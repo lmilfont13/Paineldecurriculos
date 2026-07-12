@@ -1,0 +1,66 @@
+import "server-only";
+
+import { cache } from "react";
+
+import type { PublicCompany } from "@/server/models/company.model";
+import type { PublicFormField } from "@/server/models/form.model";
+import type { PublicJob } from "@/server/models/job.model";
+import { getPublicCompanyBySlug } from "@/server/services/company.service";
+import { listApplicationFormFields } from "@/server/services/form.service";
+import {
+  countApplicants,
+  getOpenJob,
+  listOpenJobs,
+} from "@/server/services/job.service";
+
+/**
+ * Controller do fluxo público (candidato).
+ * `cache()` deduplica a resolução do tenant entre layout e página no mesmo request.
+ */
+export const getTenant = cache(
+  async (slug: string): Promise<PublicCompany | null> => {
+    return getPublicCompanyBySlug(slug);
+  }
+);
+
+export async function getJobsPageData(
+  slug: string
+): Promise<{ company: PublicCompany; jobs: PublicJob[] } | null> {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const jobs = await listOpenJobs(company.id);
+  return { company, jobs };
+}
+
+export async function getJobDetailPageData(
+  slug: string,
+  jobId: string
+): Promise<{
+  company: PublicCompany;
+  job: PublicJob;
+  applicantCount: number;
+} | null> {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const job = await getOpenJob(company.id, jobId);
+  if (!job) return null;
+  const applicantCount = await countApplicants(job.id);
+  return { company, job, applicantCount };
+}
+
+export async function getApplyPageData(
+  slug: string,
+  jobId: string
+): Promise<{
+  company: PublicCompany;
+  job: PublicJob;
+  coreFields: PublicFormField[];
+  customFields: PublicFormField[];
+} | null> {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const job = await getOpenJob(company.id, jobId);
+  if (!job) return null;
+  const { core, custom } = await listApplicationFormFields(company.id);
+  return { company, job, coreFields: core, customFields: custom };
+}
