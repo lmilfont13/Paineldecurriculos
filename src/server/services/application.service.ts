@@ -10,13 +10,23 @@ import {
   type ApplicationInput,
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
+import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
   countApplicationsByCompany,
   createApplication,
+  findApplicationByCandidateAndJob,
   findApplicationById,
+  findApplicationsByCandidate,
   findApplicationsByCompany,
+  findLatestApplicationWithAnswers,
   updateApplicationStatus,
 } from "@/server/repositories/application.repository";
+import { findManagerByCompanyId } from "@/server/repositories/user.repository";
+import { updateCandidateProfile } from "@/server/services/candidate.service";
+import {
+  sendNewApplicationNotification,
+  sendStatusUpdateEmail,
+} from "@/server/services/email.service";
 import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
 import { findJobById } from "@/server/repositories/job.repository";
 
@@ -47,7 +57,8 @@ export async function getCompanyApplication(companyId: string, id: string) {
 
 /**
  * Mudança de status — SEMPRE decisão manual do gestor (regra 2).
- * A IA jamais chama esta função.
+ * A IA jamais chama esta função. Q2: o candidato é avisado por e-mail
+ * (fire-and-forget) quando o status muda.
  */
 export async function setApplicationStatus(
   companyId: string,
@@ -56,7 +67,36 @@ export async function setApplicationStatus(
 ) {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return null;
-  return updateApplicationStatus(id, status);
+  const updated = await updateApplicationStatus(id, status);
+
+  if (status !== "PENDING" && status !== application.status) {
+    const company = await getCompanyById(companyId);
+    if (company && application.email.includes("@")) {
+      void sendStatusUpdateEmail({
+        to: application.email,
+        candidateName: application.name,
+        companyName: company.name,
+        jobTitle: application.job.title,
+        status,
+      });
+    }
+  }
+  return updated;
+}
+
+/** Respostas da última candidatura na empresa — pré-preenche extras (CA3). */
+export async function getPrefillAnswers(
+  candidateId: string,
+  companyId: string
+): Promise<Record<string, string>> {
+  const latest = await findLatestApplicationWithAnswers(candidateId, companyId);
+  if (!latest) return {};
+  return Object.fromEntries(latest.answers.map((a) => [a.fieldId, a.value]));
+}
+
+/** Candidaturas do candidato em todas as empresas (CA4). */
+export function listCandidateApplications(candidateId: string) {
+  return findApplicationsByCandidate(candidateId);
 }
 
 /** URL assinada (10 min) para baixar o currículo do Storage privado. */
@@ -78,15 +118,23 @@ export async function getResumeSignedUrl(
  * Regra 2: a candidatura é salva e respondida imediatamente — a análise de IA
  * roda depois, em background (Inngest), e nunca bloqueia o candidato.
  * A IA só escreve aiScore/aiReasoning/aiState; AppStatus é decisão do gestor.
+ *
+ * CA1/CA2/CA6: exige candidato logado, impede candidatura duplicada e
+ * salva os dados básicos no perfil para reaproveitar nas próximas vagas.
  */
 export async function submitApplication(
   companyId: string,
+  candidate: CandidateProfile,
   input: Omit<ApplicationInput, "slug">,
   resume: File | null
 ): Promise<SubmitApplicationResult> {
   const job = await findJobById(input.jobId);
   if (!job || job.companyId !== companyId || job.status !== "OPEN") {
     return { ok: false, error: "Esta vaga não está mais aberta." };
+  }
+
+  if (await findApplicationByCandidateAndJob(candidate.id, job.id)) {
+    return { ok: false, error: "Você já se candidatou a esta vaga." };
   }
 
   // Valida respostas contra os campos definidos pela empresa
@@ -107,8 +155,9 @@ export async function submitApplication(
     }
   }
 
-  // Regra 5: currículo só PDF, máx 5 MB, no Supabase Storage
-  let resumeUrl: string | null = null;
+  // Regra 5: currículo só PDF, máx 5 MB, no Supabase Storage.
+  // Sem arquivo novo, reaproveita o currículo salvo no perfil (CA3).
+  let resumeUrl: string | null = candidate.resumeUrl;
   if (resume && resume.size > 0) {
     if (resume.type !== RESUME_MIME) {
       return { ok: false, error: "O currículo deve ser um PDF." };
@@ -133,12 +182,20 @@ export async function submitApplication(
   const application = await createApplication({
     jobId: job.id,
     companyId,
+    candidateId: candidate.id,
     name: input.name,
-    email: input.email,
+    email: candidate.email,
     phone: input.phone || null,
     resumeUrl,
     aiState: resumeUrl ? "WAITING" : "NO_RESUME",
     answers,
+  });
+
+  // CA2: o que o candidato preencheu vira perfil para as próximas vagas
+  await updateCandidateProfile(candidate.id, {
+    name: input.name,
+    phone: input.phone || null,
+    resumeUrl,
   });
 
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
@@ -160,6 +217,17 @@ export async function submitApplication(
       candidateName: application.name,
       companyName: company.name,
       jobTitle: job.title,
+    });
+    // G14: avisa o gestor da empresa (fire-and-forget)
+    void findManagerByCompanyId(companyId).then((manager) => {
+      if (manager) {
+        void sendNewApplicationNotification({
+          to: manager.email,
+          candidateName: application.name,
+          jobTitle: job.title,
+          aiEnabled: Boolean(resumeUrl),
+        });
+      }
     });
   }
 

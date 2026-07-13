@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 
 import {
@@ -100,9 +101,12 @@ export function JobWizard({
         <span className="text-sm font-medium text-[#0a0a0a]">
           {jobId ? "Editar vaga" : "Nova vaga"}
         </span>
-        <span className="text-[13px] text-[#71717a]">
-          {pending ? "Salvando…" : "Rascunho salvo"}
-        </span>
+        <Link
+          href="/vagas"
+          className="text-[13px] text-[#71717a] transition-colors hover:text-[#0a0a0a]"
+        >
+          Sair sem salvar
+        </Link>
       </header>
 
       <div className="mx-auto w-full max-w-[512px] flex-1 px-6 pt-12">

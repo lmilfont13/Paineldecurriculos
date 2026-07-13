@@ -127,4 +127,38 @@
   html {
     @apply font-sans;
   }
+
+  /* Feedback visual base: transições suaves e affordance em tudo que é interativo */
+  button,
+  a,
+  select,
+  [role="button"],
+  [role="radio"],
+  [role="switch"] {
+    @apply transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-150;
+  }
+  button:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  /* Inputs reagem ao hover mesmo antes do foco */
+  input:not(:disabled):hover,
+  textarea:not(:disabled):hover,
+  select:not(:disabled):hover {
+    @apply border-[#d4d4d8];
+  }
+  /* Foco por teclado visível e consistente (acessibilidade) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-[#0a0a0a]/30 ring-offset-1;
+  }
+  /* Botões primários "afundam" levemente ao clicar */
+  button:not(:disabled):active {
+    transform: translateY(0.5px);
+  }
 }

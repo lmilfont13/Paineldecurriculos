@@ -14,8 +14,9 @@ export default async function EditarEmpresaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const company = await getEmpresaDetail(id);
-  if (!company) notFound();
+  const data = await getEmpresaDetail(id);
+  if (!data) notFound();
+  const { company, manager } = data;
 
   return (
     <>
@@ -30,7 +31,7 @@ export default async function EditarEmpresaPage({
         /{company.slug} · {company.email}
       </p>
       <div className="mt-8">
-        <CompanyTabs company={company} />
+        <CompanyTabs company={company} manager={manager} />
       </div>
     </>
   );

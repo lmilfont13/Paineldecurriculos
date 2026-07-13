@@ -64,13 +64,19 @@ export default async function VagasPage() {
             formatPublishedAgo(job.createdAt).replace("publicada ", ""),
           ].join(" · ");
           return (
-            <div key={job.id} className="flex items-center gap-6 px-5 py-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#0a0a0a]">
+            <div
+              key={job.id}
+              className="group flex items-center gap-6 px-5 py-4 transition-colors hover:bg-[#fafaf9]"
+            >
+              <Link
+                href={`/candidaturas?vaga=${job.id}`}
+                className="min-w-0 flex-1 focus-visible:outline-none"
+              >
+                <p className="truncate text-sm font-medium text-[#0a0a0a] group-hover:underline">
                   {job.title}
                 </p>
                 <p className="mt-1 truncate text-xs text-[#71717a]">{meta}</p>
-              </div>
+              </Link>
               <span
                 className={`flex h-6 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium ${style.bg} ${style.text}`}
               >

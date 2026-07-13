@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ApplyWizard } from "@/components/public/apply/apply-wizard";
 import { CompanyHeader } from "@/components/public/company-header";
@@ -29,15 +29,24 @@ export default async function ApplyPage({
   const data = await getApplyPageData(slug, jobId);
   if (!data) notFound();
 
+  // CA1: candidatar exige conta — sem sessão, cria/entra e volta para cá
+  if (!data.candidate) {
+    redirect(
+      `/${slug}/entrar?next=${encodeURIComponent(`/${slug}/vagas/${jobId}/candidatar`)}`
+    );
+  }
+
   return (
     <>
-      <CompanyHeader company={data.company} />
+      <CompanyHeader company={data.company} candidate={data.candidate} />
       <main className="flex-1 pt-14">
         <ApplyWizard
           company={data.company}
           job={data.job}
           coreFields={data.coreFields}
           customFields={data.customFields}
+          candidate={data.candidate}
+          prefillAnswers={data.prefillAnswers}
         />
       </main>
     </>

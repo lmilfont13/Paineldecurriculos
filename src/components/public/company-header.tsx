@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
+import { logoutCandidateAction } from "@/server/controllers/candidate.controller";
 
 export function companyInitials(name: string): string {
   return name
@@ -13,7 +15,13 @@ export function companyInitials(name: string): string {
 }
 
 /** Cabeçalho do fluxo público — marca do cliente (frame P1 do Figma). */
-export function CompanyHeader({ company }: { company: PublicCompany }) {
+export function CompanyHeader({
+  company,
+  candidate,
+}: {
+  company: PublicCompany;
+  candidate?: CandidateProfile | null;
+}) {
   return (
     <header className="border-b border-[#e4e4e7] bg-[#fafaf9]">
       <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-6">
@@ -37,9 +45,35 @@ export function CompanyHeader({ company }: { company: PublicCompany }) {
             {company.name}
           </span>
         </Link>
-        <span className="text-[13px] font-medium text-[#71717a]">
-          Carreiras
-        </span>
+        {candidate ? (
+          <span className="flex items-center gap-5">
+            <Link
+              href={`/${company.slug}/minhas-candidaturas`}
+              className="text-[13px] font-medium hover:underline"
+              style={{ color: "var(--brand-primary)" }}
+            >
+              Minhas candidaturas
+            </Link>
+            <Link
+              href={`/${company.slug}/perfil`}
+              className="hidden text-[13px] text-[#71717a] hover:text-[#0a0a0a] hover:underline sm:inline"
+            >
+              {candidate.name.split(" ")[0]}
+            </Link>
+            <form action={logoutCandidateAction.bind(null, company.slug)}>
+              <button
+                type="submit"
+                className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
+              >
+                Sair
+              </button>
+            </form>
+          </span>
+        ) : (
+          <span className="text-[13px] font-medium text-[#71717a]">
+            Carreiras
+          </span>
+        )}
       </div>
     </header>
   );

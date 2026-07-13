@@ -35,6 +35,16 @@ async function main() {
   }
   console.log("✔ bucket resumes");
 
+  const { error: logosError } = await supabase.storage.createBucket("logos", {
+    public: true,
+    fileSizeLimit: "2MB",
+    allowedMimeTypes: ["image/png", "image/jpeg", "image/svg+xml", "image/webp"],
+  });
+  if (logosError && !/already exists/i.test(logosError.message)) {
+    throw new Error(`Storage bucket logos: ${logosError.message}`);
+  }
+  console.log("✔ bucket logos (público)");
+
   // 2. Empresa demo
   const company = await prisma.company.upsert({
     where: { slug: "technova" },
@@ -47,8 +57,7 @@ async function main() {
       primaryColor: "#1E4FBF",
       secondaryColor: "#0E7A6B",
       heroTitle: "Vagas abertas",
-      heroSubtitle:
-        "Candidate-se em minutos, sem criar conta. Só você e seu currículo.",
+      heroSubtitle: "Crie sua conta uma vez e candidate-se em um clique.",
       aboutText:
         "A TechNova constrói o produto que conecta empresas e candidatos.",
     },

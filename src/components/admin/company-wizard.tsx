@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import {
   createCompanyAction,
@@ -45,6 +45,8 @@ export function CompanyWizard() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({
     name: "",
     slug: "",
@@ -153,6 +155,15 @@ export function CompanyWizard() {
         {Object.entries(draft).map(([key, value]) => (
           <input key={key} type="hidden" name={key} value={value} />
         ))}
+        {/* Sempre montado (fora dos passos) para o arquivo persistir até o submit */}
+        <input
+          ref={logoFileRef}
+          type="file"
+          name="logoFile"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          className="hidden"
+          onChange={(e) => setLogoFileName(e.target.files?.[0]?.name ?? null)}
+        />
 
         <div className="flex-1">
           {step === 0 && (
@@ -265,15 +276,26 @@ export function CompanyWizard() {
                   </div>
                 </label>
               </div>
-              <label className="block">
-                <span className={labelClass}>URL do logo (opcional)</span>
-                <input
-                  className={inputClass}
-                  value={draft.logoUrl}
-                  onChange={(e) => set("logoUrl", e.target.value)}
-                  placeholder="https://…/logo.png"
-                />
-              </label>
+              <div>
+                <span className={labelClass}>Logo (opcional)</span>
+                <div className="flex items-center gap-4 rounded-md border border-[#e4e4e7] bg-[#fafaf9] p-4">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
+                      {logoFileName ?? "PNG, JPG, SVG ou WebP"}
+                    </span>
+                    <span className="block text-xs text-[#71717a]">
+                      até 2 MB
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => logoFileRef.current?.click()}
+                    className="h-9 shrink-0 rounded-lg border border-[#0a0a0a]/85 bg-white px-4 text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+                  >
+                    {logoFileName ? "Trocar" : "Escolher"}
+                  </button>
+                </div>
+              </div>
               <div
                 className="mt-2 flex h-16 items-center gap-3 rounded-xl px-5"
                 style={{ backgroundColor: draft.primaryColor }}

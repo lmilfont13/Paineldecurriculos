@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Triagem
 
-## Getting Started
+SaaS multi-tenant de recrutamento white-label com triagem por IA.
+Contexto completo do produto e regras invioláveis: [CONTEXT.md](CONTEXT.md) · Backlog: [BACKLOG.md](BACKLOG.md).
 
-First, run the development server:
+## Rodando local
 
 ```bash
+npm install
+npx prisma migrate deploy              # aplica migrations no banco do .env
+node --env-file=.env prisma/seed.mjs   # dados demo (empresa technova, logins de teste)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Em outro terminal, para a análise de IA em background:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx inngest-cli@latest dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Logins demo (senha `triagem123`): `admin@triagem.app` (console) e
+`ana@technova.com` (gestora). Página pública demo: `/technova/vagas`.
 
-## Learn More
+Testes: `npm test` (vitest — models e schemas).
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy (Vercel) — checklist
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Variáveis de ambiente** (copie de `.env.example`):
+   - `DATABASE_URL` → use o **Session Pooler** do Supabase (IPv4):
+     `postgresql://postgres.<ref>:<senha>@aws-0-<região>.pooler.supabase.com:5432/postgres`
+   - `DIRECT_URL` → conexão direta (migrations)
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+   - `ANTHROPIC_API_KEY` → ativa a análise de currículos (claude-3-haiku)
+   - `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY` → do app criado em app.inngest.com
+     (sem elas o client roda em modo dev e os jobs não processam em produção)
+   - `RESEND_API_KEY` → e-mails transacionais
+   - `NEXT_PUBLIC_APP_URL` → URL pública (usada no link de reset de senha)
+2. **Resend**: verifique um domínio em *Domains* e troque o remetente `FROM` em
+   `src/server/services/email.service.ts` — com `onboarding@resend.dev`
+   os e-mails só chegam ao dono da conta Resend.
+3. **Inngest**: após o primeiro deploy, registre o app em app.inngest.com
+   apontando para `https://<seu-domínio>/api/inngest`.
+4. **Supabase Auth**: em *Authentication → URL Configuration*, defina a Site URL
+   como `https://<seu-domínio>` (necessário para o reset de senha por e-mail).
+5. **Banco**: `npx prisma migrate deploy` (usa `DIRECT_URL`) e, uma única vez,
+   execute `prisma/rls.sql` no SQL Editor do Supabase.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Arquitetura
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`Routes/View (src/app, src/components) → Controller (src/server/controllers) →
+Service (src/server/services) → Repository (src/server/repositories) → Prisma`,
+com `src/server/models` (tipos + zod) como contrato entre camadas e
+`src/proxy.ts` na borda HTTP. Só repositories importam o Prisma.

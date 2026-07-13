@@ -2,9 +2,17 @@
 
 import { redirect } from "next/navigation";
 
+import { z } from "zod";
+
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/server/models/user.model";
-import { getSessionUser, isAdmin } from "@/server/services/auth.service";
+import { emailBelongsToCandidate } from "@/server/services/candidate.service";
+import {
+  getSessionUser,
+  isAdmin,
+  resetPassword,
+  sendPasswordReset,
+} from "@/server/services/auth.service";
 
 export type LoginState = { error: string } | null;
 
@@ -28,9 +36,16 @@ export async function loginAction(
 
   const user = await getSessionUser();
   if (!user) {
-    // Autenticou no Supabase mas não tem cadastro interno — sem acesso.
+    // Autenticou mas não é staff. Se for candidato, aponta o caminho certo.
+    const isCandidate = await emailBelongsToCandidate(parsed.data.email);
     await supabase.auth.signOut();
-    return { error: "Este usuário não tem acesso à plataforma." };
+    if (isCandidate) {
+      return {
+        error:
+          "Esta é a entrada da equipe. Candidatos entram pela página de vagas da empresa — abra o link de carreiras e clique em “Entrar”.",
+      };
+    }
+    return { error: "Este e-mail não tem acesso à plataforma." };
   }
 
   redirect(isAdmin(user) ? "/admin/empresas" : "/painel");
@@ -40,4 +55,33 @@ export async function logoutAction(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export type PasswordFlowState = { error?: string; done?: boolean } | null;
+
+/** CA7/G13 · Envia o link de recuperação (resposta neutra, sem vazar cadastro). */
+export async function forgotPasswordAction(
+  _prev: PasswordFlowState,
+  formData: FormData
+): Promise<PasswordFlowState> {
+  const parsed = z.email().safeParse(formData.get("email"));
+  if (!parsed.success) return { error: "Informe um e-mail válido." };
+  await sendPasswordReset(parsed.data);
+  return { done: true };
+}
+
+/** Define a nova senha a partir do link do e-mail. */
+export async function resetPasswordAction(
+  _prev: PasswordFlowState,
+  formData: FormData
+): Promise<PasswordFlowState> {
+  const code = String(formData.get("code") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!code) return { error: "Link inválido. Peça um novo." };
+  if (password.length < 8) {
+    return { error: "A senha precisa de pelo menos 8 caracteres." };
+  }
+  const result = await resetPassword(code, password);
+  if (!result.ok) return { error: result.error };
+  return { done: true };
 }

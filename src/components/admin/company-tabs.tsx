@@ -5,22 +5,35 @@ import { useActionState, useState, useTransition } from "react";
 import type { Company } from "@prisma/client";
 
 import {
+  resetManagerPasswordAction,
   setCompanyActiveAction,
   updateCompanyAction,
   type CompanyFormState,
 } from "@/server/controllers/company.controller";
 
-const TABS = ["Dados", "Marca", "Página", "Status"] as const;
+const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
 
 /** A7 · Editar empresa em abas (frame 105:2 do Figma). */
-export function CompanyTabs({ company }: { company: Company }) {
+export function CompanyTabs({
+  company,
+  manager,
+}: {
+  company: Company;
+  manager: { email: string; name: string | null } | null;
+}) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Dados");
   const [state, formAction, pending] = useActionState<CompanyFormState, FormData>(
     updateCompanyAction.bind(null, company.id),
     null
   );
   const [saved, setSaved] = useState(false);
+  const [slugChanged, setSlugChanged] = useState(false);
   const [togglePending, startToggle] = useTransition();
+  const [pwdState, pwdAction, pwdPending] = useActionState<
+    CompanyFormState,
+    FormData
+  >(resetManagerPasswordAction.bind(null, company.id), null);
+  const [pwdSaved, setPwdSaved] = useState(false);
 
   const inputClass =
     "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
@@ -46,7 +59,57 @@ export function CompanyTabs({ company }: { company: Company }) {
         ))}
       </div>
 
-      {tab !== "Status" ? (
+      {tab === "Gestor" ? (
+        <div className="mt-6 rounded-3xl border border-[#e4e4e7] bg-white p-6">
+          <p className="text-sm text-[#0a0a0a]">
+            Gestor atual:{" "}
+            <span className="font-semibold">
+              {manager ? (manager.name ?? manager.email) : "—"}
+            </span>
+          </p>
+          <p className="mt-1 text-[13px] text-[#71717a]">
+            {manager?.email ?? "Esta empresa não tem gestor cadastrado."}
+          </p>
+          {manager && (
+            <form
+              action={(formData) => {
+                setPwdSaved(true);
+                pwdAction(formData);
+              }}
+              className="mt-6 space-y-4"
+            >
+              <label className="block">
+                <span className={labelClass}>Nova senha temporária</span>
+                <input
+                  name="password"
+                  type="text"
+                  required
+                  minLength={8}
+                  placeholder="Mínimo 8 caracteres"
+                  className={inputClass}
+                />
+              </label>
+              {pwdState?.error && (
+                <p role="alert" className="text-sm text-red-600">
+                  {pwdState.error}
+                </p>
+              )}
+              {pwdSaved && !pwdState?.error && !pwdPending && (
+                <p className="text-sm text-[#1f7a4d]">
+                  Senha redefinida. Compartilhe com o gestor.
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={pwdPending}
+                className="h-10 rounded-2xl bg-[#0a0a0a] px-6 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {pwdPending ? "Redefinindo…" : "Redefinir senha do gestor"}
+              </button>
+            </form>
+          )}
+        </div>
+      ) : tab !== "Status" ? (
         <form
           action={(formData) => {
             setSaved(true);
@@ -61,8 +124,25 @@ export function CompanyTabs({ company }: { company: Company }) {
                 <input name="name" defaultValue={company.name} className={inputClass} />
               </label>
               <label className="block">
-                <span className={labelClass}>Slug (página pública)</span>
-                <input name="slug" defaultValue={company.slug} className={inputClass} />
+                <span className={labelClass}>Slug (endereço público)</span>
+                <input
+                  name="slug"
+                  defaultValue={company.slug}
+                  onChange={(e) => setSlugChanged(e.target.value !== company.slug)}
+                  className={inputClass}
+                />
+                {slugChanged ? (
+                  <span className="mt-1.5 flex items-start gap-1.5 text-[12px] text-[#b07818]">
+                    <span aria-hidden>⚠</span>
+                    Mudar o endereço quebra os links já divulgados
+                    (/{company.slug}/vagas) — QR codes e posts deixarão de
+                    funcionar.
+                  </span>
+                ) : (
+                  <span className="mt-1 block text-[11px] text-[#a1a1aa]">
+                    triagem.app/{company.slug}/vagas
+                  </span>
+                )}
               </label>
               <label className="block">
                 <span className={labelClass}>E-mail de contato</span>
@@ -100,6 +180,17 @@ export function CompanyTabs({ company }: { company: Company }) {
               <label className="block">
                 <span className={labelClass}>URL do logo</span>
                 <input name="logoUrl" defaultValue={company.logoUrl ?? ""} className={inputClass} />
+              </label>
+              <label className="block">
+                <span className={labelClass}>
+                  Ou envie um arquivo (substitui a URL)
+                </span>
+                <input
+                  name="logoFile"
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="block w-full text-[13px] text-[#71717a] file:mr-3 file:h-9 file:cursor-pointer file:rounded-lg file:border file:border-solid file:border-[#0a0a0a]/85 file:bg-white file:px-4 file:text-xs file:font-medium file:text-[#0a0a0a]"
+                />
               </label>
             </>
           )}

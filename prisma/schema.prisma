@@ -20,7 +20,7 @@ model Company {
   secondaryColor String   @default("#0E7A6B")
   logoUrl        String?
   heroTitle      String   @default("Trabalhe com a gente")
-  heroSubtitle   String   @default("Candidate-se em minutos, sem criar conta.")
+  heroSubtitle   String   @default("Crie sua conta uma vez e candidate-se em um clique.")
   aboutText      String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -110,10 +110,24 @@ enum FieldType {
   FILE_UPLOAD
 }
 
+model Candidate {
+  id        String   @id @default(cuid())
+  authId    String?  @unique
+  email     String   @unique
+  name      String
+  phone     String?
+  resumeUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applications Application[]
+}
+
 model Application {
   id          String    @id @default(cuid())
   jobId       String
   companyId   String
+  candidateId String?
   name        String
   email       String
   phone       String?
@@ -125,9 +139,12 @@ model Application {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  job     Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  company Company  @relation(fields: [companyId], references: [id])
-  answers Answer[]
+  job       Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id])
+  candidate Candidate? @relation(fields: [candidateId], references: [id])
+  answers   Answer[]
+
+  @@unique([candidateId, jobId])
 }
 
 enum AppStatus {

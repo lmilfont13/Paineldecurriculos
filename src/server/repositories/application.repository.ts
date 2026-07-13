@@ -40,6 +40,65 @@ export function findApplicationsByCompany(companyId: string) {
   });
 }
 
+/** Dedupe (CA6): candidato só se candidata uma vez por vaga. */
+export function findApplicationByCandidateAndJob(
+  candidateId: string,
+  jobId: string
+) {
+  return prisma.application.findUnique({
+    where: { candidateId_jobId: { candidateId, jobId } },
+  });
+}
+
+/** Última candidatura do candidato na empresa — pré-preenche extras (CA3). */
+export function findLatestApplicationWithAnswers(
+  candidateId: string,
+  companyId: string
+) {
+  return prisma.application.findFirst({
+    where: { candidateId, companyId },
+    orderBy: { createdAt: "desc" },
+    include: { answers: true },
+  });
+}
+
+/** Caminhos de currículo no Storage ligados ao candidato (CA8). */
+export async function findResumePathsByCandidate(candidateId: string) {
+  const apps = await prisma.application.findMany({
+    where: { candidateId, resumeUrl: { not: null } },
+    select: { resumeUrl: true },
+  });
+  return apps.map((a) => a.resumeUrl!).filter(Boolean);
+}
+
+/**
+ * CA8 (LGPD): anonimiza as candidaturas do candidato — a empresa mantém o
+ * registro do processo, mas sem dados pessoais.
+ */
+export function anonymizeApplicationsByCandidate(candidateId: string) {
+  return prisma.application.updateMany({
+    where: { candidateId },
+    data: {
+      name: "Candidato(a) — conta excluída",
+      email: "conta-excluida",
+      phone: null,
+      resumeUrl: null,
+    },
+  });
+}
+
+/** Candidaturas do candidato em todas as empresas (CA4). */
+export function findApplicationsByCandidate(candidateId: string) {
+  return prisma.application.findMany({
+    where: { candidateId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      job: { select: { title: true } },
+      company: { select: { name: true, slug: true } },
+    },
+  });
+}
+
 export function findApplicationById(id: string) {
   return prisma.application.findUnique({
     where: { id },
@@ -80,6 +139,7 @@ export function updateApplicationStatus(
 export function createApplication(data: {
   jobId: string;
   companyId: string;
+  candidateId: string;
   name: string;
   email: string;
   phone: string | null;

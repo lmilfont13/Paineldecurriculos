@@ -6,6 +6,7 @@ import { requireAdmin } from "@/server/controllers/guards";
 import {
   countCompaniesForAdmin,
   getCompanyForAdmin,
+  getCompanyManager,
   listCompaniesForAdmin,
 } from "@/server/services/company-admin.service";
 
@@ -22,5 +23,9 @@ export async function getEmpresasPageData() {
 
 export async function getEmpresaDetail(id: string) {
   await getAdminShell();
-  return getCompanyForAdmin(id);
+  const [company, manager] = await Promise.all([
+    getCompanyForAdmin(id),
+    getCompanyManager(id),
+  ]);
+  return company ? { company, manager } : null;
 }

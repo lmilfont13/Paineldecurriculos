@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 
+import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
@@ -13,29 +14,35 @@ const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
 type WizardData = {
   name: string;
-  email: string;
   phone: string;
   answers: Record<string, string>;
 };
 
-/** P3–P7 · Candidatura multi-step (frames 87:72 a 87:243 do Figma). */
+/**
+ * P3–P7 · Candidatura multi-step (frames 87:72 a 87:243 do Figma).
+ * CA3: pré-preenchido com o perfil do candidato e com as respostas
+ * da última candidatura na mesma empresa.
+ */
 export function ApplyWizard({
   company,
   job,
   coreFields,
   customFields,
+  candidate,
+  prefillAnswers,
 }: {
   company: PublicCompany;
   job: PublicJob;
   coreFields: PublicFormField[];
   customFields: PublicFormField[];
+  candidate: CandidateProfile;
+  prefillAnswers: Record<string, string>;
 }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<WizardData>({
-    name: "",
-    email: "",
-    phone: "",
-    answers: {},
+    name: candidate.name,
+    phone: candidate.phone ?? "",
+    answers: prefillAnswers,
   });
   const [resume, setResume] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +56,6 @@ export function ApplyWizard({
   const stepError = useMemo(() => {
     if (step === 0) {
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
-      if (!/^\S+@\S+\.\S+$/.test(data.email)) return "Informe um e-mail válido.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
     }
     const fields = step === 1 ? coreFields : step === 2 ? customFields : [];
@@ -99,7 +105,6 @@ export function ApplyWizard({
     formData.set("slug", company.slug);
     formData.set("jobId", job.id);
     formData.set("name", data.name.trim());
-    formData.set("email", data.email.trim());
     formData.set("phone", data.phone.trim());
     formData.set("answers", JSON.stringify(data.answers));
     if (resume) formData.set("resume", resume);
@@ -115,7 +120,7 @@ export function ApplyWizard({
   }
 
   if (sent) {
-    return <Confirmation company={company} job={job} email={data.email} />;
+    return <Confirmation company={company} job={job} email={candidate.email} />;
   }
 
   const progress = ["w-0", "w-1/3", "w-2/3", "w-full"][step];
@@ -181,12 +186,13 @@ export function ApplyWizard({
                 />
               </Field>
               <Field label="E-mail">
-                <TextInput
+                <input
                   type="email"
-                  value={data.email}
-                  onChange={(v) => setData((d) => ({ ...d, email: v }))}
-                  placeholder="voce@email.com"
-                  autoComplete="email"
+                  value={candidate.email}
+                  readOnly
+                  disabled
+                  className="h-10 w-full rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-3 text-sm text-[#71717a]"
+                  title="E-mail da sua conta"
                 />
               </Field>
               <Field label="Telefone / WhatsApp">
@@ -223,7 +229,9 @@ export function ApplyWizard({
                     <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                       {resume
                         ? resume.name
-                        : "Arraste aqui ou selecione um arquivo"}
+                        : candidate.resumeUrl
+                          ? "Usaremos o currículo do seu perfil"
+                          : "Arraste aqui ou selecione um arquivo"}
                     </span>
                     <span className="block text-xs text-[#71717a]">
                       PDF até 5 MB
@@ -274,9 +282,20 @@ export function ApplyWizard({
               title="Tudo certo?"
               subtitle="Revise antes de enviar sua candidatura."
             >
+              {/* P8 · Erro no envio (frame 106:142) */}
+              {error && (
+                <div className="rounded-lg bg-[#fbeae8] px-4 py-3" role="alert">
+                  <p className="text-[13px] font-semibold text-[#c23b3b]">
+                    Não conseguimos enviar sua candidatura
+                  </p>
+                  <p className="mt-1 text-xs text-[#9b4038]">
+                    {error} Seus dados estão salvos aqui — é só tentar de novo.
+                  </p>
+                </div>
+              )}
               <dl>
                 <ReviewRow label="Nome" value={data.name} />
-                <ReviewRow label="E-mail" value={data.email} />
+                <ReviewRow label="E-mail" value={candidate.email} />
                 <ReviewRow label="Telefone" value={data.phone} />
                 {[...coreFields, ...customFields]
                   .filter((f) => (data.answers[f.id] ?? "").trim())
@@ -289,14 +308,20 @@ export function ApplyWizard({
                   ))}
                 <ReviewRow
                   label="Currículo"
-                  value={resume ? resume.name : "Não enviado"}
+                  value={
+                    resume
+                      ? resume.name
+                      : candidate.resumeUrl
+                        ? "Currículo do perfil"
+                        : "Não enviado"
+                  }
                 />
               </dl>
             </StepShell>
           )}
         </div>
 
-        {error && (
+        {error && step < 3 && (
           <p role="alert" className="mb-4 text-sm text-red-600">
             {error}
           </p>
@@ -339,7 +364,11 @@ export function ApplyWizard({
                 color: "var(--brand-foreground)",
               }}
             >
-              {pending ? "Enviando…" : "Enviar candidatura"}{" "}
+              {pending
+                ? "Enviando…"
+                : error
+                  ? "Tentar enviar de novo"
+                  : "Enviar candidatura"}{" "}
               {!pending && <span aria-hidden>›</span>}
             </button>
           )}

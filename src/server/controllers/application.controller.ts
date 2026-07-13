@@ -11,7 +11,24 @@ import {
   setApplicationStatus,
   submitApplication,
 } from "@/server/services/application.service";
+import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
+
+/** G11 · Mudança de status em massa (E9) — cada id é validado pelo tenant. */
+export async function bulkSetApplicationStatusAction(
+  applicationIds: string[],
+  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+): Promise<{ updated: number }> {
+  const user = await requireManager();
+  let updated = 0;
+  for (const id of applicationIds.slice(0, 100)) {
+    const result = await setApplicationStatus(user.companyId, id, status);
+    if (result) updated += 1;
+  }
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  return { updated };
+}
 
 /** Mudança de status pelo gestor (E4) — decisão sempre manual (regra 2). */
 export async function setApplicationStatusAction(
@@ -39,7 +56,6 @@ export async function submitApplicationAction(
     slug: formData.get("slug"),
     jobId: formData.get("jobId"),
     name: formData.get("name"),
-    email: formData.get("email"),
     phone: formData.get("phone"),
     answers,
   });
@@ -47,6 +63,15 @@ export async function submitApplicationAction(
     return {
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+    };
+  }
+
+  // CA1: candidatura exige conta de candidato
+  const candidate = await getSessionCandidate();
+  if (!candidate) {
+    return {
+      ok: false,
+      error: "Sua sessão expirou. Entre novamente para enviar.",
     };
   }
 
@@ -58,6 +83,7 @@ export async function submitApplicationAction(
   const resume = formData.get("resume");
   return submitApplication(
     company.id,
+    candidate,
     parsed.data,
     resume instanceof File ? resume : null
   );

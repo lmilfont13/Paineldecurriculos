@@ -7,7 +7,7 @@ export const applicationInputSchema = z.object({
   slug: z.string().min(1),
   jobId: z.string().min(1),
   name: z.string().min(2, "Informe seu nome completo."),
-  email: z.email("Informe um e-mail válido."),
+  // e-mail vem da conta do candidato (sessão), não do formulário
   phone: z.string().min(8, "Informe um telefone válido."),
   /** Respostas dos FormFields da empresa: fieldId → valor. */
   answers: z.record(z.string(), z.string()),

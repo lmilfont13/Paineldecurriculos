@@ -54,26 +54,30 @@ export function JobList({
           : `${filtered.length} vagas abertas`}
       </p>
 
-      <ul className="mt-3 divide-y divide-[#e4e4e7] border-y border-[#e4e4e7]">
+      {/* Mobile (M1): cards · Desktop (P1): linhas divididas */}
+      <ul className="mt-3 space-y-4 md:space-y-0 md:divide-y md:divide-[#e4e4e7] md:border-y md:border-[#e4e4e7]">
         {filtered.map((job) => (
           <li
             key={job.id}
-            className="flex flex-col gap-4 py-6 md:flex-row md:items-center"
+            className="group flex flex-col gap-3 rounded-[14px] border border-[#e4e4e7] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)] md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:py-6 md:transition-colors md:hover:translate-y-0 md:hover:bg-[#f5f5f4]/60 md:hover:shadow-none"
           >
-            <div className="flex-1">
-              <h2 className="text-[22px] font-bold text-[#0a0a0a]">
+            <Link
+              href={`/${slug}/vagas/${job.id}`}
+              className="flex-1 focus-visible:outline-none"
+            >
+              <h2 className="text-base font-bold leading-snug text-[#0a0a0a] group-hover:underline md:text-[22px]">
                 {job.title}
               </h2>
-              <p className="mt-2 max-w-[560px] text-sm text-[#71717a]">
+              <p className="mt-2 hidden max-w-[560px] text-sm text-[#71717a] md:block">
                 {firstLine(job.description)}
               </p>
-            </div>
-            <p className="w-[220px] text-sm text-[#71717a]">
+            </Link>
+            <p className="text-xs text-[#71717a] md:w-[220px] md:text-sm">
               {formatJobMeta(job)}
             </p>
             <Link
               href={`/${slug}/vagas/${job.id}`}
-              className="flex h-11 w-[170px] items-center justify-center gap-2 rounded-2xl border border-[#0a0a0a]/85 bg-white text-sm font-medium text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-white"
+              className="self-end text-xs font-medium text-[#0a0a0a] transition-colors md:flex md:h-11 md:w-[170px] md:items-center md:justify-center md:gap-2 md:self-auto md:rounded-2xl md:border md:border-[#0a0a0a]/85 md:bg-white md:text-sm md:group-hover:bg-[#0a0a0a] md:group-hover:text-white"
             >
               Ver vaga <span aria-hidden>›</span>
             </Link>

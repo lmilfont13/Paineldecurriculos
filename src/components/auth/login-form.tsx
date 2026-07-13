@@ -67,9 +67,12 @@ export function LoginForm({ branded }: { branded: boolean }) {
       </button>
 
       {branded && (
-        <p className="mt-4 text-[13px] font-medium text-[#71717a]">
+        <a
+          href="/recuperar-senha"
+          className="mt-4 inline-block text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a] hover:underline"
+        >
           Esqueci minha senha
-        </p>
+        </a>
       )}
     </form>
   );

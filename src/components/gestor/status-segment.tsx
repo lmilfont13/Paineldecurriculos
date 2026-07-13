@@ -1,7 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
+import { Toast } from "@/components/gestor/toast";
 import { setApplicationStatusAction } from "@/server/controllers/application.controller";
 import {
   appStatusLabels,
@@ -19,6 +20,7 @@ export function StatusSegment({
   status: AppStatusKey;
 }) {
   const [pending, startTransition] = useTransition();
+  const [toast, setToast] = useState<string | null>(null);
 
   return (
     <div
@@ -26,6 +28,7 @@ export function StatusSegment({
       aria-label="Status do processo"
       className="grid h-10 grid-cols-4 gap-1 rounded-lg bg-[#f4f4f5] p-[3px]"
     >
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {ORDER.map((key) => {
         const active = key === status;
         return (
@@ -36,9 +39,10 @@ export function StatusSegment({
             aria-checked={active}
             disabled={pending}
             onClick={() =>
-              startTransition(() =>
-                setApplicationStatusAction(applicationId, key)
-              )
+              startTransition(async () => {
+                await setApplicationStatusAction(applicationId, key);
+                setToast(`Status atualizado para "${appStatusLabels[key]}".`);
+              })
             }
             className={
               "rounded-md text-xs transition-colors " +

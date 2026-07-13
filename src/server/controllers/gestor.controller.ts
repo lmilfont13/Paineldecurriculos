@@ -54,6 +54,15 @@ export async function getCandidaturaDetail(id: string) {
   return getCompanyApplication(user.companyId, id);
 }
 
+/** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
+export async function getCompareData(ids: string[]) {
+  const { user } = await getGestorShell();
+  const applications = await Promise.all(
+    ids.slice(0, 3).map((id) => getCompanyApplication(user.companyId, id))
+  );
+  return applications.filter((a) => a !== null);
+}
+
 export async function getJobForEdit(jobId: string) {
   const { user, company } = await getGestorShell();
   const job = await getCompanyJob(user.companyId, jobId);
@@ -63,6 +72,8 @@ export async function getJobForEdit(jobId: string) {
 export async function getPainelData(): Promise<{
   userName: string;
   companyName: string;
+  companySlug: string;
+  publicUrl: string;
   stats: DashboardStats;
   priority: PriorityApplication[];
 }> {
@@ -71,6 +82,8 @@ export async function getPainelData(): Promise<{
   return {
     userName: user.name ?? user.email,
     companyName: company.name,
+    companySlug: company.slug,
+    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas`,
     stats,
     priority,
   };

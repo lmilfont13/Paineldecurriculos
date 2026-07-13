@@ -68,7 +68,7 @@ export default async function EmpresasPage() {
           {companies.map((company) => (
             <div
               key={company.id}
-              className="grid grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-4 last:border-b-0"
+              className="group grid grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9]"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
@@ -105,7 +105,7 @@ export default async function EmpresasPage() {
               </span>
               <Link
                 href={`/admin/empresas/${company.id}`}
-                className="text-right text-xs font-medium text-[#0a0a0a] hover:underline"
+                className="text-right text-xs font-medium text-[#71717a] transition-colors hover:text-[#0a0a0a] hover:underline group-hover:text-[#0a0a0a]"
               >
                 Editar ›
               </Link>

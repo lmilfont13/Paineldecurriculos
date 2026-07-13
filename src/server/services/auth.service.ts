@@ -41,3 +41,35 @@ export function isManager(user: SessionUser): user is ManagerUser {
 export function isAdmin(user: SessionUser): user is AdminUser {
   return user.role === "ADMIN";
 }
+
+/**
+ * CA7/G13 · Recuperação de senha unificada (gestor, admin e candidato).
+ * O Supabase envia o e-mail com link para /redefinir-senha?code=…
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha`,
+  });
+}
+
+/** Troca o code do link de recuperação por sessão e define a nova senha. */
+export async function resetPassword(
+  code: string,
+  newPassword: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const { error: exchangeError } =
+    await supabase.auth.exchangeCodeForSession(code);
+  if (exchangeError) {
+    return {
+      ok: false,
+      error: "Link inválido ou expirado. Peça um novo link de recuperação.",
+    };
+  }
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    return { ok: false, error: "Não foi possível redefinir a senha." };
+  }
+  return { ok: true };
+}

@@ -6,7 +6,11 @@ import {
   CompanyHeader,
 } from "@/components/public/company-header";
 import { JobList } from "@/components/public/job-list";
-import { getJobsPageData, getTenant } from "@/server/controllers/public.controller";
+import {
+  getJobsPageData,
+  getPublicSession,
+  getTenant,
+} from "@/server/controllers/public.controller";
 
 export async function generateMetadata({
   params,
@@ -25,13 +29,16 @@ export default async function PublicJobsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await getJobsPageData(slug);
+  const [data, candidate] = await Promise.all([
+    getJobsPageData(slug),
+    getPublicSession(),
+  ]);
   if (!data) notFound();
   const { company, jobs } = data;
 
   return (
     <>
-      <CompanyHeader company={company} />
+      <CompanyHeader company={company} candidate={candidate} />
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 pt-16">
         <p
           className="text-xs font-medium uppercase tracking-[1px]"
@@ -39,7 +46,7 @@ export default async function PublicJobsPage({
         >
           Carreiras · {company.name}
         </p>
-        <h1 className="mt-3 text-[44px] font-bold leading-tight text-[#0a0a0a]">
+        <h1 className="mt-3 text-[28px] font-bold leading-tight text-[#0a0a0a] md:text-[44px]">
           {company.heroTitle}
         </h1>
         <div className="mt-5">

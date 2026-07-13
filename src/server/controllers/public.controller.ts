@@ -2,9 +2,15 @@ import "server-only";
 
 import { cache } from "react";
 
+import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
+import {
+  getPrefillAnswers,
+  listCandidateApplications,
+} from "@/server/services/application.service";
+import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
 import {
@@ -56,11 +62,41 @@ export async function getApplyPageData(
   job: PublicJob;
   coreFields: PublicFormField[];
   customFields: PublicFormField[];
+  candidate: CandidateProfile | null;
+  prefillAnswers: Record<string, string>;
 } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
   const job = await getOpenJob(company.id, jobId);
   if (!job) return null;
-  const { core, custom } = await listApplicationFormFields(company.id);
-  return { company, job, coreFields: core, customFields: custom };
+  const [{ core, custom }, candidate] = await Promise.all([
+    listApplicationFormFields(company.id),
+    getSessionCandidate(),
+  ]);
+  const prefillAnswers = candidate
+    ? await getPrefillAnswers(candidate.id, company.id)
+    : {};
+  return {
+    company,
+    job,
+    coreFields: core,
+    customFields: custom,
+    candidate,
+    prefillAnswers,
+  };
+}
+
+/** Sessão do candidato para o header público. */
+export async function getPublicSession(): Promise<CandidateProfile | null> {
+  return getSessionCandidate();
+}
+
+/** CA4 · Minhas candidaturas (todas as empresas). */
+export async function getMinhasCandidaturasData(slug: string) {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const candidate = await getSessionCandidate();
+  if (!candidate) return { company, candidate: null, applications: [] };
+  const applications = await listCandidateApplications(candidate.id);
+  return { company, candidate, applications };
 }

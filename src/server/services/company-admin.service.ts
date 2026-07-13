@@ -14,9 +14,15 @@ import {
   updateCompany,
 } from "@/server/repositories/company.repository";
 import {
+  findManagerByCompanyId,
   findUserByEmail,
   prismaCreateManagerUser,
 } from "@/server/repositories/user.repository";
+
+/** Gestor do cliente (aba Gestor da A7). */
+export function getCompanyManager(companyId: string) {
+  return findManagerByCompanyId(companyId);
+}
 
 export type AdminCompanyRow = {
   id: string;
@@ -121,4 +127,58 @@ export async function updateCompanyForAdmin(
 
 export async function setCompanyActive(id: string, isActive: boolean) {
   return updateCompany(id, { isActive });
+}
+
+const LOGO_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/svg+xml",
+  "image/webp",
+]);
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+/** A6 · Sobe o logo do cliente para o bucket público e retorna a URL. */
+export async function uploadCompanyLogo(
+  file: File
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!LOGO_MIMES.has(file.type)) {
+    return { ok: false, error: "Logo: use PNG, JPG, SVG ou WebP." };
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return { ok: false, error: "Logo: máximo de 2 MB." };
+  }
+  const ext = file.type === "image/svg+xml" ? "svg" : file.type.split("/")[1];
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage
+    .from("logos")
+    .upload(path, file, { contentType: file.type });
+  if (error) return { ok: false, error: "Falha ao enviar o logo." };
+  const { data } = supabase.storage.from("logos").getPublicUrl(path);
+  return { ok: true, url: data.publicUrl };
+}
+
+/** A7 · Define nova senha temporária para o gestor do cliente. */
+export async function resetManagerPassword(
+  companyId: string,
+  newPassword: string
+): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const company = await findAllCompaniesForAdmin().then((all) =>
+    all.find((c) => c.id === companyId)
+  );
+  const managerEmail = company?.users[0]?.email;
+  if (!managerEmail) {
+    return { ok: false, error: "Esta empresa não tem gestor cadastrado." };
+  }
+  const admin = createAdminClient();
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const authUser = data.users.find((u) => u.email === managerEmail);
+  if (!authUser) {
+    return { ok: false, error: "Usuário de acesso não encontrado no Auth." };
+  }
+  const { error } = await admin.auth.admin.updateUserById(authUser.id, {
+    password: newPassword,
+  });
+  if (error) return { ok: false, error: "Falha ao redefinir a senha." };
+  return { ok: true, email: managerEmail };
 }

@@ -11,7 +11,10 @@ import {
   formatPublishedAgo,
   requirementsToBullets,
 } from "@/server/models/job.model";
-import { getJobDetailPageData } from "@/server/controllers/public.controller";
+import {
+  getJobDetailPageData,
+  getPublicSession,
+} from "@/server/controllers/public.controller";
 
 export async function generateMetadata({
   params,
@@ -32,14 +35,17 @@ export default async function PublicJobDetailPage({
   params: Promise<{ slug: string; jobId: string }>;
 }) {
   const { slug, jobId } = await params;
-  const data = await getJobDetailPageData(slug, jobId);
+  const [data, candidate] = await Promise.all([
+    getJobDetailPageData(slug, jobId),
+    getPublicSession(),
+  ]);
   if (!data) notFound();
   const { company, job, applicantCount } = data;
   const bullets = requirementsToBullets(job.requirements);
 
   return (
     <>
-      <CompanyHeader company={company} />
+      <CompanyHeader company={company} candidate={candidate} />
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 pt-10">
         <Link
           href={`/${company.slug}/vagas`}
@@ -50,7 +56,7 @@ export default async function PublicJobDetailPage({
 
         <div className="mt-8 flex flex-col gap-12 lg:flex-row lg:justify-between">
           <article className="max-w-[680px]">
-            <h1 className="text-[40px] font-bold leading-tight text-[#0a0a0a]">
+            <h1 className="text-[28px] font-bold leading-tight text-[#0a0a0a] md:text-[40px]">
               {job.title}
             </h1>
             <p className="mt-4 text-sm text-[#71717a]">
@@ -94,7 +100,7 @@ export default async function PublicJobDetailPage({
                 Candidate-se a esta vaga
               </h2>
               <p className="mt-1 text-[13px] leading-[19px] text-[#71717a]">
-                Menos de 2 minutos. Sem criar conta.
+                Menos de 2 minutos. Seu perfil fica salvo para as próximas.
               </p>
               <Link
                 href={`/${company.slug}/vagas/${job.id}/candidatar`}

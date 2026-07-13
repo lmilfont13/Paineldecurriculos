@@ -71,16 +71,21 @@ export default async function LoginPage({
       {/* Formulário */}
       <section className="flex flex-1 items-center justify-center px-6">
         <div className="w-full max-w-[400px]">
-          <h2 className="text-[28px] font-bold text-[#0a0a0a]">
-            {company ? "Entrar" : "Acesso admin"}
-          </h2>
+          <h2 className="text-[28px] font-bold text-[#0a0a0a]">Entrar</h2>
           <p className="mt-2 text-sm text-[#71717a]">
             {company
               ? `Acesse o painel da ${company.name}.`
-              : "Restrito à equipe da plataforma."}
+              : "Área da equipe — gestores e administradores."}
           </p>
 
           <LoginForm branded={Boolean(company)} />
+
+          {!company && (
+            <p className="mt-6 border-t border-[#e4e4e7] pt-6 text-[13px] leading-relaxed text-[#71717a]">
+              É candidato? Você entra pela página de vagas da empresa onde se
+              candidatou — abra o link de carreiras e clique em “Entrar”.
+            </p>
+          )}
         </div>
       </section>
     </main>
