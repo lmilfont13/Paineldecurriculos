@@ -30,7 +30,7 @@ Testes: `npm test` (vitest — models e schemas).
      `postgresql://postgres.<ref>:<senha>@aws-0-<região>.pooler.supabase.com:5432/postgres`
    - `DIRECT_URL` → conexão direta (migrations)
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-   - `ANTHROPIC_API_KEY` → ativa a análise de currículos (claude-3-haiku)
+   - `GEMINI_API_KEY` → ativa a análise de currículos (gemini-flash-lite)
    - `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY` → do app criado em app.inngest.com
      (sem elas o client roda em modo dev e os jobs não processam em produção)
    - `RESEND_API_KEY` → e-mails transacionais

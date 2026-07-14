@@ -2,7 +2,7 @@ import "server-only";
 
 import { PDFParse } from "pdf-parse";
 
-import { anthropic } from "@/lib/anthropic";
+import { geminiGenerate } from "@/lib/gemini";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   findApplicationById,
@@ -13,7 +13,6 @@ import {
 const AI_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
 
-const AI_MODEL = "claude-3-haiku-20240307";
 const MAX_RESUME_CHARS = 12000;
 
 /**
@@ -54,20 +53,13 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
         : (application.job.requirements ?? "Sem critérios específicos.");
 
     // 3. Chama o modelo com o prompt imutável (regra 3)
-    const message = await anthropic.messages.create({
-      model: AI_MODEL,
-      max_tokens: 300,
+    const raw = await geminiGenerate({
       system: AI_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: `Vaga: ${application.job.title}\n\nCritérios de aderência:\n${criteria}\n\nCurrículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
-        },
-      ],
+      prompt: `Vaga: ${application.job.title}\n\nCritérios de aderência:\n${criteria}\n\nCurrículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
+      maxTokens: 300,
+      json: true,
     });
 
-    const raw =
-      message.content[0]?.type === "text" ? message.content[0].text : "";
     const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
       score?: unknown;
       reasoning?: unknown;

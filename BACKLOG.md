@@ -54,7 +54,7 @@ commit `a9b8566`).
 |----|------|--------|-------|
 | Q1 | Estados de erro do envio de candidatura conforme frame P8 (106:142) e confirmações/toasts do E12 (104:332). | ✅ feito | Banner P8 no wizard + toasts nas ações do gestor |
 | Q2 | Candidato: e-mails transacionais de mudança de status (entrevista/aprovado), disparados pela ação do gestor. | ✅ feito | Reprovação enviada como "processo finalizado" (neutro) — revisar copy se quiser |
-| Q3 | Deploy na Vercel: chaves Inngest, `DATABASE_URL` → pooler do Supabase (IPv4), domínio verificado no Resend, `ANTHROPIC_API_KEY`. | todo | Código pronto; checklist no README |
+| Q3 | Deploy na Vercel: chaves Inngest, `DATABASE_URL` → pooler do Supabase (IPv4), domínio verificado no Resend, `GEMINI_API_KEY`. | todo | Código pronto; checklist no README |
 | Q4 | Testes automatizados (models, schemas, contraste da marca). | ✅ feito | `npm test` — 18 testes; services com I/O ficam para integração |
 | Q5 | Telas mobile M1–M5 conferidas com o Figma. | ✅ feito | M1 em cards no mobile; títulos responsivos |
 

@@ -9,7 +9,7 @@ Next.js 14+ App Router + TypeScript
 Supabase          → Postgres + Auth + Storage (currículos e logos)
 Prisma            → ORM
 Tailwind + shadcn/ui
-Anthropic API     → claude-haiku-3 (análise de currículos)
+Gemini API        → gemini-flash-lite (análise de currículos)
 Inngest           → jobs em background (análise de IA)
 Resend            → e-mails transacionais
 Vercel            → deploy
@@ -23,7 +23,7 @@ DIRECT_URL=""                    # Supabase direct connection (para migrations)
 NEXT_PUBLIC_SUPABASE_URL=""
 NEXT_PUBLIC_SUPABASE_ANON_KEY=""
 SUPABASE_SERVICE_ROLE_KEY=""
-ANTHROPIC_API_KEY=""
+GEMINI_API_KEY=""
 INNGEST_EVENT_KEY=""
 INNGEST_SIGNING_KEY=""
 RESEND_API_KEY=""
@@ -127,7 +127,7 @@ src/server/repositories/  → MODEL (acesso a dados): único lugar que importa
                             `lib/prisma`. Uma função por consulta/mutação.
 
 src/lib/                  → INFRA: clients (prisma, supabase, inngest, resend,
-                            anthropic) e utilitários puros.
+                            gemini) e utilitários puros.
 ```
 
 Fluxo: `Route/View → Controller → Service → Repository → Prisma`, com os
