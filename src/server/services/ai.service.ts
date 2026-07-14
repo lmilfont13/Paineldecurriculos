@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PDFParse } from "pdf-parse";
+import { extractText, getDocumentProxy } from "unpdf";
 
 import { geminiGenerate } from "@/lib/gemini";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -40,11 +40,9 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
     if (error || !data) {
       throw new Error(`Falha ao baixar currículo: ${error?.message}`);
     }
-    const parser = new PDFParse({
-      data: new Uint8Array(await data.arrayBuffer()),
-    });
-    const { text: resumeText } = await parser.getText();
-    await parser.destroy();
+    // unpdf: extração de texto pronta para serverless (sem DOMMatrix)
+    const pdf = await getDocumentProxy(new Uint8Array(await data.arrayBuffer()));
+    const { text: resumeText } = await extractText(pdf, { mergePages: true });
 
     // 2. Monta o contexto da vaga (critérios definidos pelo gestor)
     const criteria =

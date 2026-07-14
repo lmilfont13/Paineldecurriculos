@@ -96,7 +96,7 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }
 ### 5. Upload de currículo
 
 - Apenas PDF, máx 5 MB, salvar no Supabase Storage
-- Extrair texto com `pdf-parse` antes de mandar para a IA
+- Extrair texto com `unpdf` (serverless-safe) antes de mandar para a IA
 
 ### 6. Arquitetura em camadas (MVC)
 
