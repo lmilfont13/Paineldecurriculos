@@ -21,6 +21,13 @@ function isProtectedPath(pathname: string): boolean {
  * redireciona para /login quem acessa área protegida sem sessão.
  */
 export async function updateSession(request: NextRequest) {
+  // Performance: só as rotas protegidas precisam do getUser() (round-trip de
+  // auth) na borda. Nas páginas públicas, a sessão do candidato é resolvida
+  // na própria página quando necessário — evita uma chamada de auth por acesso.
+  if (!isProtectedPath(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
