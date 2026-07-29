@@ -87,6 +87,14 @@ export function ProfileForm({
               </span>
               <span className="block text-xs text-[#71717a]">PDF até 5 MB</span>
             </span>
+            {candidate.resumeUrl && !fileName && (
+              <a
+                href={`/${slug}/perfil/cv`}
+                className="h-9 shrink-0 rounded-lg px-3 text-xs font-medium leading-9 text-[#71717a] hover:text-[#0a0a0a]"
+              >
+                Baixar
+              </a>
+            )}
             <button
               type="button"
               onClick={() => fileRef.current?.click()}

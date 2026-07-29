@@ -3,13 +3,30 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { LiveRefresh } from "@/components/gestor/live-refresh";
+import { NotesForm } from "@/components/gestor/notes-form";
+import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import {
   DecisionButtons,
   StatusSegment,
 } from "@/components/gestor/status-segment";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
-import { formatAppliedAt } from "@/server/models/application.model";
+import {
+  appStatusLabels,
+  formatAppliedAt,
+  type AppStatusKey,
+} from "@/server/models/application.model";
 import { personInitials } from "@/server/models/dashboard.model";
+
+/** Linha do histórico na voz do gestor. */
+function historyLine(
+  from: AppStatusKey | null,
+  to: AppStatusKey,
+  actor: string
+): string {
+  if (from === null) return "Candidatura enviada pelo candidato";
+  const who = actor === "gestor" ? "Você" : "O sistema";
+  return `${who} moveu de "${appStatusLabels[from]}" para "${appStatusLabels[to]}"`;
+}
 
 export const metadata: Metadata = { title: "Candidatura · Triagem" };
 
@@ -112,9 +129,12 @@ export default async function CandidaturaDetailPage({
             {app.aiState === "NO_RESUME"
               ? "Sem currículo — candidatura não analisada pela IA."
               : app.aiState === "FAILED"
-                ? "A análise falhou. Será tentada novamente automaticamente."
+                ? "A análise falhou. Você pode pedir uma nova tentativa."
                 : "Analisando o currículo… o resultado aparece aqui em instantes."}
           </div>
+        )}
+        {app.aiState === "FAILED" && app.resumeUrl && (
+          <ReanalyzeButton applicationId={app.id} />
         )}
 
         {/* H6: os critérios que a IA usou, à vista, sem exigir memória */}
@@ -146,7 +166,41 @@ export default async function CandidaturaDetailPage({
           Status do processo
         </h2>
         <div className="mt-3">
-          <StatusSegment applicationId={app.id} status={app.status} />
+          <StatusSegment
+            applicationId={app.id}
+            status={app.status}
+            candidateName={app.name}
+          />
+        </div>
+
+        {/* H1: histórico visível — quem moveu o quê, e quando */}
+        {app.statusEvents.length > 0 && (
+          <ol className="mt-4 space-y-2 border-t border-[#e4e4e7] pt-4">
+            {app.statusEvents.map((event) => (
+              <li
+                key={event.id}
+                className="flex items-baseline gap-2 text-[12px]"
+              >
+                <span className="text-[#0a0a0a]">
+                  {historyLine(event.from, event.to, event.actor)}
+                </span>
+                <span className="text-[#a1a1aa]">
+                  · {formatAppliedAt(event.createdAt, true)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      {/* Notas internas — memória do processo entre gestores */}
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-[#0a0a0a]">Notas internas</h2>
+        <p className="mt-1 text-[11px] text-[#a1a1aa]">
+          Visível só para a sua equipe. O candidato nunca vê.
+        </p>
+        <div className="mt-3">
+          <NotesForm applicationId={app.id} notes={app.managerNotes} />
         </div>
       </section>
 
@@ -199,7 +253,11 @@ export default async function CandidaturaDetailPage({
       </section>
 
       <footer className="mt-8 border-t border-[#e4e4e7] pt-6">
-        <DecisionButtons applicationId={app.id} status={app.status} />
+        <DecisionButtons
+          applicationId={app.id}
+          status={app.status}
+          candidateName={app.name}
+        />
       </footer>
     </div>
   );

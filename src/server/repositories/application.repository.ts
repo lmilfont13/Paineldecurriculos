@@ -113,8 +113,50 @@ export function findApplicationById(id: string) {
         },
       },
       answers: { include: { field: true } },
+      statusEvents: { orderBy: { createdAt: "asc" } },
     },
   });
+}
+
+/** Trilha de status (histórico do gestor + timeline do candidato). */
+export function createStatusEvent(data: {
+  applicationId: string;
+  from: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED" | null;
+  to: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
+  actor: "candidato" | "gestor" | "sistema";
+}) {
+  return prisma.statusEvent.create({ data });
+}
+
+export function findStatusEvents(applicationId: string) {
+  return prisma.statusEvent.findMany({
+    where: { applicationId },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export function updateManagerNotes(id: string, managerNotes: string | null) {
+  return prisma.application.update({ where: { id }, data: { managerNotes } });
+}
+
+/** Candidatura do candidato (detalhe da timeline), com posse verificada. */
+export function findApplicationForCandidate(
+  candidateId: string,
+  applicationId: string
+) {
+  return prisma.application.findFirst({
+    where: { id: applicationId, candidateId },
+    include: {
+      job: { select: { title: true } },
+      company: { select: { name: true, slug: true } },
+      answers: { include: { field: true } },
+      statusEvents: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
+
+export function deleteApplication(id: string) {
+  return prisma.application.delete({ where: { id } });
 }
 
 /** Regra 2: a IA só escreve aiScore/aiReasoning/aiState — nunca AppStatus. */

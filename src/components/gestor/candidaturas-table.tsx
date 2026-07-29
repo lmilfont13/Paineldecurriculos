@@ -42,14 +42,19 @@ export function CandidaturasTable({
   rows,
   jobs,
   initialJobId,
+  initialStatus,
+  initialOnlyMeets = false,
 }: {
   rows: CandidaturaRow[];
   jobs: { id: string; title: string }[];
   initialJobId?: string;
+  initialStatus?: AppStatusKey;
+  initialOnlyMeets?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [jobId, setJobId] = useState(initialJobId ?? "");
-  const [status, setStatus] = useState<"" | AppStatusKey>("");
+  const [status, setStatus] = useState<"" | AppStatusKey>(initialStatus ?? "");
+  const [onlyMeets, setOnlyMeets] = useState(initialOnlyMeets);
   const [minScore, setMinScore] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
@@ -63,11 +68,13 @@ export function CandidaturasTable({
         return false;
       if (jobId && row.jobId !== jobId) return false;
       if (status && row.status !== status) return false;
+      if (onlyMeets && (row.aiScore === null || row.aiScore < row.aiMinScore))
+        return false;
       if (minScore > 0 && (row.aiScore === null || row.aiScore < minScore))
         return false;
       return true;
     });
-  }, [rows, search, jobId, status, minScore]);
+  }, [rows, search, jobId, status, minScore, onlyMeets]);
 
   const visibleSelected = filtered.filter((r) => selected.has(r.id));
   const allVisibleSelected =
@@ -93,6 +100,7 @@ export function CandidaturasTable({
     setJobId("");
     setStatus("");
     setMinScore(0);
+    setOnlyMeets(false);
   }
 
   /** Ações que enviam e-mail ao candidato exigem confirmação (irreversível). */
@@ -143,6 +151,11 @@ export function CandidaturasTable({
   }
 
   const activeChips: { label: string; clear: () => void }[] = [];
+  if (onlyMeets)
+    activeChips.push({
+      label: "Atendem o mínimo",
+      clear: () => setOnlyMeets(false),
+    });
   if (minScore > 0)
     activeChips.push({ label: `Score ≥ ${minScore}`, clear: () => setMinScore(0) });
   if (status)

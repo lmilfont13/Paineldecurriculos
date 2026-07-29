@@ -14,12 +14,17 @@ import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
   countApplicationsByCompany,
   createApplication,
+  createStatusEvent,
+  deleteApplication,
   findApplicationByCandidateAndJob,
   findApplicationById,
+  findApplicationForCandidate,
   findApplicationsByCandidate,
   findApplicationsByCompany,
   findLatestApplicationWithAnswers,
+  updateApplicationAi,
   updateApplicationStatus,
+  updateManagerNotes,
 } from "@/server/repositories/application.repository";
 import { findManagerByCompanyId } from "@/server/repositories/user.repository";
 import { updateCandidateProfile } from "@/server/services/candidate.service";
@@ -69,6 +74,15 @@ export async function setApplicationStatus(
   if (!application) return null;
   const updated = await updateApplicationStatus(id, status);
 
+  if (status !== application.status) {
+    await createStatusEvent({
+      applicationId: id,
+      from: application.status,
+      to: status,
+      actor: "gestor",
+    });
+  }
+
   if (status !== "PENDING" && status !== application.status) {
     const company = await getCompanyById(companyId);
     if (company && application.email.includes("@")) {
@@ -97,6 +111,95 @@ export async function getPrefillAnswers(
 /** Candidaturas do candidato em todas as empresas (CA4). */
 export function listCandidateApplications(candidateId: string) {
   return findApplicationsByCandidate(candidateId);
+}
+
+/** Já existe candidatura deste candidato nesta vaga? (detecção precoce) */
+export async function getExistingApplicationId(
+  candidateId: string,
+  jobId: string
+): Promise<string | null> {
+  const existing = await findApplicationByCandidateAndJob(candidateId, jobId);
+  return existing?.id ?? null;
+}
+
+/**
+ * Reenfileira a análise de IA (gestor, para FAILED/NO_RESUME). Continua
+ * respeitando a regra 2: só aiState muda aqui; o job em background faz o resto.
+ */
+export async function requestReanalysis(
+  companyId: string,
+  id: string
+): Promise<{ ok: boolean }> {
+  const application = await getCompanyApplication(companyId, id);
+  if (!application) return { ok: false };
+  await updateApplicationAi(id, { aiState: "WAITING" });
+  try {
+    await inngest.send({
+      name: "application/submitted",
+      data: { applicationId: id },
+    });
+  } catch (error) {
+    console.error("[inngest] Falha ao reenfileirar análise:", error);
+  }
+  return { ok: true };
+}
+
+/** Notas internas do gestor sobre a candidatura. */
+export async function saveManagerNotes(
+  companyId: string,
+  id: string,
+  notes: string
+) {
+  const application = await getCompanyApplication(companyId, id);
+  if (!application) return null;
+  return updateManagerNotes(id, notes.trim() || null);
+}
+
+/** Detalhe da candidatura na visão do candidato (timeline, respostas). */
+export function getCandidateApplication(
+  candidateId: string,
+  applicationId: string
+) {
+  return findApplicationForCandidate(candidateId, applicationId);
+}
+
+/**
+ * Candidato retira a candidatura: apaga o registro (e respostas/eventos em
+ * cascata). Currículo enviado só para esta vaga sai do Storage; o do perfil
+ * (path profile/…) é preservado.
+ */
+export async function withdrawApplication(
+  candidateId: string,
+  applicationId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const application = await findApplicationForCandidate(
+    candidateId,
+    applicationId
+  );
+  if (!application) return { ok: false, error: "Candidatura não encontrada." };
+
+  if (
+    application.resumeUrl &&
+    !application.resumeUrl.startsWith("profile/")
+  ) {
+    const supabase = createAdminClient();
+    await supabase.storage.from(RESUMES_BUCKET).remove([application.resumeUrl]);
+  }
+  await deleteApplication(applicationId);
+  return { ok: true };
+}
+
+/** URL assinada do currículo, na visão do candidato (posse verificada). */
+export async function getCandidateResumeSignedUrl(
+  candidateId: string,
+  resumePath: string | null
+): Promise<string | null> {
+  if (!resumePath) return null;
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.storage
+    .from(RESUMES_BUCKET)
+    .createSignedUrl(resumePath, 600);
+  return error ? null : data.signedUrl;
 }
 
 /** URL assinada (10 min) para baixar o currículo do Storage privado. */
@@ -198,6 +301,14 @@ export async function submitApplication(
     resumeUrl,
   });
 
+  // Timeline: registra o envio (primeiro evento da candidatura)
+  await createStatusEvent({
+    applicationId: application.id,
+    from: null,
+    to: "PENDING",
+    actor: "candidato",
+  }).catch(() => {});
+
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
   // IA roda em background via Inngest; e-mail é fire-and-forget.
   try {
@@ -226,6 +337,7 @@ export async function submitApplication(
           candidateName: application.name,
           jobTitle: job.title,
           aiEnabled: Boolean(resumeUrl),
+          applicationId: application.id,
         });
       }
     });

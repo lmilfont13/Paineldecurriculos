@@ -5,6 +5,10 @@ import {
   type CandidaturaRow,
 } from "@/components/gestor/candidaturas-table";
 import { getCandidaturasPageData } from "@/server/controllers/gestor.controller";
+import {
+  appStatusLabels,
+  type AppStatusKey,
+} from "@/server/models/application.model";
 
 export const metadata: Metadata = { title: "Candidaturas · Triagem" };
 
@@ -12,9 +16,11 @@ export const metadata: Metadata = { title: "Candidaturas · Triagem" };
 export default async function CandidaturasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vaga?: string }>;
+  searchParams: Promise<{ vaga?: string; status?: string; atende?: string }>;
 }) {
-  const { vaga } = await searchParams;
+  const { vaga, status, atende } = await searchParams;
+  const initialStatus =
+    status && status in appStatusLabels ? (status as AppStatusKey) : undefined;
   const { applications, jobs } = await getCandidaturasPageData();
 
   const rows: CandidaturaRow[] = applications.map((app) => ({
@@ -38,6 +44,8 @@ export default async function CandidaturasPage({
         rows={rows}
         jobs={jobs.map((j) => ({ id: j.id, title: j.title }))}
         initialJobId={vaga}
+        initialStatus={initialStatus}
+        initialOnlyMeets={atende === "1"}
       />
     </>
   );

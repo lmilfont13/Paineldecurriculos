@@ -8,11 +8,37 @@ import {
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
 import {
+  requestReanalysis,
+  saveManagerNotes,
   setApplicationStatus,
   submitApplication,
 } from "@/server/services/application.service";
 import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
+
+/** Notas internas do gestor na candidatura (E4). */
+export async function saveNotesAction(
+  applicationId: string,
+  _prev: { saved: boolean } | null,
+  formData: FormData
+): Promise<{ saved: boolean }> {
+  const user = await requireManager();
+  await saveManagerNotes(
+    user.companyId,
+    applicationId,
+    String(formData.get("notes") ?? "")
+  );
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return { saved: true };
+}
+
+/** Reenfileira a análise de IA (FAILED/NO_RESUME com currículo novo). */
+export async function reanalyzeAction(applicationId: string): Promise<void> {
+  const user = await requireManager();
+  await requestReanalysis(user.companyId, applicationId);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/candidaturas");
+}
 
 /** G11 · Mudança de status em massa (E9) — cada id é validado pelo tenant. */
 export async function bulkSetApplicationStatusAction(

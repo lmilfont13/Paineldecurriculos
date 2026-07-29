@@ -7,11 +7,16 @@ import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
 import {
+  getCandidateApplication,
+  getExistingApplicationId,
   getPrefillAnswers,
   listCandidateApplications,
 } from "@/server/services/application.service";
 import { getSessionCandidate } from "@/server/services/candidate.service";
-import { getPublicCompanyBySlug } from "@/server/services/company.service";
+import {
+  getDefaultCompanySlug,
+  getPublicCompanyBySlug,
+} from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
 import {
   countApplicants,
@@ -64,6 +69,7 @@ export async function getApplyPageData(
   customFields: PublicFormField[];
   candidate: CandidateProfile | null;
   prefillAnswers: Record<string, string>;
+  alreadyAppliedId: string | null;
 } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
@@ -73,9 +79,12 @@ export async function getApplyPageData(
     listApplicationFormFields(company.id),
     getSessionCandidate(),
   ]);
-  const prefillAnswers = candidate
-    ? await getPrefillAnswers(candidate.id, company.id)
-    : {};
+  const [prefillAnswers, alreadyAppliedId] = candidate
+    ? await Promise.all([
+        getPrefillAnswers(candidate.id, company.id),
+        getExistingApplicationId(candidate.id, job.id),
+      ])
+    : [{}, null];
   return {
     company,
     job,
@@ -83,7 +92,23 @@ export async function getApplyPageData(
     customFields: custom,
     candidate,
     prefillAnswers,
+    alreadyAppliedId,
   };
+}
+
+/** Detalhe da candidatura na visão do candidato (timeline, respostas, CV). */
+export async function getMinhaCandidaturaData(slug: string, id: string) {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const candidate = await getSessionCandidate();
+  if (!candidate) return { company, candidate: null, application: null };
+  const application = await getCandidateApplication(candidate.id, id);
+  return { company, candidate, application };
+}
+
+/** Raiz do site → página de vagas da empresa ativa. */
+export async function getDefaultPublicSlug(): Promise<string | null> {
+  return getDefaultCompanySlug();
 }
 
 /** Sessão do candidato para o header público. */

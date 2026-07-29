@@ -29,6 +29,14 @@ export function countCompanies() {
   return prisma.company.count();
 }
 
+/** Primeira empresa ativa — usada como destino padrão da raiz do site. */
+export function findFirstActiveCompany() {
+  return prisma.company.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 export function createCompany(data: {
   name: string;
   slug: string;

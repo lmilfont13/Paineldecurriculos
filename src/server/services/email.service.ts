@@ -27,8 +27,10 @@ export async function sendNewApplicationNotification(params: {
   candidateName: string;
   jobTitle: string;
   aiEnabled: boolean;
+  applicationId: string;
 }): Promise<void> {
   if (!resend) return;
+  const link = `${process.env.NEXT_PUBLIC_APP_URL}/candidaturas/${params.applicationId}`;
   try {
     await resend.emails.send({
       from: FROM,
@@ -39,6 +41,7 @@ export async function sendNewApplicationNotification(params: {
         params.aiEnabled
           ? "A análise de aderência da IA já está em andamento — em instantes o score aparece no seu painel."
           : "Abra o painel para ver os detalhes.",
+        `<a href="${link}" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#0a0a0a;color:#fff;border-radius:12px;text-decoration:none;font-size:14px">Abrir candidatura</a>`,
       ]),
     });
   } catch (error) {

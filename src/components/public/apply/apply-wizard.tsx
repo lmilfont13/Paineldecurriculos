@@ -589,8 +589,18 @@ function Confirmation({
           Confirmação enviada para {email}
         </p>
         <Link
+          href={`/${company.slug}/minhas-candidaturas`}
+          className="mt-6 flex h-11 w-[240px] items-center justify-center rounded-2xl text-[13px] font-medium hover:opacity-90"
+          style={{
+            backgroundColor: "var(--brand-primary)",
+            color: "var(--brand-foreground)",
+          }}
+        >
+          Acompanhar minha candidatura
+        </Link>
+        <Link
           href={`/${company.slug}/vagas`}
-          className="mt-6 flex h-11 w-[200px] items-center justify-center rounded-2xl border border-[#0a0a0a]/85 bg-white text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+          className="mt-3 text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
         >
           Ver outras vagas
         </Link>

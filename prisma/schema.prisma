@@ -124,27 +124,41 @@ model Candidate {
 }
 
 model Application {
-  id          String    @id @default(cuid())
-  jobId       String
-  companyId   String
-  candidateId String?
-  name        String
-  email       String
-  phone       String?
-  resumeUrl   String?
-  status      AppStatus @default(PENDING)
-  aiState     AIState   @default(WAITING)
-  aiScore     Int?
-  aiReasoning String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  jobId        String
+  companyId    String
+  candidateId  String?
+  name         String
+  email        String
+  phone        String?
+  resumeUrl    String?
+  status       AppStatus @default(PENDING)
+  aiState      AIState   @default(WAITING)
+  aiScore      Int?
+  aiReasoning  String?
+  managerNotes String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  job       Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  company   Company    @relation(fields: [companyId], references: [id])
-  candidate Candidate? @relation(fields: [candidateId], references: [id])
-  answers   Answer[]
+  job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company      Company       @relation(fields: [companyId], references: [id])
+  candidate    Candidate?    @relation(fields: [candidateId], references: [id])
+  answers      Answer[]
+  statusEvents StatusEvent[]
 
   @@unique([candidateId, jobId])
+}
+
+/// Trilha de mudanças de status — histórico p/ gestor, timeline p/ candidato.
+model StatusEvent {
+  id            String     @id @default(cuid())
+  applicationId String
+  from          AppStatus?
+  to            AppStatus
+  actor         String // "candidato" | "gestor" | "sistema"
+  createdAt     DateTime   @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
 
 enum AppStatus {

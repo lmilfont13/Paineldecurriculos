@@ -79,20 +79,20 @@ export default async function PainelPage() {
       value: stats.newApplications7d,
       label: "Candidaturas novas",
       hint: "últimos 7 dias",
-      href: "/candidaturas",
+      href: "/candidaturas?status=PENDING",
     },
     {
       value: stats.meetingMinimum,
       label: "Atendem o mínimo",
       hint: "sinalizadas pela IA",
       green: true,
-      href: "/candidaturas",
+      href: "/candidaturas?atende=1",
     },
     {
       value: stats.inInterview,
       label: "Em entrevista",
       hint: "aguardando decisão",
-      href: "/candidaturas",
+      href: "/candidaturas?status=INTERVIEW",
     },
   ];
 

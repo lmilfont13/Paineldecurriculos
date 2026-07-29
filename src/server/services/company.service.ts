@@ -7,6 +7,7 @@ import {
 import {
   findCompanyById,
   findCompanyBySlug,
+  findFirstActiveCompany,
 } from "@/server/repositories/company.repository";
 
 /**
@@ -24,4 +25,10 @@ export async function getPublicCompanyBySlug(
 /** Empresa do gestor logado (uso interno — dados completos). */
 export function getCompanyById(id: string) {
   return findCompanyById(id);
+}
+
+/** Slug da empresa padrão (raiz do site aponta para a página dela). */
+export async function getDefaultCompanySlug(): Promise<string | null> {
+  const company = await findFirstActiveCompany();
+  return company?.slug ?? null;
 }

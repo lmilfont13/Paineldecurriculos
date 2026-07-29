@@ -9,6 +9,7 @@ import {
   candidateLoginSchema,
   candidateSignupSchema,
 } from "@/server/models/candidate.model";
+import { withdrawApplication } from "@/server/services/application.service";
 import {
   deleteCandidateAccount,
   getSessionCandidate,
@@ -96,6 +97,18 @@ export async function updateProfileAction(
   });
   revalidatePath(`/${slug}/perfil`);
   return null;
+}
+
+/** Retirar candidatura — decisão do candidato, apaga o registro. */
+export async function withdrawApplicationAction(
+  slug: string,
+  applicationId: string
+): Promise<void> {
+  const candidate = await getSessionCandidate();
+  if (candidate) {
+    await withdrawApplication(candidate.id, applicationId);
+  }
+  redirect(`/${slug}/minhas-candidaturas`);
 }
 
 /** CA8 · Exclui a conta e os dados pessoais (LGPD). */

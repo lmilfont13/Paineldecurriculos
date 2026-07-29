@@ -69,7 +69,11 @@ export default async function MinhasCandidaturasPage({
           {applications.map((app) => {
             const status = candidateStatus[app.status];
             return (
-              <div key={app.id} className="flex items-center gap-4 px-5 py-4">
+              <Link
+                key={app.id}
+                href={`/${slug}/minhas-candidaturas/${app.id}`}
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[#fafaf9]"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#0a0a0a]">
                     {app.job.title}
@@ -85,7 +89,10 @@ export default async function MinhasCandidaturasPage({
                   <span className="size-1.5 rounded-full bg-current" />
                   {status.label}
                 </span>
-              </div>
+                <span aria-hidden className="text-[#a1a1aa]">
+                  ›
+                </span>
+              </Link>
             );
           })}
         </div>

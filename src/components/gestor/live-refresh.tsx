@@ -11,7 +11,7 @@ import { useEffect, useRef } from "react";
 export function LiveRefresh({
   active,
   intervalMs = 5000,
-  maxMs = 120000,
+  maxMs = 600000,
 }: {
   active: boolean;
   intervalMs?: number;
