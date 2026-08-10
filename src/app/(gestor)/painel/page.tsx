@@ -4,17 +4,62 @@ import Link from "next/link";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getPainelData } from "@/server/controllers/gestor.controller";
+import { formatWaiting } from "@/server/models/application.model";
 import { personInitials } from "@/server/models/dashboard.model";
+import { jobStatusLabels } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Painel · Triagem" };
 
-/** E1 · Painel (frame 89:20 do Figma). */
+/** Barra do funil: proporção de cada etapa, sem números competindo por espaço. */
+function FunnelBar({
+  pending,
+  interview,
+  approved,
+  rejected,
+}: {
+  pending: number;
+  interview: number;
+  approved: number;
+  rejected: number;
+}) {
+  const total = pending + interview + approved + rejected;
+  if (total === 0) {
+    return <span className="block h-1.5 rounded-full bg-[#f1f0ed]" />;
+  }
+  const parts = [
+    { value: pending, color: "#e0a83a" },
+    { value: interview, color: "#b07818" },
+    { value: approved, color: "#1f7a4d" },
+    { value: rejected, color: "#e4e4e7" },
+  ];
+  return (
+    <span className="flex h-1.5 overflow-hidden rounded-full bg-[#f1f0ed]">
+      {parts.map((part, i) =>
+        part.value > 0 ? (
+          <span
+            key={i}
+            style={{
+              width: `${(part.value / total) * 100}%`,
+              backgroundColor: part.color,
+            }}
+          />
+        ) : null
+      )}
+    </span>
+  );
+}
+
+/**
+ * E1 · Painel como fila de trabalho. Os quatro contadores de volume saíram:
+ * a tela agora abre pela única pergunta que importa no dia a dia — quem está
+ * esperando resposta e há quanto tempo.
+ */
 export default async function PainelPage() {
-  const { userName, companyName, publicUrl, stats, priority } =
+  const { userName, companyName, publicUrl, stats, priority, jobs } =
     await getPainelData();
   const firstName = userName.split(" ")[0];
 
-  // Primeiro uso (nenhuma vaga ainda): induz a G4 em vez de mostrar zeros.
+  // Primeiro uso (nenhuma vaga ainda): induz a criar a vaga, sem mostrar zeros.
   if (stats.totalJobs === 0) {
     return (
       <>
@@ -68,33 +113,7 @@ export default async function PainelPage() {
     );
   }
 
-  const cards = [
-    {
-      value: stats.openJobs,
-      label: "Vagas abertas",
-      hint: `de ${stats.totalJobs} no total`,
-      href: "/vagas",
-    },
-    {
-      value: stats.newApplications7d,
-      label: "Candidaturas novas",
-      hint: "últimos 7 dias",
-      href: "/candidaturas?status=PENDING",
-    },
-    {
-      value: stats.meetingMinimum,
-      label: "Atendem o mínimo",
-      hint: "sinalizadas pela IA",
-      green: true,
-      href: "/candidaturas?atende=1",
-    },
-    {
-      value: stats.inInterview,
-      label: "Em entrevista",
-      hint: "aguardando decisão",
-      href: "/candidaturas?status=INTERVIEW",
-    },
-  ];
+  const clear = stats.waiting === 0;
 
   return (
     <>
@@ -102,7 +121,9 @@ export default async function PainelPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">Olá, {firstName}</h1>
           <p className="mt-2 text-sm text-[#71717a]">
-            Resumo do recrutamento da {companyName} hoje.
+            {stats.newApplications7d} candidatura
+            {stats.newApplications7d === 1 ? "" : "s"} e {stats.decided7d} decis
+            {stats.decided7d === 1 ? "ão" : "ões"} nos últimos 7 dias.
           </p>
         </div>
         <Link
@@ -117,76 +138,148 @@ export default async function PainelPage() {
         </Link>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => (
-          <Link
-            key={card.label}
-            href={card.href}
-            className="group rounded-xl border border-[#e4e4e7] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
-          >
-            <p
+      {/* A fila: o único número que muda o que o gestor faz agora */}
+      <section
+        className={
+          "mt-8 flex flex-wrap items-center justify-between gap-6 rounded-2xl border p-7 " +
+          (clear
+            ? "border-[#e4e4e7] bg-white"
+            : "border-[#f0e3c8] bg-[#fdfaf3]")
+        }
+      >
+        <div>
+          <p className="flex items-baseline gap-3">
+            <span
               className={
-                "text-4xl font-bold " +
-                (card.green ? "text-[#1f7a4d]" : "text-[#0a0a0a]")
+                "text-5xl font-bold " +
+                (clear ? "text-[#1f7a4d]" : "text-[#b07818]")
               }
             >
-              {card.value}
-            </p>
-            <p className="mt-3 flex items-center gap-1 text-sm font-medium text-[#0a0a0a]">
-              {card.label}
-              <span className="text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100">
-                ›
-              </span>
-            </p>
-            <p className="text-[11px] text-[#71717a]">{card.hint}</p>
-          </Link>
-        ))}
-      </div>
-
-      <div className="mt-10 flex items-baseline gap-4">
-        <h2 className="text-[15px] font-semibold text-[#0a0a0a]">
-          Precisam da sua atenção
-        </h2>
-        <span className="text-xs text-[#71717a]">Priorizado pela IA</span>
-      </div>
-
-      <div className="mt-4 max-w-[848px] overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
-        {priority.length === 0 && (
-          <p className="p-6 text-sm text-[#71717a]">
-            Nenhuma candidatura pendente no momento.
+              {clear ? "0" : stats.waiting}
+            </span>
+            <span className="text-lg font-medium text-[#0a0a0a]">
+              {clear
+                ? "ninguém esperando resposta"
+                : `${stats.waiting === 1 ? "candidato" : "candidatos"} esperando sua resposta`}
+            </span>
           </p>
-        )}
-        {priority.map((app) => (
+          <p className="mt-2 text-sm text-[#71717a]">
+            {clear
+              ? "Fila limpa. Todo mundo que se candidatou já teve um retorno seu."
+              : stats.oldestWaitingAt
+                ? `O mais antigo se candidatou ${formatWaiting(stats.oldestWaitingAt)} e ainda não teve retorno.`
+                : ""}
+          </p>
+        </div>
+        {!clear && (
           <Link
-            key={app.id}
-            href={`/candidaturas/${app.id}`}
-            className="flex items-center gap-3.5 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] focus-visible:bg-[#fafaf9] focus-visible:outline-none"
+            href="/candidaturas?status=PENDING"
+            className="flex h-11 items-center rounded-2xl px-6 text-sm font-medium transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: "var(--brand-primary)",
+              color: "var(--brand-foreground)",
+            }}
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
-              {personInitials(app.name)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
-                {app.name}
-              </span>
-              <span className="block truncate text-[11px] text-[#71717a]">
-                {app.jobTitle}
-              </span>
-            </span>
-            <AiScoreChip
-              aiScore={app.aiScore}
-              aiState={app.aiState}
-              meetsMinimum={app.meetsMinimum}
-            />
-            <span
-              className="ml-6 text-xs font-medium"
-              style={{ color: "var(--brand-primary)" }}
-            >
-              Abrir ›
-            </span>
+            Começar a triagem
           </Link>
-        ))}
-      </div>
+        )}
+      </section>
+
+      {/* Fila priorizada — e a linha diz por que a pessoa está aí */}
+      {priority.length > 0 && (
+        <>
+          <div className="mt-10 flex items-baseline gap-4">
+            <h2 className="text-[15px] font-semibold text-[#0a0a0a]">
+              Quem está esperando há mais tempo
+            </h2>
+          </div>
+
+          <div className="mt-4 max-w-[848px] overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
+            {priority.map((app) => (
+              <Link
+                key={app.id}
+                href={`/candidaturas/${app.id}`}
+                className="flex items-center gap-3.5 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] focus-visible:bg-[#fafaf9] focus-visible:outline-none"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
+                  {personInitials(app.name)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
+                    {app.name}
+                  </span>
+                  <span className="block truncate text-[11px] text-[#71717a]">
+                    {app.jobTitle} · espera{" "}
+                    <span className="font-medium text-[#b07818]">
+                      {formatWaiting(app.createdAt)}
+                    </span>
+                  </span>
+                </span>
+                <AiScoreChip
+                  aiScore={app.aiScore}
+                  aiState={app.aiState}
+                  meetsMinimum={app.meetsMinimum}
+                />
+                <span
+                  className="ml-6 text-xs font-medium"
+                  style={{ color: "var(--brand-primary)" }}
+                >
+                  Abrir ›
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Andamento por processo — a vaga é a unidade de trabalho */}
+      {jobs.length > 0 && (
+        <>
+          <h2 className="mt-10 text-[15px] font-semibold text-[#0a0a0a]">
+            Seus processos
+          </h2>
+          <div className="mt-4 grid max-w-[848px] grid-cols-1 gap-4 sm:grid-cols-2">
+            {jobs.map((job) => (
+              <Link
+                key={job.id}
+                href={`/vagas/${job.id}`}
+                className="rounded-xl border border-[#e4e4e7] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)]"
+              >
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="truncate text-sm font-medium text-[#0a0a0a]">
+                    {job.title}
+                  </span>
+                  {job.status !== "OPEN" && (
+                    <span className="shrink-0 text-[10px] font-medium text-[#b07818]">
+                      {jobStatusLabels[job.status]}
+                    </span>
+                  )}
+                </span>
+                <span className="mt-3 block">
+                  <FunnelBar
+                    pending={job.pending}
+                    interview={job.interview}
+                    approved={job.approved}
+                    rejected={job.rejected}
+                  />
+                </span>
+                <span className="mt-2.5 block text-[11px] text-[#71717a]">
+                  {job.total} candidato{job.total === 1 ? "" : "s"}
+                  {job.pending > 0 && (
+                    <>
+                      {" · "}
+                      <span className="font-medium text-[#b07818]">
+                        {job.pending} esperando
+                      </span>
+                    </>
+                  )}
+                  {job.interview > 0 && ` · ${job.interview} em entrevista`}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }

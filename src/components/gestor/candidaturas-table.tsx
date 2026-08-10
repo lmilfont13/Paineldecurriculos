@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 
-import type { AIState, AppStatus } from "@prisma/client";
-
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { Toast } from "@/components/gestor/toast";
@@ -15,30 +13,66 @@ import {
   formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
+import {
+  applyFilters,
+  countByStage,
+  meetsMinimum,
+  selectStage,
+  sortRows,
+  type CandidaturaRow,
+  type SortKey,
+  type StageKey,
+} from "@/server/models/candidate-list.model";
 import { personInitials } from "@/server/models/dashboard.model";
 
-export type CandidaturaRow = {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string; // ISO
-  status: AppStatus;
-  aiState: AIState;
-  aiScore: number | null;
-  resumeUrl: string | null;
-  jobId: string;
-  jobTitle: string;
-  aiMinScore: number;
+export type { CandidaturaRow };
+
+/** Etapas do funil como abas — a organização segue o processo, não a tabela. */
+const TABS: { key: StageKey; label: string }[] = [
+  { key: "PENDING", label: "Triagem" },
+  { key: "INTERVIEW", label: "Entrevista" },
+  { key: "APPROVED", label: "Aprovados" },
+  { key: "REJECTED", label: "Reprovados" },
+  { key: "ALL", label: "Todos" },
+];
+
+const SORT_LABELS: Record<SortKey, string> = {
+  WAITING: "Quem espera há mais tempo",
+  RECENT: "Mais recentes",
+  SCORE: "Maior aderência",
 };
 
 const statusPill: Record<AppStatusKey, string> = {
-  PENDING: "bg-[#f1f0ed] text-[#a1a1aa]",
+  PENDING: "bg-[#f1f0ed] text-[#71717a]",
   INTERVIEW: "bg-[#f7f0e1] text-[#b07818]",
   APPROVED: "bg-[#e4f6ec] text-[#1f7a4d]",
   REJECTED: "bg-[#fbeae8] text-[#c23b3b]",
 };
 
-/** E3/E9 · Candidaturas com filtros, seleção em massa e exportação (G11). */
+/** Ações em massa por etapa — só o que faz sentido de onde o gestor está. */
+const BULK_BY_TAB: Record<StageKey, AppStatusKey[]> = {
+  PENDING: ["INTERVIEW", "REJECTED"],
+  INTERVIEW: ["APPROVED", "REJECTED"],
+  APPROVED: ["INTERVIEW"],
+  REJECTED: ["PENDING"],
+  ALL: ["INTERVIEW", "APPROVED", "REJECTED"],
+};
+
+const BULK_LABELS: Record<AppStatusKey, string> = {
+  PENDING: "Voltar p/ triagem",
+  INTERVIEW: "Chamar p/ entrevista",
+  APPROVED: "Aprovar",
+  REJECTED: "Reprovar",
+};
+
+const PAGE = 40;
+
+/**
+ * Candidatos (E3/E9). A etapa do funil é o organizador da tela: cada aba traz
+ * a contagem, então o gestor vê onde está o trabalho antes de filtrar às
+ * cegas. Dentro da triagem, a ordem padrão é por tempo de espera — a fila
+ * começa por quem foi deixado esperando.
+ */
 export function CandidaturasTable({
   rows,
   jobs,
@@ -52,34 +86,36 @@ export function CandidaturasTable({
   initialStatus?: AppStatusKey;
   initialOnlyMeets?: boolean;
 }) {
+  const pendingTotal = rows.filter((r) => r.status === "PENDING").length;
+
+  const [tab, setTab] = useState<StageKey>(
+    initialStatus ?? (pendingTotal > 0 ? "PENDING" : "ALL")
+  );
   const [search, setSearch] = useState("");
   const [jobId, setJobId] = useState(initialJobId ?? "");
-  const [status, setStatus] = useState<"" | AppStatusKey>(initialStatus ?? "");
   const [onlyMeets, setOnlyMeets] = useState(initialOnlyMeets);
-  const [minScore, setMinScore] = useState(0);
+  const [sort, setSort] = useState<SortKey>("WAITING");
+  const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((row) => {
-      if (q && !row.name.toLowerCase().includes(q) && !row.email.toLowerCase().includes(q))
-        return false;
-      if (jobId && row.jobId !== jobId) return false;
-      if (status && row.status !== status) return false;
-      if (onlyMeets && (row.aiScore === null || row.aiScore < row.aiMinScore))
-        return false;
-      if (minScore > 0 && (row.aiScore === null || row.aiScore < minScore))
-        return false;
-      return true;
-    });
-  }, [rows, search, jobId, status, minScore, onlyMeets]);
+  /** Tudo menos a aba — é a base das contagens de cada aba (scent honesto). */
+  const scoped = useMemo(
+    () => applyFilters(rows, { search, jobId, onlyMeets }),
+    [rows, search, jobId, onlyMeets]
+  );
+  const counts = useMemo(() => countByStage(scoped), [scoped]);
+  const filtered = useMemo(
+    () => sortRows(selectStage(scoped, tab), sort),
+    [scoped, tab, sort]
+  );
 
+  const visible = filtered.slice(0, limit);
   const visibleSelected = filtered.filter((r) => selected.has(r.id));
   const allVisibleSelected =
-    filtered.length > 0 && visibleSelected.length === filtered.length;
+    visible.length > 0 && visible.every((r) => selected.has(r.id));
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -92,16 +128,15 @@ export function CandidaturasTable({
 
   function toggleAll() {
     setSelected(
-      allVisibleSelected ? new Set() : new Set(filtered.map((r) => r.id))
+      allVisibleSelected ? new Set() : new Set(visible.map((r) => r.id))
     );
   }
 
-  function clearFilters() {
-    setSearch("");
-    setJobId("");
-    setStatus("");
-    setMinScore(0);
-    setOnlyMeets(false);
+  function changeTab(key: StageKey) {
+    setTab(key);
+    setSelected(new Set());
+    setLimit(PAGE);
+    setSort(key === "PENDING" ? "WAITING" : "RECENT");
   }
 
   /** Ações que enviam e-mail ao candidato exigem confirmação (irreversível). */
@@ -116,7 +151,7 @@ export function CandidaturasTable({
     startTransition(async () => {
       const { updated } = await bulkSetApplicationStatusAction(ids, newStatus);
       setToast(
-        `${updated} candidatura${updated === 1 ? "" : "s"} movida${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}".`
+        `${updated} candidato${updated === 1 ? "" : "s"} movido${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}".`
       );
       setSelected(new Set());
     });
@@ -145,55 +180,87 @@ export function CandidaturasTable({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "candidaturas.csv";
+    a.download = "candidatos.csv";
     a.click();
     URL.revokeObjectURL(url);
     setToast(`CSV exportado (${rowsToExport.length} linhas).`);
   }
 
-  const activeChips: { label: string; clear: () => void }[] = [];
-  if (onlyMeets)
-    activeChips.push({
-      label: "Atendem o mínimo",
-      clear: () => setOnlyMeets(false),
-    });
-  if (minScore > 0)
-    activeChips.push({ label: `Score ≥ ${minScore}`, clear: () => setMinScore(0) });
-  if (status)
-    activeChips.push({
-      label: appStatusLabels[status],
-      clear: () => setStatus(""),
-    });
-  if (jobId)
-    activeChips.push({
-      label: jobs.find((j) => j.id === jobId)?.title ?? "Vaga",
-      clear: () => setJobId(""),
-    });
-
-  const inputBase =
-    "h-full bg-transparent text-[13px] text-[#0a0a0a] focus:outline-none";
-
   const anyAnalyzing = rows.some(
     (r) => r.aiState === "WAITING" || r.aiState === "PROCESSING"
   );
+  const cols =
+    "grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_44px_72px]";
 
   return (
     <>
       <LiveRefresh active={anyAnalyzing} />
-      <p className="mt-2 text-sm text-[#71717a]">
-        {rows.length} no total
-        {selected.size > 0 ? ` · ${selected.size} selecionadas` : ""}
-        {anyAnalyzing && (
-          <span className="ml-2 inline-flex items-center gap-1.5 text-[#8a8781]">
-            <span className="size-1.5 animate-pulse rounded-full bg-[#8a8781]" />
-            atualizando análises…
-          </span>
-        )}
-      </p>
 
-      {/* Barra de filtros (E9) */}
-      <div className="mt-6 flex h-12 items-stretch divide-x divide-[#e4e4e7] overflow-hidden rounded-[10px] border border-[#e4e4e7] bg-white">
-        <div className="flex flex-1 items-center gap-2 px-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 className="text-2xl font-bold text-[#0a0a0a]">Candidatos</h1>
+        <p className="text-sm text-[#71717a]">
+          {rows.length} no total
+          {pendingTotal > 0 && (
+            <>
+              {" · "}
+              <span className="font-medium text-[#b07818]">
+                {pendingTotal} esperando sua resposta
+              </span>
+            </>
+          )}
+          {anyAnalyzing && (
+            <span className="ml-2 inline-flex items-center gap-1.5 text-[#8a8781]">
+              <span className="size-1.5 animate-pulse rounded-full bg-[#8a8781]" />
+              atualizando análises…
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* Etapas do funil com contagem — onde está o trabalho, sem filtrar às cegas */}
+      <div
+        role="tablist"
+        aria-label="Etapa do processo"
+        className="mt-6 flex flex-wrap gap-1 border-b border-[#e4e4e7]"
+      >
+        {TABS.map((item) => {
+          const active = tab === item.key;
+          return (
+            <button
+              key={item.key}
+              role="tab"
+              aria-selected={active}
+              type="button"
+              onClick={() => changeTab(item.key)}
+              className={
+                "-mb-px flex items-center gap-2 border-b-2 px-3.5 pb-2.5 pt-1 text-[13px] transition-colors " +
+                (active
+                  ? "font-medium text-[#0a0a0a]"
+                  : "border-transparent text-[#71717a] hover:text-[#0a0a0a]")
+              }
+              style={
+                active ? { borderColor: "var(--brand-primary)" } : undefined
+              }
+            >
+              {item.label}
+              <span
+                className={
+                  "rounded-full px-1.5 text-[11px] font-medium " +
+                  (active
+                    ? "bg-[#e7e5e4] text-[#0a0a0a]"
+                    : "bg-[#f1f0ed] text-[#a1a1aa]")
+                }
+              >
+                {counts[item.key]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Controles secundários: refinam a aba, não competem com ela */}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3">
           <span className="text-sm text-[#a1a1aa]" aria-hidden>
             ⌕
           </span>
@@ -201,82 +268,56 @@ export function CandidaturasTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar nome ou e-mail…"
-            aria-label="Buscar candidaturas"
-            className={`${inputBase} w-full placeholder:text-[#a1a1aa]`}
+            aria-label="Buscar candidatos"
+            className="w-full bg-transparent text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
           />
         </div>
+
+        {jobs.length > 1 && (
+          <select
+            value={jobId}
+            onChange={(e) => setJobId(e.target.value)}
+            aria-label="Filtrar por vaga"
+            className="h-9 max-w-[220px] rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+          >
+            <option value="">Todas as vagas</option>
+            {jobs.map((job) => (
+              <option key={job.id} value={job.id}>
+                {job.title}
+              </option>
+            ))}
+          </select>
+        )}
+
         <select
-          value={jobId}
-          onChange={(e) => setJobId(e.target.value)}
-          aria-label="Filtrar por vaga"
-          className={`${inputBase} max-w-[180px] px-3`}
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          aria-label="Ordenar por"
+          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
         >
-          <option value="">Vaga: todas</option>
-          {jobs.map((job) => (
-            <option key={job.id} value={job.id}>
-              {job.title}
-            </option>
-          ))}
-        </select>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as "" | AppStatusKey)}
-          aria-label="Filtrar por status"
-          className={`${inputBase} max-w-[160px] px-3`}
-        >
-          <option value="">Status: todos</option>
-          {Object.entries(appStatusLabels).map(([value, label]) => (
+          {Object.entries(SORT_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-3 px-4 text-[13px] text-[#0a0a0a]">
-          Score ≥
+
+        <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
           <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={minScore}
-            onChange={(e) => setMinScore(Number(e.target.value))}
-            className="w-[120px]"
-            style={{ accentColor: "var(--brand-primary)" }}
+            type="checkbox"
+            checked={onlyMeets}
+            onChange={(e) => setOnlyMeets(e.target.checked)}
+            className="size-3.5 accent-[#0a0a0a]"
           />
-          <span className="w-6 text-sm font-bold">{minScore}</span>
+          Só quem atende o mínimo
         </label>
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="px-4 text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
-        >
-          Limpar filtros
-        </button>
       </div>
 
-      {/* Chips de filtros ativos */}
-      {activeChips.length > 0 && (
-        <div className="mt-4 flex items-center gap-3">
-          {activeChips.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={chip.clear}
-              className="flex h-7 items-center gap-2 rounded-full bg-[#e7e5e4] px-3 text-[11px] font-medium text-[#0a0a0a] hover:bg-[#dedcda]"
-            >
-              {chip.label}
-              <span className="text-[#71717a]">✕</span>
-            </button>
-          ))}
-          <span className="text-xs text-[#a1a1aa]">
-            {filtered.length} resultado{filtered.length === 1 ? "" : "s"}
-          </span>
-        </div>
-      )}
-
-      {/* Tabela */}
-      <div className="mt-6 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
-        <div className="grid grid-cols-[40px_minmax(200px,2fr)_170px_140px_80px_60px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-3.5">
+      {/* Lista */}
+      <div className="mt-5 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
+        <div
+          className={`grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3`}
+        >
           <input
             type="checkbox"
             checked={allVisibleSelected}
@@ -284,29 +325,38 @@ export function CandidaturasTable({
             aria-label="Selecionar todos"
             className="size-4 accent-[#0a0a0a]"
           />
-          {["CANDIDATO", "ADERÊNCIA · IA", "STATUS", "DATA", "CV", ""].map(
-            (h, i) => (
-              <span
-                key={i}
-                className="text-[11px] font-medium tracking-[0.6px] text-[#a1a1aa]"
-              >
-                {h}
-              </span>
-            )
-          )}
+          {[
+            "CANDIDATO",
+            "ADERÊNCIA · IA",
+            tab === "PENDING" ? "ESPERANDO" : "QUANDO",
+            "CV",
+            "",
+          ].map((h, i) => (
+            <span
+              key={i}
+              className="text-[11px] font-medium tracking-[0.6px] text-[#a1a1aa]"
+            >
+              {h}
+            </span>
+          ))}
         </div>
+
         {filtered.length === 0 && (
           <p className="p-6 text-sm text-[#71717a]">
-            Nenhuma candidatura com esses filtros.
+            {tab === "PENDING"
+              ? "Ninguém esperando resposta. Fila limpa."
+              : "Nenhum candidato nesta etapa."}
           </p>
         )}
-        {filtered.map((row) => {
+
+        {visible.map((row) => {
           const isSelected = selected.has(row.id);
+          const waiting = row.status === "PENDING";
           return (
             <div
               key={row.id}
               className={
-                "grid grid-cols-[40px_minmax(200px,2fr)_170px_140px_80px_60px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-4 last:border-b-0 " +
+                `grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3.5 transition-colors last:border-b-0 hover:bg-[#fafaf9] ` +
                 (isSelected ? "bg-[#fafaf9]" : "")
               }
             >
@@ -317,7 +367,10 @@ export function CandidaturasTable({
                 aria-label={`Selecionar ${row.name}`}
                 className="size-4 accent-[#0a0a0a]"
               />
-              <div className="flex min-w-0 items-center gap-3">
+              <Link
+                href={`/candidaturas/${row.id}`}
+                className="flex min-w-0 items-center gap-3 focus-visible:outline-none"
+              >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
                   {personInitials(row.name)}
                 </span>
@@ -329,25 +382,25 @@ export function CandidaturasTable({
                     {row.jobTitle}
                   </span>
                 </span>
-              </div>
+              </Link>
               <AiScoreChip
                 aiScore={row.aiScore}
                 aiState={row.aiState}
-                meetsMinimum={
-                  row.aiScore !== null && row.aiScore >= row.aiMinScore
-                }
+                meetsMinimum={meetsMinimum(row)}
               />
-              <span
-                className={`inline-flex h-6 w-fit items-center gap-1.5 rounded-full px-3 text-[11px] font-medium ${statusPill[row.status]}`}
-              >
-                <span className="size-1.5 rounded-full bg-current" />
-                {appStatusLabels[row.status]}
-              </span>
-              <span className="text-xs text-[#71717a]">
-                {formatAppliedAt(new Date(row.createdAt))}
-                {row.status === "PENDING" && (
-                  <span className="block text-[11px] font-medium text-[#b07818]">
+              <span className="min-w-0 text-xs text-[#71717a]">
+                {waiting ? (
+                  <span className="font-medium text-[#b07818]">
                     {formatWaiting(new Date(row.createdAt))}
+                  </span>
+                ) : (
+                  formatAppliedAt(new Date(row.createdAt))
+                )}
+                {tab === "ALL" && (
+                  <span
+                    className={`ml-2 inline-flex h-5 items-center rounded-full px-2 text-[10px] font-medium ${statusPill[row.status]}`}
+                  >
+                    {appStatusLabels[row.status]}
                   </span>
                 )}
               </span>
@@ -372,6 +425,26 @@ export function CandidaturasTable({
             </div>
           );
         })}
+
+        {filtered.length > visible.length && (
+          <button
+            type="button"
+            onClick={() => setLimit((l) => l + PAGE)}
+            className="w-full border-t border-[#e4e4e7] py-3 text-[13px] font-medium text-[#71717a] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+          >
+            Mostrar mais ({filtered.length - visible.length} restantes)
+          </button>
+        )}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="text-xs font-medium text-[#a1a1aa] hover:text-[#0a0a0a]"
+        >
+          Exportar CSV
+        </button>
       </div>
 
       {/* Barra de ações em massa (E9) */}
@@ -381,37 +454,22 @@ export function CandidaturasTable({
             {selected.size} selecionado{selected.size === 1 ? "" : "s"}
           </span>
           <span className="h-8 w-px bg-white/15" />
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => requestBulk("INTERVIEW")}
-            className="h-[34px] rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
-          >
-            Mover p/ Entrevista
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => requestBulk("APPROVED")}
-            className="h-[34px] rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
-          >
-            Aprovar
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => requestBulk("REJECTED")}
-            className="h-[34px] rounded-[10px] bg-[#c86b60]/25 px-4 text-xs font-medium text-[#f5b7b0] hover:bg-[#c86b60]/40 disabled:opacity-50"
-          >
-            Reprovar
-          </button>
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="h-[34px] rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20"
-          >
-            Exportar CSV
-          </button>
+          {BULK_BY_TAB[tab].map((target) => (
+            <button
+              key={target}
+              type="button"
+              disabled={pending}
+              onClick={() => requestBulk(target)}
+              className={
+                "h-[34px] rounded-[10px] px-4 text-xs font-medium disabled:opacity-50 " +
+                (target === "REJECTED"
+                  ? "bg-[#c86b60]/25 text-[#f5b7b0] hover:bg-[#c86b60]/40"
+                  : "bg-white/12 text-white hover:bg-white/20")
+              }
+            >
+              {BULK_LABELS[target]}
+            </button>
+          ))}
           {selected.size >= 2 && selected.size <= 3 && (
             <Link
               href={`/candidaturas/comparar?ids=${[...selected].join(",")}`}
@@ -444,8 +502,8 @@ export function CandidaturasTable({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold text-[#0a0a0a]">
-              {appStatusLabels[confirm]} {selected.size}{" "}
-              candidatura{selected.size === 1 ? "" : "s"}?
+              {BULK_LABELS[confirm]}: {selected.size} candidato
+              {selected.size === 1 ? "" : "s"}?
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#71717a]">
               {confirm === "REJECTED"
@@ -468,7 +526,7 @@ export function CandidaturasTable({
                   (confirm === "REJECTED" ? "bg-[#c23b3b]" : "bg-[#0a0a0a]")
                 }
               >
-                {confirm === "REJECTED" ? "Reprovar" : `Confirmar`}
+                {confirm === "REJECTED" ? "Reprovar" : "Confirmar"}
               </button>
             </div>
           </div>

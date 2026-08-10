@@ -13,6 +13,14 @@ import {
 import {
   candidateSignupSchema,
 } from "@/server/models/candidate.model";
+import {
+  applyFilters,
+  countByStage,
+  meetsMinimum,
+  selectStage,
+  sortRows,
+  type CandidaturaRow,
+} from "@/server/models/candidate-list.model";
 import { personInitials } from "@/server/models/dashboard.model";
 import {
   formatJobMeta,
@@ -213,5 +221,86 @@ describe("schemas zod", () => {
         password: "1234",
       }).success
     ).toBe(false);
+  });
+});
+
+describe("lista de candidatos (etapas, filtros e ordem)", () => {
+  const row = (
+    over: Partial<CandidaturaRow> & Pick<CandidaturaRow, "id">
+  ): CandidaturaRow => ({
+    name: "Fulano de Tal",
+    email: "fulano@email.com",
+    createdAt: "2026-07-10T12:00:00.000Z",
+    status: "PENDING",
+    aiState: "DONE",
+    aiScore: 80,
+    resumeUrl: "cv.pdf",
+    jobId: "vaga-1",
+    jobTitle: "Full Stack",
+    aiMinScore: 70,
+    ...over,
+  });
+
+  const rows: CandidaturaRow[] = [
+    row({ id: "a", name: "Ana Lima", createdAt: "2026-07-01T00:00:00.000Z", aiScore: 90 }),
+    row({ id: "b", name: "Bruno Sá", createdAt: "2026-07-05T00:00:00.000Z", aiScore: 60 }),
+    row({ id: "c", name: "Célia Rocha", createdAt: "2026-07-09T00:00:00.000Z", status: "INTERVIEW", aiScore: null, aiState: "NO_RESUME" }),
+    row({ id: "d", name: "Davi Souza", createdAt: "2026-07-02T00:00:00.000Z", status: "REJECTED", jobId: "vaga-2" }),
+  ];
+
+  it("conta cada etapa e o total", () => {
+    const counts = countByStage(rows);
+    expect(counts.PENDING).toBe(2);
+    expect(counts.INTERVIEW).toBe(1);
+    expect(counts.REJECTED).toBe(1);
+    expect(counts.APPROVED).toBe(0);
+    expect(counts.ALL).toBe(4);
+  });
+
+  it("as contagens respeitam os filtros ativos", () => {
+    const counts = countByStage(
+      applyFilters(rows, { search: "", jobId: "vaga-2", onlyMeets: false })
+    );
+    expect(counts.ALL).toBe(1);
+    expect(counts.PENDING).toBe(0);
+  });
+
+  it("busca por nome ou e-mail, sem diferenciar caixa", () => {
+    expect(
+      applyFilters(rows, { search: "ANA", jobId: "", onlyMeets: false })
+    ).toHaveLength(1);
+    expect(
+      applyFilters(rows, { search: "fulano@", jobId: "", onlyMeets: false })
+    ).toHaveLength(4);
+  });
+
+  it("só quem atende o mínimo exclui abaixo do corte e sem análise", () => {
+    const kept = applyFilters(rows, {
+      search: "",
+      jobId: "",
+      onlyMeets: true,
+    }).map((r) => r.id);
+    expect(kept).toEqual(["a", "d"]); // b tem 60 (<70) e c não tem score
+  });
+
+  it("triagem ordenada por espera começa por quem chegou primeiro", () => {
+    const ids = sortRows(selectStage(rows, "PENDING"), "WAITING").map((r) => r.id);
+    expect(ids).toEqual(["a", "b"]);
+  });
+
+  it("mais recentes inverte a ordem do tempo", () => {
+    const ids = sortRows(rows, "RECENT").map((r) => r.id);
+    expect(ids).toEqual(["c", "b", "d", "a"]);
+  });
+
+  it("por aderência joga quem não tem score para o fim", () => {
+    const ids = sortRows(rows, "SCORE").map((r) => r.id);
+    expect(ids[0]).toBe("a");
+    expect(ids.at(-1)).toBe("c");
+  });
+
+  it("meetsMinimum trata score ausente como não atende", () => {
+    expect(meetsMinimum(row({ id: "x", aiScore: null }))).toBe(false);
+    expect(meetsMinimum(row({ id: "x", aiScore: 70, aiMinScore: 70 }))).toBe(true);
   });
 });

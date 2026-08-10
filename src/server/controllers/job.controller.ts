@@ -69,4 +69,6 @@ export async function setJobStatusAction(
   const user = await requireManager();
   await updateCompanyJob(user.companyId, jobId, { status });
   revalidatePath("/vagas");
+  revalidatePath(`/vagas/${jobId}`);
+  revalidatePath("/painel");
 }

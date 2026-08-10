@@ -5,6 +5,7 @@ import { cache } from "react";
 import { requireManager } from "@/server/controllers/guards";
 import type {
   DashboardStats,
+  JobProgress,
   PriorityApplication,
 } from "@/server/models/dashboard.model";
 import {
@@ -49,6 +50,20 @@ export async function getCandidaturasPageData(jobId?: string) {
   return { applications, jobs };
 }
 
+/** Hub da vaga: o processo inteiro em um lugar (funil, sinais, critérios). */
+export async function getVagaDetailData(jobId: string) {
+  const { user, company } = await getGestorShell();
+  const job = await getCompanyJob(user.companyId, jobId);
+  if (!job) return null;
+  const applications = await listCompanyApplications(user.companyId, jobId);
+  return {
+    job,
+    companySlug: company.slug,
+    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas/${job.id}`,
+    applications,
+  };
+}
+
 export async function getCandidaturaDetail(id: string) {
   const { user } = await getGestorShell();
   return getCompanyApplication(user.companyId, id);
@@ -76,9 +91,10 @@ export async function getPainelData(): Promise<{
   publicUrl: string;
   stats: DashboardStats;
   priority: PriorityApplication[];
+  jobs: JobProgress[];
 }> {
   const { user, company } = await getGestorShell();
-  const { stats, priority } = await getDashboard(user.companyId);
+  const { stats, priority, jobs } = await getDashboard(user.companyId);
   return {
     userName: user.name ?? user.email,
     companyName: company.name,
@@ -86,5 +102,6 @@ export async function getPainelData(): Promise<{
     publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas`,
     stats,
     priority,
+    jobs,
   };
 }

@@ -10,7 +10,7 @@ import {
   type AppStatusKey,
 } from "@/server/models/application.model";
 
-export const metadata: Metadata = { title: "Candidaturas · Triagem" };
+export const metadata: Metadata = { title: "Candidatos · Triagem" };
 
 /** E3/E9 · Candidaturas com filtros e seleção em massa. */
 export default async function CandidaturasPage({
@@ -39,7 +39,6 @@ export default async function CandidaturasPage({
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-[#0a0a0a]">Candidaturas</h1>
       <CandidaturasTable
         rows={rows}
         jobs={jobs.map((j) => ({ id: j.id, title: j.title }))}
