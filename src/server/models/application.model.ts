@@ -19,14 +19,27 @@ export type SubmitApplicationResult =
   | { ok: true; applicationId: string }
   | { ok: false; error: string };
 
+/**
+ * Rótulos do status do processo, na visão do gestor. "Análise" é palavra
+ * reservada para a IA — o status do processo nunca a usa, para as duas coisas
+ * não se confundirem na mesma tela.
+ */
 export const appStatusLabels = {
-  PENDING: "Em análise",
+  PENDING: "Triagem",
   INTERVIEW: "Entrevista",
   APPROVED: "Aprovado",
   REJECTED: "Reprovado",
 } as const;
 
 export type AppStatusKey = keyof typeof appStatusLabels;
+
+/** "há 9 dias" — torna visível o candidato esquecido. */
+export function formatWaiting(since: Date): string {
+  const days = Math.floor((Date.now() - since.getTime()) / 86_400_000);
+  if (days <= 0) return "hoje";
+  if (days === 1) return "há 1 dia";
+  return `há ${days} dias`;
+}
 
 /** "candidatou-se em 9 jul" / "…em 9 jul, 14:32" (E3/E4). */
 export function formatAppliedAt(date: Date, withTime = false): string {

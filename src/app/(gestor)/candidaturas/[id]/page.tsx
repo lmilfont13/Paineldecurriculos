@@ -2,17 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DecisionBlock } from "@/components/gestor/decision-block";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
-import {
-  DecisionButtons,
-  StatusSegment,
-} from "@/components/gestor/status-segment";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
 import {
   appStatusLabels,
   formatAppliedAt,
+  formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
 import { personInitials } from "@/server/models/dashboard.model";
@@ -80,46 +78,50 @@ export default async function CandidaturaDetailPage({
           <h1 className="text-xl font-bold text-[#0a0a0a]">{app.name}</h1>
           <p className="mt-0.5 text-xs text-[#71717a]">
             Candidatou-se em {formatAppliedAt(app.createdAt, true)}
+            {app.status === "PENDING" && (
+              <>
+                {" · "}
+                <span className="font-medium text-[#b07818]">
+                  esperando resposta {formatWaiting(app.createdAt)}
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
 
       {/* Bloco de IA — só leitura; nunca muda o status (regra 2) */}
       <section className="mt-6 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-6">
+        {/* A ressalva vem antes do dado, não depois: quem lê já lê enquadrado. */}
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
-          Análise de aderência · IA
+          Leitura da IA · apoio à decisão, a escolha é sua
         </p>
         {app.aiState === "DONE" && app.aiScore !== null ? (
           <>
-            <div className="mt-2 flex items-center gap-4">
-              <p className="text-5xl font-bold text-[#0a0a0a]">
-                {app.aiScore}
-                <span className="ml-1 text-sm font-normal text-[#a1a1aa]">
-                  /100
-                </span>
-              </p>
-              <div>
-                <span
-                  className={
-                    "inline-flex h-[30px] items-center gap-2 rounded-lg px-3.5 text-xs font-semibold " +
-                    (meets
-                      ? "bg-[#e4f6ec] text-[#1f7a4d]"
-                      : "bg-[#fbeae8] text-[#c23b3b]")
-                  }
-                >
-                  <span className="size-1.5 rounded-full bg-current" />
-                  {meets ? "Atende" : "Não atende"}
-                </span>
-                <p className="mt-1.5 text-[11px] text-[#71717a]">
-                  score mínimo: {app.job.aiMinScore}
-                </p>
-              </div>
-            </div>
+            {/* O raciocínio é o que informa; o número é só o resumo dele. */}
             {app.aiReasoning && (
-              <p className="mt-4 text-xs leading-[18px] text-[#0a0a0a]">
+              <p className="mt-3 text-[15px] leading-6 text-[#0a0a0a]">
                 {app.aiReasoning}
               </p>
             )}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className={
+                  "inline-flex h-7 items-center gap-2 rounded-lg px-3 text-xs font-semibold " +
+                  (meets
+                    ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                    : "bg-[#f1f0ed] text-[#71717a]")
+                }
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+                {app.aiScore} de 100
+              </span>
+              <span className="text-[11px] text-[#71717a]">
+                {meets
+                  ? `acima do mínimo definido para a vaga (${app.job.aiMinScore})`
+                  : `abaixo do mínimo definido para a vaga (${app.job.aiMinScore})`}
+              </span>
+            </div>
           </>
         ) : (
           <div className="mt-3 flex items-center gap-2 text-sm text-[#71717a]">
@@ -156,26 +158,23 @@ export default async function CandidaturaDetailPage({
           </div>
         )}
 
-        <p className="mt-4 rounded-md bg-[#f4f4f5] px-3.5 py-2 text-[11px] text-[#71717a]">
-          Apoio à decisão. A decisão final é sua.
-        </p>
       </section>
+
+      {/* Uma decisão, um lugar (antes eram dois controles para a mesma ação) */}
+      <DecisionBlock
+        applicationId={app.id}
+        status={app.status}
+        candidateName={app.name}
+      />
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-[#0a0a0a]">
-          Status do processo
+          Histórico do processo
         </h2>
-        <div className="mt-3">
-          <StatusSegment
-            applicationId={app.id}
-            status={app.status}
-            candidateName={app.name}
-          />
-        </div>
 
         {/* H1: histórico visível — quem moveu o quê, e quando */}
         {app.statusEvents.length > 0 && (
-          <ol className="mt-4 space-y-2 border-t border-[#e4e4e7] pt-4">
+          <ol className="mt-3 space-y-2">
             {app.statusEvents.map((event) => (
               <li
                 key={event.id}
@@ -251,14 +250,6 @@ export default async function CandidaturaDetailPage({
           </span>
         )}
       </section>
-
-      <footer className="mt-8 border-t border-[#e4e4e7] pt-6">
-        <DecisionButtons
-          applicationId={app.id}
-          status={app.status}
-          candidateName={app.name}
-        />
-      </footer>
     </div>
   );
 }

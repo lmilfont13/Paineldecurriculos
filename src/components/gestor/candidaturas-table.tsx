@@ -12,6 +12,7 @@ import { bulkSetApplicationStatusAction } from "@/server/controllers/application
 import {
   appStatusLabels,
   formatAppliedAt,
+  formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
 import { personInitials } from "@/server/models/dashboard.model";
@@ -344,6 +345,11 @@ export function CandidaturasTable({
               </span>
               <span className="text-xs text-[#71717a]">
                 {formatAppliedAt(new Date(row.createdAt))}
+                {row.status === "PENDING" && (
+                  <span className="block text-[11px] font-medium text-[#b07818]">
+                    {formatWaiting(new Date(row.createdAt))}
+                  </span>
+                )}
               </span>
               {row.resumeUrl ? (
                 <a

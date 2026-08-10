@@ -1,13 +1,14 @@
 "use client";
 
+import { ClipboardList, LayoutDashboard, Users, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/painel", label: "Painel" },
-  { href: "/vagas", label: "Vagas" },
-  { href: "/candidaturas", label: "Candidaturas", badge: true },
-  { href: "/formulario", label: "Formulário" },
+  { href: "/painel", label: "Painel", Icon: LayoutDashboard },
+  { href: "/vagas", label: "Vagas", Icon: Briefcase },
+  { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
+  { href: "/formulario", label: "Formulário", Icon: ClipboardList },
 ] as const;
 
 /**
@@ -42,11 +43,8 @@ export function GestorSidebar({
         >
           {companyInitials}
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
-            {companyName}
-          </span>
-          <span className="block text-[11px] text-[#71717a]">Plano Pro</span>
+        <span className="min-w-0 truncate text-[13px] font-medium text-[#0a0a0a]">
+          {companyName}
         </span>
       </div>
 
@@ -68,12 +66,12 @@ export function GestorSidebar({
                   : "text-[#71717a] hover:bg-[#eeedec]")
               }
             >
-              <span
-                className={"size-4 rounded " + (active ? "" : "bg-[#71717a]/50")}
+              <item.Icon
+                aria-hidden
+                className="size-4 shrink-0"
+                strokeWidth={active ? 2.25 : 1.75}
                 style={
-                  active
-                    ? { backgroundColor: "var(--brand-primary)" }
-                    : undefined
+                  active ? { color: "var(--brand-primary)" } : undefined
                 }
               />
               <span className="flex-1">{item.label}</span>
@@ -98,13 +96,8 @@ export function GestorSidebar({
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
           {userInitials}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
-            {userName}
-          </span>
-          <span className="block text-[11px] text-[#71717a]">
-            Gestor(a) de RH
-          </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#0a0a0a]">
+          {userName}
         </span>
         <button
           type="button"

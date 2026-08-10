@@ -8,7 +8,6 @@ import {
 } from "@/components/public/company-header";
 import { getMinhasCandidaturasData } from "@/server/controllers/public.controller";
 import {
-  appStatusLabels,
   formatAppliedAt,
   type AppStatusKey,
 } from "@/server/models/application.model";
