@@ -3,6 +3,8 @@ import "server-only";
 import type { AppStatus } from "@prisma/client";
 
 import {
+  interviewNotification,
+  managerMessageNotification,
   receivedNotification,
   stageNotification,
 } from "@/server/models/notification.model";
@@ -33,6 +35,54 @@ export async function notifyStageChange(params: {
     params.jobTitle
   );
   if (!content) return;
+  await createNotification({
+    candidateId: params.candidateId,
+    applicationId: params.applicationId,
+    type: content.type,
+    title: content.title,
+    body: content.body,
+  });
+}
+
+export async function notifyInterviewScheduled(params: {
+  candidateId: string | null;
+  applicationId: string;
+  companyName: string;
+  jobTitle: string;
+  when: string;
+  mode: string;
+  location: string | null;
+}): Promise<void> {
+  if (!params.candidateId) return;
+  const content = interviewNotification(
+    params.companyName,
+    params.jobTitle,
+    params.when,
+    params.mode,
+    params.location
+  );
+  await createNotification({
+    candidateId: params.candidateId,
+    applicationId: params.applicationId,
+    type: content.type,
+    title: content.title,
+    body: content.body,
+  });
+}
+
+export async function notifyManagerMessage(params: {
+  candidateId: string | null;
+  applicationId: string;
+  companyName: string;
+  jobTitle: string;
+  message: string;
+}): Promise<void> {
+  if (!params.candidateId) return;
+  const content = managerMessageNotification(
+    params.companyName,
+    params.jobTitle,
+    params.message
+  );
   await createNotification({
     candidateId: params.candidateId,
     applicationId: params.applicationId,

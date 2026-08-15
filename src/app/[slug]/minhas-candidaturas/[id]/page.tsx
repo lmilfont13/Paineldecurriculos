@@ -9,6 +9,8 @@ import {
 import { WithdrawButton } from "@/components/public/withdraw-button";
 import { getMinhaCandidaturaData } from "@/server/controllers/public.controller";
 import { formatAppliedAt } from "@/server/models/application.model";
+import { formatInterviewLong } from "@/server/models/interview.model";
+import { formatNotificationAge } from "@/server/models/notification.model";
 
 export const metadata: Metadata = { title: "Minha candidatura · Triagem" };
 
@@ -21,6 +23,8 @@ function eventLabel(
   switch (to) {
     case "INTERVIEW":
       return { label: "Você avançou para a entrevista", tone: "good" };
+    case "PENDING":
+      return { label: "Voltou para análise", tone: "neutral" };
     case "APPROVED":
       return { label: "Você foi aprovado(a) 🎉", tone: "good" };
     case "REJECTED":
@@ -65,6 +69,64 @@ export default async function MinhaCandidaturaPage({
           {application.company.name} · enviada em{" "}
           {formatAppliedAt(application.createdAt)}
         </p>
+
+        {/* A conversa combinada — a informação mais acionável da tela */}
+        {application.interviewAt && application.status === "INTERVIEW" && (
+          <section className="mt-8 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-6">
+            <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#b07818]">
+              Sua entrevista
+            </p>
+            <p className="mt-2 text-lg font-semibold text-[#0a0a0a]">
+              {formatInterviewLong(application.interviewAt)}
+            </p>
+            <p className="mt-1 text-sm text-[#71717a]">
+              {application.interviewMode ?? "A combinar"}
+              {application.interviewLocation && (
+                <>
+                  {" · "}
+                  {/^https?:\/\//.test(application.interviewLocation) ? (
+                    <a
+                      href={application.interviewLocation}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium underline"
+                      style={{ color: "var(--brand-primary)" }}
+                    >
+                      abrir link da chamada
+                    </a>
+                  ) : (
+                    application.interviewLocation
+                  )}
+                </>
+              )}
+            </p>
+            <p className="mt-3 text-[12px] leading-5 text-[#71717a]">
+              Se esse horário não funcionar, responda o e-mail que a{" "}
+              {application.company.name} enviou.
+            </p>
+          </section>
+        )}
+
+        {/* Recados da empresa */}
+        {application.notifications.length > 0 && (
+          <section className="mt-6 rounded-2xl border border-[#e4e4e7] bg-white p-6">
+            <h2 className="text-sm font-semibold text-[#0a0a0a]">
+              Recados da {application.company.name}
+            </h2>
+            <ul className="mt-4 space-y-4">
+              {application.notifications.map((message) => (
+                <li key={message.id}>
+                  <p className="text-[13px] leading-5 text-[#0a0a0a]">
+                    {message.body}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#a1a1aa]">
+                    {formatNotificationAge(message.createdAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Linha do tempo */}
         <section className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-6">

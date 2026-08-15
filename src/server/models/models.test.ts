@@ -23,7 +23,15 @@ import {
 } from "@/server/models/candidate-list.model";
 import { personInitials } from "@/server/models/dashboard.model";
 import {
+  formatInterviewAt,
+  formatInterviewLong,
+  interviewSchema,
+  interviewSummary,
+  isPastInterview,
+} from "@/server/models/interview.model";
+import {
   formatNotificationAge,
+  interviewNotification,
   stageNotification,
   whatHappensNow,
 } from "@/server/models/notification.model";
@@ -373,5 +381,59 @@ describe("notificações do candidato", () => {
     expect(formatNotificationAge(new Date(Date.now() - 72 * 60 * min))).toBe(
       "há 3 dias"
     );
+  });
+});
+
+describe("entrevista", () => {
+  const at = new Date(2026, 7, 20, 14, 0); // 20 de agosto de 2026, 14:00
+
+  it("formata data e hora para o candidato", () => {
+    expect(formatInterviewAt(at)).toBe("20 de agosto, 14:00");
+    expect(formatInterviewLong(at)).toContain("20 de agosto, 14:00");
+  });
+
+  it("resumo junta modo e horário, e sobrevive sem modo", () => {
+    expect(interviewSummary(at, "Videochamada")).toBe(
+      "Videochamada · 20 de agosto, 14:00"
+    );
+    expect(interviewSummary(at, null)).toBe("20 de agosto, 14:00");
+  });
+
+  it("reconhece entrevista que já passou", () => {
+    expect(isPastInterview(new Date(Date.now() - 3600_000))).toBe(true);
+    expect(isPastInterview(new Date(Date.now() + 3600_000))).toBe(false);
+  });
+
+  it("schema exige data válida e modo conhecido", () => {
+    const base = { at: "2026-08-20T14:00", mode: "Videochamada", location: "" };
+    expect(interviewSchema.safeParse(base).success).toBe(true);
+    expect(
+      interviewSchema.safeParse({ ...base, at: "não é data" }).success
+    ).toBe(false);
+    expect(
+      interviewSchema.safeParse({ ...base, mode: "Pombo-correio" }).success
+    ).toBe(false);
+  });
+
+  it("a expectativa da etapa passa a citar o horário quando há um", () => {
+    expect(whatHappensNow("INTERVIEW", "tarhget", "20 de agosto, 14:00")).toContain(
+      "20 de agosto, 14:00"
+    );
+    expect(whatHappensNow("INTERVIEW", "tarhget", null)).toContain("combinar");
+  });
+
+  it("a novidade da entrevista não menciona análise nem score", () => {
+    const n = interviewNotification(
+      "tarhget",
+      "Full Stack",
+      "20 de agosto, 14:00",
+      "Videochamada",
+      "https://meet.google.com/abc"
+    );
+    expect(n.title).toContain("20 de agosto, 14:00");
+    const texto = `${n.title} ${n.body}`.toLowerCase();
+    for (const proibido of ["score", "pontos", "aderência"]) {
+      expect(texto).not.toContain(proibido);
+    }
   });
 });

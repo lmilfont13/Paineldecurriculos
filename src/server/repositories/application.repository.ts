@@ -139,6 +139,19 @@ export function updateManagerNotes(id: string, managerNotes: string | null) {
   return prisma.application.update({ where: { id }, data: { managerNotes } });
 }
 
+/** Combina (ou remarca) a conversa da candidatura. */
+export function updateInterview(
+  id: string,
+  data: {
+    interviewAt: Date;
+    interviewMode: string;
+    interviewLocation: string | null;
+    status?: "INTERVIEW";
+  }
+) {
+  return prisma.application.update({ where: { id }, data });
+}
+
 /** Candidatura do candidato (detalhe da timeline), com posse verificada. */
 export function findApplicationForCandidate(
   candidateId: string,
@@ -151,6 +164,10 @@ export function findApplicationForCandidate(
       company: { select: { name: true, slug: true } },
       answers: { include: { field: true } },
       statusEvents: { orderBy: { createdAt: "asc" } },
+      notifications: {
+        where: { type: "MANAGER_MESSAGE" },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 }

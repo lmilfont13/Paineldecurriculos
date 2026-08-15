@@ -141,6 +141,12 @@ model Application {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  /// Conversa combinada. Uma rodada por candidatura — se um dia houver mais
+  /// de uma etapa de entrevista, isto vira um modelo próprio.
+  interviewAt       DateTime?
+  interviewMode     String? // "Videochamada" | "Presencial" | "Telefone"
+  interviewLocation String? // link da chamada, endereço ou telefone
+
   job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
   company       Company        @relation(fields: [companyId], references: [id])
   candidate     Candidate?     @relation(fields: [candidateId], references: [id])

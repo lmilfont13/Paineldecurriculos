@@ -7,9 +7,12 @@ import {
   applicationInputSchema,
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
+import { interviewSchema } from "@/server/models/interview.model";
 import {
   requestReanalysis,
   saveManagerNotes,
+  scheduleInterview,
+  sendManagerMessage,
   setApplicationStatus,
   submitApplication,
 } from "@/server/services/application.service";
@@ -30,6 +33,54 @@ export async function saveNotesAction(
   );
   revalidatePath(`/candidaturas/${applicationId}`);
   return { saved: true };
+}
+
+export type InterviewState = { error: string } | { ok: true } | null;
+
+/** Combina a conversa com o candidato (move para Entrevista e avisa). */
+export async function scheduleInterviewAction(
+  applicationId: string,
+  _prev: InterviewState,
+  formData: FormData
+): Promise<InterviewState> {
+  const user = await requireManager();
+  const parsed = interviewSchema.safeParse({
+    at: formData.get("at"),
+    mode: formData.get("mode"),
+    location: formData.get("location") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const result = await scheduleInterview(user.companyId, applicationId, {
+    at: new Date(parsed.data.at),
+    mode: parsed.data.mode,
+    location: parsed.data.location.trim() || null,
+  });
+  if (!result.ok) return { error: "Candidatura não encontrada." };
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  return { ok: true };
+}
+
+/** Recado do gestor para o candidato (novidade no site + e-mail). */
+export async function sendMessageAction(
+  applicationId: string,
+  _prev: InterviewState,
+  formData: FormData
+): Promise<InterviewState> {
+  const user = await requireManager();
+  const message = String(formData.get("message") ?? "").trim();
+  if (message.length < 2) return { error: "Escreva o recado antes de enviar." };
+  const result = await sendManagerMessage(
+    user.companyId,
+    applicationId,
+    message
+  );
+  if (!result.ok) return { error: "Não foi possível enviar o recado." };
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return { ok: true };
 }
 
 /** Reenfileira a análise de IA (FAILED/NO_RESUME com currículo novo). */

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { DecisionBlock } from "@/components/gestor/decision-block";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
+import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
@@ -14,6 +15,16 @@ import {
   type AppStatusKey,
 } from "@/server/models/application.model";
 import { personInitials } from "@/server/models/dashboard.model";
+import {
+  interviewSummary,
+  isPastInterview,
+} from "@/server/models/interview.model";
+
+/** Date → valor de `datetime-local`, no fuso do servidor. */
+function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 /** Linha do histórico na voz do gestor. */
 function historyLine(
@@ -165,6 +176,17 @@ export default async function CandidaturaDetailPage({
         applicationId={app.id}
         status={app.status}
         candidateName={app.name}
+        interview={
+          app.interviewAt
+            ? {
+                at: toLocalInput(app.interviewAt),
+                summary: interviewSummary(app.interviewAt, app.interviewMode),
+                mode: app.interviewMode ?? "Videochamada",
+                location: app.interviewLocation ?? "",
+                past: isPastInterview(app.interviewAt),
+              }
+            : null
+        }
       />
 
       <section className="mt-8">
@@ -190,6 +212,18 @@ export default async function CandidaturaDetailPage({
             ))}
           </ol>
         )}
+      </section>
+
+      {/* Falar com o candidato — sai do sistema, chega como novidade e e-mail */}
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-[#0a0a0a]">
+          Recado para o candidato
+        </h2>
+        <p className="mt-1 text-[11px] text-[#a1a1aa]">
+          {app.name.split(" ")[0]} recebe por e-mail e nas novidades da área
+          dele.
+        </p>
+        <MessageBox applicationId={app.id} candidateName={app.name} />
       </section>
 
       {/* Notas internas — memória do processo entre gestores */}

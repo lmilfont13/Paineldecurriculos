@@ -24,15 +24,21 @@ import {
   findLatestApplicationWithAnswers,
   updateApplicationAi,
   updateApplicationStatus,
+  updateInterview,
   updateManagerNotes,
 } from "@/server/repositories/application.repository";
+import { formatInterviewAt } from "@/server/models/interview.model";
 import {
   notifyApplicationReceived,
+  notifyInterviewScheduled,
+  notifyManagerMessage,
   notifyStageChange,
 } from "@/server/services/notification.service";
 import { findManagerByCompanyId } from "@/server/repositories/user.repository";
 import { updateCandidateProfile } from "@/server/services/candidate.service";
 import {
+  sendInterviewScheduledEmail,
+  sendManagerMessageEmail,
   sendNewApplicationNotification,
   sendStatusUpdateEmail,
 } from "@/server/services/email.service";
@@ -154,6 +160,102 @@ export async function requestReanalysis(
     });
   } catch (error) {
     console.error("[inngest] Falha ao reenfileirar análise:", error);
+  }
+  return { ok: true };
+}
+
+/**
+ * Combina a conversa: move para Entrevista se ainda não estiver, grava a
+ * trilha, avisa o candidato dentro do site e por e-mail. É o momento em que
+ * as duas personas se encontram — por isso tudo acontece num ato só, em vez
+ * de o gestor mudar o status aqui e combinar o horário por fora.
+ */
+export async function scheduleInterview(
+  companyId: string,
+  id: string,
+  input: { at: Date; mode: string; location: string | null }
+): Promise<{ ok: boolean }> {
+  const application = await getCompanyApplication(companyId, id);
+  if (!application) return { ok: false };
+
+  const wasInterview = application.status === "INTERVIEW";
+  await updateInterview(id, {
+    interviewAt: input.at,
+    interviewMode: input.mode,
+    interviewLocation: input.location,
+    ...(wasInterview ? {} : { status: "INTERVIEW" as const }),
+  });
+
+  if (!wasInterview) {
+    await createStatusEvent({
+      applicationId: id,
+      from: application.status,
+      to: "INTERVIEW",
+      actor: "gestor",
+    });
+  }
+
+  const company = await getCompanyById(companyId);
+  if (!company) return { ok: true };
+  const when = formatInterviewAt(input.at);
+
+  void notifyInterviewScheduled({
+    candidateId: application.candidateId,
+    applicationId: id,
+    companyName: company.name,
+    jobTitle: application.job.title,
+    when,
+    mode: input.mode,
+    location: input.location,
+  }).catch(() => {});
+
+  if (application.email.includes("@")) {
+    const manager = await findManagerByCompanyId(companyId);
+    void sendInterviewScheduledEmail({
+      to: application.email,
+      candidateName: application.name,
+      companyName: company.name,
+      jobTitle: application.job.title,
+      when,
+      mode: input.mode,
+      location: input.location,
+      managerEmail: manager?.email ?? null,
+    });
+  }
+  return { ok: true };
+}
+
+/** Recado do gestor ao candidato — vira novidade no site e e-mail. */
+export async function sendManagerMessage(
+  companyId: string,
+  id: string,
+  message: string
+): Promise<{ ok: boolean }> {
+  const text = message.trim();
+  const application = await getCompanyApplication(companyId, id);
+  if (!application || text.length === 0) return { ok: false };
+
+  const company = await getCompanyById(companyId);
+  if (!company) return { ok: false };
+
+  void notifyManagerMessage({
+    candidateId: application.candidateId,
+    applicationId: id,
+    companyName: company.name,
+    jobTitle: application.job.title,
+    message: text,
+  }).catch(() => {});
+
+  if (application.email.includes("@")) {
+    const manager = await findManagerByCompanyId(companyId);
+    void sendManagerMessageEmail({
+      to: application.email,
+      candidateName: application.name,
+      companyName: company.name,
+      jobTitle: application.job.title,
+      message: text,
+      managerEmail: manager?.email ?? null,
+    });
   }
   return { ok: true };
 }

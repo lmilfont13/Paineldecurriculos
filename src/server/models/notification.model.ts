@@ -37,6 +37,33 @@ export function stageNotification(
   }
 }
 
+export function interviewNotification(
+  companyName: string,
+  jobTitle: string,
+  when: string,
+  mode: string,
+  location: string | null
+): { type: NotificationType; title: string; body: string } {
+  const onde = location ? ` ${mode === "Presencial" ? "em" : "em"} ${location}.` : "";
+  return {
+    type: "INTERVIEW_SCHEDULED",
+    title: `Entrevista marcada para ${when}`,
+    body: `A ${companyName} marcou sua conversa sobre a vaga de ${jobTitle}: ${when}, por ${mode.toLowerCase()}.${onde} Se o horário não der, responda o e-mail que você recebeu.`,
+  };
+}
+
+export function managerMessageNotification(
+  companyName: string,
+  jobTitle: string,
+  message: string
+): { type: NotificationType; title: string; body: string } {
+  return {
+    type: "MANAGER_MESSAGE",
+    title: `Recado da ${companyName}`,
+    body: `Sobre a vaga de ${jobTitle}: ${message}`,
+  };
+}
+
 export function receivedNotification(
   companyName: string,
   jobTitle: string
@@ -63,12 +90,18 @@ export function formatNotificationAge(createdAt: Date): string {
  * O que o candidato pode esperar agora — a frase que responde a pergunta que
  * o traz de volta ao site.
  */
-export function whatHappensNow(status: AppStatus, companyName: string): string {
+export function whatHappensNow(
+  status: AppStatus,
+  companyName: string,
+  interviewWhen?: string | null
+): string {
   switch (status) {
     case "PENDING":
       return `A ${companyName} está avaliando as candidaturas. Você é avisado aqui e por e-mail assim que houver novidade.`;
     case "INTERVIEW":
-      return `A ${companyName} vai combinar com você o horário da conversa. Se preferir, responda o e-mail que recebeu.`;
+      return interviewWhen
+        ? `Sua conversa com a ${companyName} está marcada para ${interviewWhen}.`
+        : `A ${companyName} vai combinar com você o horário da conversa. Se preferir, responda o e-mail que recebeu.`;
     case "APPROVED":
       return `A ${companyName} entra em contato com os próximos passos da contratação.`;
     case "REJECTED":

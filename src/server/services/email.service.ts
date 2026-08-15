@@ -49,6 +49,66 @@ export async function sendNewApplicationNotification(params: {
   }
 }
 
+/** Entrevista combinada: data, hora e onde, para o candidato responder. */
+export async function sendInterviewScheduledEmail(params: {
+  to: string;
+  candidateName: string;
+  companyName: string;
+  jobTitle: string;
+  when: string;
+  mode: string;
+  location: string | null;
+  managerEmail: string | null;
+}): Promise<void> {
+  if (!resend) return;
+  const first = params.candidateName.split(" ")[0];
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      ...(params.managerEmail ? { replyTo: params.managerEmail } : {}),
+      subject: `Entrevista marcada · ${params.jobTitle}`,
+      html: shell(`Sua conversa está marcada`, [
+        `Oi, ${first}! A ${params.companyName} marcou a conversa sobre a vaga de <strong>${params.jobTitle}</strong>.`,
+        `<strong style="color:#0a0a0a;font-size:16px">${params.when}</strong><br/>${params.mode}${
+          params.location ? ` · ${params.location}` : ""
+        }`,
+        "Se esse horário não funcionar para você, é só responder este e-mail.",
+      ]),
+    });
+  } catch (error) {
+    console.error("[email] Falha ao enviar convite de entrevista:", error);
+  }
+}
+
+/** Recado do gestor ao candidato — o texto é escrito por ele, sem edição. */
+export async function sendManagerMessageEmail(params: {
+  to: string;
+  candidateName: string;
+  companyName: string;
+  jobTitle: string;
+  message: string;
+  managerEmail: string | null;
+}): Promise<void> {
+  if (!resend) return;
+  const first = params.candidateName.split(" ")[0];
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      ...(params.managerEmail ? { replyTo: params.managerEmail } : {}),
+      subject: `Recado da ${params.companyName} · ${params.jobTitle}`,
+      html: shell(`Recado da ${params.companyName}`, [
+        `Oi, ${first}! A ${params.companyName} deixou um recado sobre a vaga de <strong>${params.jobTitle}</strong>:`,
+        `<span style="display:block;padding:12px 16px;background:#fafaf9;border-left:3px solid #e4e4e7;color:#0a0a0a">${params.message.replace(/</g, "&lt;").replace(/\n/g, "<br/>")}</span>`,
+        "Você pode responder este e-mail para falar com a empresa.",
+      ]),
+    });
+  } catch (error) {
+    console.error("[email] Falha ao enviar recado:", error);
+  }
+}
+
 /** Q2 · Avisa o candidato quando o gestor muda o status. Nunca lança. */
 export async function sendStatusUpdateEmail(params: {
   to: string;

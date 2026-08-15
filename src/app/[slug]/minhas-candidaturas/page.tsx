@@ -11,6 +11,7 @@ import {
   formatAppliedAt,
   type AppStatusKey,
 } from "@/server/models/application.model";
+import { formatInterviewAt } from "@/server/models/interview.model";
 import {
   formatNotificationAge,
   whatHappensNow,
@@ -153,7 +154,11 @@ export default async function MinhasCandidaturasPage({
                   </span>
                 </span>
                 <span className="mt-3 block border-t border-[#f1f0ed] pt-3 text-[12px] leading-5 text-[#71717a]">
-                  {whatHappensNow(app.status, app.company.name)}
+                  {whatHappensNow(
+                    app.status,
+                    app.company.name,
+                    app.interviewAt ? formatInterviewAt(app.interviewAt) : null
+                  )}
                 </span>
               </Link>
             );
