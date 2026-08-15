@@ -120,7 +120,8 @@ model Candidate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applications Application[]
+  applications  Application[]
+  notifications Notification[]
 }
 
 model Application {
@@ -140,13 +141,41 @@ model Application {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  company      Company       @relation(fields: [companyId], references: [id])
-  candidate    Candidate?    @relation(fields: [candidateId], references: [id])
-  answers      Answer[]
-  statusEvents StatusEvent[]
+  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company       Company        @relation(fields: [companyId], references: [id])
+  candidate     Candidate?     @relation(fields: [candidateId], references: [id])
+  answers       Answer[]
+  statusEvents  StatusEvent[]
+  notifications Notification[]
 
   @@unique([candidateId, jobId])
+}
+
+/// Novidade do processo na visão do candidato — o mesmo evento que vira
+/// trilha e e-mail. Nunca carrega score, raciocínio da IA ou notas do gestor.
+model Notification {
+  id            String           @id @default(cuid())
+  candidateId   String
+  applicationId String?
+  type          NotificationType
+  title         String
+  body          String?
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+
+  candidate   Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, readAt])
+}
+
+enum NotificationType {
+  APPLICATION_RECEIVED
+  STAGE_CHANGED
+  INTERVIEW_SCHEDULED
+  MANAGER_MESSAGE
+  RESULT
+  NEW_JOB
 }
 
 /// Trilha de mudanças de status — histórico p/ gestor, timeline p/ candidato.

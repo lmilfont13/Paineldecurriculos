@@ -23,6 +23,11 @@ import {
 } from "@/server/models/candidate-list.model";
 import { personInitials } from "@/server/models/dashboard.model";
 import {
+  formatNotificationAge,
+  stageNotification,
+  whatHappensNow,
+} from "@/server/models/notification.model";
+import {
   formatJobMeta,
   formatPublishedAgo,
   jobFormSchema,
@@ -302,5 +307,71 @@ describe("lista de candidatos (etapas, filtros e ordem)", () => {
   it("meetsMinimum trata score ausente como não atende", () => {
     expect(meetsMinimum(row({ id: "x", aiScore: null }))).toBe(false);
     expect(meetsMinimum(row({ id: "x", aiScore: 70, aiMinScore: 70 }))).toBe(true);
+  });
+});
+
+describe("notificações do candidato", () => {
+  it("cada etapa vira uma novidade na voz do candidato", () => {
+    expect(stageNotification("INTERVIEW", "tarhget", "Full Stack")?.title).toBe(
+      "Você avançou para a entrevista"
+    );
+    expect(stageNotification("APPROVED", "tarhget", "Full Stack")?.type).toBe(
+      "RESULT"
+    );
+  });
+
+  it("reprovado nunca aparece como reprovado para o candidato", () => {
+    const rejected = stageNotification("REJECTED", "tarhget", "Full Stack");
+    expect(rejected?.title).toBe("Processo finalizado");
+    expect(`${rejected?.title} ${rejected?.body}`.toLowerCase()).not.toContain(
+      "reprovad"
+    );
+  });
+
+  it("voltar para triagem é conserto do gestor e não gera novidade", () => {
+    expect(stageNotification("PENDING", "tarhget", "Full Stack")).toBeNull();
+  });
+
+  it("nenhum texto de novidade menciona score ou análise da IA", () => {
+    const textos = (["INTERVIEW", "APPROVED", "REJECTED"] as const)
+      .map((s) => {
+        const n = stageNotification(s, "tarhget", "Full Stack");
+        return `${n?.title} ${n?.body}`;
+      })
+      .concat(
+        (["PENDING", "INTERVIEW", "APPROVED", "REJECTED"] as const).map((s) =>
+          whatHappensNow(s, "tarhget")
+        )
+      )
+      .join(" ")
+      .toLowerCase();
+    for (const proibido of ["score", "pontos", "aderência", "ia ", "nota"]) {
+      expect(textos).not.toContain(proibido);
+    }
+  });
+
+  it("toda etapa tem uma frase de expectativa", () => {
+    for (const status of ["PENDING", "INTERVIEW", "APPROVED", "REJECTED"] as const) {
+      expect(whatHappensNow(status, "tarhget").length).toBeGreaterThan(20);
+    }
+  });
+
+  it("idade da novidade em linguagem de gente", () => {
+    const min = 60_000;
+    expect(formatNotificationAge(new Date(Date.now() - min))).toBe(
+      "agora há pouco"
+    );
+    expect(formatNotificationAge(new Date(Date.now() - 30 * min))).toBe(
+      "há 30 min"
+    );
+    expect(formatNotificationAge(new Date(Date.now() - 3 * 60 * min))).toBe(
+      "há 3 h"
+    );
+    expect(formatNotificationAge(new Date(Date.now() - 24 * 60 * min))).toBe(
+      "ontem"
+    );
+    expect(formatNotificationAge(new Date(Date.now() - 72 * 60 * min))).toBe(
+      "há 3 dias"
+    );
   });
 });

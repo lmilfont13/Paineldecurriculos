@@ -26,6 +26,10 @@ import {
   updateApplicationStatus,
   updateManagerNotes,
 } from "@/server/repositories/application.repository";
+import {
+  notifyApplicationReceived,
+  notifyStageChange,
+} from "@/server/services/notification.service";
 import { findManagerByCompanyId } from "@/server/repositories/user.repository";
 import { updateCandidateProfile } from "@/server/services/candidate.service";
 import {
@@ -85,14 +89,24 @@ export async function setApplicationStatus(
 
   if (status !== "PENDING" && status !== application.status) {
     const company = await getCompanyById(companyId);
-    if (company && application.email.includes("@")) {
-      void sendStatusUpdateEmail({
-        to: application.email,
-        candidateName: application.name,
+    if (company) {
+      // Um evento, três destinos: trilha (acima), novidade no site e e-mail.
+      void notifyStageChange({
+        candidateId: application.candidateId,
+        applicationId: id,
+        to: status,
         companyName: company.name,
         jobTitle: application.job.title,
-        status,
-      });
+      }).catch(() => {});
+      if (application.email.includes("@")) {
+        void sendStatusUpdateEmail({
+          to: application.email,
+          candidateName: application.name,
+          companyName: company.name,
+          jobTitle: application.job.title,
+          status,
+        });
+      }
     }
   }
   return updated;
@@ -323,6 +337,12 @@ export async function submitApplication(
 
   const company = await getCompanyById(companyId);
   if (company) {
+    void notifyApplicationReceived({
+      candidateId: candidate.id,
+      applicationId: application.id,
+      companyName: company.name,
+      jobTitle: job.title,
+    }).catch(() => {});
     void sendApplicationConfirmation({
       to: application.email,
       candidateName: application.name,

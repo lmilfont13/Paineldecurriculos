@@ -19,6 +19,10 @@ import {
 } from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
 import {
+  countCandidateUnread,
+  listCandidateNotifications,
+} from "@/server/services/notification.service";
+import {
   countApplicants,
   getOpenJob,
   listOpenJobs,
@@ -116,12 +120,39 @@ export async function getPublicSession(): Promise<CandidateProfile | null> {
   return getSessionCandidate();
 }
 
-/** CA4 · Minhas candidaturas (todas as empresas). */
+/** Novidades não lidas do candidato da sessão (contador do sino). */
+export const getUnreadCount = cache(async (): Promise<number> => {
+  const candidate = await getSessionCandidate();
+  if (!candidate) return 0;
+  return countCandidateUnread(candidate.id);
+});
+
+/** Histórico de novidades do candidato (página de notificações). */
+export async function getNotificacoesData(slug: string) {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const candidate = await getSessionCandidate();
+  if (!candidate) return { company, candidate: null, notifications: [] };
+  const notifications = await listCandidateNotifications(candidate.id);
+  return { company, candidate, notifications };
+}
+
+/** CA4 · Home do candidato: novidades + candidaturas em andamento e encerradas. */
 export async function getMinhasCandidaturasData(slug: string) {
   const company = await getTenant(slug);
   if (!company) return null;
   const candidate = await getSessionCandidate();
-  if (!candidate) return { company, candidate: null, applications: [] };
-  const applications = await listCandidateApplications(candidate.id);
-  return { company, candidate, applications };
+  if (!candidate) {
+    return { company, candidate: null, applications: [], unread: [] };
+  }
+  const [applications, notifications] = await Promise.all([
+    listCandidateApplications(candidate.id),
+    listCandidateNotifications(candidate.id),
+  ]);
+  return {
+    company,
+    candidate,
+    applications,
+    unread: notifications.filter((n) => !n.readAt).slice(0, 3),
+  };
 }

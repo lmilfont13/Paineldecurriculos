@@ -10,6 +10,7 @@ import {
   candidateSignupSchema,
 } from "@/server/models/candidate.model";
 import { withdrawApplication } from "@/server/services/application.service";
+import { markRead } from "@/server/services/notification.service";
 import {
   deleteCandidateAccount,
   getSessionCandidate,
@@ -109,6 +110,14 @@ export async function withdrawApplicationAction(
     await withdrawApplication(candidate.id, applicationId);
   }
   redirect(`/${slug}/minhas-candidaturas`);
+}
+
+/** Marca as novidades como lidas — sempre no escopo do candidato da sessão. */
+export async function markNotificationsReadAction(slug: string): Promise<void> {
+  const candidate = await getSessionCandidate();
+  if (candidate) await markRead(candidate.id);
+  revalidatePath(`/${slug}/notificacoes`);
+  revalidatePath(`/${slug}/minhas-candidaturas`);
 }
 
 /** CA8 · Exclui a conta e os dados pessoais (LGPD). */
