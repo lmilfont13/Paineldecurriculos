@@ -1,1 +1,2 @@
 @AGENTS.md
+@contexto.md
