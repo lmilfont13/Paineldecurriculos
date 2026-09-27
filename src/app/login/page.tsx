@@ -1,20 +1,21 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { brandCssVars } from "@/server/models/company.model";
-import { getPublicCompanyBySlug } from "@/server/services/company.service";
+import {
+  getDefaultCompanySlug,
+  getPublicCompanyBySlug,
+} from "@/server/services/company.service";
 import { getSessionUser, isAdmin } from "@/server/services/auth.service";
 
-function companyInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  const initials = words.slice(0, 2).map((w) => w[0] ?? "");
-  return initials.join("").toUpperCase();
-}
+export const metadata: Metadata = { title: "Entrar" };
 
 /**
- * Login unificado (gestor + admin) — frames E0/A0 do Figma.
- * Com `?empresa=<slug>` mostra a marca do cliente (regra 4);
- * sem o parâmetro, versão neutra da plataforma.
+ * Login unificado (gestor + admin). Com `?empresa=<slug>` mostra essa marca;
+ * sem o parâmetro, a da empresa ativa, porque quem digita só /login é o dono
+ * dela. `?empresa=plataforma` força a versão neutra do console.
  */
 export default async function LoginPage({
   searchParams,
@@ -25,67 +26,93 @@ export default async function LoginPage({
   if (user) redirect(isAdmin(user) ? "/admin/empresas" : "/painel");
 
   const { empresa } = await searchParams;
-  const company = empresa ? await getPublicCompanyBySlug(empresa) : null;
+  const slug =
+    empresa === "plataforma" ? null : (empresa ?? (await getDefaultCompanySlug()));
+  const company = slug ? await getPublicCompanyBySlug(slug) : null;
 
   return (
     <main
-      className="flex min-h-screen bg-[#fafaf9]"
+      className="flex min-h-screen bg-[#faf8f6]"
       style={
         company ? (brandCssVars(company) as React.CSSProperties) : undefined
       }
     >
-      {/* Painel esquerdo — marca (empresa no login do gestor, plataforma no admin) */}
-      <aside className="hidden w-[560px] shrink-0 flex-col justify-between bg-[#1c1917] p-16 lg:flex">
-        <div className="flex items-center gap-2.5">
-          {company ? (
-            <span
-              className="flex size-8 items-center justify-center rounded-[7px] text-[11px] font-bold text-white"
-              style={{ backgroundColor: company.primaryColor }}
-            >
-              {companyInitials(company.name)}
-            </span>
-          ) : (
-            <span className="flex size-8 items-center justify-center rounded-[7px] bg-[#fafaf9] text-[13px] text-[#1c1917]">
-              ▲
-            </span>
-          )}
-          <span className="text-sm font-bold text-[#fafaf9]">
+      {/* Painel da marca (empresa no login do gestor, plataforma no admin) */}
+      <aside
+        className="hidden w-[520px] shrink-0 flex-col justify-between p-14 lg:flex"
+        style={{
+          background: company
+            ? "linear-gradient(165deg, var(--brand-primary) 0%, var(--brand-deep) 100%)"
+            : "#1c1917",
+        }}
+      >
+        {company?.logoFullUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={company.logoFullUrl}
+            alt={company.name}
+            className="h-20 w-auto self-start object-contain"
+            style={{ filter: "brightness(0) invert(1)" }}
+          />
+        ) : (
+          <span className="text-sm font-bold text-white">
             {company ? company.name : "Triagem"}
           </span>
-        </div>
+        )}
 
-        <div className="mb-32">
-          <h1 className="max-w-[420px] text-[32px] font-bold leading-10 text-[#fafaf9]">
+        <div>
+          <h1 className="max-w-[400px] text-[30px] font-bold leading-tight text-white">
             {company ? "Painel de recrutamento" : "Console da plataforma"}
           </h1>
-          <p className="mt-10 max-w-[380px] text-sm leading-[21px] text-[#fafaf9]/50">
+          <p className="mt-4 max-w-[360px] text-sm leading-6 text-white/65">
             {company
-              ? "Gerencie vagas, candidaturas e a triagem por IA da sua empresa."
-              : "Cadastre empresas, configure identidade e formulários, e gerencie os clientes."}
+              ? `Vagas, candidatos e entrevistas da ${company.name}.`
+              : "Cadastro de empresas, identidade visual e formulários dos clientes."}
           </p>
         </div>
 
-        <div />
+        <span className="text-xs text-white/40">
+          {company ? `${company.name} · feito com Triagem` : "Triagem"}
+        </span>
       </aside>
 
       {/* Formulário */}
-      <section className="flex flex-1 items-center justify-center px-6">
-        <div className="w-full max-w-[400px]">
-          <h2 className="text-[28px] font-bold text-[#0a0a0a]">Entrar</h2>
-          <p className="mt-2 text-sm text-[#71717a]">
+      <section className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-[380px]">
+          {company && (
+            <div className="mb-10 flex items-center gap-3 lg:hidden">
+              {company.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={company.logoUrl} alt="" className="size-10 object-contain" />
+              )}
+              <span className="text-base font-semibold text-[#1c1917]">
+                {company.name}
+              </span>
+            </div>
+          )}
+          <h2 className="text-[26px] font-bold text-[#1c1917]">Entrar</h2>
+          <p className="mt-2 text-sm text-[#78716c]">
             {company
-              ? `Acesse o painel da ${company.name}.`
-              : "Área da equipe — gestores e administradores."}
+              ? `Acesso da equipe da ${company.name}.`
+              : "Área da equipe: gestores e administradores."}
           </p>
 
           <LoginForm branded={Boolean(company)} />
 
-          {!company && (
-            <p className="mt-6 border-t border-[#e4e4e7] pt-6 text-[13px] leading-relaxed text-[#71717a]">
-              É candidato? Você entra pela página de vagas da empresa onde se
-              candidatou — abra o link de carreiras e clique em “Entrar”.
-            </p>
-          )}
+          <p className="mt-8 border-t border-[#ebe7e3] pt-6 text-[13px] leading-relaxed text-[#78716c]">
+            É candidato?{" "}
+            {company ? (
+              <Link
+                href={`/${company.slug}/vagas`}
+                className="font-medium underline-offset-2 hover:underline"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Veja as vagas e acompanhe sua candidatura por lá.
+              </Link>
+            ) : (
+              "Você entra pela página de vagas da empresa onde se candidatou."
+            )}
+          </p>
         </div>
       </section>
     </main>

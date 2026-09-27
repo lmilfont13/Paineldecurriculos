@@ -38,6 +38,7 @@ export function createJob(data: {
   status: "DRAFT" | "OPEN";
   aiCriteria: string[];
   aiMinScore: number;
+  publishedAt: Date | null;
 }) {
   return prisma.job.create({ data });
 }
@@ -54,6 +55,7 @@ export function updateJob(
     status: "DRAFT" | "OPEN" | "PAUSED" | "CLOSED";
     aiCriteria: string[];
     aiMinScore: number;
+    publishedAt: Date;
   }>
 ) {
   return prisma.job.update({ where: { id }, data });

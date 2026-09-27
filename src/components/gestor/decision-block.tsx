@@ -174,7 +174,7 @@ export function DecisionBlock({
               )}
               {interview.past && (
                 <span className="text-[11px] font-medium text-[#b07818]">
-                  já aconteceu — falta decidir
+                  já aconteceu, falta decidir
                 </span>
               )}
               <button

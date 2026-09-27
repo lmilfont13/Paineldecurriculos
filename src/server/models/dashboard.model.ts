@@ -15,6 +15,8 @@ export type DashboardStats = {
   /** Decisões tomadas nos últimos 7 dias (o painel também mostra progresso). */
   decided7d: number;
   newApplications7d: number;
+  /** Candidaturas de todos os tempos: distingue "fila limpa" de "ninguém veio". */
+  totalApplications: number;
 };
 
 /** Andamento de uma vaga aberta, para a linha por processo do painel. */

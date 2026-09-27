@@ -253,8 +253,8 @@ export default async function VagaHubPage({
           </h2>
           <p className="mb-3 mt-1 text-[12px] text-[#71717a]">
             {job.status === "OPEN"
-              ? "É por aqui que os candidatos chegam. Compartilhe no LinkedIn, no site ou no WhatsApp."
-              : "A vaga não está aberta — o link só recebe candidaturas quando ela estiver publicada."}
+              ? "Mande no WhatsApp, poste no Instagram ou onde seus candidatos estão. É por esse link que eles chegam."
+              : "A vaga ainda não está no ar. O link só recebe candidaturas depois que você publicar."}
           </p>
           <CopyLink url={publicUrl} />
         </section>
@@ -284,7 +284,7 @@ export default async function VagaHubPage({
             </div>
           ) : (
             <p className="mt-3 text-[12px] text-[#71717a]">
-              Nenhum critério definido — a IA avalia só pela descrição da vaga.
+              Nenhum critério definido. A IA avalia só pela descrição da vaga.
             </p>
           )}
           <p className="mt-3 text-[11px] text-[#a1a1aa]">

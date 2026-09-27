@@ -7,6 +7,7 @@ const PROTECTED_PREFIXES = [
   "/vagas",
   "/candidaturas",
   "/formulario",
+  "/configuracoes",
   "/admin",
 ];
 

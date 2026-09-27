@@ -35,6 +35,15 @@ export async function getVagasPageData() {
   return { companySlug: company.slug, jobs };
 }
 
+/** Configurações · a vitrine da empresa, como o dono edita. */
+export async function getConfiguracoesData() {
+  const { company } = await getGestorShell();
+  return {
+    company,
+    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas`,
+  };
+}
+
 export async function getFormularioPageData() {
   const { user } = await getGestorShell();
   const { core, custom } = await listApplicationFormFields(user.companyId);

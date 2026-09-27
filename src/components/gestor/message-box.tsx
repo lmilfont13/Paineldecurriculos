@@ -46,7 +46,7 @@ export function MessageBox({
         </button>
         {sent && (
           <span className="text-xs text-[#1f7a4d]">
-            Recado enviado — {candidateName.split(" ")[0]} recebeu por e-mail e
+            Recado enviado. {candidateName.split(" ")[0]} recebeu por e-mail e
             na área dele.
           </span>
         )}

@@ -12,8 +12,14 @@ const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
 
 /** CA1 · Criar conta / entrar como candidato, com a marca da empresa. */
-export function CandidateAuthForm({ next }: { next: string }) {
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+export function CandidateAuthForm({
+  next,
+  initialMode = "signup",
+}: {
+  next: string;
+  initialMode?: "signup" | "login";
+}) {
+  const [mode, setMode] = useState<"signup" | "login">(initialMode);
   const [signupState, signupAction, signupPending] = useActionState<
     CandidateAuthState,
     FormData

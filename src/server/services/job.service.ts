@@ -82,6 +82,7 @@ export function createCompanyJob(
     status: publish ? "OPEN" : "DRAFT",
     aiCriteria: input.aiCriteria,
     aiMinScore: input.aiMinScore,
+    publishedAt: publish ? new Date() : null,
   });
 }
 
@@ -95,8 +96,11 @@ export async function updateCompanyJob(
 ) {
   const job = await getCompanyJob(companyId, jobId);
   if (!job) return null;
+  // Entrar no ar (publicar ou reabrir) zera o relógio do "publicada há".
+  const goingLive = input.status === "OPEN" && job.status !== "OPEN";
   return updateJob(jobId, {
     ...input,
+    ...(goingLive ? { publishedAt: new Date() } : {}),
     requirements:
       input.requirements !== undefined ? input.requirements || null : undefined,
     location: input.location !== undefined ? input.location || null : undefined,

@@ -190,7 +190,7 @@ export function CandidaturasTable({
     (r) => r.aiState === "WAITING" || r.aiState === "PROCESSING"
   );
   const cols =
-    "grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_44px_72px]";
+    "grid-cols-[28px_minmax(0,1fr)_auto] md:grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_44px_72px]";
 
   return (
     <>
@@ -221,7 +221,7 @@ export function CandidaturasTable({
       <div
         role="tablist"
         aria-label="Etapa do processo"
-        className="mt-6 flex flex-wrap gap-1 border-b border-[#e4e4e7]"
+        className="mt-6 flex gap-1 overflow-x-auto border-b border-[#e4e4e7]"
       >
         {TABS.map((item) => {
           const active = tab === item.key;
@@ -233,7 +233,7 @@ export function CandidaturasTable({
               type="button"
               onClick={() => changeTab(item.key)}
               className={
-                "-mb-px flex items-center gap-2 border-b-2 px-3.5 pb-2.5 pt-1 text-[13px] transition-colors " +
+                "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3.5 pb-2.5 pt-1 text-[13px] transition-colors " +
                 (active
                   ? "font-medium text-[#0a0a0a]"
                   : "border-transparent text-[#71717a] hover:text-[#0a0a0a]")
@@ -316,7 +316,7 @@ export function CandidaturasTable({
       {/* Lista */}
       <div className="mt-5 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
         <div
-          className={`grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3`}
+          className={`hidden md:grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3`}
         >
           <input
             type="checkbox"
@@ -356,7 +356,7 @@ export function CandidaturasTable({
             <div
               key={row.id}
               className={
-                `grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3.5 transition-colors last:border-b-0 hover:bg-[#fafaf9] ` +
+                `grid ${cols} items-center gap-3 border-b border-[#e4e4e7] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:gap-4 md:px-5 ` +
                 (isSelected ? "bg-[#fafaf9]" : "")
               }
             >
@@ -380,6 +380,12 @@ export function CandidaturasTable({
                   </span>
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {row.jobTitle}
+                    {waiting && (
+                      <span className="font-medium text-[#b07818] md:hidden">
+                        {" · "}
+                        {formatWaiting(new Date(row.createdAt))}
+                      </span>
+                    )}
                   </span>
                 </span>
               </Link>
@@ -388,7 +394,7 @@ export function CandidaturasTable({
                 aiState={row.aiState}
                 meetsMinimum={meetsMinimum(row)}
               />
-              <span className="min-w-0 text-xs text-[#71717a]">
+              <span className="hidden min-w-0 text-xs text-[#71717a] md:block">
                 {waiting ? (
                   <span className="font-medium text-[#b07818]">
                     {formatWaiting(new Date(row.createdAt))}
@@ -407,17 +413,17 @@ export function CandidaturasTable({
               {row.resumeUrl ? (
                 <a
                   href={`/candidaturas/${row.id}/cv`}
-                  className="text-sm text-[#71717a] hover:text-[#0a0a0a]"
+                  className="hidden text-sm text-[#71717a] hover:text-[#0a0a0a] md:inline"
                   title="Baixar currículo"
                 >
                   ↓
                 </a>
               ) : (
-                <span className="text-sm text-[#e4e4e7]">—</span>
+                <span className="hidden text-sm text-[#e4e4e7] md:inline">–</span>
               )}
               <Link
                 href={`/candidaturas/${row.id}`}
-                className="text-right text-xs font-medium hover:underline"
+                className="hidden text-right text-xs font-medium hover:underline md:block"
                 style={{ color: "var(--brand-primary)" }}
               >
                 Abrir ›
@@ -449,8 +455,8 @@ export function CandidaturasTable({
 
       {/* Barra de ações em massa (E9) */}
       {selected.size > 0 && (
-        <div className="fixed bottom-8 left-1/2 z-40 flex h-14 -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#1c1917] px-5 shadow-[0px_8px_12px_rgba(0,0,0,0.25)]">
-          <span className="text-[13px] font-medium text-white">
+        <div className="fixed bottom-20 left-1/2 z-50 flex h-14 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-3 overflow-x-auto rounded-2xl bg-[#1c1917] px-4 shadow-[0px_8px_12px_rgba(0,0,0,0.25)] md:bottom-8 md:px-5">
+          <span className="shrink-0 text-[13px] font-medium text-white">
             {selected.size} selecionado{selected.size === 1 ? "" : "s"}
           </span>
           <span className="h-8 w-px bg-white/15" />
@@ -461,7 +467,7 @@ export function CandidaturasTable({
               disabled={pending}
               onClick={() => requestBulk(target)}
               className={
-                "h-[34px] rounded-[10px] px-4 text-xs font-medium disabled:opacity-50 " +
+                "h-[34px] shrink-0 rounded-[10px] px-4 text-xs font-medium disabled:opacity-50 " +
                 (target === "REJECTED"
                   ? "bg-[#c86b60]/25 text-[#f5b7b0] hover:bg-[#c86b60]/40"
                   : "bg-white/12 text-white hover:bg-white/20")

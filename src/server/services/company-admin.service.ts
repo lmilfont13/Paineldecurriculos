@@ -129,34 +129,7 @@ export async function setCompanyActive(id: string, isActive: boolean) {
   return updateCompany(id, { isActive });
 }
 
-const LOGO_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/svg+xml",
-  "image/webp",
-]);
-const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-
-/** A6 · Sobe o logo do cliente para o bucket público e retorna a URL. */
-export async function uploadCompanyLogo(
-  file: File
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (!LOGO_MIMES.has(file.type)) {
-    return { ok: false, error: "Logo: use PNG, JPG, SVG ou WebP." };
-  }
-  if (file.size > MAX_LOGO_BYTES) {
-    return { ok: false, error: "Logo: máximo de 2 MB." };
-  }
-  const ext = file.type === "image/svg+xml" ? "svg" : file.type.split("/")[1];
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const supabase = createAdminClient();
-  const { error } = await supabase.storage
-    .from("logos")
-    .upload(path, file, { contentType: file.type });
-  if (error) return { ok: false, error: "Falha ao enviar o logo." };
-  const { data } = supabase.storage.from("logos").getPublicUrl(path);
-  return { ok: true, url: data.publicUrl };
-}
+export { uploadCompanyLogo } from "@/server/services/company.service";
 
 /** A7 · Define nova senha temporária para o gestor do cliente. */
 export async function resetManagerPassword(

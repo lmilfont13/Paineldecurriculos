@@ -43,7 +43,7 @@ function FunnelBar({
               backgroundColor: part.color,
             }}
           />
-        ) : null
+        ) : null,
       )}
     </span>
   );
@@ -103,8 +103,8 @@ export default async function PainelPage() {
               Seu link de carreiras
             </p>
             <p className="mb-2 mt-0.5 text-xs text-[#71717a]">
-              Compartilhe no LinkedIn, no site ou por WhatsApp — é por aqui que
-              os candidatos chegam.
+              Mande no WhatsApp, poste no Instagram ou onde seus candidatos
+              estão. É por esse link que eles chegam.
             </p>
             <CopyLink url={publicUrl} />
           </div>
@@ -114,16 +114,20 @@ export default async function PainelPage() {
   }
 
   const clear = stats.waiting === 0;
+  const nobodyYet = stats.totalApplications === 0;
+  const drafts = jobs.filter((j) => j.status === "DRAFT");
 
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0a0a0a]">Olá, {firstName}</h1>
+          <h1 className="text-2xl font-bold text-[#0a0a0a]">
+            Olá, {firstName}
+          </h1>
           <p className="mt-2 text-sm text-[#71717a]">
-            {stats.newApplications7d} candidatura
-            {stats.newApplications7d === 1 ? "" : "s"} e {stats.decided7d} decis
-            {stats.decided7d === 1 ? "ão" : "ões"} nos últimos 7 dias.
+            {nobodyYet
+              ? `Painel de recrutamento da ${companyName}.`
+              : `${stats.newApplications7d} candidatura${stats.newApplications7d === 1 ? "" : "s"} e ${stats.decided7d} ${stats.decided7d === 1 ? "decisão" : "decisões"} nos últimos 7 dias.`}
           </p>
         </div>
         <Link
@@ -137,6 +141,39 @@ export default async function PainelPage() {
           + Nova vaga
         </Link>
       </div>
+
+      {drafts.length > 0 && (
+        <Link
+          href={`/vagas/${drafts[0].id}`}
+          className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-6 transition-colors"
+          style={{
+            borderColor:
+              "color-mix(in srgb, var(--brand-primary) 25%, transparent)",
+            backgroundColor: "var(--brand-tint)",
+          }}
+        >
+          <span>
+            <span className="block text-[15px] font-semibold text-[#0a0a0a]">
+              {drafts.length === 1
+                ? `${drafts[0].title} está em rascunho`
+                : `${drafts.length} vagas em rascunho`}
+            </span>
+            <span className="mt-1 block text-sm text-[#57534e]">
+              Revise o texto e publique. Só depois disso a vaga aparece para os
+              candidatos.
+            </span>
+          </span>
+          <span
+            className="flex h-10 items-center rounded-2xl px-5 text-[13px] font-medium"
+            style={{
+              backgroundColor: "var(--brand-primary)",
+              color: "var(--brand-foreground)",
+            }}
+          >
+            Revisar e publicar
+          </span>
+        </Link>
+      )}
 
       {/* A fila: o único número que muda o que o gestor faz agora */}
       <section
@@ -152,23 +189,33 @@ export default async function PainelPage() {
             <span
               className={
                 "text-5xl font-bold " +
-                (clear ? "text-[#1f7a4d]" : "text-[#b07818]")
+                (nobodyYet
+                  ? "text-[#a1a1aa]"
+                  : clear
+                    ? "text-[#1f7a4d]"
+                    : "text-[#b07818]")
               }
             >
               {clear ? "0" : stats.waiting}
             </span>
             <span className="text-lg font-medium text-[#0a0a0a]">
-              {clear
-                ? "ninguém esperando resposta"
-                : `${stats.waiting === 1 ? "candidato" : "candidatos"} esperando sua resposta`}
+              {nobodyYet
+                ? "candidaturas por enquanto"
+                : clear
+                  ? "ninguém esperando resposta"
+                  : `${stats.waiting === 1 ? "candidato" : "candidatos"} esperando sua resposta`}
             </span>
           </p>
           <p className="mt-2 text-sm text-[#71717a]">
-            {clear
-              ? "Fila limpa. Todo mundo que se candidatou já teve um retorno seu."
-              : stats.oldestWaitingAt
-                ? `O mais antigo se candidatou ${formatWaiting(stats.oldestWaitingAt)} e ainda não teve retorno.`
-                : ""}
+            {nobodyYet
+              ? stats.openJobs > 0
+                ? "Divulgue o link das vagas no WhatsApp e no Instagram. Cada candidatura nova aparece aqui."
+                : "Publique uma vaga para começar a receber candidatos."
+              : clear
+                ? "Fila limpa. Todo mundo que se candidatou já teve um retorno seu."
+                : stats.oldestWaitingAt
+                  ? `O mais antigo se candidatou ${formatWaiting(stats.oldestWaitingAt)} e ainda não teve retorno.`
+                  : ""}
           </p>
         </div>
         {!clear && (
@@ -264,16 +311,27 @@ export default async function PainelPage() {
                   />
                 </span>
                 <span className="mt-2.5 block text-[11px] text-[#71717a]">
-                  {job.total} candidato{job.total === 1 ? "" : "s"}
-                  {job.pending > 0 && (
+                  {job.status === "DRAFT" ? (
+                    <span
+                      className="font-medium"
+                      style={{ color: "var(--brand-primary)" }}
+                    >
+                      Revisar e publicar ›
+                    </span>
+                  ) : (
                     <>
-                      {" · "}
-                      <span className="font-medium text-[#b07818]">
-                        {job.pending} esperando
-                      </span>
+                      {job.total} candidato{job.total === 1 ? "" : "s"}
+                      {job.pending > 0 && (
+                        <>
+                          {" · "}
+                          <span className="font-medium text-[#b07818]">
+                            {job.pending} esperando
+                          </span>
+                        </>
+                      )}
+                      {job.interview > 0 && ` · ${job.interview} em entrevista`}
                     </>
                   )}
-                  {job.interview > 0 && ` · ${job.interview} em entrevista`}
                 </span>
               </Link>
             ))}

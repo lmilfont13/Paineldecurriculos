@@ -2,7 +2,6 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inngest } from "@/lib/inngest";
-import { sendApplicationConfirmation } from "@/server/services/email.service";
 import { getCompanyById } from "@/server/services/company.service";
 import {
   MAX_RESUME_BYTES,
@@ -37,15 +36,32 @@ import {
 import { findManagerByCompanyId } from "@/server/repositories/user.repository";
 import { updateCandidateProfile } from "@/server/services/candidate.service";
 import {
+  sendApplicationConfirmation,
   sendInterviewScheduledEmail,
   sendManagerMessageEmail,
   sendNewApplicationNotification,
   sendStatusUpdateEmail,
+  type EmailBrand,
 } from "@/server/services/email.service";
 import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
 import { findJobById } from "@/server/repositories/job.repository";
 
 const RESUMES_BUCKET = "resumes";
+
+/** Para o candidato, quem escreve é a empresa: nome, símbolo e cor dela. */
+function emailBrand(company: {
+  name: string;
+  slug: string;
+  primaryColor: string;
+  logoUrl: string | null;
+}): EmailBrand {
+  return {
+    name: company.name,
+    slug: company.slug,
+    primaryColor: company.primaryColor,
+    logoUrl: company.logoUrl,
+  };
+}
 
 /** Contagem de candidaturas pendentes (badge da sidebar do gestor). */
 export function countPendingApplications(companyId: string): Promise<number> {
@@ -106,11 +122,12 @@ export async function setApplicationStatus(
       }).catch(() => {});
       if (application.email.includes("@")) {
         void sendStatusUpdateEmail({
+          brand: emailBrand(company),
           to: application.email,
           candidateName: application.name,
-          companyName: company.name,
           jobTitle: application.job.title,
           status,
+          applicationId: id,
         });
       }
     }
@@ -212,14 +229,15 @@ export async function scheduleInterview(
   if (application.email.includes("@")) {
     const manager = await findManagerByCompanyId(companyId);
     void sendInterviewScheduledEmail({
+      brand: emailBrand(company),
       to: application.email,
       candidateName: application.name,
-      companyName: company.name,
       jobTitle: application.job.title,
       when,
       mode: input.mode,
       location: input.location,
       managerEmail: manager?.email ?? null,
+      applicationId: id,
     });
   }
   return { ok: true };
@@ -249,12 +267,13 @@ export async function sendManagerMessage(
   if (application.email.includes("@")) {
     const manager = await findManagerByCompanyId(companyId);
     void sendManagerMessageEmail({
+      brand: emailBrand(company),
       to: application.email,
       candidateName: application.name,
-      companyName: company.name,
       jobTitle: application.job.title,
       message: text,
       managerEmail: manager?.email ?? null,
+      applicationId: id,
     });
   }
   return { ok: true };
@@ -446,15 +465,17 @@ export async function submitApplication(
       jobTitle: job.title,
     }).catch(() => {});
     void sendApplicationConfirmation({
+      brand: emailBrand(company),
       to: application.email,
       candidateName: application.name,
-      companyName: company.name,
       jobTitle: job.title,
+      applicationId: application.id,
     });
     // G14: avisa o gestor da empresa (fire-and-forget)
     void findManagerByCompanyId(companyId).then((manager) => {
       if (manager) {
         void sendNewApplicationNotification({
+          brand: emailBrand(company),
           to: manager.email,
           candidateName: application.name,
           jobTitle: job.title,

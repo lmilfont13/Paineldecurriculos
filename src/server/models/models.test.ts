@@ -6,9 +6,13 @@ import {
 } from "@/server/models/application.model";
 import {
   brandCssVars,
+  brandDeep,
   brandForeground,
+  brandTint,
+  careersPageSchema,
   companyDataSchema,
   createCompanySchema,
+  mixHex,
 } from "@/server/models/company.model";
 import {
   candidateSignupSchema,
@@ -435,5 +439,46 @@ describe("entrevista", () => {
     for (const proibido of ["score", "pontos", "aderência"]) {
       expect(texto).not.toContain(proibido);
     }
+  });
+});
+
+describe("tons da marca Tarhget", () => {
+  it("mistura cores nos extremos e no meio", () => {
+    expect(mixHex("#811201", "#000000", 0)).toBe("#811201");
+    expect(mixHex("#811201", "#000000", 1)).toBe("#000000");
+    expect(mixHex("#000000", "#ffffff", 0.5)).toBe("#808080");
+  });
+
+  it("o tom escuro do bordô fica mais escuro e ainda avermelhado", () => {
+    const deep = brandDeep("#811201");
+    const r = parseInt(deep.slice(1, 3), 16);
+    const g = parseInt(deep.slice(3, 5), 16);
+    expect(r).toBeLessThan(0x81);
+    expect(r).toBeGreaterThan(g * 3);
+  });
+
+  it("o tom claro fica quase branco", () => {
+    const tint = brandTint("#811201");
+    expect(parseInt(tint.slice(1, 3), 16)).toBeGreaterThan(0xf0);
+  });
+
+  it("as CSS vars trazem os tons derivados e texto branco sobre o bordô", () => {
+    const vars = brandCssVars({ primaryColor: "#811201", secondaryColor: "#3b1812" });
+    expect(vars["--brand-foreground"]).toBe("#ffffff");
+    expect(vars["--brand-deep"]).toBe(brandDeep("#811201"));
+    expect(vars["--brand-tint"]).toBe(brandTint("#811201"));
+  });
+
+  it("a página de carreiras exige nome, título e cor válida", () => {
+    const base = {
+      name: "Tarhget",
+      heroTitle: "Trabalhe com a gente",
+      heroSubtitle: "Vagas abertas da Tarhget.",
+      aboutText: "",
+      primaryColor: "#811201",
+    };
+    expect(careersPageSchema.safeParse(base).success).toBe(true);
+    expect(careersPageSchema.safeParse({ ...base, primaryColor: "bordô" }).success).toBe(false);
+    expect(careersPageSchema.safeParse({ ...base, name: " " }).success).toBe(false);
   });
 });

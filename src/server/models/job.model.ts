@@ -36,7 +36,8 @@ export function toPublicJob(job: Job): PublicJob {
     location: job.location,
     contract: job.contract,
     workMode: job.workMode,
-    createdAt: job.createdAt,
+    // Para quem lê a vaga, a data que importa é quando ela entrou no ar.
+    createdAt: job.publishedAt ?? job.createdAt,
   };
 }
 

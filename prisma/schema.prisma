@@ -18,7 +18,10 @@ model Company {
   website        String?
   primaryColor   String   @default("#1E4FBF")
   secondaryColor String   @default("#0E7A6B")
+  /// Símbolo quadrado: cabeçalho, ícone da aba, e-mails.
   logoUrl        String?
+  /// Logo completo (com o nome): topo da página de vagas e login.
+  logoFullUrl    String?
   heroTitle      String   @default("Trabalhe com a gente")
   heroSubtitle   String   @default("Crie sua conta uma vez e candidate-se em um clique.")
   aboutText      String?
@@ -59,6 +62,8 @@ model Job {
   status       JobStatus @default(DRAFT)
   aiCriteria   String[]  @default([])
   aiMinScore   Int       @default(70)
+  /// Quando a vaga entrou no ar pela última vez ("publicada há X dias").
+  publishedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

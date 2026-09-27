@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 
@@ -220,10 +221,10 @@ export function ApplyWizard({
                   onChange={(v) => setAnswer(field.id, v)}
                 />
               ))}
-              <Field label="Currículo (PDF)">
+              <Field label="Currículo em PDF (opcional)">
                 <div className="flex items-center gap-4 rounded-md border border-[#e4e4e7] bg-[#fafaf9] p-4">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white">
-                    <span className="size-[18px] rounded-[3px] bg-[#71717a]/45" />
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white text-[#78716c]">
+                    <FileText aria-hidden className="size-[18px]" strokeWidth={1.75} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
@@ -231,7 +232,7 @@ export function ApplyWizard({
                         ? resume.name
                         : candidate.resumeUrl
                           ? "Usaremos o currículo do seu perfil"
-                          : "Arraste aqui ou selecione um arquivo"}
+                          : "Nenhum arquivo escolhido"}
                     </span>
                     <span className="block text-xs text-[#71717a]">
                       PDF até 5 MB
@@ -252,6 +253,12 @@ export function ApplyWizard({
                     onChange={(e) => pickResume(e.target.files?.[0] ?? null)}
                   />
                 </div>
+                {!resume && !candidate.resumeUrl && (
+                  <p className="mt-2 text-xs leading-5 text-[#78716c]">
+                    Não tem currículo em PDF? Pode seguir sem. A{" "}
+                    {company.name} lê as suas respostas.
+                  </p>
+                )}
               </Field>
             </StepShell>
           )}
@@ -259,11 +266,11 @@ export function ApplyWizard({
           {step === 2 && (
             <StepShell
               title={`Perguntas da ${company.name}`}
-              subtitle="Campos definidos por esta empresa."
+              subtitle="Mais algumas perguntas sobre você."
             >
               {customFields.length === 0 && (
                 <p className="text-sm text-[#71717a]">
-                  Esta empresa não definiu perguntas adicionais. Pode continuar.
+                  Não há mais perguntas. Pode continuar.
                 </p>
               )}
               {customFields.map((field) => (
@@ -289,7 +296,7 @@ export function ApplyWizard({
                     Não conseguimos enviar sua candidatura
                   </p>
                   <p className="mt-1 text-xs text-[#9b4038]">
-                    {error} Seus dados estão salvos aqui — é só tentar de novo.
+                    {error} Suas respostas continuam aqui.
                   </p>
                 </div>
               )}
@@ -574,8 +581,8 @@ function Confirmation({
   return (
     <div className="mx-auto w-full max-w-[512px] px-6 pt-8">
       <div className="flex flex-col items-center rounded-3xl border border-[#e4e4e7] bg-white px-7 py-12 text-center shadow-[0px_4px_6px_rgba(0,0,0,0.07)]">
-        <span className="flex size-16 items-center justify-center rounded-full bg-green-100">
-          <span className="text-2xl text-green-600" aria-hidden>
+        <span className="flex size-16 items-center justify-center rounded-full bg-[#e4f6ec]">
+          <span className="text-2xl text-[#1f7a4d]" aria-hidden>
             ✓
           </span>
         </span>
@@ -583,7 +590,8 @@ function Confirmation({
           Candidatura enviada
         </h1>
         <p className="mt-3 max-w-[400px] text-sm leading-[21px] text-[#71717a]">
-          A {company.name} recebeu sua candidatura para {job.title}.
+          A {company.name} recebeu sua candidatura para {job.title}. Cada
+          novidade do processo aparece na sua área e chega por e-mail.
         </p>
         <p className="mt-8 w-full max-w-[400px] rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3 text-xs text-[#71717a]">
           Confirmação enviada para {email}

@@ -23,6 +23,7 @@ export const companyBrandSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Cor secundária inválida (use #RRGGBB)."),
   logoUrl: z.string().optional().default(""),
+  logoFullUrl: z.string().optional().default(""),
 });
 
 /** Passo 3 — Página (A4). */
@@ -55,15 +56,33 @@ export const updateCompanySchema = companyDataSchema
 
 export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;
 
-/** Projeção pública da empresa — o que o fluxo do candidato pode ver. */
+/**
+ * Página de carreiras editada pelo próprio dono (Configurações). Só o que é
+ * vitrine: slug, e-mail e status da conta continuam com a plataforma.
+ */
+export const careersPageSchema = z.object({
+  name: z.string().trim().min(2, "Informe o nome da empresa."),
+  heroTitle: z.string().trim().min(2, "Informe o título da página."),
+  heroSubtitle: z.string().trim().min(2, "Informe o texto de apresentação."),
+  aboutText: z.string().trim().max(1200).optional().default(""),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida (use #RRGGBB)."),
+});
+
+export type CareersPageInput = z.infer<typeof careersPageSchema>;
+
+/** Projeção pública da empresa: o que o fluxo do candidato pode ver. */
 export type PublicCompany = Pick<
   Company,
   | "id"
   | "name"
   | "slug"
+  | "sector"
   | "primaryColor"
   | "secondaryColor"
   | "logoUrl"
+  | "logoFullUrl"
   | "heroTitle"
   | "heroSubtitle"
   | "aboutText"
@@ -83,7 +102,39 @@ export function brandForeground(hex: string): string {
   return luminance > 0.6 ? "#0a0a0a" : "#ffffff";
 }
 
-/** CSS vars da marca — usadas no fluxo público e nos acentos do painel do gestor. */
+/** Mistura duas cores #RRGGBB (t = 0 → a, t = 1 → b). */
+export function mixHex(a: string, b: string, t: number): string {
+  const parse = (hex: string) => {
+    const v = hex.replace("#", "");
+    return v.length === 6
+      ? [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16))
+      : [0, 0, 0];
+  };
+  const [ca, cb] = [parse(a), parse(b)];
+  return (
+    "#" +
+    ca
+      .map((c, i) => Math.round(c + (cb[i] - c) * t))
+      .map((c) => c.toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+/** Tom escuro da marca: fundo do topo da página de vagas e do login. */
+export function brandDeep(hex: string): string {
+  return mixHex(hex, "#000000", 0.55);
+}
+
+/** Tom claríssimo da marca: realces e fundos de destaque. */
+export function brandTint(hex: string): string {
+  return mixHex(hex, "#ffffff", 0.93);
+}
+
+/**
+ * CSS vars da marca, usadas no fluxo público e nos acentos do painel do
+ * gestor. Os tons derivados saem da cor principal, então uma única escolha
+ * de cor mantém o conjunto harmônico.
+ */
 export function brandCssVars(company: {
   primaryColor: string;
   secondaryColor: string;
@@ -92,6 +143,8 @@ export function brandCssVars(company: {
     "--brand-primary": company.primaryColor,
     "--brand-secondary": company.secondaryColor,
     "--brand-foreground": brandForeground(company.primaryColor),
+    "--brand-deep": brandDeep(company.primaryColor),
+    "--brand-tint": brandTint(company.primaryColor),
   };
 }
 
@@ -100,9 +153,11 @@ export function toPublicCompany(company: Company): PublicCompany {
     id: company.id,
     name: company.name,
     slug: company.slug,
+    sector: company.sector,
     primaryColor: company.primaryColor,
     secondaryColor: company.secondaryColor,
     logoUrl: company.logoUrl,
+    logoFullUrl: company.logoFullUrl,
     heroTitle: company.heroTitle,
     heroSubtitle: company.heroSubtitle,
     aboutText: company.aboutText,

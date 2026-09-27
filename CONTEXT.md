@@ -27,6 +27,7 @@ GEMINI_API_KEY=""
 INNGEST_EVENT_KEY=""
 INNGEST_SIGNING_KEY=""
 RESEND_API_KEY=""
+EMAIL_FROM_ADDRESS=""            # opcional: remetente com domínio verificado no Resend
 NEXT_PUBLIC_APP_URL=""
 ```
 
@@ -45,7 +46,11 @@ NEXT_PUBLIC_APP_URL=""
 /(gestor)/vagas/nova             → criar vaga multi-step (4 passos)
 /(gestor)/candidaturas           → lista com filtros e ações em massa
 /(gestor)/candidaturas/[id]      → detalhe com bloco de IA
-/(gestor)/formulario             → construtor de formulário
+/(gestor)/vagas/[jobId]          → hub da vaga (funil, link, critérios)
+/(gestor)/configuracoes          → página de carreiras (textos, logos, cor)
+/(gestor)/configuracoes/formulario → construtor de formulário
+/[slug]/minhas-candidaturas      → área do candidato (novidades, andamento)
+/[slug]/notificacoes             → histórico de novidades do candidato
 ```
 
 ## Schema Prisma

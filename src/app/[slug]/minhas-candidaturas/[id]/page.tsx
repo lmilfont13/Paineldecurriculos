@@ -26,7 +26,7 @@ function eventLabel(
     case "PENDING":
       return { label: "Voltou para análise", tone: "neutral" };
     case "APPROVED":
-      return { label: "Você foi aprovado(a) 🎉", tone: "good" };
+      return { label: "Você foi aprovado", tone: "good" };
     case "REJECTED":
       return { label: "Processo finalizado", tone: "end" };
     default:

@@ -45,6 +45,7 @@ export async function getDashboard(companyId: string): Promise<{
         a.updatedAt >= since7d
     ).length,
     newApplications7d: applications.filter((a) => a.createdAt >= since7d).length,
+    totalApplications: applications.length,
   };
 
   const priority: PriorityApplication[] = waitingList
@@ -65,8 +66,9 @@ export async function getDashboard(companyId: string): Promise<{
     })
     .slice(0, 5);
 
+  // Rascunho entra na lista: é trabalho parado esperando o dono publicar.
   const jobs: JobProgress[] = allJobs
-    .filter((j) => j.status === "OPEN" || j.status === "PAUSED")
+    .filter((j) => j.status !== "CLOSED")
     .map((job) => {
       const ofJob = applications.filter((a) => a.job.id === job.id);
       const count = (status: string) =>
@@ -82,7 +84,11 @@ export async function getDashboard(companyId: string): Promise<{
         rejected: count("REJECTED"),
       };
     })
-    .sort((a, b) => b.pending - a.pending);
+    .sort((a, b) => {
+      if (a.status === "DRAFT" && b.status !== "DRAFT") return -1;
+      if (b.status === "DRAFT" && a.status !== "DRAFT") return 1;
+      return b.pending - a.pending;
+    });
 
   return { stats, priority, jobs };
 }

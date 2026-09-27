@@ -66,6 +66,7 @@ export function updateCompany(
     primaryColor: string;
     secondaryColor: string;
     logoUrl: string | null;
+    logoFullUrl: string | null;
     heroTitle: string;
     heroSubtitle: string;
     aboutText: string | null;

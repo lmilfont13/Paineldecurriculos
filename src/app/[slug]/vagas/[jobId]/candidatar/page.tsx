@@ -50,8 +50,8 @@ export default async function ApplyPage({
               Você já se candidatou a esta vaga
             </h1>
             <p className="mt-2 text-sm text-[#71717a]">
-              Sua candidatura para {data.job.title} está registrada — acompanhe
-              o andamento na sua área.
+              Sua candidatura para {data.job.title} já está com a{" "}
+              {data.company.name}. O andamento fica na sua área.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3">
               <a

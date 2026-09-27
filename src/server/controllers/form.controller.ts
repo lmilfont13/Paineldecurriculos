@@ -35,7 +35,7 @@ export async function addFormFieldAction(
     return { error: "Dropdown precisa de pelo menos 2 opções." };
   }
   await addFormField(user.companyId, parsed.data);
-  revalidatePath("/formulario");
+  revalidatePath("/configuracoes/formulario");
   return null;
 }
 
@@ -45,7 +45,7 @@ export async function toggleFieldRequiredAction(
 ): Promise<void> {
   const user = await requireManager();
   await setFormFieldRequired(user.companyId, fieldId, required);
-  revalidatePath("/formulario");
+  revalidatePath("/configuracoes/formulario");
 }
 
 export async function deleteFormFieldAction(
@@ -53,6 +53,6 @@ export async function deleteFormFieldAction(
 ): Promise<{ error: string } | null> {
   const user = await requireManager();
   const result = await removeFormField(user.companyId, fieldId);
-  revalidatePath("/formulario");
+  revalidatePath("/configuracoes/formulario");
   return result.ok ? null : { error: result.error };
 }

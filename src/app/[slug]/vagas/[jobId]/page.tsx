@@ -7,9 +7,10 @@ import {
   CompanyHeader,
 } from "@/components/public/company-header";
 import {
-  formatJobMeta,
+  contractLabels,
   formatPublishedAgo,
   requirementsToBullets,
+  workModeLabels,
 } from "@/server/models/job.model";
 import {
   getJobDetailPageData,
@@ -28,7 +29,7 @@ export async function generateMetadata({
   };
 }
 
-/** P2 · Detalhe da vaga (público) — frame 87:44 do Figma. */
+/** P2 · Detalhe da vaga (público). */
 export default async function PublicJobDetailPage({
   params,
 }: {
@@ -42,48 +43,64 @@ export default async function PublicJobDetailPage({
   if (!data) notFound();
   const { company, job, applicantCount } = data;
   const bullets = requirementsToBullets(job.requirements);
+  const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
+  const tags = [
+    job.location,
+    workModeLabels[job.workMode],
+    contractLabels[job.contract],
+  ].filter(Boolean) as string[];
 
   return (
     <>
       <CompanyHeader company={company} candidate={candidate} />
-      <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 pt-10">
+      <main className="mx-auto w-full max-w-[1120px] flex-1 px-5 pt-8 md:px-8 md:pt-10">
         <Link
           href={`/${company.slug}/vagas`}
-          className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
+          className="text-[13px] font-medium text-[#78716c] hover:text-[#1c1917]"
         >
           ← Todas as vagas
         </Link>
 
-        <div className="mt-8 flex flex-col gap-12 lg:flex-row lg:justify-between">
-          <article className="max-w-[680px]">
-            <h1 className="text-[28px] font-bold leading-tight text-[#0a0a0a] md:text-[40px]">
+        <div className="mt-7 flex flex-col gap-10 lg:flex-row lg:justify-between lg:gap-16">
+          <article className="min-w-0 max-w-[680px] flex-1">
+            <h1 className="text-[30px] font-bold leading-[1.15] tracking-[-0.4px] text-[#1c1917] md:text-[40px]">
               {job.title}
             </h1>
-            <p className="mt-4 text-sm text-[#71717a]">
-              {formatJobMeta(job)} · {formatPublishedAgo(job.createdAt)}
-            </p>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-[#f1ece7] px-2.5 py-1 text-xs text-[#57534e]"
+                >
+                  {tag}
+                </span>
+              ))}
+              <span className="px-1 py-1 text-xs text-[#a8a29e]">
+                {formatPublishedAgo(job.createdAt)}
+              </span>
+            </div>
 
-            <h2 className="mt-12 text-[15px] font-semibold text-[#0a0a0a]">
+            <h2 className="mt-10 text-[15px] font-semibold text-[#1c1917]">
               Sobre a vaga
             </h2>
-            <p className="mt-3 max-w-[640px] whitespace-pre-line text-[15px] leading-6 text-[#71717a]">
+            <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-[#57534e]">
               {job.description}
             </p>
 
             {bullets.length > 0 && (
               <>
-                <h2 className="mt-12 text-[15px] font-semibold text-[#0a0a0a]">
-                  O que esperamos
+                <h2 className="mt-10 text-[15px] font-semibold text-[#1c1917]">
+                  O que a gente procura
                 </h2>
-                <ul className="mt-4 space-y-2.5">
+                <ul className="mt-4 space-y-3">
                   {bullets.map((item) => (
                     <li
                       key={item}
-                      className="flex max-w-[600px] items-start gap-3 text-[15px] text-[#0a0a0a]"
+                      className="flex items-start gap-3 text-[15px] leading-6 text-[#1c1917]"
                     >
                       <span
                         aria-hidden
-                        className="mt-[7px] size-[5px] shrink-0 rounded-full"
+                        className="mt-[9px] size-[6px] shrink-0 rounded-full"
                         style={{ backgroundColor: "var(--brand-primary)" }}
                       />
                       {item}
@@ -92,38 +109,67 @@ export default async function PublicJobDetailPage({
                 </ul>
               </>
             )}
+
+            {company.aboutText && (
+              <>
+                <h2 className="mt-10 text-[15px] font-semibold text-[#1c1917]">
+                  Sobre a {company.name}
+                </h2>
+                <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-[#57534e]">
+                  {company.aboutText}
+                </p>
+              </>
+            )}
           </article>
 
-          <aside className="w-full shrink-0 lg:w-[440px]">
-            <div className="rounded-3xl border border-[#e4e4e7] bg-white p-7 shadow-[0px_4px_6px_rgba(0,0,0,0.07)]">
-              <h2 className="text-base font-semibold text-[#0a0a0a]">
-                Candidate-se a esta vaga
+          <aside className="hidden w-full shrink-0 lg:block lg:w-[380px]">
+            <div className="sticky top-8 rounded-2xl border border-[#ebe7e3] bg-white p-7 shadow-[0_6px_20px_rgba(28,25,23,0.05)]">
+              <h2 className="text-base font-semibold text-[#1c1917]">
+                Quer essa vaga?
               </h2>
-              <p className="mt-1 text-[13px] leading-[19px] text-[#71717a]">
-                Menos de 2 minutos. Seu perfil fica salvo para as próximas.
+              <p className="mt-1.5 text-[13px] leading-5 text-[#78716c]">
+                Leva uns 3 minutos. Currículo em PDF ajuda, mas não é
+                obrigatório.
               </p>
               <Link
-                href={`/${company.slug}/vagas/${job.id}/candidatar`}
-                className="mt-6 flex h-[46px] w-full items-center justify-center rounded-2xl text-sm font-semibold transition-opacity hover:opacity-90"
+                href={applyHref}
+                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: "var(--brand-primary)",
                   color: "var(--brand-foreground)",
                 }}
               >
-                Candidatar-se agora
+                Candidatar-se
               </Link>
-              <p className="mt-4 text-xs text-[#a1a1aa]">
+              <p className="mt-4 text-xs text-[#a8a29e]">
                 {applicantCount === 0
-                  ? "Seja a primeira pessoa a se candidatar"
+                  ? "Ninguém se candidatou ainda."
                   : applicantCount === 1
-                    ? "1 pessoa já se candidatou"
-                    : `${applicantCount} pessoas já se candidataram`}
+                    ? "1 pessoa já se candidatou."
+                    : `${applicantCount} pessoas já se candidataram.`}
               </p>
             </div>
           </aside>
         </div>
       </main>
+
+      {/* Celular: o botão acompanha a leitura, em vez de esperar no fim da página */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ebe7e3] bg-white/95 px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
+        <Link
+          href={applyHref}
+          className="flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold"
+          style={{
+            backgroundColor: "var(--brand-primary)",
+            color: "var(--brand-foreground)",
+          }}
+        >
+          Candidatar-se
+        </Link>
+      </div>
+
       <CompanyFooter company={company} />
+      {/* Espaço para o rodapé não ficar escondido atrás do botão fixo */}
+      <div aria-hidden className="h-20 lg:hidden" />
     </>
   );
 }

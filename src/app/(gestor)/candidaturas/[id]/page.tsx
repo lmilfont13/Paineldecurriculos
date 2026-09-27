@@ -66,7 +66,7 @@ export default async function CandidaturaDetailPage({
   const analyzing = app.aiState === "WAITING" || app.aiState === "PROCESSING";
 
   return (
-    <div className="mx-auto max-w-[640px] rounded-2xl border border-[#e4e4e7] bg-white p-8 shadow-sm">
+    <div className="mx-auto max-w-[640px] rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-8">
       <LiveRefresh active={analyzing} />
       <div className="flex items-start justify-between">
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
@@ -140,7 +140,7 @@ export default async function CandidaturaDetailPage({
               <span className="size-2 animate-pulse rounded-full bg-[#8a8781]" />
             )}
             {app.aiState === "NO_RESUME"
-              ? "Sem currículo — candidatura não analisada pela IA."
+              ? "Sem currículo, então a IA não fez a leitura. Avalie pelas respostas abaixo."
               : app.aiState === "FAILED"
                 ? "A análise falhou. Você pode pedir uma nova tentativa."
                 : "Analisando o currículo… o resultado aparece aqui em instantes."}
