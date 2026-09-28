@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/configuracoes", label: "Página de carreiras" },
   { href: "/configuracoes/formulario", label: "Formulário de candidatura" },
+  { href: "/configuracoes/usuarios", label: "Usuários" },
 ];
 
 /** Abas de Configurações: o que é ajuste, fora da navegação do dia a dia. */
