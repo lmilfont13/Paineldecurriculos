@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { InviteForm, RemoveManagerButton } from "@/components/gestor/invite-form";
+import { InviteForm, ProfileForm, RemoveManagerButton } from "@/components/gestor/invite-form";
 import { SettingsTabs } from "@/components/gestor/settings-tabs";
 import { requireManager } from "@/server/controllers/guards";
 import { listCompanyUsers } from "@/server/services/user.service";
@@ -35,6 +35,15 @@ export default async function UsuariosPage() {
       <SettingsTabs />
 
       <div className="mt-8 max-w-[640px] space-y-8">
+        {/* Meu perfil */}
+        <section>
+          <h2 className="text-sm font-semibold text-[#0a0a0a]">Meu perfil</h2>
+          <p className="mt-1 text-[12px] text-[#71717a]">
+            Nome e e-mail que aparecem no painel e na auditoria.
+          </p>
+          <ProfileForm currentName={manager.name} currentEmail={manager.email} />
+        </section>
+
         {/* Lista de usuários */}
         <section>
           <h2 className="text-sm font-semibold text-[#0a0a0a]">
