@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
 export type AuditAction =
@@ -24,7 +26,7 @@ export interface CreateAuditLogInput {
   entityType?: "VAGA" | "CANDIDATURA" | "EMPRESA";
   entityId?: string;
   entityLabel?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonObject;
 }
 
 export function createAuditLog(input: CreateAuditLogInput) {
