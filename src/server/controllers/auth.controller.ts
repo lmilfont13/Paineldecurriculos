@@ -14,7 +14,7 @@ import {
   sendPasswordReset,
 } from "@/server/services/auth.service";
 
-export type LoginState = { error: string } | null;
+export type LoginState = { error: string; isCandidate?: boolean } | null;
 
 export async function loginAction(
   _prevState: LoginState,
@@ -40,10 +40,7 @@ export async function loginAction(
     const isCandidate = await emailBelongsToCandidate(parsed.data.email);
     await supabase.auth.signOut();
     if (isCandidate) {
-      return {
-        error:
-          "Esta é a entrada da equipe. Candidatos entram pela página de vagas da empresa — abra o link de carreiras e clique em “Entrar”.",
-      };
+      return { error: “candidato”, isCandidate: true };
     }
     return { error: "Este e-mail não tem acesso à plataforma." };
   }

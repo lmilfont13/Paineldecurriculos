@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import { loginAction, type LoginState } from "@/server/controllers/auth.controller";
 
-export function LoginForm({ branded }: { branded: boolean }) {
+export function LoginForm({ branded, slug }: { branded: boolean; slug?: string }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     loginAction,
     null
@@ -46,10 +46,37 @@ export function LoginForm({ branded }: { branded: boolean }) {
         className="mt-1.5 h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
       />
 
-      {state?.error && (
+      {state?.error && !state.isCandidate && (
         <p role="alert" className="mt-4 text-sm text-red-600">
           {state.error}
         </p>
+      )}
+
+      {state?.isCandidate && (
+        <div className="mt-4 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-4 text-center">
+          <p className="text-[13px] font-medium text-[#0a0a0a]">
+            Essa conta é de candidato
+          </p>
+          <p className="mt-1 text-[12px] text-[#71717a]">
+            O acesso de candidatos é pela página de vagas da empresa.
+          </p>
+          {slug ? (
+            <a
+              href={`/${slug}/vagas`}
+              className="mt-3 inline-flex h-9 items-center rounded-2xl px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--brand-primary)" }}
+            >
+              Ver vagas e entrar
+            </a>
+          ) : (
+            <a
+              href="/login"
+              className="mt-3 inline-flex h-9 items-center rounded-2xl bg-[#0a0a0a] px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+            >
+              Ir para a página de vagas
+            </a>
+          )}
+        </div>
       )}
 
       <button

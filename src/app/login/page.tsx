@@ -162,7 +162,7 @@ export default async function LoginPage({
                   ? `Painel de candidatos da ${company.name}.`
                   : "Gestores de RH e administradores da plataforma."}
               </p>
-              <LoginForm branded={Boolean(company)} />
+              <LoginForm branded={Boolean(company)} slug={company?.slug} />
             </div>
           </details>
         </div>
