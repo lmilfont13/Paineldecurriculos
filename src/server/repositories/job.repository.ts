@@ -43,6 +43,14 @@ export function createJob(data: {
   return prisma.job.create({ data });
 }
 
+export function incrementWhatsappShares(id: string) {
+  return prisma.job.update({
+    where: { id },
+    data: { whatsappShares: { increment: 1 } },
+    select: { whatsappShares: true },
+  });
+}
+
 export function updateJob(
   id: string,
   data: Partial<{

@@ -29,6 +29,22 @@ export function countCompanies() {
   return prisma.company.count();
 }
 
+/** Lista de empresas ativas para a tela de seleção pública. */
+export function findActiveCompanies() {
+  return prisma.company.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    select: {
+      name: true,
+      slug: true,
+      logoUrl: true,
+      primaryColor: true,
+      sector: true,
+      _count: { select: { jobs: { where: { status: "OPEN" } } } },
+    },
+  });
+}
+
 /** Primeira empresa ativa — usada como destino padrão da raiz do site. */
 export function findFirstActiveCompany() {
   return prisma.company.findFirst({

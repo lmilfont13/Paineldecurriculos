@@ -40,6 +40,18 @@ export function findApplicationsByCompany(companyId: string) {
   });
 }
 
+/** IDs de vagas em que o candidato já tem candidatura (para indicador na lista). */
+export async function findAppliedJobIds(
+  candidateId: string,
+  jobIds: string[]
+): Promise<string[]> {
+  const rows = await prisma.application.findMany({
+    where: { candidateId, jobId: { in: jobIds } },
+    select: { jobId: true },
+  });
+  return rows.map((r) => r.jobId);
+}
+
 /** Dedupe (CA6): candidato só se candidata uma vez por vaga. */
 export function findApplicationByCandidateAndJob(
   candidateId: string,
@@ -112,6 +124,7 @@ export function findApplicationById(id: string) {
           requirements: true,
         },
       },
+      company: { select: { name: true, slug: true, primaryColor: true } },
       answers: { include: { field: true } },
       statusEvents: { orderBy: { createdAt: "asc" } },
     },

@@ -6,6 +6,7 @@ import {
   CompanyFooter,
   CompanyHeader,
 } from "@/components/public/company-header";
+import { WhatsAppShareButton } from "@/components/public/whatsapp-share-button";
 import {
   contractLabels,
   formatPublishedAgo,
@@ -42,6 +43,7 @@ export default async function PublicJobDetailPage({
   ]);
   if (!data) notFound();
   const { company, job, applicantCount } = data;
+  const publicJobUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${company.slug}/vagas/${job.id}`;
   const bullets = requirementsToBullets(job.requirements);
   const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
   const tags = [
@@ -148,23 +150,39 @@ export default async function PublicJobDetailPage({
                     ? "1 pessoa já se candidatou."
                     : `${applicantCount} pessoas já se candidataram.`}
               </p>
+              <div className="mt-3">
+                <WhatsAppShareButton
+                  jobId={job.id}
+                  jobTitle={job.title}
+                  url={publicJobUrl}
+                  variant="outline"
+                />
+              </div>
             </div>
           </aside>
         </div>
       </main>
 
-      {/* Celular: o botão acompanha a leitura, em vez de esperar no fim da página */}
+      {/* Celular: botões fixos no rodapé */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ebe7e3] bg-white/95 px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
-        <Link
-          href={applyHref}
-          className="flex h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold"
-          style={{
-            backgroundColor: "var(--brand-primary)",
-            color: "var(--brand-foreground)",
-          }}
-        >
-          Candidatar-se
-        </Link>
+        <div className="flex gap-2">
+          <WhatsAppShareButton
+            jobId={job.id}
+            jobTitle={job.title}
+            url={publicJobUrl}
+            variant="solid"
+          />
+          <Link
+            href={applyHref}
+            className="flex h-11 flex-1 items-center justify-center rounded-xl text-[14px] font-semibold transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: "var(--brand-primary)",
+              color: "var(--brand-foreground)",
+            }}
+          >
+            Candidatar-se
+          </Link>
+        </div>
       </div>
 
       <CompanyFooter company={company} />

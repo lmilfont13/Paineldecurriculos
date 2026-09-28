@@ -15,6 +15,7 @@ import {
   createApplication,
   createStatusEvent,
   deleteApplication,
+  findAppliedJobIds,
   findApplicationByCandidateAndJob,
   findApplicationById,
   findApplicationForCandidate,
@@ -148,6 +149,11 @@ export async function getPrefillAnswers(
 /** Candidaturas do candidato em todas as empresas (CA4). */
 export function listCandidateApplications(candidateId: string) {
   return findApplicationsByCandidate(candidateId);
+}
+
+/** IDs de vagas em que o candidato já se candidatou (para lista pública). */
+export function getAppliedJobIds(candidateId: string, jobIds: string[]) {
+  return findAppliedJobIds(candidateId, jobIds);
 }
 
 /** Já existe candidatura deste candidato nesta vaga? (detecção precoce) */

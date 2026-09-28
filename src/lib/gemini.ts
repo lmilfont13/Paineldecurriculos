@@ -1,46 +1,42 @@
 import "server-only";
 
-const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-// flash-lite: rápido, barato e no free tier do Gemini
-const MODEL = "gemini-flash-lite-latest";
+const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "qwen/qwen3.8-27b";
 
-/**
- * Chamada mínima ao Gemini (generateContent) via REST — sem SDK.
- * `system` é a instrução fixa; `prompt` é o conteúdo do usuário.
- * Retorna o texto (JSON quando `json` é true).
- */
 export async function geminiGenerate(params: {
   system: string;
   prompt: string;
   maxTokens?: number;
   json?: boolean;
 }): Promise<string> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY não configurada");
 
-  const res = await fetch(
-    `${ENDPOINT}/${MODEL}:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: params.system }] },
-        contents: [{ parts: [{ text: params.prompt }] }],
-        generationConfig: {
-          maxOutputTokens: params.maxTokens ?? 300,
-          ...(params.json ? { responseMimeType: "application/json" } : {}),
-        },
-      }),
-    }
-  );
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: params.system },
+        { role: "user", content: params.prompt },
+      ],
+      max_tokens: params.maxTokens ?? 300,
+      temperature: 0.2,
+      ...(params.json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Gemini ${res.status}: ${body.slice(0, 300)}`);
+    throw new Error(`Groq ${res.status}: ${body.slice(0, 300)}`);
   }
 
   const data = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    choices?: { message?: { content?: string } }[];
   };
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  return data.choices?.[0]?.message?.content ?? "";
 }

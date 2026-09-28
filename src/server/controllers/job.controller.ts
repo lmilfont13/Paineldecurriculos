@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
 import { jobFormSchema } from "@/server/models/job.model";
 import {
   createCompanyJob,
+  trackWhatsappShare,
   updateCompanyJob,
 } from "@/server/services/job.service";
 
@@ -59,6 +61,39 @@ export async function updateJobAction(
   if (!updated) return { error: "Vaga não encontrada." };
   revalidatePath("/vagas");
   redirect("/vagas");
+}
+
+/** Incrementa o contador de compartilhamentos via WhatsApp. */
+export async function trackJobShareAction(jobId: string): Promise<void> {
+  const user = await requireManager();
+  await trackWhatsappShare(user.companyId, jobId);
+  revalidatePath(`/vagas/${jobId}`);
+}
+
+/** Reescreve o texto de uma vaga com IA — retorna o texto melhorado. */
+export async function rewriteJobTextAction(
+  field: "description" | "requirements",
+  text: string,
+  jobTitle: string
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  await requireManager();
+  if (!text.trim()) return { ok: false, error: "Texto vazio." };
+
+  const systemPrompts = {
+    description: `Você é um especialista em RH. Reescreva a descrição da vaga abaixo de forma clara, atraente e objetiva. Use parágrafos curtos. Não invente informações que não estão no original. Retorne apenas o texto reescrito, sem preâmbulos.`,
+    requirements: `Você é um especialista em RH. Reescreva a lista de requisitos da vaga abaixo de forma clara e direta, um item por linha, começando cada linha com "• ". Não invente requisitos. Retorne apenas os itens, sem preâmbulos.`,
+  };
+
+  try {
+    const result = await geminiGenerate({
+      system: systemPrompts[field],
+      prompt: `Vaga: ${jobTitle}\n\n${text}`,
+      maxTokens: 800,
+    });
+    return { ok: true, text: result.trim() };
+  } catch {
+    return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
+  }
 }
 
 /** Muda status (Aberta/Pausada/Encerrada) — decisão manual do gestor. */

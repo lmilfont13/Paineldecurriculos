@@ -15,6 +15,7 @@ import {
   findJobById,
   findJobsByCompanyId,
   findOpenJobsByCompanyId,
+  incrementWhatsappShares,
   updateJob,
 } from "@/server/repositories/job.repository";
 
@@ -84,6 +85,13 @@ export function createCompanyJob(
     aiMinScore: input.aiMinScore,
     publishedAt: publish ? new Date() : null,
   });
+}
+
+/** Registra um compartilhamento via WhatsApp (contagem pública). */
+export async function trackWhatsappShare(companyId: string, jobId: string) {
+  const job = await getCompanyJob(companyId, jobId);
+  if (!job) return null;
+  return incrementWhatsappShares(jobId);
 }
 
 /** Atualiza vaga do tenant — sempre valida a posse antes (regra 1). */

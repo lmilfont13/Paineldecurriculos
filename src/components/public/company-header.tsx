@@ -73,12 +73,13 @@ export async function CompanyHeader({
   candidate,
   tone = "light",
   showSignIn = true,
+  jobCount,
 }: {
   company: PublicCompany;
   candidate?: CandidateProfile | null;
   tone?: "light" | "brand";
-  /** Falso na própria tela de entrar, onde o botão não levaria a lugar novo. */
   showSignIn?: boolean;
+  jobCount?: number;
 }) {
   const unread = candidate ? await getUnreadCount() : 0;
   const onBrand = tone === "brand";
@@ -104,17 +105,37 @@ export async function CompanyHeader({
           (onBrand ? "pt-6" : "h-16")
         }
       >
-        <Link
-          href={`/${company.slug}/vagas`}
-          aria-label={`${company.name}: vagas`}
-          className="shrink-0"
-        >
-          {onBrand ? (
-            <BrandLogo company={company} />
-          ) : (
-            <LightLogo company={company} />
+        <div className="flex items-center gap-6">
+          <Link
+            href={`/${company.slug}/vagas`}
+            aria-label={`${company.name}: vagas`}
+            className="shrink-0"
+          >
+            {onBrand ? (
+              <BrandLogo company={company} />
+            ) : (
+              <LightLogo company={company} />
+            )}
+          </Link>
+
+          {!onBrand && jobCount !== undefined && jobCount > 0 && (
+            <Link
+              href={`/${company.slug}/vagas`}
+              className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#57534e] hover:text-[#0a0a0a] sm:flex"
+            >
+              Vagas
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                style={{
+                  backgroundColor: "var(--brand-tint)",
+                  color: "var(--brand-primary)",
+                }}
+              >
+                {jobCount}
+              </span>
+            </Link>
           )}
-        </Link>
+        </div>
 
         {candidate ? (
           <nav className="flex items-center gap-1 sm:gap-2">

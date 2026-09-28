@@ -7,6 +7,7 @@ import {
   type PublicCompany,
 } from "@/server/models/company.model";
 import {
+  findActiveCompanies,
   findCompanyById,
   findCompanyBySlug,
   findFirstActiveCompany,
@@ -28,6 +29,11 @@ export async function getPublicCompanyBySlug(
 /** Empresa do gestor logado (uso interno — dados completos). */
 export function getCompanyById(id: string) {
   return findCompanyById(id);
+}
+
+/** Lista de empresas ativas para o seletor público da tela de login. */
+export function listPublicCompanies() {
+  return findActiveCompanies();
 }
 
 /** Slug da empresa padrão (raiz do site aponta para a página dela). */

@@ -8,6 +8,7 @@ import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
 import {
   getCandidateApplication,
+  getAppliedJobIds,
   getExistingApplicationId,
   getPrefillAnswers,
   listCandidateApplications,
@@ -40,11 +41,14 @@ export const getTenant = cache(
 
 export async function getJobsPageData(
   slug: string
-): Promise<{ company: PublicCompany; jobs: PublicJob[] } | null> {
+): Promise<{ company: PublicCompany; jobs: PublicJob[]; appliedJobIds: string[] } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
-  const jobs = await listOpenJobs(company.id);
-  return { company, jobs };
+  const [jobs, candidate] = await Promise.all([listOpenJobs(company.id), getSessionCandidate()]);
+  const appliedJobIds = candidate
+    ? await getAppliedJobIds(candidate.id, jobs.map((j) => j.id))
+    : [];
+  return { company, jobs, appliedJobIds };
 }
 
 export async function getJobDetailPageData(

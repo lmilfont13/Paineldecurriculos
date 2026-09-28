@@ -11,6 +11,7 @@ import {
 } from "@/server/models/job.model";
 import {
   createJobAction,
+  rewriteJobTextAction,
   updateJobAction,
   type JobFormState,
 } from "@/server/controllers/job.controller";
@@ -39,6 +40,8 @@ export function JobWizard({
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [publish, setPublish] = useState(true);
+  const [rewriting, setRewriting] = useState<"description" | "requirements" | null>(null);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [criterionInput, setCriterionInput] = useState("");
   const [draft, setDraft] = useState<Draft>({
     title: initial?.title ?? "",
@@ -81,6 +84,20 @@ export function JobWizard({
   function back() {
     setError(null);
     setStep((s) => Math.max(s - 1, 0));
+  }
+
+  async function rewrite(field: "description" | "requirements") {
+    const text = draft[field];
+    if (!text.trim()) return;
+    setRewriteError(null);
+    setRewriting(field);
+    const result = await rewriteJobTextAction(field, text, draft.title);
+    setRewriting(null);
+    if (result.ok) {
+      set(field, result.text);
+    } else {
+      setRewriteError(result.error);
+    }
   }
 
   function addCriterion() {
@@ -250,11 +267,32 @@ export function JobWizard({
                 <p className="mt-2 text-sm text-[#71717a]">
                   O que o candidato vê na página pública.
                 </p>
+                {rewriteError && (
+                  <p className="mt-3 text-sm text-red-600">{rewriteError}</p>
+                )}
                 <div className="mt-6 space-y-5">
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                      Sobre a vaga
-                    </span>
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-[#0a0a0a]">
+                        Sobre a vaga
+                      </span>
+                      <button
+                        type="button"
+                        disabled={rewriting !== null || !draft.description.trim()}
+                        onClick={() => rewrite("description")}
+                        className="flex items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Cole o texto da vaga acima e clique aqui"
+                      >
+                        {rewriting === "description" ? (
+                          <>
+                            <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
+                            Reescrevendo…
+                          </>
+                        ) : (
+                          <>✦ Reescrever com IA</>
+                        )}
+                      </button>
+                    </div>
                     <textarea
                       rows={7}
                       className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
@@ -262,11 +300,29 @@ export function JobWizard({
                       onChange={(e) => set("description", e.target.value)}
                       placeholder="Responsabilidades, time, desafios…"
                     />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-                      O que esperamos (um item por linha)
-                    </span>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-[#0a0a0a]">
+                        O que esperamos (um item por linha)
+                      </span>
+                      <button
+                        type="button"
+                        disabled={rewriting !== null || !draft.requirements.trim()}
+                        onClick={() => rewrite("requirements")}
+                        className="flex items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Cole os requisitos acima e clique aqui"
+                      >
+                        {rewriting === "requirements" ? (
+                          <>
+                            <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
+                            Reescrevendo…
+                          </>
+                        ) : (
+                          <>✦ Reescrever com IA</>
+                        )}
+                      </button>
+                    </div>
                     <textarea
                       rows={5}
                       className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
@@ -274,7 +330,7 @@ export function JobWizard({
                       onChange={(e) => set("requirements", e.target.value)}
                       placeholder={"3+ anos com React\nInglês para leitura técnica"}
                     />
-                  </label>
+                  </div>
                 </div>
               </>
             )}

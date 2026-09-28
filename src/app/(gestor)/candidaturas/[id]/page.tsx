@@ -223,7 +223,11 @@ export default async function CandidaturaDetailPage({
           {app.name.split(" ")[0]} recebe por e-mail e nas novidades da área
           dele.
         </p>
-        <MessageBox applicationId={app.id} candidateName={app.name} />
+        <MessageBox
+          applicationId={app.id}
+          candidateName={app.name}
+          candidatePhone={app.phone ?? undefined}
+        />
       </section>
 
       {/* Notas internas — memória do processo entre gestores */}

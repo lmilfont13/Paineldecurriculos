@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
 import {
   applicationInputSchema,
@@ -9,6 +10,7 @@ import {
 } from "@/server/models/application.model";
 import { interviewSchema } from "@/server/models/interview.model";
 import {
+  getCompanyApplication,
   requestReanalysis,
   saveManagerNotes,
   scheduleInterview,
@@ -81,6 +83,47 @@ export async function sendMessageAction(
   if (!result.ok) return { error: "Não foi possível enviar o recado." };
   revalidatePath(`/candidaturas/${applicationId}`);
   return { ok: true };
+}
+
+export type SuggestMessageResult =
+  | { ok: true; text: string }
+  | { ok: false; error: string };
+
+const TOPICS: Record<string, string> = {
+  entrevista: "convocar para entrevista (informar que gostou do perfil e quer marcar uma conversa)",
+  documentos: "solicitar documentos (RG, CPF, comprovante de residência, etc.)",
+  teste: "convidar para um teste técnico ou desafio prático",
+  feedback: "dar um feedback positivo sobre a candidatura (sem ainda dar uma resposta definitiva)",
+  informacoes: "pedir informações adicionais sobre experiência ou disponibilidade",
+  proposta: "comunicar que a proposta foi aprovada e o candidato foi selecionado",
+};
+
+/** Gera sugestão de mensagem por IA baseada no assunto escolhido. */
+export async function suggestMessageAction(
+  applicationId: string,
+  topicKey: string
+): Promise<SuggestMessageResult> {
+  const user = await requireManager();
+  const app = await getCompanyApplication(user.companyId, applicationId);
+  if (!app) return { ok: false, error: "Candidatura não encontrada." };
+
+  const topicDescription = TOPICS[topicKey];
+  if (!topicDescription) return { ok: false, error: "Assunto inválido." };
+
+  const firstName = app.name.split(" ")[0];
+  const companyName = app.company.name;
+  const jobTitle = app.job.title;
+
+  try {
+    const text = await geminiGenerate({
+      system: `Você é um especialista em RH redijindo mensagens para candidatos. Escreva sempre em português brasileiro. Tom: profissional, acolhedor e direto. Sem saudações genéricas (não use "Prezado(a)"). Comece pelo nome do candidato. Não use emojis. Máximo 4 linhas.`,
+      prompt: `Escreva uma mensagem para ${firstName} que se candidatou à vaga de ${jobTitle} na empresa ${companyName}. Objetivo: ${topicDescription}.`,
+      maxTokens: 300,
+    });
+    return { ok: true, text: text.trim() };
+  } catch {
+    return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
+  }
 }
 
 /** Reenfileira a análise de IA (FAILED/NO_RESUME com currículo novo). */

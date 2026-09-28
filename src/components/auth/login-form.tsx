@@ -24,6 +24,7 @@ export function LoginForm({ branded }: { branded: boolean }) {
         type="email"
         required
         autoComplete="email"
+        defaultValue="ana@technova.com"
         placeholder="voce@empresa.com"
         className="mt-1.5 h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
       />
@@ -40,6 +41,7 @@ export function LoginForm({ branded }: { branded: boolean }) {
         type="password"
         required
         autoComplete="current-password"
+        defaultValue="triagem123"
         placeholder="••••••••••"
         className="mt-1.5 h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
       />

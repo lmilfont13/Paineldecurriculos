@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Job" ADD COLUMN "whatsappShares" INTEGER NOT NULL DEFAULT 0;

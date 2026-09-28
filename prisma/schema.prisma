@@ -61,7 +61,8 @@ model Job {
   workMode     WorkMode  @default(REMOTE)
   status       JobStatus @default(DRAFT)
   aiCriteria   String[]  @default([])
-  aiMinScore   Int       @default(70)
+  aiMinScore      Int       @default(70)
+  whatsappShares  Int       @default(0)
   /// Quando a vaga entrou no ar pela última vez ("publicada há X dias").
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
