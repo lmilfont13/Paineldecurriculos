@@ -89,4 +89,4 @@ function RemoveButton({ userId, isSelf }: { userId: string; isSelf: boolean }) {
   );
 }
 
-export const InviteForm = { Form, RemoveButton };
+export { Form as InviteForm, RemoveButton as RemoveManagerButton };

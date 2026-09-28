@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { InviteForm } from "@/components/gestor/invite-form";
+import { InviteForm, RemoveManagerButton } from "@/components/gestor/invite-form";
 import { SettingsTabs } from "@/components/gestor/settings-tabs";
 import { requireManager } from "@/server/controllers/guards";
 import { listCompanyUsers } from "@/server/services/user.service";
@@ -57,7 +57,7 @@ export default async function UsuariosPage() {
                     {u.email} · desde {formatDate(u.createdAt)}
                   </p>
                 </div>
-                <InviteForm.RemoveButton
+                <RemoveManagerButton
                   userId={u.id}
                   isSelf={u.id === manager.id}
                 />
@@ -72,7 +72,7 @@ export default async function UsuariosPage() {
           <p className="mt-1 text-[12px] text-[#71717a]">
             A pessoa receberá um link por e-mail para definir a própria senha e acessar o painel.
           </p>
-          <InviteForm.Form />
+          <InviteForm />
         </section>
       </div>
     </>
