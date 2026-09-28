@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { redirect } from "next/navigation";
 
@@ -40,7 +40,7 @@ export async function loginAction(
     const isCandidate = await emailBelongsToCandidate(parsed.data.email);
     await supabase.auth.signOut();
     if (isCandidate) {
-      return { error: “candidato”, isCandidate: true };
+      return { error: "candidato", isCandidate: true };
     }
     return { error: "Este e-mail não tem acesso à plataforma." };
   }
