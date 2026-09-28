@@ -9,6 +9,7 @@ import {
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
 import { interviewSchema } from "@/server/models/interview.model";
+import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   getCompanyApplication,
   requestReanalysis,
@@ -28,11 +29,25 @@ export async function saveNotesAction(
   formData: FormData
 ): Promise<{ saved: boolean }> {
   const user = await requireManager();
+  const app = await getCompanyApplication(user.companyId, applicationId);
   await saveManagerNotes(
     user.companyId,
     applicationId,
     String(formData.get("notes") ?? "")
   );
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "NOTA_SALVA",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app?.name,
+      metadata: { jobTitle: app?.job.title },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/candidaturas/${applicationId}`);
   return { saved: true };
 }
@@ -60,6 +75,25 @@ export async function scheduleInterviewAction(
     location: parsed.data.location.trim() || null,
   });
   if (!result.ok) return { error: "Candidatura não encontrada." };
+  try {
+    const app = await getCompanyApplication(user.companyId, applicationId);
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "ENTREVISTA_AGENDADA",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app?.name,
+      metadata: {
+        jobTitle: app?.job.title,
+        at: parsed.data.at,
+        mode: parsed.data.mode,
+        location: parsed.data.location || null,
+      },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/candidaturas");
   revalidatePath("/painel");
@@ -81,6 +115,20 @@ export async function sendMessageAction(
     message
   );
   if (!result.ok) return { error: "Não foi possível enviar o recado." };
+  try {
+    const app = await getCompanyApplication(user.companyId, applicationId);
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "RECADO_ENVIADO",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app?.name,
+      metadata: { jobTitle: app?.job.title, preview: message.slice(0, 80) },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/candidaturas/${applicationId}`);
   return { ok: true };
 }
@@ -157,6 +205,29 @@ export async function setApplicationStatusAction(
 ): Promise<void> {
   const user = await requireManager();
   await setApplicationStatus(user.companyId, applicationId, status);
+  const statusLabels = {
+    PENDING: "Triagem",
+    INTERVIEW: "Entrevista",
+    APPROVED: "Aprovado",
+    REJECTED: "Reprovado",
+  };
+  try {
+    const app = await getCompanyApplication(user.companyId, applicationId);
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "CANDIDATURA_STATUS_ALTERADO",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app?.name,
+      metadata: {
+        jobTitle: app?.job.title,
+        novoStatus: statusLabels[status],
+      },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/candidaturas");
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");

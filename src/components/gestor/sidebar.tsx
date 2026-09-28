@@ -2,6 +2,7 @@
 
 import {
   Briefcase,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -14,6 +15,7 @@ const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
   { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
+  { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList },
   { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings },
 ] as const;
 

@@ -33,6 +33,7 @@ model Company {
   jobs         Job[]
   formFields   FormField[]
   applications Application[]
+  auditLogs    AuditLog[]
 }
 
 model User {
@@ -225,4 +226,23 @@ model Answer {
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   field       FormField   @relation(fields: [fieldId], references: [id])
+}
+
+/// Trilha de auditoria — quem fez o quê e quando, por empresa.
+model AuditLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  userId      String?
+  userEmail   String?
+  userName    String?
+  action      String
+  entityType  String?
+  entityId    String?
+  entityLabel String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt(sort: Desc)])
 }

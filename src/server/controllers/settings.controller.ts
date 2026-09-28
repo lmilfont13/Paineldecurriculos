@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
 import { careersPageSchema } from "@/server/models/company.model";
+import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   updateCareersPage,
   uploadCompanyLogo,
@@ -47,6 +48,20 @@ export async function updateCareersPageAction(
     logoUrl: mark.url,
     logoFullUrl: full.url,
   });
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "CONFIGURACOES_ATUALIZADAS",
+      entityType: "EMPRESA",
+      metadata: {
+        campos: Object.keys(parsed.data),
+        logoAlterada: !!(mark.url || full.url),
+      },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   // A marca aparece em todas as telas (públicas e do painel).
   revalidatePath("/", "layout");
   return { ok: true };

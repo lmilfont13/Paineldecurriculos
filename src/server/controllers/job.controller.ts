@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
 import { jobFormSchema } from "@/server/models/job.model";
+import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   createCompanyJob,
   trackWhatsappShare,
@@ -37,11 +38,20 @@ export async function createJobAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  await createCompanyJob(
-    user.companyId,
-    parsed.data,
-    formData.get("publish") === "true"
-  );
+  const isPublish = formData.get("publish") === "true";
+  const job = await createCompanyJob(user.companyId, parsed.data, isPublish);
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: isPublish ? "VAGA_PUBLICADA" : "VAGA_CRIADA",
+      entityType: "VAGA",
+      entityId: job.id,
+      entityLabel: parsed.data.title,
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/vagas");
   redirect("/vagas");
 }
@@ -59,6 +69,18 @@ export async function updateJobAction(
   }
   const updated = await updateCompanyJob(user.companyId, jobId, parsed.data);
   if (!updated) return { error: "Vaga não encontrada." };
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "VAGA_EDITADA",
+      entityType: "VAGA",
+      entityId: jobId,
+      entityLabel: parsed.data.title,
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/vagas");
   redirect("/vagas");
 }
@@ -67,6 +89,17 @@ export async function updateJobAction(
 export async function trackJobShareAction(jobId: string): Promise<void> {
   const user = await requireManager();
   await trackWhatsappShare(user.companyId, jobId);
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "VAGA_COMPARTILHADA_WHATSAPP",
+      entityType: "VAGA",
+      entityId: jobId,
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/vagas/${jobId}`);
 }
 
@@ -102,7 +135,24 @@ export async function setJobStatusAction(
   status: "OPEN" | "PAUSED" | "CLOSED"
 ): Promise<void> {
   const user = await requireManager();
-  await updateCompanyJob(user.companyId, jobId, { status });
+  const updated = await updateCompanyJob(user.companyId, jobId, { status });
+  const actionMap = {
+    OPEN: "VAGA_PUBLICADA",
+    PAUSED: "VAGA_PAUSADA",
+    CLOSED: "VAGA_ENCERRADA",
+  } as const;
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: actionMap[status],
+      entityType: "VAGA",
+      entityId: jobId,
+      entityLabel: updated?.title,
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/vagas");
   revalidatePath(`/vagas/${jobId}`);
   revalidatePath("/painel");
