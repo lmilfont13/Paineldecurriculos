@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type React from "react";
 
+import { GraphCanvas } from "@/components/auth/graph-canvas";
 import { LoginForm } from "@/components/auth/login-form";
 import { brandCssVars } from "@/server/models/company.model";
 import {
@@ -32,7 +33,7 @@ export default async function LoginPage({
   const slug =
     empresa === "plataforma"
       ? null
-      : (empresa ?? await getDefaultCompanySlug());
+      : (empresa ?? (await getDefaultCompanySlug()));
 
   const [company, companies] = await Promise.all([
     slug ? getPublicCompanyBySlug(slug) : null,
@@ -41,108 +42,168 @@ export default async function LoginPage({
 
   return (
     <main
-      className="flex min-h-screen bg-[#faf8f6]"
-      style={
-        company ? (brandCssVars(company) as React.CSSProperties) : undefined
-      }
+      className="flex min-h-screen"
+      style={{
+        background: "#0c0807",
+        color: "#ede8e5",
+        ...(company ? (brandCssVars(company) as React.CSSProperties) : {}),
+      }}
     >
-      {/* Painel lateral da marca */}
-      <aside
-        className="hidden w-[520px] shrink-0 flex-col justify-between p-14 lg:flex"
-        style={{
-          background: company
-            ? "linear-gradient(165deg, var(--brand-primary) 0%, var(--brand-deep) 100%)"
-            : "#1c1917",
-        }}
+      {/* ── LEFT: visual stage (desktop only) ── */}
+      <div
+        className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex"
+        style={{ flex: "0 0 58%" }}
       >
-        {company?.logoFullUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={company.logoFullUrl}
-            alt={company.name}
-            className="h-20 w-auto self-start object-contain"
-            style={{ filter: "brightness(0) invert(1)" }}
-          />
-        ) : (
-          <span className="text-sm font-bold text-white">
-            {company ? company.name : "Triagem"}
-          </span>
-        )}
+        {/* Warm radial flush behind headline */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 left-0 right-0"
+          style={{
+            height: "55%",
+            background:
+              "radial-gradient(ellipse at 30% 110%, rgba(129,18,1,0.09) 0%, transparent 65%)",
+          }}
+        />
+        {/* Right edge fade */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 top-0"
+          style={{
+            width: 120,
+            background: "linear-gradient(to right, transparent, #0c0807)",
+          }}
+        />
 
-        <div>
-          <h1 className="max-w-[400px] text-[30px] font-bold leading-tight text-white">
-            {company ? "Painel de recrutamento" : "Console da plataforma"}
-          </h1>
-          <p className="mt-4 max-w-[360px] text-sm leading-6 text-white/65">
+        <GraphCanvas />
+
+        {/* Wordmark */}
+        <span
+          className="relative z-10 flex items-center gap-2 text-[13px] font-semibold"
+          style={{ color: "#7e706e" }}
+        >
+          <span
+            aria-hidden
+            className="inline-block size-[7px] shrink-0 rounded-full"
+            style={{ background: "#9e1802" }}
+          />
+          Triagem
+        </span>
+
+        {/* Headline */}
+        <div className="relative z-10 max-w-[480px]">
+          <h1
+            className="mb-3 text-balance leading-[1.08] tracking-[-0.025em]"
+            style={{ fontSize: "clamp(28px,3.5vw,50px)", fontWeight: 700 }}
+          >
             {company
-              ? `Vagas, candidatos e entrevistas da ${company.name}.`
+              ? "Encontre quem vai fazer a diferença."
+              : "Console da plataforma Triagem."}
+          </h1>
+          <p className="text-[15px] leading-relaxed" style={{ color: "#7e706e" }}>
+            {company
+              ? `Painel de recrutamento da ${company.name} — triagem, entrevistas e decisões num único lugar.`
               : "Cadastro de empresas, identidade visual e formulários dos clientes."}
           </p>
         </div>
+      </div>
 
-        <span className="text-xs text-white/40">
-          {company ? `${company.name} · feito com Triagem` : "Triagem"}
-        </span>
-      </aside>
+      {/* ── RIGHT: action panel ── */}
+      <section
+        className="flex flex-1 flex-col justify-center overflow-y-auto px-6 py-12 sm:px-12"
+        style={{
+          background: "#141010",
+          borderLeft: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
+        <div className="mx-auto w-full max-w-[360px]">
 
-      {/* Área direita */}
-      <section className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[400px]">
+          {/* Mobile wordmark */}
+          <span
+            className="mb-8 flex items-center gap-2 text-[13px] font-semibold lg:hidden"
+            style={{ color: "#7e706e" }}
+          >
+            <span
+              aria-hidden
+              className="inline-block size-[7px] shrink-0 rounded-full"
+              style={{ background: "#9e1802" }}
+            />
+            Triagem
+          </span>
 
-          {/* Logo mobile */}
-          {company && (
-            <div className="mb-8 flex items-center gap-3 lg:hidden">
-              {company.logoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={company.logoUrl} alt="" className="size-9 object-contain" />
-              )}
-              <span className="text-base font-semibold text-[#1c1917]">{company.name}</span>
-            </div>
-          )}
-
-          {/* CANDIDATO — seção principal (maior destaque) */}
+          {/* Candidate path */}
           {companies.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-[22px] font-bold text-[#1c1917]">
+            <div className="mb-7">
+              <p
+                className="mb-1 text-[17px] font-bold"
+                style={{ color: "#ede8e5" }}
+              >
                 Procurando vagas?
-              </h2>
-              <p className="mt-1 text-sm text-[#78716c]">
-                Escolha a empresa e veja as oportunidades abertas.
               </p>
-              <ul className="mt-4 space-y-2">
+              <p className="mb-4 text-[13px]" style={{ color: "#7e706e" }}>
+                Veja as oportunidades abertas e candidate-se em minutos.
+              </p>
+              <ul className="flex flex-col gap-1.5">
                 {companies.map((c) => (
                   <li key={c.slug}>
                     <Link
                       href={`/${c.slug}/vagas`}
-                      className="flex items-center gap-3 rounded-xl border border-[#ece8e3] bg-white px-3.5 py-3 transition-colors hover:border-[#d6d0c9] hover:bg-[#faf8f6]"
+                      className="flex items-center gap-3 rounded-[10px] px-3.5 py-3 transition-colors hover:bg-[#1d1614]"
+                      style={{
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        color: "inherit",
+                        textDecoration: "none",
+                      }}
                     >
                       <span
-                        className="flex size-9 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold text-white"
-                        style={{ background: c.primaryColor ?? "#7B1C3E" }}
+                        className="flex size-[34px] shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
+                        style={{ background: c.primaryColor ?? "#811201" }}
                       >
                         {c.logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.logoUrl} alt="" className="size-9 rounded-lg object-cover" />
+                          <img
+                            src={c.logoUrl}
+                            alt=""
+                            className="size-[34px] rounded-lg object-cover"
+                          />
                         ) : (
                           c.name.slice(0, 2).toUpperCase()
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-semibold text-[#1c1917]">
+                        <span
+                          className="block truncate text-[13.5px] font-semibold"
+                          style={{ color: "#ede8e5" }}
+                        >
                           {c.name}
                         </span>
                         {c.sector && (
-                          <span className="block truncate text-[12px] text-[#a8a29e]">
+                          <span
+                            className="block truncate text-[11.5px]"
+                            style={{ color: "#7e706e" }}
+                          >
                             {c.sector}
                           </span>
                         )}
                       </span>
                       {c._count.jobs > 0 && (
-                        <span className="shrink-0 rounded-full bg-[#f0ece8] px-2.5 py-1 text-[12px] font-semibold text-[#78716c]">
-                          {c._count.jobs} {c._count.jobs === 1 ? "vaga" : "vagas"}
+                        <span
+                          className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                          style={{
+                            background: "rgba(129,18,1,0.16)",
+                            color: "#c97065",
+                            border: "1px solid rgba(129,18,1,0.22)",
+                          }}
+                        >
+                          {c._count.jobs}{" "}
+                          {c._count.jobs === 1 ? "vaga" : "vagas"}
                         </span>
                       )}
-                      <span className="shrink-0 text-[#c4bfba]">›</span>
+                      <span
+                        className="shrink-0 text-[18px] leading-none"
+                        style={{ color: "#3c3230" }}
+                      >
+                        ›
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -150,21 +211,43 @@ export default async function LoginPage({
             </div>
           )}
 
-          {/* EMPRESA — seção secundária (discreta) */}
-          <details open className="group rounded-xl border border-[#ece8e3] bg-[#faf8f6]">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[12px] font-medium text-[#a8a29e] hover:text-[#78716c]">
-              <span>Acesso para recrutadores e gestores</span>
-              <span className="transition-transform group-open:rotate-180 text-[10px]">▼</span>
-            </summary>
-            <div className="border-t border-[#ece8e3] px-4 pb-4 pt-3">
-              <p className="mb-4 text-[12px] text-[#a8a29e]">
-                {company
-                  ? `Painel de candidatos da ${company.name}.`
-                  : "Gestores de RH e administradores da plataforma."}
-              </p>
-              <LoginForm branded={Boolean(company)} slug={company?.slug} />
-            </div>
-          </details>
+          {/* Divider */}
+          <div className="mb-6 flex items-center gap-2.5">
+            <span
+              className="h-px flex-1"
+              style={{ background: "rgba(255,255,255,0.07)" }}
+            />
+            <span
+              className="text-[11px]"
+              style={{ color: "#3c3230", letterSpacing: "0.05em" }}
+            >
+              Acesso ao painel
+            </span>
+            <span
+              className="h-px flex-1"
+              style={{ background: "rgba(255,255,255,0.07)" }}
+            />
+          </div>
+
+          {/* Manager login */}
+          <p className="mb-1 text-[17px] font-bold" style={{ color: "#ede8e5" }}>
+            {empresa === "plataforma" ? "Console admin" : "Gestor ou admin"}
+          </p>
+          <p className="text-[13px]" style={{ color: "#7e706e" }}>
+            {company
+              ? `Painel de candidatos da ${company.name}.`
+              : "Gestores de RH e administradores da plataforma."}
+          </p>
+
+          <LoginForm branded={Boolean(company)} slug={company?.slug} dark />
+
+          <a
+            href="/login?empresa=plataforma"
+            className="mt-8 block text-[11px] transition-colors hover:text-[#7e706e]"
+            style={{ color: "#3c3230" }}
+          >
+            Console da plataforma
+          </a>
         </div>
       </section>
     </main>
