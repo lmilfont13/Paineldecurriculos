@@ -211,12 +211,20 @@ export async function CompanyHeader({
 export function CompanyFooter({ company }: { company: PublicCompany }) {
   return (
     <footer className="mt-24 border-t border-[#ebe7e3]">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-1 px-5 py-8 text-xs text-[#a8a29e] sm:flex-row sm:justify-between md:px-8">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-1 px-5 py-8 text-xs text-[#a8a29e] sm:flex-row sm:items-center sm:justify-between md:px-8">
         <span>
           {company.name}
           {company.sector ? ` · ${company.sector}` : ""}
         </span>
-        <span>Página de vagas feita com Triagem</span>
+        <div className="flex items-center gap-4">
+          <a
+            href="/login"
+            className="transition-colors hover:text-[#78716c]"
+          >
+            Área do gestor
+          </a>
+          <span>Página de vagas feita com Triagem</span>
+        </div>
       </div>
     </footer>
   );
