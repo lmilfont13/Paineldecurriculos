@@ -124,7 +124,7 @@ export function findApplicationById(id: string) {
           requirements: true,
         },
       },
-      company: { select: { name: true, slug: true, primaryColor: true } },
+      company: { select: { name: true, slug: true, primaryColor: true, logoUrl: true } },
       answers: { include: { field: true } },
       statusEvents: { orderBy: { createdAt: "asc" } },
     },
