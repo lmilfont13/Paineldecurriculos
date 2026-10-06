@@ -204,35 +204,40 @@ export async function setApplicationStatusAction(
   status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
 ): Promise<void> {
   const user = await requireManager();
-  await setApplicationStatus(user.companyId, applicationId, status);
+  const updated = await setApplicationStatus(user.companyId, applicationId, status);
   const statusLabels = {
     PENDING: "Triagem",
     INTERVIEW: "Entrevista",
     APPROVED: "Aprovado",
     REJECTED: "Reprovado",
   };
-  try {
-    const app = await getCompanyApplication(user.companyId, applicationId);
-    await createAuditLog({
-      companyId: user.companyId,
-      userId: user.id,
-      userEmail: user.email,
-      userName: user.name,
-      action: "CANDIDATURA_STATUS_ALTERADO",
-      entityType: "CANDIDATURA",
-      entityId: applicationId,
-      entityLabel: app?.name,
-      metadata: {
-        jobTitle: app?.job.title,
-        novoStatus: statusLabels[status],
-      },
-    });
-  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  if (updated) {
+    // Auditoria é importante, mas nunca deve aumentar o tempo percebido
+    // da ação principal.
+    void (async () => {
+      try {
+        const app = await getCompanyApplication(user.companyId, applicationId);
+        await createAuditLog({
+          companyId: user.companyId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          action: "CANDIDATURA_STATUS_ALTERADO",
+          entityType: "CANDIDATURA",
+          entityId: applicationId,
+          entityLabel: app?.name,
+          metadata: {
+            jobTitle: app?.job.title,
+            novoStatus: statusLabels[status],
+          },
+        });
+      } catch { /* auditoria nunca bloqueia a ação principal */ }
+    })();
+  }
   revalidatePath("/candidaturas");
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
-  const refreshed = await getCompanyApplication(user.companyId, applicationId);
-  if (refreshed) revalidatePath(`/vagas/${refreshed.job.id}`);
+  if (updated) revalidatePath(`/vagas/${updated.jobId}`);
 }
 
 export async function submitApplicationAction(
