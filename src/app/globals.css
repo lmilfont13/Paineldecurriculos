@@ -185,3 +185,24 @@
     transform: translateY(0.5px);
   }
 }
+
+@keyframes heroFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
+  50% { transform: translate3d(0, -9px, 0) rotate(1deg); }
+}
+
+@keyframes heroFloatReverse {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(1deg); }
+  50% { transform: translate3d(0, 8px, 0) rotate(-1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
