@@ -55,39 +55,104 @@ export default async function PublicJobsPage({
           jobCount={jobs.length}
         />
 
-        <div className="relative mx-auto grid w-full max-w-[1120px] gap-8 px-5 pb-11 pt-9 md:grid-cols-[1fr_300px] md:items-end md:px-8 md:pb-14 md:pt-10">
-          <div>
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-              Carreira · {company.name}
-            </p>
-            <h1 className="max-w-[680px] text-[34px] font-bold leading-[1.05] tracking-[-1px] text-white md:text-[52px]">
-              {company.heroTitle}
-            </h1>
-            <p className="mt-4 max-w-[600px] text-[15px] leading-6 text-white/75 md:text-[16px] md:leading-7">
-              {company.heroSubtitle}
-            </p>
-          </div>
+        <div className="relative mx-auto w-full max-w-[1180px] px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-10">
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.9fr)] lg:gap-12">
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70 backdrop-blur">
+                <span className="size-1.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
+                Carreira · {company.name}
+              </div>
 
-          <div className="rounded-2xl border border-white/15 bg-black/10 p-5 backdrop-blur-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
-              Oportunidades
-            </p>
-            <div className="mt-2 flex items-end gap-2">
-              <span className="text-4xl font-bold tracking-[-1px] text-white">
-                {jobs.length}
-              </span>
-              <span className="pb-1 text-sm text-white/65">
-                {jobs.length === 1 ? "vaga aberta" : "vagas abertas"}
-              </span>
+              <h1 className="mt-6 max-w-[700px] text-[42px] font-semibold leading-[0.98] tracking-[-2px] text-white md:text-[58px] lg:text-[66px]">
+                {company.heroTitle}
+              </h1>
+
+              <p className="mt-6 max-w-[610px] text-[15px] leading-7 text-white/70 md:text-[17px]">
+                {company.heroSubtitle}
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a
+                  href="#vagas"
+                  className="inline-flex h-11 items-center rounded-xl px-5 text-[13px] font-semibold shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,0,0,0.24)]"
+                  style={{ backgroundColor: "white", color: "var(--brand-primary)" }}
+                >
+                  Ver vagas abertas <span className="ml-2">→</span>
+                </a>
+                <span className="text-[12px] text-white/45">
+                  {jobs.length} {jobs.length === 1 ? "oportunidade" : "oportunidades"} disponíveis
+                </span>
+              </div>
             </div>
-            <p className="mt-2 text-xs leading-5 text-white/55">
-              Encontre uma oportunidade que combine com o seu próximo passo.
-            </p>
+
+            <div className="relative mx-auto h-[360px] w-full max-w-[500px] md:h-[420px]" aria-hidden="true">
+              <div className="absolute left-1/2 top-1/2 size-[250px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-3xl" style={{ background: "var(--brand-secondary)" }} />
+              <div className="absolute left-[12%] top-[12%] size-2 rounded-full bg-white/70 shadow-[0_0_24px_rgba(255,255,255,0.9)] animate-pulse" />
+              <div className="absolute right-[10%] top-[30%] size-1.5 rounded-full bg-white/60 shadow-[0_0_18px_rgba(255,255,255,0.8)]" />
+
+              <div className="absolute inset-x-[12%] top-[7%] bottom-[4%] overflow-hidden rounded-[34px] border border-white/20 bg-white/[0.08] shadow-[0_30px_90px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.015))]" />
+                <div className="absolute left-8 top-8 right-8">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">Talent pool</span>
+                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-semibold text-white/65">ao vivo</span>
+                  </div>
+                  <div className="mt-7 flex items-end gap-2">
+                    <span className="text-5xl font-semibold tracking-[-2px] text-white">{jobs.length}</span>
+                    <span className="pb-1 text-xs text-white/45">vagas abertas</span>
+                  </div>
+                  <div className="mt-8 h-px bg-white/10" />
+                  <div className="mt-6 space-y-3">
+                    {[
+                      ["AM", "Ana Martins", "Marketing"],
+                      ["RC", "Rafael Costa", "Operações"],
+                      ["LS", "Lucas Silva", "Tecnologia"],
+                    ].map(([initials, name, role], index) => (
+                      <div
+                        key={name}
+                        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-3"
+                        style={{ animationDelay: `${index * 120}ms` }}
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[10px] font-bold text-white">
+                          {initials}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[11px] font-semibold text-white/85">{name}</span>
+                          <span className="block text-[10px] text-white/40">{role}</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-white/55">{92 - index * 4}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute -left-1 top-[28%] w-[170px] rounded-2xl border border-white/20 bg-white/95 p-3 shadow-[0_20px_45px_rgba(0,0,0,0.22)] backdrop-blur-md [animation:heroFloat_5s_ease-in-out_infinite]">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-8 items-center justify-center rounded-xl text-[9px] font-bold text-white" style={{ background: "var(--brand-primary)" }}>92%</span>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#1c1917]">Alta compatibilidade</p>
+                    <p className="text-[9px] text-[#78716c]">perfil + vaga</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute -right-1 bottom-[12%] w-[185px] rounded-2xl border border-white/15 bg-[#171313]/90 p-3.5 shadow-[0_20px_45px_rgba(0,0,0,0.3)] backdrop-blur-md [animation:heroFloatReverse_6s_ease-in-out_infinite]">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">Nova candidatura</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="flex size-8 items-center justify-center rounded-xl bg-white/10 text-[9px] font-bold text-white">JD</span>
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/85">João Dias</p>
+                    <p className="text-[9px] text-white/40">Acabou de se candidatar</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <main className="mx-auto w-full max-w-[1120px] px-5 pb-12 pt-9 md:px-8 md:pt-11">
+      <main id="vagas" className="mx-auto w-full max-w-[1120px] px-5 pb-12 pt-9 md:px-8 md:pt-11">
         <JobList
           slug={company.slug}
           jobs={jobs}
