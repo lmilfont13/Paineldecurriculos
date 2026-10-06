@@ -143,7 +143,7 @@ export async function notifyApplicationStatusChange(
     jobTitle: application.job.title,
   }).catch(() => {});
 
-  if (application.email.includes("@")) {
+  if (status !== "PENDING" && application.email.includes("@")) {
     void sendStatusUpdateEmail({
       brand: emailBrand(application.company),
       to: application.email,
