@@ -30,7 +30,7 @@ export default async function VagasPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">Vagas</h1>
           <p className="mt-2 text-sm text-[#71717a]">
@@ -38,7 +38,7 @@ export default async function VagasPage() {
             {openCount} abertas
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2.5">
           <CopyLink url={publicUrl} />
           <Link
             href="/vagas/nova"
@@ -53,7 +53,7 @@ export default async function VagasPage() {
         </div>
       </div>
 
-      <div className="mt-8 divide-y divide-[#e4e4e7] overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
+      <div className="mt-7 divide-y divide-[#e4e4e7] overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         {jobs.length === 0 && (
           <p className="p-6 text-sm text-[#71717a]">
             Nenhuma vaga ainda. Crie a primeira com “+ Nova vaga”.
@@ -73,11 +73,11 @@ export default async function VagasPage() {
             <Link
               key={job.id}
               href={`/vagas/${job.id}`}
-              className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 transition-colors hover:bg-[#fafaf9]"
+              className="group flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 transition-colors hover:bg-[#fafaf9] md:px-6"
             >
-              <span className="min-w-[220px] flex-1">
+              <span className="min-w-[240px] flex-1">
                 <span className="flex items-center gap-2.5">
-                  <span className="truncate text-sm font-medium text-[#0a0a0a]">
+                  <span className="truncate text-[14px] font-semibold text-[#0a0a0a]">
                     {job.title}
                   </span>
                   <span
@@ -109,10 +109,10 @@ export default async function VagasPage() {
               </span>
 
               <span
-                className="text-xs font-medium"
+                className="text-xs font-semibold opacity-70 transition-opacity group-hover:opacity-100"
                 style={{ color: "var(--brand-primary)" }}
               >
-                Abrir ›
+                Abrir →
               </span>
             </Link>
           );

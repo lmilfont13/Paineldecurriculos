@@ -19,7 +19,6 @@ import {
 
 export const metadata: Metadata = { title: "Minhas candidaturas · Triagem" };
 
-/** Para o candidato, "reprovado" aparece como processo finalizado. */
 const candidateStatus: Record<
   AppStatusKey,
   { label: string; className: string }
@@ -32,11 +31,6 @@ const candidateStatus: Record<
 
 const CLOSED: AppStatusKey[] = ["APPROVED", "REJECTED"];
 
-/**
- * CA4 · A casa do candidato: novidades no topo, processos em andamento no
- * meio — cada um dizendo o que acontece agora, que é a pergunta que traz o
- * candidato de volta — e encerrados recolhidos no fim.
- */
 export default async function MinhasCandidaturasPage({
   params,
 }: {
@@ -50,50 +44,91 @@ export default async function MinhasCandidaturasPage({
       `/${slug}/entrar?next=${encodeURIComponent(`/${slug}/minhas-candidaturas`)}`
     );
   }
+
   const { company, candidate, applications, unread } = data;
   const running = applications.filter((a) => !CLOSED.includes(a.status));
   const closed = applications.filter((a) => CLOSED.includes(a.status));
 
   return (
-    <>
+    <div className="min-h-screen bg-[#faf9f7]">
       <CompanyHeader company={company} candidate={candidate} />
-      <main className="mx-auto w-full max-w-[720px] flex-1 px-6 pt-14">
-        <h1 className="text-2xl font-bold text-[#0a0a0a]">
-          Olá, {candidate.name.split(" ")[0]}
-        </h1>
-        <p className="mt-2 text-sm text-[#71717a]">
-          {running.length === 0
-            ? "Você não tem processos em andamento no momento."
-            : `Você tem ${running.length} ${running.length === 1 ? "processo em andamento" : "processos em andamento"}.`}
-        </p>
 
-        {/* Novidades — o que mudou desde a última vez que você entrou */}
+      <main className="mx-auto w-full max-w-[960px] px-5 pb-16 pt-10 md:px-8 md:pt-12">
+        <section
+          className="relative overflow-hidden rounded-3xl p-7 text-white md:p-9"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-deep) 100%)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-20 -top-28 size-72 rounded-full bg-white/10 blur-3xl"
+          />
+          <div className="relative">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+              Área do candidato
+            </p>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-5">
+              <div>
+                <h1 className="text-3xl font-bold tracking-[-0.7px] md:text-4xl">
+                  Olá, {candidate.name.split(" ")[0]}
+                </h1>
+                <p className="mt-2 max-w-[560px] text-sm leading-6 text-white/70">
+                  {running.length === 0
+                    ? "Acompanhe suas candidaturas por aqui e veja novas oportunidades."
+                    : `Você tem ${running.length} ${running.length === 1 ? "processo em andamento" : "processos em andamento"}.`}
+                </p>
+              </div>
+              <Link
+                href={`/${slug}/vagas`}
+                className="inline-flex h-10 items-center rounded-xl bg-white px-4 text-[13px] font-semibold transition-opacity hover:opacity-90"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Ver vagas abertas
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {unread.length > 0 && (
-          <section className="mt-8 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-5">
-            <h2 className="text-[13px] font-semibold text-[#0a0a0a]">
-              Novidades
-            </h2>
-            <ul className="mt-3 space-y-3">
-              {unread.map((item) => (
-                <li key={item.id}>
+          <section className="mt-7 rounded-2xl border border-[#eadfca] bg-[#fffaf0] p-5 md:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a17a35]">
+                  Novidades
+                </p>
+                <h2 className="mt-1 text-[15px] font-semibold text-[#1c1917]">
+                  O que mudou desde sua última visita
+                </h2>
+              </div>
+              <Link
+                href={`/${slug}/notificacoes`}
+                className="text-[12px] font-medium"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Ver todas
+              </Link>
+            </div>
+            <ul className="mt-4 divide-y divide-[#efe4d0]">
+              {unread.slice(0, 3).map((item) => (
+                <li key={item.id} className="py-3 first:pt-0 last:pb-0">
                   <Link
                     href={
                       item.application
                         ? `/${slug}/minhas-candidaturas/${item.application.id}`
                         : `/${slug}/notificacoes`
                     }
-                    className="block"
+                    className="flex flex-wrap items-baseline justify-between gap-2"
                   >
-                    <span className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-[13px] font-medium text-[#0a0a0a] hover:underline">
-                        {item.title}
-                      </span>
-                      <span className="text-[11px] text-[#a1a1aa]">
-                        {formatNotificationAge(item.createdAt)}
-                      </span>
+                    <span className="text-[13px] font-medium text-[#1c1917] hover:underline">
+                      {item.title}
+                    </span>
+                    <span className="text-[11px] text-[#a1a1aa]">
+                      {formatNotificationAge(item.createdAt)}
                     </span>
                     {item.body && (
-                      <span className="mt-0.5 block text-[12px] leading-5 text-[#71717a]">
+                      <span className="basis-full text-[12px] leading-5 text-[#78716c]">
                         {item.body}
                       </span>
                     )}
@@ -101,87 +136,108 @@ export default async function MinhasCandidaturasPage({
                 </li>
               ))}
             </ul>
-            <Link
-              href={`/${slug}/notificacoes`}
-              className="mt-3 inline-block text-[12px] font-medium"
-              style={{ color: "var(--brand-primary)" }}
-            >
-              Ver todas as novidades ›
-            </Link>
           </section>
         )}
 
-        {/* Em andamento — com a expectativa explícita de cada etapa */}
-        <h2 className="mt-10 text-[15px] font-semibold text-[#0a0a0a]">
-          Em andamento
-        </h2>
+        <div className="mt-9 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8a29e]">
+              Seus processos
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-[-0.25px] text-[#1c1917]">
+              Em andamento
+            </h2>
+          </div>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#78716c] ring-1 ring-[#e5e0db]">
+            {running.length}
+          </span>
+        </div>
+
         <div className="mt-4 space-y-3">
           {running.length === 0 && (
-            <p className="rounded-xl border border-[#e4e4e7] bg-white p-6 text-sm text-[#71717a]">
-              Nenhum processo aberto.{" "}
+            <div className="rounded-2xl border border-dashed border-[#d9d3cd] bg-white p-8 text-center md:p-10">
+              <div
+                className="mx-auto flex size-12 items-center justify-center rounded-2xl text-lg font-bold"
+                style={{
+                  backgroundColor: "var(--brand-tint)",
+                  color: "var(--brand-primary)",
+                }}
+              >
+                +
+              </div>
+              <h3 className="mt-4 text-[15px] font-semibold text-[#1c1917]">
+                Nenhuma candidatura em andamento
+              </h3>
+              <p className="mx-auto mt-1.5 max-w-[440px] text-[13px] leading-5 text-[#78716c]">
+                Explore as vagas abertas da {company.name} e encontre sua próxima oportunidade.
+              </p>
               <Link
                 href={`/${slug}/vagas`}
-                className="font-medium hover:underline"
-                style={{ color: "var(--brand-primary)" }}
+                className="mt-5 inline-flex h-10 items-center rounded-xl px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: "var(--brand-primary)" }}
               >
-                Ver vagas abertas ›
+                Explorar vagas
               </Link>
-            </p>
+            </div>
           )}
+
           {running.map((app) => {
             const status = candidateStatus[app.status];
             return (
               <Link
                 key={app.id}
                 href={`/${slug}/minhas-candidaturas/${app.id}`}
-                className="block rounded-xl border border-[#e4e4e7] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)]"
+                className="group block rounded-2xl border border-[#e8e3de] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d6d0ca] hover:shadow-[0_8px_24px_rgba(28,25,23,0.06)] md:p-6"
               >
-                <span className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-[#0a0a0a]">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="block truncate text-[15px] font-semibold text-[#1c1917] group-hover:text-[var(--brand-primary)]">
                       {app.job.title}
                     </span>
-                    <span className="mt-0.5 block text-xs text-[#71717a]">
-                      {app.company.name} · enviada em{" "}
-                      {formatAppliedAt(app.createdAt)}
+                    <span className="mt-1 block text-xs text-[#8a847e]">
+                      {app.company.name} · enviada em {formatAppliedAt(app.createdAt)}
                     </span>
-                  </span>
+                  </div>
                   <span
-                    className={`flex h-6 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium ${status.className}`}
+                    className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold ${status.className}`}
                   >
                     <span className="size-1.5 rounded-full bg-current" />
                     {status.label}
                   </span>
-                </span>
-                <span className="mt-3 block border-t border-[#f1f0ed] pt-3 text-[12px] leading-5 text-[#71717a]">
-                  {whatHappensNow(
-                    app.status,
-                    app.company.name,
-                    app.interviewAt ? formatInterviewAt(app.interviewAt) : null
-                  )}
-                </span>
+                </div>
+                <div className="mt-4 border-t border-[#f0ece8] pt-4">
+                  <p className="text-[12px] font-medium uppercase tracking-[0.1em] text-[#aaa39c]">
+                    Próximo passo
+                  </p>
+                  <p className="mt-1 text-[13px] leading-6 text-[#57534e]">
+                    {whatHappensNow(
+                      app.status,
+                      app.company.name,
+                      app.interviewAt ? formatInterviewAt(app.interviewAt) : null
+                    )}
+                  </p>
+                </div>
               </Link>
             );
           })}
         </div>
 
-        {/* Encerrados — presentes, sem ocupar o primeiro plano */}
         {closed.length > 0 && (
-          <details className="mt-8 rounded-xl border border-[#e4e4e7] bg-white">
-            <summary className="cursor-pointer px-5 py-4 text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]">
+          <details className="mt-7 overflow-hidden rounded-2xl border border-[#e8e3de] bg-white">
+            <summary className="cursor-pointer px-5 py-4 text-[13px] font-semibold text-[#57534e] hover:text-[#1c1917]">
               Processos encerrados ({closed.length})
             </summary>
-            <div className="divide-y divide-[#f1f0ed] border-t border-[#e4e4e7]">
+            <div className="divide-y divide-[#f1f0ed] border-t border-[#e8e3de]">
               {closed.map((app) => {
                 const status = candidateStatus[app.status];
                 return (
                   <Link
                     key={app.id}
                     href={`/${slug}/minhas-candidaturas/${app.id}`}
-                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#fafaf9]"
+                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#faf9f7]"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] text-[#0a0a0a]">
+                      <span className="block truncate text-[13px] text-[#1c1917]">
                         {app.job.title}
                       </span>
                       <span className="block text-[11px] text-[#a1a1aa]">
@@ -200,22 +256,28 @@ export default async function MinhasCandidaturasPage({
           </details>
         )}
 
-        {/* Perfil incompleto: serve às duas pontas — menos atrito, melhor dado */}
         {!candidate.resumeUrl && (
-          <p className="mt-8 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-4 text-[13px] leading-5 text-[#71717a]">
-            Você ainda não tem currículo salvo no perfil.{" "}
+          <section className="mt-7 flex flex-col gap-4 rounded-2xl border border-[#e8e3de] bg-white p-5 md:flex-row md:items-center md:justify-between md:p-6">
+            <div>
+              <p className="text-[13px] font-semibold text-[#1c1917]">
+                Deixe seu perfil pronto para a próxima vaga
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-[#78716c]">
+                Salve seu currículo e candidate-se mais rápido.
+              </p>
+            </div>
             <Link
               href={`/${slug}/perfil`}
-              className="font-medium hover:underline"
-              style={{ color: "var(--brand-primary)" }}
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl px-4 text-[12px] font-semibold text-white"
+              style={{ backgroundColor: "var(--brand-primary)" }}
             >
-              Adicione o seu
-            </Link>{" "}
-            e a próxima candidatura leva um clique.
-          </p>
+              Adicionar currículo
+            </Link>
+          </section>
         )}
       </main>
+
       <CompanyFooter company={company} />
-    </>
+    </div>
   );
 }

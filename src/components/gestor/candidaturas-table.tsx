@@ -196,8 +196,12 @@ export function CandidaturasTable({
     <>
       <LiveRefresh active={anyAnalyzing} />
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-2xl font-bold text-[#0a0a0a]">Candidatos</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">Candidatos</h1>
+          <span className="rounded-full bg-[#f1f0ed] px-2.5 py-1 text-[11px] font-medium text-[#57534e]">{rows.length}</span>
+        </div>
         <p className="text-sm text-[#71717a]">
           {rows.length} no total
           {pendingTotal > 0 && (
@@ -215,13 +219,19 @@ export function CandidaturasTable({
             </span>
           )}
         </p>
+        </div>
+        {pendingTotal > 0 && (
+          <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>
+            Triar agora →
+          </Link>
+        )}
       </div>
 
       {/* Etapas do funil com contagem — onde está o trabalho, sem filtrar às cegas */}
       <div
         role="tablist"
         aria-label="Etapa do processo"
-        className="mt-6 flex gap-1 overflow-x-auto border-b border-[#e4e4e7]"
+        className="mt-7 flex gap-1 overflow-x-auto border-b border-[#e4e4e7]"
       >
         {TABS.map((item) => {
           const active = tab === item.key;
@@ -259,8 +269,8 @@ export function CandidaturasTable({
       </div>
 
       {/* Controles secundários: refinam a aba, não competem com ela */}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div className="flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3">
+      <div className="mt-4 flex flex-wrap items-center gap-2.5">
+        <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
           <span className="text-sm text-[#a1a1aa]" aria-hidden>
             ⌕
           </span>
@@ -278,7 +288,7 @@ export function CandidaturasTable({
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
             aria-label="Filtrar por vaga"
-            className="h-9 max-w-[220px] rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+            className="h-10 max-w-[220px] rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
           >
             <option value="">Todas as vagas</option>
             {jobs.map((job) => (
@@ -293,7 +303,7 @@ export function CandidaturasTable({
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="Ordenar por"
-          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-10 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
         >
           {Object.entries(SORT_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -302,7 +312,7 @@ export function CandidaturasTable({
           ))}
         </select>
 
-        <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
+        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
           <input
             type="checkbox"
             checked={onlyMeets}
@@ -314,7 +324,7 @@ export function CandidaturasTable({
       </div>
 
       {/* Lista */}
-      <div className="mt-5 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <div
           className={`hidden md:grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3`}
         >
@@ -356,7 +366,7 @@ export function CandidaturasTable({
             <div
               key={row.id}
               className={
-                `grid ${cols} items-center gap-3 border-b border-[#e4e4e7] px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:gap-4 md:px-5 ` +
+                `grid ${cols} items-center gap-3 border-b border-[#e4e4e7] px-4 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:gap-4 md:px-5 ` +
                 (isSelected ? "bg-[#fafaf9]" : "")
               }
             >

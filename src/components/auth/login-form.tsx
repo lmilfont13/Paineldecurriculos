@@ -30,12 +30,16 @@ export function LoginForm({
         color: "#0a0a0a",
       };
 
+  const text = dark
+    ? { label: "#7e706e", input: "#ede8e5", placeholder: "#5c4f4c" }
+    : { label: "#57534e", input: "#1c1917", placeholder: "#b8b2ac" };
+
   return (
     <form action={formAction} className="mt-5">
       <label
         htmlFor="email"
         className="block text-[11.5px] font-semibold"
-        style={{ color: dark ? "#7e706e" : "#0a0a0a" }}
+        style={{ color: text.label }}
       >
         E-mail
       </label>
@@ -45,16 +49,15 @@ export function LoginForm({
         type="email"
         required
         autoComplete="email"
-        defaultValue="ana@technova.com"
         placeholder="voce@empresa.com"
-        className="mt-1.5 h-[42px] w-full rounded-lg border px-3.5 text-[13.5px] outline-none transition-colors focus:border-[#9e1802]"
-        style={inputStyle}
+        className="mt-1.5 h-11 w-full rounded-xl border px-3.5 text-[13.5px] outline-none transition-all focus:border-[var(--brand-primary,#811201)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand-primary,#811201)_10%,transparent)]"
+        style={{ ...inputStyle, color: text.input }}
       />
 
       <label
         htmlFor="password"
         className="mt-4 block text-[11.5px] font-semibold"
-        style={{ color: dark ? "#7e706e" : "#0a0a0a" }}
+        style={{ color: text.label }}
       >
         Senha
       </label>
@@ -64,10 +67,9 @@ export function LoginForm({
         type="password"
         required
         autoComplete="current-password"
-        defaultValue="triagem123"
-        placeholder="••••••••"
-        className="mt-1.5 h-[42px] w-full rounded-lg border px-3.5 text-[13.5px] outline-none transition-colors focus:border-[#9e1802]"
-        style={inputStyle}
+        placeholder="Sua senha"
+        className="mt-1.5 h-11 w-full rounded-xl border px-3.5 text-[13.5px] outline-none transition-all focus:border-[var(--brand-primary,#811201)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand-primary,#811201)_10%,transparent)]"
+        style={{ ...inputStyle, color: text.input }}
       />
 
       {state?.error && !state.isCandidate && (
@@ -110,7 +112,7 @@ export function LoginForm({
           {slug ? (
             <a
               href={`/${slug}/vagas`}
-              className="mt-3 inline-flex h-9 items-center rounded-2xl px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+              className="mt-3 inline-flex h-9 items-center rounded-xl px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: "var(--brand-primary, #811201)" }}
             >
               Ver vagas e entrar
@@ -118,7 +120,7 @@ export function LoginForm({
           ) : (
             <a
               href="/login"
-              className="mt-3 inline-flex h-9 items-center rounded-2xl px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+              className="mt-3 inline-flex h-9 items-center rounded-xl px-5 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: dark ? "#811201" : "#0a0a0a" }}
             >
               Ir para a página de vagas
@@ -130,18 +132,14 @@ export function LoginForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 h-11 w-full rounded-lg text-[14px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={
-          branded
-            ? {
-                backgroundColor: "var(--brand-primary, #811201)",
-                color: "var(--brand-foreground, #ffffff)",
-              }
-            : {
-                backgroundColor: dark ? "#811201" : "#0a0a0a",
-                color: "#ffffff",
-              }
-        }
+        className="mt-5 h-11 w-full rounded-xl text-[14px] font-semibold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:opacity-60"
+        style={{
+          backgroundColor: branded
+            ? "var(--brand-primary, #811201)"
+            : dark
+              ? "#811201"
+              : "#1c1917",
+        }}
       >
         {pending ? "Entrando…" : "Entrar no painel"}
       </button>
@@ -149,8 +147,8 @@ export function LoginForm({
       {branded && (
         <a
           href="/recuperar-senha"
-          className="mt-3 inline-block text-[12px] transition-colors"
-          style={{ color: dark ? "#3c3230" : "#71717a" }}
+          className="mt-4 inline-block text-[12px] transition-colors hover:underline"
+          style={{ color: dark ? "#3c3230" : "#78716c" }}
         >
           Esqueci minha senha
         </a>

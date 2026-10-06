@@ -51,8 +51,8 @@ export default async function GestorLayout({
           logoUrl={company.logoUrl}
           logoutAction={logoutAction}
         />
-        <main className="flex-1 overflow-x-hidden px-4 pb-28 pt-6 md:px-10 md:pb-12 md:pt-9 lg:px-12">
-          {children}
+        <main className="flex-1 overflow-x-hidden px-4 pb-28 pt-6 md:px-8 md:pb-12 md:pt-8 lg:px-10">
+          <div className="mx-auto w-full max-w-[1180px]">{children}</div>
         </main>
       </div>
       <GestorBottomNav pendingCount={pendingCount} />

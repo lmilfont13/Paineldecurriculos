@@ -118,12 +118,26 @@
 }
 
 @layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
   }
+  body {
+    @apply min-h-screen font-sans;
+  }
+
   html {
     @apply font-sans;
   }
@@ -157,8 +171,38 @@
   :focus-visible {
     @apply outline-none ring-2 ring-[#0a0a0a]/30 ring-offset-1;
   }
+
+  @media (max-width: 767px) {
+    button,
+    a,
+    select,
+    [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
   /* Botões primários "afundam" levemente ao clicar */
   button:not(:disabled):active {
     transform: translateY(0.5px);
+  }
+}
+
+@keyframes heroFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
+  50% { transform: translate3d(0, -9px, 0) rotate(1deg); }
+}
+
+@keyframes heroFloatReverse {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(1deg); }
+  50% { transform: translate3d(0, 8px, 0) rotate(-1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

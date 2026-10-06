@@ -63,9 +63,9 @@ export default async function AuditoriaPage() {
   const logs = await findAuditLogs(user.companyId, 200);
 
   return (
-    <div className="mx-auto max-w-[900px]">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-[#0a0a0a]">Auditoria</h1>
+    <div className="mx-auto w-full max-w-[980px]">
+      <div className="mb-7">
+        <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">Auditoria</h1>
         <p className="mt-1 text-[13px] text-[#71717a]">
           Registro de todas as ações realizadas no painel — quem fez, o quê e quando.
           Últimas {logs.length} entradas.
@@ -79,9 +79,9 @@ export default async function AuditoriaPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
           {/* Cabeçalho */}
-          <div className="grid grid-cols-[120px_1fr_160px] gap-4 border-b border-[#e4e4e7] bg-[#fafaf9] px-5 py-3">
+          <div className="hidden md:grid grid-cols-[120px_1fr_160px] gap-4 border-b border-[#e4e4e7] bg-[#fafaf9] px-5 py-3">
             <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Data · Hora</span>
             <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Ação</span>
             <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Quem</span>
@@ -99,7 +99,7 @@ export default async function AuditoriaPage() {
                 <li
                   key={log.id}
                   className={
-                    "grid grid-cols-[120px_1fr_160px] items-start gap-4 px-5 py-3.5 text-[13px] " +
+                    "flex flex-col gap-3 px-5 py-4 text-[13px] md:grid md:grid-cols-[120px_1fr_160px] md:items-start md:gap-4 " +
                     (i % 2 === 0 ? "bg-white" : "bg-[#fafaf9]")
                   }
                 >

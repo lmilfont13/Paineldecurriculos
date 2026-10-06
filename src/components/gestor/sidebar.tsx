@@ -101,8 +101,8 @@ export function GestorSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#e4e4e7] bg-[#f5f5f4] md:flex">
-      <div className="m-3 flex items-center gap-2.5 rounded-lg p-2">
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#e7e5e4] bg-[#fafaf9] md:flex">
+      <div className="mx-3 mt-4 flex items-center gap-2.5 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
         <CompanyMark
           name={companyName}
           initials={companyInitials}
@@ -113,7 +113,7 @@ export function GestorSidebar({
         </span>
       </div>
 
-      <nav className="mt-4 flex flex-col gap-1 px-3">
+      <nav className="mt-5 flex flex-col gap-1 px-3">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           return (
@@ -121,15 +121,15 @@ export function GestorSidebar({
               key={item.href}
               href={item.href}
               className={
-                "flex h-[38px] items-center gap-2.5 rounded-lg px-3.5 text-sm " +
+                "group flex h-10 items-center gap-2.5 rounded-xl px-3.5 text-sm " +
                 (active
-                  ? "bg-[#e7e5e4] font-medium text-[#0a0a0a]"
-                  : "text-[#71717a] hover:bg-[#eeedec] hover:text-[#0a0a0a]")
+                  ? "font-semibold text-[#0a0a0a] shadow-sm"
+                  : "text-[#71717a] hover:bg-white hover:text-[#0a0a0a]")
               }
             >
               <item.Icon
                 aria-hidden
-                className="size-4 shrink-0"
+                className="size-[17px] shrink-0"
                 strokeWidth={active ? 2.25 : 1.75}
                 style={active ? { color: "var(--brand-primary)" } : undefined}
               />
@@ -142,7 +142,7 @@ export function GestorSidebar({
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2.5 border-t border-[#e4e4e7] p-3">
+      <div className="mx-3 mb-3 mt-auto flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
           {userInitials}
         </span>
@@ -218,7 +218,7 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
     >
       {NAV.map((item) => {
         const active = isActive(pathname, item.href);
