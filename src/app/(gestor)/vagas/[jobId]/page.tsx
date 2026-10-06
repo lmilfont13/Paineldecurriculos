@@ -7,6 +7,7 @@ import { CopyLink } from "@/components/gestor/copy-link";
 import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
+import { VagaPipeline } from "@/components/gestor/vaga-pipeline";
 import { getVagaDetailData } from "@/server/controllers/gestor.controller";
 import {
   appStatusLabels,
@@ -168,83 +169,21 @@ export default async function VagaHubPage({
         </Link>
       </div>
 
-      {/* Funil: onde cada pessoa está, sem precisar filtrar */}
+      {/* Funil interativo: o gestor move pessoas visualmente entre etapas. */}
       <h2 className="mt-10 text-[15px] font-semibold text-[#0a0a0a]">
         Funil do processo
       </h2>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {STAGES.map((stage) => {
-          const people = byStage(stage.key);
-          return (
-            <section
-              key={stage.key}
-              className="flex flex-col rounded-xl border border-[#e4e4e7] bg-white"
-            >
-              <header className="flex items-center justify-between border-b border-[#e4e4e7] px-4 py-3">
-                <span className="text-[13px] font-medium text-[#0a0a0a]">
-                  {stage.label}
-                </span>
-                <span
-                  className="rounded-full bg-[#f1f0ed] px-2 text-[11px] font-medium"
-                  style={{ color: stage.accent }}
-                >
-                  {people.length}
-                </span>
-              </header>
-
-              {people.length === 0 && (
-                <p className="px-4 py-5 text-[12px] text-[#a1a1aa]">
-                  {stage.key === "PENDING"
-                    ? "Ninguém esperando."
-                    : "Ninguém nesta etapa."}
-                </p>
-              )}
-
-              <ul className="divide-y divide-[#f1f0ed]">
-                {people.slice(0, PER_COLUMN).map((person) => (
-                  <li key={person.id}>
-                    <Link
-                      href={`/candidaturas/${person.id}`}
-                      className="flex items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[#fafaf9]"
-                    >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[9px] font-bold text-white">
-                        {personInitials(person.name)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12px] font-medium text-[#0a0a0a]">
-                          {person.name}
-                        </span>
-                        {stage.key === "PENDING" && (
-                          <span className="block text-[10px] font-medium text-[#b07818]">
-                            {formatWaiting(person.createdAt)}
-                          </span>
-                        )}
-                      </span>
-                      <AiScoreChip
-                        aiScore={person.aiScore}
-                        aiState={person.aiState}
-                        meetsMinimum={
-                          person.aiScore !== null &&
-                          person.aiScore >= job.aiMinScore
-                        }
-                      />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-
-              {people.length > PER_COLUMN && (
-                <Link
-                  href={`/candidaturas?vaga=${job.id}&status=${stage.key}`}
-                  className="border-t border-[#e4e4e7] px-4 py-2.5 text-[12px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
-                >
-                  Ver os {people.length} em {appStatusLabels[stage.key]} ›
-                </Link>
-              )}
-            </section>
-          );
-        })}
-      </div>
+      <VagaPipeline
+        aiMinScore={job.aiMinScore}
+        applications={applications.map((person) => ({
+          id: person.id,
+          name: person.name,
+          status: person.status,
+          aiScore: person.aiScore,
+          aiState: person.aiState,
+          createdAt: person.createdAt.toISOString(),
+        }))}
+      />
 
       {/* Divulgação e critérios: o resto do processo, fora do caminho */}
       <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2">
