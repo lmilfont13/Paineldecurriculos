@@ -231,6 +231,8 @@ export async function setApplicationStatusAction(
   revalidatePath("/candidaturas");
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
+  const refreshed = await getCompanyApplication(user.companyId, applicationId);
+  if (refreshed) revalidatePath(`/vagas/${refreshed.job.id}`);
 }
 
 export async function submitApplicationAction(
