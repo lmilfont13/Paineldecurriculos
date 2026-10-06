@@ -68,7 +68,16 @@ export default async function CandidaturaDetailPage({
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <LiveRefresh active={analyzing} />
-      <div className="flex items-start justify-between rounded-2xl border border-[#e7e5e4] bg-white p-5 shadow-sm sm:p-7">
+      <div className="mb-4 flex items-center justify-between">
+        <Link href="/candidaturas" className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]">
+          ← Voltar para candidatos
+        </Link>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.7px] text-[#a1a1aa]">
+          Detalhe da candidatura
+        </span>
+      </div>
+      <div className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-7 lg:p-8">
+        <div className="flex items-start justify-between">
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
           Candidatura · {app.job.title}
         </p>
@@ -81,7 +90,7 @@ export default async function CandidaturaDetailPage({
         </Link>
       </div>
 
-      <div className="mt-4 flex items-center gap-4">
+        <div className="mt-5 flex items-center gap-4">
         <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm">
           {personInitials(app.name)}
         </span>
@@ -101,7 +110,9 @@ export default async function CandidaturaDetailPage({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">\n        <div>\n      {/* Bloco de IA — só leitura; nunca muda o status (regra 2) */}
+        <div className="mt-7 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="min-w-0">
+      {/* Bloco de IA — só leitura; nunca muda o status (regra 2) */}
       <section className="mt-6 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-6">
         {/* A ressalva vem antes do dado, não depois: quem lê já lê enquadrado. */}
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
@@ -188,6 +199,7 @@ export default async function CandidaturaDetailPage({
             : null
         }
       />
+      </div>
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-[#0a0a0a]">
@@ -256,8 +268,29 @@ export default async function CandidaturaDetailPage({
           ))}
         </dl>
       </section>
+          </div>
 
-      </section>\n      </div>\n\n      <section className="mt-5 flex items-center gap-4 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3">
+          <aside className="hidden lg:block lg:sticky lg:top-6">
+            <DecisionBlock
+              applicationId={app.id}
+              status={app.status}
+              candidateName={app.name}
+              interview={
+                app.interviewAt
+                  ? {
+                      at: toLocalInput(app.interviewAt),
+                      summary: interviewSummary(app.interviewAt, app.interviewMode),
+                      mode: app.interviewMode ?? "Videochamada",
+                      location: app.interviewLocation ?? "",
+                      past: isPastInterview(app.interviewAt),
+                    }
+                  : null
+              }
+            />
+          </aside>
+        </div>
+
+      <section className="mt-5 flex items-center gap-4 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3">
         {app.resumeUrl ? (
           <>
             <span className="rounded-[5px] bg-[#e4f6ec] px-2 py-2 text-[8px] font-bold text-[#1f7a4d]">
@@ -288,6 +321,7 @@ export default async function CandidaturaDetailPage({
           </span>
         )}
       </section>
+      </div>
     </div>
   );
 }
