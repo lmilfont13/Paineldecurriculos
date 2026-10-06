@@ -138,12 +138,12 @@ export default async function PublicJobsPage({
               </div>
 
               <div className="absolute -right-1 bottom-[12%] w-[185px] rounded-2xl border border-white/15 bg-[#171313]/90 p-3.5 shadow-[0_20px_45px_rgba(0,0,0,0.3)] backdrop-blur-md [animation:heroFloatReverse_6s_ease-in-out_infinite]">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">Nova candidatura</p>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">Nova oportunidade</p>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="flex size-8 items-center justify-center rounded-xl bg-white/10 text-[9px] font-bold text-white">JD</span>
                   <div>
-                    <p className="text-[10px] font-semibold text-white/85">João Dias</p>
-                    <p className="text-[9px] text-white/40">Acabou de se candidatar</p>
+                    <p className="text-[10px] font-semibold text-white/85">Seu próximo passo</p>
+                    <p className="text-[9px] text-white/40">Encontre a vaga certa para você</p>
                   </div>
                 </div>
               </div>
