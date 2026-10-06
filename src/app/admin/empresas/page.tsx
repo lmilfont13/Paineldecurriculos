@@ -13,7 +13,7 @@ export default async function EmpresasPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">Empresas</h1>
           <p className="mt-2 text-sm text-[#71717a]">
@@ -25,7 +25,7 @@ export default async function EmpresasPage() {
         </div>
         <Link
           href="/admin/empresas/nova"
-          className="flex h-10 items-center rounded-2xl bg-[#0a0a0a] px-5 text-[13px] font-medium text-white hover:opacity-90"
+          className="flex h-10 items-center rounded-xl bg-[#0a0a0a] px-5 text-[13px] font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:opacity-90"
         >
           + Nova empresa
         </Link>
@@ -52,8 +52,8 @@ export default async function EmpresasPage() {
           </Link>
         </div>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
-          <div className="grid grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-3.5">
+        <div className="mt-7 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+          <div className="hidden md:grid grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-3.5">
             {["EMPRESA", "PÁGINA PÚBLICA", "GESTOR", "VAGAS", "STATUS", ""].map(
               (h, i) => (
                 <span
@@ -68,7 +68,7 @@ export default async function EmpresasPage() {
           {companies.map((company) => (
             <div
               key={company.id}
-              className="group grid grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] items-center gap-4 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9]"
+              className="group flex flex-col gap-3 border-b md:px-5 md:py-4 md:grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] md:items-center md:gap-4" border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9]"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
