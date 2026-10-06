@@ -40,14 +40,14 @@ export default async function LoginPage({
         ...(company ? (brandCssVars(company) as React.CSSProperties) : {}),
       }}
     >
-      <div className="grid min-h-screen lg:grid-cols-[1.12fr_0.88fr]">
+      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden border-r border-white/[0.06] lg:flex">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.07),transparent_34%),radial-gradient(circle_at_72%_80%,rgba(129,18,1,0.18),transparent_42%)]" />
-          <div className="relative flex w-full flex-col justify-between p-12 xl:p-16">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(255,255,255,0.075),transparent_28%),radial-gradient(circle_at_78%_62%,rgba(129,18,1,0.2),transparent_34%),linear-gradient(135deg,#090808_0%,#0c0a0a_58%,#130d0c_100%)]" />
+          <div className="relative flex w-full flex-col justify-between p-10 xl:p-14 2xl:p-16">
             <div>
               <div className="flex items-center gap-3">
                 <span
-                  className="flex size-10 items-center justify-center rounded-xl text-xs font-bold text-white"
+                  className="flex size-10 items-center justify-center rounded-[13px] text-xs font-bold text-white shadow-[0_8px_30px_rgba(129,18,1,0.28)]"
                   style={{ backgroundColor: "var(--brand-primary, #811201)" }}
                 >
                   T
@@ -58,19 +58,19 @@ export default async function LoginPage({
                 </div>
               </div>
 
-              <div className="mt-20 max-w-[600px]">
+              <div className="mt-24 max-w-[620px] xl:mt-28">
                 <p
                   className="text-[11px] font-semibold uppercase tracking-[0.2em]"
                   style={{ color: "var(--brand-secondary, #c9a9a2)" }}
                 >
                   {company ? company.name : "Plataforma"}
                 </p>
-                <h1 className="mt-4 text-[44px] font-semibold leading-[1.04] tracking-[-1.6px] text-white xl:text-[58px]">
+                <div className="flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/30"><span className="h-px w-8 bg-white/20" />Recrutamento sem ruído</div><h1 className="mt-5 max-w-[590px] text-[44px] font-semibold leading-[1.01] tracking-[-2px] text-white xl:text-[60px] 2xl:text-[64px]">
                   {company
                     ? "Encontre os talentos certos para o seu time."
                     : "Recrutamento mais claro. Decisões melhores."}
                 </h1>
-                <p className="mt-6 max-w-[540px] text-[16px] leading-7 text-white/55">
+                <p className="mt-7 max-w-[540px] text-[15px] leading-7 text-white/55">
                   {company
                     ? `Organize vagas, avalie candidatos e tome decisões com mais contexto.`
                     : "Uma plataforma para organizar vagas, candidatos e o processo de decisão da sua equipe."}
@@ -78,7 +78,22 @@ export default async function LoginPage({
               </div>
             </div>
 
-            <div className="grid max-w-[600px] gap-3 sm:grid-cols-3">
+            <div className="mt-12 hidden w-[360px] rounded-[22px] border border-white/[0.1] bg-white/[0.035] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-md xl:block">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Painel de decisão</p>
+                  <p className="mt-1 text-[12px] font-medium text-white/80">Contexto antes da escolha</p>
+                </div>
+                <span className="flex size-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[10px] text-white/45">AI</span>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                <div className="flex items-center gap-3"><span className="w-[108px] text-[10px] text-white/40">Experiência</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><span className="block h-full w-[82%] rounded-full bg-gradient-to-r from-white/20 to-white/55" /></div><span className="w-14 text-right text-[9px] font-medium text-white/35">forte</span></div>
+                <div className="flex items-center gap-3"><span className="w-[108px] text-[10px] text-white/40">Aderência à vaga</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><span className="block h-full w-[91%] rounded-full bg-gradient-to-r from-white/20 to-white/55" /></div><span className="w-14 text-right text-[9px] font-medium text-white/35">alta</span></div>
+                <div className="flex items-center gap-3"><span className="w-[108px] text-[10px] text-white/40">Momento profissional</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><span className="block h-full w-[76%] rounded-full bg-gradient-to-r from-white/20 to-white/55" /></div><span className="w-14 text-right text-[9px] font-medium text-white/35">compatível</span></div>
+              </div>
+            </div>
+
+            <div className="grid max-w-[620px] gap-3 sm:grid-cols-3">
               {[
                 ["01", "Vagas", "Organize oportunidades e critérios."],
                 ["02", "Triagem", "Priorize candidatos com contexto."],
@@ -86,7 +101,7 @@ export default async function LoginPage({
               ].map(([number, title, description]) => (
                 <div
                   key={number}
-                  className="rounded-2xl border border-white/[0.11] bg-white/[0.035] p-4 transition-colors hover:bg-white/[0.05]"
+                  className="rounded-[18px] border border-white/[0.1] bg-white/[0.035] p-4 transition-all hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.055]"
                 >
                   <span className="text-[10px] font-semibold tracking-[0.16em] text-white/30">
                     {number}
@@ -103,20 +118,20 @@ export default async function LoginPage({
           </div>
         </section>
 
-        <section className="flex items-center justify-center bg-[#f7f5f2] px-5 py-10 text-[#1c1917] sm:px-8">
-          <div className="w-full max-w-[380px]">
+        <section className="flex items-center justify-center overflow-hidden bg-[#f7f5f2] px-5 py-10 text-[#1c1917] sm:px-8">
+          <div className="relative w-full max-w-[390px]"><div className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[#811201]/[0.035] blur-2xl" />
             <div className="mb-8 lg:hidden">
               <p className="text-sm font-semibold">Triagem</p>
               <p className="mt-1 text-xs text-[#8a847e]">Recrutamento inteligente</p>
             </div>
 
-            <div className="rounded-[26px] border border-[#e7e1db] bg-white p-6 shadow-[0_24px_70px_rgba(28,25,23,0.09)] sm:p-7">
+            <div className="rounded-[28px] border border-[#e7e1db] bg-white/95 p-6 shadow-[0_30px_90px_rgba(28,25,23,0.11),0_2px_8px_rgba(28,25,23,0.03)] backdrop-blur-xl sm:p-7">
               {companies.length > 0 && (
                 <div className="mb-6">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aaa39c]">
                     Para candidatos
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold tracking-[-0.3px]">
+                  <h2 className="mt-2 text-[21px] font-semibold tracking-[-0.45px]">
                     Encontre uma vaga
                   </h2>
                   <p className="mt-1.5 text-[13px] leading-5 text-[#78716c]">
@@ -170,12 +185,10 @@ export default async function LoginPage({
                 </div>
               )}
 
-              <div className="my-5 h-px bg-[#eee9e4]" />
+              <div className="my-6 flex items-center gap-3"><div className="h-px flex-1 bg-[#eee9e4]" /><span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#c1bbb5]">ou</span><div className="h-px flex-1 bg-[#eee9e4]" /></div>
 
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aaa39c]">
-                  Área restrita
-                </p>
+                <div className="flex items-center justify-between"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aaa39c]">Área restrita</p><span className="text-[10px] font-medium text-[#c1bbb5]">02</span></div>
                 <h2 className="mt-2 text-xl font-semibold tracking-[-0.3px]">
                   {empresa === "plataforma" ? "Console admin" : "Entrar no painel"}
                 </h2>
