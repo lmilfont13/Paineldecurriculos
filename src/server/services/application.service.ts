@@ -111,26 +111,17 @@ export async function setApplicationStatus(
   }
 
   if (status !== "PENDING" && status !== application.status) {
-    const company = await getCompanyById(companyId);
-    if (company) {
-      // Um evento, três destinos: trilha (acima), novidade no site e e-mail.
-      void notifyStageChange({
-        candidateId: application.candidateId,
-        applicationId: id,
-        to: status,
-        companyName: company.name,
-        jobTitle: application.job.title,
-      }).catch(() => {});
-      if (application.email.includes("@")) {
-        void sendStatusUpdateEmail({
-          brand: emailBrand(company),
-          to: application.email,
-          candidateName: application.name,
-          jobTitle: application.job.title,
-          status,
-          applicationId: id,
-        });
-      }
+    try {
+      // O gestor não espera e-mail/notificação: o evento é processado em
+      // background. O fallback mantém a comunicação funcionando enquanto o
+      // Inngest de produção não estiver configurado.
+      await inngest.send({
+        name: "application/status-changed",
+        data: { applicationId: id, status },
+      });
+    } catch (error) {
+      console.error("[inngest] Falha ao enfileirar mudança de status:", error);
+      void notifyApplicationStatusChange(id, status).catch(() => {});
     }
   }
   return updated;
