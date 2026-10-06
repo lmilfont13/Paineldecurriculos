@@ -110,7 +110,7 @@ export async function setApplicationStatus(
     });
   }
 
-  if (status !== "PENDING" && status !== application.status) {
+  if (status !== application.status) {
     try {
       // O gestor não espera e-mail/notificação: o evento é processado em
       // background. O fallback mantém a comunicação funcionando enquanto o
