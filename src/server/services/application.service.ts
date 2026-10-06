@@ -127,6 +127,34 @@ export async function setApplicationStatus(
   return updated;
 }
 
+/** Comunicação pós-mudança de status: novidade no portal e e-mail. */
+export async function notifyApplicationStatusChange(
+  applicationId: string,
+  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+) {
+  const application = await findApplicationById(applicationId);
+  if (!application) return;
+
+  void notifyStageChange({
+    candidateId: application.candidateId,
+    applicationId,
+    to: status,
+    companyName: application.company.name,
+    jobTitle: application.job.title,
+  }).catch(() => {});
+
+  if (application.email.includes("@")) {
+    void sendStatusUpdateEmail({
+      brand: emailBrand(application.company),
+      to: application.email,
+      candidateName: application.name,
+      jobTitle: application.job.title,
+      status,
+      applicationId,
+    }).catch(() => {});
+  }
+}
+
 /** Respostas da última candidatura na empresa — pré-preenche extras (CA3). */
 export async function getPrefillAnswers(
   candidateId: string,
