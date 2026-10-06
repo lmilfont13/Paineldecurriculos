@@ -35,54 +35,59 @@ export default async function PublicJobsPage({
   const { company, jobs, appliedJobIds } = data;
 
   return (
-    <>
-      {/* Hero com gradiente da marca */}
-      <div
+    <div className="min-h-screen bg-[#faf9f7]">
+      <section
+        className="relative overflow-hidden"
         style={{
           background:
-            "linear-gradient(165deg, var(--brand-primary) 0%, var(--brand-deep) 100%)",
+            "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-deep) 100%)",
         }}
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-32 -top-40 size-[520px] rounded-full opacity-20 blur-3xl"
+          style={{ background: "var(--brand-secondary)" }}
+        />
         <CompanyHeader
           company={company}
           candidate={candidate}
           tone="brand"
           jobCount={jobs.length}
         />
-        <section className="mx-auto w-full max-w-[1120px] px-5 pb-14 pt-12 md:px-8 md:pb-20 md:pt-16">
-          <h1 className="max-w-[720px] text-[32px] font-bold leading-[1.1] tracking-[-0.5px] text-white md:text-[48px]">
-            {company.heroTitle}
-          </h1>
-          <p className="mt-4 max-w-[560px] text-[15px] leading-6 text-white/80 md:text-base md:leading-7">
-            {company.heroSubtitle}
-          </p>
-          {jobs.length > 0 && (
-            <p
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-[13px] font-medium text-white ring-1 ring-white/15"
-              style={{ animation: "fadeInUp 0.6s ease both 0.2s" }}
-            >
-              <span
-                className="size-1.5 rounded-full bg-white"
-                style={{ animation: "pulse 2s ease infinite" }}
-              />
-              {jobs.length === 1 ? "1 vaga aberta" : `${jobs.length} vagas abertas`}
+
+        <div className="relative mx-auto grid w-full max-w-[1120px] gap-8 px-5 pb-11 pt-9 md:grid-cols-[1fr_300px] md:items-end md:px-8 md:pb-14 md:pt-10">
+          <div>
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+              Carreira · {company.name}
             </p>
-          )}
-        </section>
-      </div>
+            <h1 className="max-w-[680px] text-[34px] font-bold leading-[1.05] tracking-[-1px] text-white md:text-[52px]">
+              {company.heroTitle}
+            </h1>
+            <p className="mt-4 max-w-[600px] text-[15px] leading-6 text-white/75 md:text-[16px] md:leading-7">
+              {company.heroSubtitle}
+            </p>
+          </div>
 
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.4; }
-        }
-      `}</style>
+          <div className="rounded-2xl border border-white/15 bg-black/10 p-5 backdrop-blur-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+              Oportunidades
+            </p>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="text-4xl font-bold tracking-[-1px] text-white">
+                {jobs.length}
+              </span>
+              <span className="pb-1 text-sm text-white/65">
+                {jobs.length === 1 ? "vaga aberta" : "vagas abertas"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/55">
+              Encontre uma oportunidade que combine com o seu próximo passo.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <main className="mx-auto w-full max-w-[1120px] flex-1 px-5 pt-10 md:px-8 md:pt-14">
+      <main className="mx-auto w-full max-w-[1120px] px-5 pb-12 pt-9 md:px-8 md:pt-11">
         <JobList
           slug={company.slug}
           jobs={jobs}
@@ -92,17 +97,23 @@ export default async function PublicJobsPage({
         />
 
         {company.aboutText && (
-          <section className="mt-16 grid gap-4 border-t border-[#ebe7e3] pt-10 md:grid-cols-[240px_1fr] md:gap-10">
-            <h2 className="text-[15px] font-semibold text-[#1c1917]">
-              Sobre a {company.name}
-            </h2>
-            <p className="max-w-[640px] whitespace-pre-line text-[15px] leading-7 text-[#57534e]">
+          <section className="mt-16 grid gap-5 rounded-2xl border border-[#e8e3de] bg-white p-7 md:grid-cols-[220px_1fr] md:gap-10 md:p-9">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8a29e]">
+                Sobre a empresa
+              </p>
+              <h2 className="mt-2 text-lg font-semibold tracking-[-0.2px] text-[#1c1917]">
+                {company.name}
+              </h2>
+            </div>
+            <p className="max-w-[680px] whitespace-pre-line text-[14px] leading-7 text-[#57534e]">
               {company.aboutText}
             </p>
           </section>
         )}
       </main>
+
       <CompanyFooter company={company} />
-    </>
+    </div>
   );
 }
