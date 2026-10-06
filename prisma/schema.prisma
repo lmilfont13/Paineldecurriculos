@@ -162,6 +162,9 @@ model Application {
   notifications Notification[]
 
   @@unique([candidateId, jobId])
+  @@index([companyId, status, createdAt])
+  @@index([jobId, status])
+  @@index([companyId, aiScore])
 }
 
 /// Novidade do processo na visão do candidato — o mesmo evento que vira
@@ -201,6 +204,8 @@ model StatusEvent {
   createdAt     DateTime   @default(now())
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
 }
 
 enum AppStatus {
