@@ -66,9 +66,9 @@ export default async function CandidaturaDetailPage({
   const analyzing = app.aiState === "WAITING" || app.aiState === "PROCESSING";
 
   return (
-    <div className="mx-auto max-w-[640px] rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-8">
+    <div className="mx-auto w-full max-w-[1080px]">
       <LiveRefresh active={analyzing} />
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between rounded-2xl border border-[#e7e5e4] bg-white p-5 shadow-sm sm:p-7">
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
           Candidatura · {app.job.title}
         </p>
@@ -82,7 +82,7 @@ export default async function CandidaturaDetailPage({
       </div>
 
       <div className="mt-4 flex items-center gap-4">
-        <span className="flex size-[52px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[15px] font-bold text-white">
+        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm">
           {personInitials(app.name)}
         </span>
         <div>
@@ -101,7 +101,7 @@ export default async function CandidaturaDetailPage({
         </div>
       </div>
 
-      {/* Bloco de IA — só leitura; nunca muda o status (regra 2) */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">\n        <div>\n      {/* Bloco de IA — só leitura; nunca muda o status (regra 2) */}
       <section className="mt-6 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-6">
         {/* A ressalva vem antes do dado, não depois: quem lê já lê enquadrado. */}
         <p className="text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
@@ -257,7 +257,7 @@ export default async function CandidaturaDetailPage({
         </dl>
       </section>
 
-      <section className="mt-8 flex items-center gap-4 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3">
+      </section>\n      </div>\n\n      <section className="mt-5 flex items-center gap-4 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3">
         {app.resumeUrl ? (
           <>
             <span className="rounded-[5px] bg-[#e4f6ec] px-2 py-2 text-[8px] font-bold text-[#1f7a4d]">
