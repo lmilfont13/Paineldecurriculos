@@ -58,27 +58,27 @@ export default async function LoginPage({
                 </div>
               </div>
 
-              <div className="mt-24 max-w-[620px]">
+              <div className="mt-20 max-w-[600px]">
                 <p
                   className="text-[11px] font-semibold uppercase tracking-[0.2em]"
                   style={{ color: "var(--brand-secondary, #c9a9a2)" }}
                 >
                   {company ? company.name : "Plataforma"}
                 </p>
-                <h1 className="mt-4 text-[48px] font-semibold leading-[1.02] tracking-[-1.8px] text-white xl:text-[64px]">
+                <h1 className="mt-4 text-[44px] font-semibold leading-[1.04] tracking-[-1.6px] text-white xl:text-[58px]">
                   {company
-                    ? "Encontre quem vai fazer a diferença."
+                    ? "Encontre os talentos certos para o seu time."
                     : "Recrutamento mais claro. Decisões melhores."}
                 </h1>
                 <p className="mt-6 max-w-[540px] text-[16px] leading-7 text-white/55">
                   {company
-                    ? `Um espaço único para acompanhar vagas, candidatos e decisões da ${company.name}.`
+                    ? `Organize vagas, avalie candidatos e tome decisões com mais contexto.`
                     : "Uma plataforma para organizar vagas, candidatos e o processo de decisão da sua equipe."}
                 </p>
               </div>
             </div>
 
-            <div className="grid max-w-[620px] gap-3 sm:grid-cols-3">
+            <div className="grid max-w-[600px] gap-3 sm:grid-cols-3">
               {[
                 ["01", "Vagas", "Organize oportunidades e critérios."],
                 ["02", "Triagem", "Priorize candidatos com contexto."],
@@ -86,7 +86,7 @@ export default async function LoginPage({
               ].map(([number, title, description]) => (
                 <div
                   key={number}
-                  className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
+                  className="rounded-2xl border border-white/[0.11] bg-white/[0.035] p-4 transition-colors hover:bg-white/[0.05]"
                 >
                   <span className="text-[10px] font-semibold tracking-[0.16em] text-white/30">
                     {number}
@@ -104,15 +104,15 @@ export default async function LoginPage({
         </section>
 
         <section className="flex items-center justify-center bg-[#f7f5f2] px-5 py-10 text-[#1c1917] sm:px-8">
-          <div className="w-full max-w-[400px]">
+          <div className="w-full max-w-[380px]">
             <div className="mb-8 lg:hidden">
               <p className="text-sm font-semibold">Triagem</p>
               <p className="mt-1 text-xs text-[#8a847e]">Recrutamento inteligente</p>
             </div>
 
-            <div className="rounded-3xl border border-[#e7e1db] bg-white p-6 shadow-[0_20px_60px_rgba(28,25,23,0.08)] sm:p-8">
+            <div className="rounded-[26px] border border-[#e7e1db] bg-white p-6 shadow-[0_24px_70px_rgba(28,25,23,0.09)] sm:p-7">
               {companies.length > 0 && (
-                <div className="mb-7">
+                <div className="mb-6">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aaa39c]">
                     Para candidatos
                   </p>
@@ -170,7 +170,7 @@ export default async function LoginPage({
                 </div>
               )}
 
-              <div className="my-6 h-px bg-[#eee9e4]" />
+              <div className="my-5 h-px bg-[#eee9e4]" />
 
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aaa39c]">
