@@ -15,15 +15,14 @@ const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
   { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
-  { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList },
-  { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings },
+  { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList, secondary: true },
+  { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings, secondary: true },
 ] as const;
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Símbolo da empresa: a imagem quando existe, iniciais quando não. */
 function CompanyMark({
   name,
   initials,
@@ -77,10 +76,6 @@ function PendingBadge({ count }: { count: number }) {
   );
 }
 
-/**
- * Lateral do painel (desktop). Base neutra (regra 4); a marca entra no
- * símbolo da empresa, no item ativo e no contador.
- */
 export function GestorSidebar({
   companyName,
   companyInitials,
@@ -103,18 +98,17 @@ export function GestorSidebar({
   return (
     <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#e7e5e4] bg-[#fafaf9] md:flex">
       <div className="mx-3 mt-4 flex items-center gap-2.5 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <CompanyMark
-          name={companyName}
-          initials={companyInitials}
-          logoUrl={logoUrl}
-        />
+        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} />
         <span className="min-w-0 truncate text-[13px] font-semibold text-[#0a0a0a]">
           {companyName}
         </span>
       </div>
 
-      <nav className="mt-5 flex flex-col gap-1 px-3">
-        {NAV.map((item) => {
+      <nav className="mt-6 flex flex-col gap-1 px-3">
+        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#b0aba6]">
+          Recrutamento
+        </p>
+        {NAV.filter((item) => !("secondary" in item && item.secondary)).map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -134,9 +128,35 @@ export function GestorSidebar({
                 style={active ? { color: "var(--brand-primary)" } : undefined}
               />
               <span className="flex-1">{item.label}</span>
-              {"badge" in item && item.badge && pendingCount > 0 && (
-                <PendingBadge count={pendingCount} />
-              )}
+              {"badge" in item && item.badge && pendingCount > 0 && <PendingBadge count={pendingCount} />}
+            </Link>
+          );
+        })}
+
+        <div className="mx-3 my-3 h-px bg-[#e7e5e4]" />
+        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#b0aba6]">
+          Administração
+        </p>
+        {NAV.filter((item) => "secondary" in item && item.secondary).map((item) => {
+          const active = isActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                "group flex h-9 items-center gap-2.5 rounded-xl px-3.5 text-[13px] " +
+                (active
+                  ? "font-semibold text-[#0a0a0a] shadow-sm"
+                  : "text-[#85817d] hover:bg-white hover:text-[#0a0a0a]")
+              }
+            >
+              <item.Icon
+                aria-hidden
+                className="size-[16px] shrink-0"
+                strokeWidth={active ? 2.1 : 1.6}
+                style={active ? { color: "var(--brand-primary)" } : undefined}
+              />
+              <span className="flex-1">{item.label}</span>
             </Link>
           );
         })}
@@ -162,10 +182,6 @@ export function GestorSidebar({
   );
 }
 
-/**
- * Barra de cima. No desktop mostra onde você está; no celular, que não tem a
- * lateral, carrega a identidade da empresa e o botão de sair.
- */
 export function GestorTopbar({
   companyName,
   companyInitials,
@@ -178,21 +194,13 @@ export function GestorTopbar({
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
-  const section =
-    NAV.find((n) => isActive(pathname, n.href))?.label ?? "Painel";
+  const section = NAV.find((n) => isActive(pathname, n.href))?.label ?? "Painel";
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-[#e4e4e7] bg-white/95 px-4 backdrop-blur md:static md:bg-white md:px-8">
       <span className="flex min-w-0 flex-1 items-center gap-2.5 md:hidden">
-        <CompanyMark
-          name={companyName}
-          initials={companyInitials}
-          logoUrl={logoUrl}
-          size={28}
-        />
-        <span className="truncate text-[13px] font-semibold text-[#0a0a0a]">
-          {companyName}
-        </span>
+        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={28} />
+        <span className="truncate text-[13px] font-semibold text-[#0a0a0a]">{companyName}</span>
       </span>
       <button
         type="button"
@@ -212,7 +220,6 @@ export function GestorTopbar({
   );
 }
 
-/** Navegação do celular: polegar alcança, rótulo sempre visível. */
 export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   const pathname = usePathname();
   return (
