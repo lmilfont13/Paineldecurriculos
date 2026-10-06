@@ -118,12 +118,26 @@
 }
 
 @layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
   }
+  body {
+    @apply min-h-screen font-sans;
+  }
+
   html {
     @apply font-sans;
   }
@@ -156,6 +170,15 @@
   /* Foco por teclado visível e consistente (acessibilidade) */
   :focus-visible {
     @apply outline-none ring-2 ring-[#0a0a0a]/30 ring-offset-1;
+  }
+
+  @media (max-width: 767px) {
+    button,
+    a,
+    select,
+    [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+    }
   }
   /* Botões primários "afundam" levemente ao clicar */
   button:not(:disabled):active {
