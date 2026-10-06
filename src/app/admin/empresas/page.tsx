@@ -68,7 +68,7 @@ export default async function EmpresasPage() {
           {companies.map((company) => (
             <div
               key={company.id}
-              className="group flex flex-col gap-3 border-b md:px-5 md:py-4 md:grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] md:items-center md:gap-4" border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9]"
+              className="group flex flex-col gap-3 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:grid md:grid-cols-[minmax(200px,2fr)_140px_minmax(160px,1.5fr)_70px_110px_80px] md:items-center md:gap-4"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
