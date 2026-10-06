@@ -34,8 +34,8 @@ export function VagaPipeline({ applications, aiMinScore }: { applications: Pipel
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
     if(stage==="REJECTED"){setConfirm({id,name:person.name,stage});return;} move(id,stage);
   }
-  function onDragStart(e:React.DragEvent<HTMLDivElement>,id:string){setDraggingId(id);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",id);}
-  function onDrop(e:React.DragEvent<HTMLDivElement>,stage:AppStatusKey){e.preventDefault();const id=e.dataTransfer.getData("text/plain")||draggingId;if(id)askMove(id,stage);}
+  function onDragStart(e:React.DragEvent<HTMLElement>,id:string){setDraggingId(id);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",id);}
+  function onDrop(e:React.DragEvent<HTMLElement>,stage:AppStatusKey){e.preventDefault();const id=e.dataTransfer.getData("text/plain")||draggingId;if(id)askMove(id,stage);}
 
   return <>
     <div className="mt-4 rounded-2xl border border-[#e4e4e7] bg-[#f7f6f4] p-2">
