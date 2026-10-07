@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 export async function createAgentRun(data: {
   companyId: string;
   applicationId?: string;
-  agent: "TRIAGE" | "COMMUNICATION";
+  agent: "TRIAGE" | "COMMUNICATION" | "INTELLIGENCE";
   eventName: string;
 }) {
   return prisma.agentRun.create({
