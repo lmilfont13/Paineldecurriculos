@@ -15,7 +15,8 @@ import { usePathname } from "next/navigation";
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
-  { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },\n  { href: "/agentes", label: "Agentes", Icon: Bot },
+  { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
+  { href: "/agentes", label: "Agentes", Icon: Bot },
   { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList, secondary: true },
   { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings, secondary: true },
 ] as const;
