@@ -5,15 +5,16 @@ import { AgentRoom } from "@/components/gestor/agent-room";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
-import { DemoTriageButton } from "@/components/gestor/demo-triage-button";
+import { SimulationControls } from "@/components/gestor/simulation-controls";
 
 import { loadAgentCenter } from "@/server/controllers/ai-status.controller";
+import { loadSimulationOptions } from "@/server/controllers/demo.controller";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
 
-// A sala de simulação roda 4 análises em sequência depois da resposta
-// (after()); o tempo da função precisa cobrir todas.
-export const maxDuration = 120;
+// A sala roda até 8 análises em sequência depois da resposta (after());
+// o tempo da função precisa cobrir todas.
+export const maxDuration = 300;
 
 const agents = [
   {
@@ -75,6 +76,11 @@ export default async function AgentesPage() {
       console.error("[agentes] Falha ao carregar telemetria:", error);
       return emptyData;
     });
+  const simulation = await loadSimulationOptions().catch((error) => {
+    unstable_rethrow(error);
+    console.error("[agentes] Falha ao carregar vagas da sala:", error);
+    return { total: 0, jobs: [] };
+  });
   const runs = data.runs;
   const runMetrics = data.runMetrics;
 
@@ -115,7 +121,7 @@ export default async function AgentesPage() {
             candidato é sempre sua.
           </p>
         </div>
-        <DemoTriageButton compact />
+        <SimulationControls jobs={simulation.jobs} total={simulation.total} />
       </div>
 
       <LiveRefresh
