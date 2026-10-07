@@ -202,8 +202,8 @@ export default async function AgentesPage() {
             <h2 className="mt-1 text-base font-semibold text-[#18181b]">Histórico operacional</h2>
           </div>
           <div className="flex gap-2 text-[10px] text-[#71717a]">
-            <span className="rounded-full bg-[#f4f4f5] px-2.5 py-1">{runMetrics.succeeded{'}'} concluídas</span>
-            <span className="rounded-full bg-[#fef2f2] px-2.5 py-1 text-[#b91c1c]">{runMetrics.failed{'}'} falhas</span>
+            <span className="rounded-full bg-[#f4f4f5] px-2.5 py-1">{runMetrics.succeeded} concluídas</span>
+            <span className="rounded-full bg-[#fef2f2] px-2.5 py-1 text-[#b91c1c]">{runMetrics.failed} falhas</span>
           </div>
         </div>
         <div className="mt-5 divide-y divide-[#f0efed]">
