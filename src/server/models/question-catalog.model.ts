@@ -34,7 +34,7 @@ export const QUESTION_CATALOG: CatalogQuestion[] = [
   { id: "escolaridade", category: "Requisitos", label: "Qual a sua escolaridade?", type: "DROPDOWN", options: ["Fundamental", "Médio incompleto", "Médio completo", "Técnico", "Superior incompleto", "Superior completo"], required: true, keywords: ["escolaridade", "superior", "graduacao", "tecnico em"] },
   { id: "maioridade", category: "Requisitos", label: "Tem 18 anos ou mais?", type: "YES_NO", options: [], required: true, keywords: ["18 anos", "maior de idade"] },
   { id: "cnh", category: "Requisitos", label: "Tem CNH? Qual categoria?", type: "DROPDOWN", options: ["Não tenho", "A", "B", "AB", "C", "D", "E"], required: true, keywords: ["cnh", "habilitacao", "motorista"] },
-  { id: "veiculo", category: "Requisitos", label: "Tem moto ou carro próprio para trabalhar?", type: "YES_NO", options: [], required: false, keywords: ["veiculo", "moto", "carro proprio", "vale combustivel"] },
+  { id: "veiculo", category: "Requisitos", label: "Tem moto ou carro próprio para trabalhar?", type: "YES_NO", options: [], required: false, keywords: ["veiculo", " moto ", " moto,", "carro proprio", "vale combustivel"] },
   { id: "frio", category: "Requisitos", label: "Topa trabalhar em ambiente refrigerado (câmara fria)?", type: "YES_NO", options: [], required: true, keywords: ["frio", "refrigerad", "camara fria"] },
   { id: "sanitario", category: "Requisitos", label: "Consegue seguir as normas sanitárias da função (unhas curtas sem esmalte, cabelo preso, sem adornos)?", type: "YES_NO", options: [], required: true, keywords: ["sanitari", "manipula", "fatia"] },
 

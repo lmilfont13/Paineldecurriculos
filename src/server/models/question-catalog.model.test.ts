@@ -20,6 +20,8 @@ describe("suggestQuestions", () => {
     }
     expect(recommended).not.toContain("cnh");
     expect(recommended).not.toContain("viagem");
+    // "promotor" contém "moto": não pode recomendar a pergunta de veículo
+    expect(recommended).not.toContain("veiculo");
   });
 
   it("recomendadas vêm primeiro e nada se perde", () => {
