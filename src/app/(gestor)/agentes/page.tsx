@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
 
 import { requireManager } from "@/server/controllers/guards";
 import { getAgentCenterData, getAgentRunMetrics, getAgentRuns } from "@/server/repositories/application.repository";
@@ -50,6 +51,20 @@ export default async function AgentesPage() {
     getAgentRuns(manager.companyId),
   ]);
 
+  const liveRuns = runs.map((run) => ({
+    id: run.id,
+    agent: run.agent,
+    status: run.status,
+    eventName: run.eventName,
+    createdAt: run.createdAt.toISOString(),
+    startedAt: run.startedAt?.toISOString() ?? null,
+    finishedAt: run.finishedAt?.toISOString() ?? null,
+    durationMs: run.durationMs,
+    summary: run.summary,
+    error: run.error,
+    application: run.application,
+  }));
+
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <div className="flex flex-wrap items-end justify-between gap-5">
@@ -74,6 +89,8 @@ export default async function AgentesPage() {
           </span>
         </div>
       </div>
+
+      <AgentLiveMonitor runs={liveRuns} />
 
       <section className="mt-8 grid gap-4 lg:grid-cols-2">
         {agents.map((agent) => {
