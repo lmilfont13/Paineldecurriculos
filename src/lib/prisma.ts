@@ -16,7 +16,7 @@ function getDatabaseUrl() {
     if (url.hostname.endsWith(".pooler.supabase.com")) {
       if (url.port === "5432") url.port = "6543";
       url.searchParams.set("pgbouncer", "true");
-      url.searchParams.set("connection_limit", "1");
+      url.searchParams.set("connection_limit", "3");
     }
 
     return url.toString();
