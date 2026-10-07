@@ -1,38 +1,22 @@
 import { PrismaClient } from "@prisma/client";
 
+import { normalizeDatabaseUrl } from "@/lib/database-url";
+
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function getDatabaseUrl() {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) return raw;
-
-  try {
-    const url = new URL(raw);
-
-    // Vercel serverless functions can create multiple Prisma instances.
-    // Supabase's session pooler (5432) is not a good fit for that model.
-    // When the configured URL is the Supabase pooler, use transaction mode
-    // and keep Prisma's per-instance connection footprint small.
-    if (url.hostname.endsWith(".pooler.supabase.com")) {
-      if (url.port === "5432") url.port = "6543";
-      url.searchParams.set("pgbouncer", "true");
-      url.searchParams.set("connection_limit", "1");
-    }
-
-    return url.toString();
-  } catch {
-    return raw;
-  }
-}
-
+/**
+ * Singleton: uma instância de PrismaClient por processo. Guardado no
+ * globalThis também em produção — se o módulo for avaliado mais de uma vez no
+ * mesmo processo (chunks diferentes), reaproveita a mesma conexão.
+ */
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     datasources: {
       db: {
-        url: getDatabaseUrl(),
+        url: normalizeDatabaseUrl(process.env.DATABASE_URL),
       },
     },
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+globalForPrisma.prisma = prisma;

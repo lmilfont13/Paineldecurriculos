@@ -27,10 +27,10 @@ export default async function PublicJobsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [data, candidate] = await Promise.all([
-    getJobsPageData(slug),
-    getPublicSession(),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const data = await getJobsPageData(slug);
+  const candidate = await getPublicSession();
   if (!data) notFound();
   const { company, jobs, appliedJobIds } = data;
 

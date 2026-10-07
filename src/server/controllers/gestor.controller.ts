@@ -21,10 +21,10 @@ import { getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
 /** Dados do shell do gestor (sidebar/topbar) — 1x por request. */
 export const getGestorShell = cache(async () => {
   const user = await requireManager();
-  const [company, pendingCount] = await Promise.all([
-    getCompanyById(user.companyId),
-    countPendingApplications(user.companyId),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const company = await getCompanyById(user.companyId);
+  const pendingCount = await countPendingApplications(user.companyId);
   if (!company) throw new Error("Empresa da sessão não encontrada");
   return { user, company, pendingCount };
 });
@@ -52,10 +52,10 @@ export async function getFormularioPageData() {
 
 export async function getCandidaturasPageData(jobId?: string) {
   const { user } = await getGestorShell();
-  const [applications, jobs] = await Promise.all([
-    listCompanyApplications(user.companyId, jobId),
-    listCompanyJobs(user.companyId),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const applications = await listCompanyApplications(user.companyId, jobId);
+  const jobs = await listCompanyJobs(user.companyId);
   return { applications, jobs };
 }
 
@@ -81,10 +81,13 @@ export async function getCandidaturaDetail(id: string) {
 /** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
 export async function getCompareData(ids: string[]) {
   const { user } = await getGestorShell();
-  const applications = await Promise.all(
-    ids.slice(0, 3).map((id) => getCompanyApplication(user.companyId, id))
-  );
-  return applications.filter((a) => a !== null);
+  // Sequencial (connection_limit=1): cada detalhe já faz vários joins.
+  const applications = [];
+  for (const id of ids.slice(0, 3)) {
+    const application = await getCompanyApplication(user.companyId, id);
+    if (application) applications.push(application);
+  }
+  return applications;
 }
 
 export async function getJobForEdit(jobId: string) {

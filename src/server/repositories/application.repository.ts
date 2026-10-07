@@ -102,39 +102,38 @@ export async function getAgentRuns(companyId: string) {
 export async function getAgentCenterData(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [applications, communications, runs] = await Promise.all([
-    prisma.application.findMany({
-      where: { companyId },
-      orderBy: { updatedAt: "desc" },
-      take: 500,
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        aiState: true,
-        aiScore: true,
-        createdAt: true,
-        updatedAt: true,
-        job: { select: { title: true } },
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira.
+  const applications = await prisma.application.findMany({
+    where: { companyId },
+    orderBy: { updatedAt: "desc" },
+    take: 500,
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiState: true,
+      aiScore: true,
+      createdAt: true,
+      updatedAt: true,
+      job: { select: { title: true } },
+    },
+  });
+  const communications = await prisma.statusEvent.count({
+    where: {
+      createdAt: { gte: since },
+      application: { companyId },
+    },
+  });
+  const runs = await prisma.agentRun.findMany({
+    where: { companyId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: {
+      application: {
+        select: { name: true, job: { select: { title: true } } },
       },
-    }),
-    prisma.statusEvent.count({
-      where: {
-        createdAt: { gte: since },
-        application: { companyId },
-      },
-    }),
-    prisma.agentRun.findMany({
-      where: { companyId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: {
-        application: {
-          select: { name: true, job: { select: { title: true } } },
-        },
-      },
-    }),
-  ]);
+    },
+  });
 
   const recentApplications = applications.slice(0, 6);
   const recentRuns = runs;
