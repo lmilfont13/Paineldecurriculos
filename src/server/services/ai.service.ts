@@ -8,6 +8,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { Prisma } from "@prisma/client";
 
 import { AI_MODEL_ID, geminiGenerate } from "@/lib/gemini";
+import { parseCareer, type CareerProfile } from "@/server/models/career.model";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDemoResumePath } from "@/server/models/application.model";
 import {
@@ -142,15 +143,8 @@ async function scoreMaterial(
   return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500) };
 }
 
-/**
- * Stand-by: nota do currículo de uma candidatura contra OUTRA vaga (banco de
- * talentos). Não grava nada na candidatura — quem chama guarda o resultado à
- * parte (TalentMatch). Sem material, devolve null.
- */
-export async function scoreApplicationAgainstJob(
-  applicationId: string,
-  job: ScorableJob
-): Promise<{ score: number; reasoning: string } | null> {
+/** Currículo (texto do PDF) + respostas de uma candidatura, ou null sem material. */
+async function loadApplicationMaterial(applicationId: string): Promise<string | null> {
   const application = await findApplicationById(applicationId);
   if (!application) return null;
   const answersText = buildAnswersText(application.answers);
@@ -160,7 +154,46 @@ export async function scoreApplicationAgainstJob(
     resumeText = (await extractText(pdf, { mergePages: true })).text;
   }
   if (!hasMaterial(resumeText, answersText)) return null;
-  return scoreMaterial(job, composeMaterial(resumeText, answersText));
+  return composeMaterial(resumeText, answersText);
+}
+
+/**
+ * Stand-by: nota do currículo de uma candidatura contra OUTRA vaga (banco de
+ * talentos). Não grava nada na candidatura — quem chama guarda o resultado à
+ * parte (TalentMatch). Sem material, devolve null.
+ */
+export async function scoreApplicationAgainstJob(
+  applicationId: string,
+  job: ScorableJob
+): Promise<{ score: number; reasoning: string } | null> {
+  const material = await loadApplicationMaterial(applicationId);
+  if (!material) return null;
+  return scoreMaterial(job, material);
+}
+
+/**
+ * Prompt da análise de perfil. Separado do AI_PROMPT (regra 3): não é a nota
+ * de uma vaga, é uma leitura geral do currículo para orientar o gestor.
+ */
+const CAREER_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
+Você orienta um recrutador sobre onde este candidato seria mais bem aproveitado, sem pensar em uma vaga específica.
+Escolha de 1 a 3 áreas em que ele seria um bom candidato e dê, para cada uma, uma nota estimada de 0 a 100 e o motivo em 1 frase, baseado só no material.
+Sugira até 4 funções (cargos) e escreva um resumo de até 3 frases dizendo em que tipo de vaga ele seria bem aproveitado.
+Retorne JSON: { "areas": [ { "area": "...", "score": 0-100, "why": "..." } ], "roles": ["..."], "summary": "..." }`;
+
+/** Análise de perfil sob demanda. Sem material, devolve null. */
+export async function analyzeCareerProfile(applicationId: string): Promise<CareerProfile | null> {
+  const material = await loadApplicationMaterial(applicationId);
+  if (!material) return null;
+  const raw = await geminiGenerate({
+    system: CAREER_PROMPT,
+    prompt: material,
+    maxTokens: 700,
+    json: true,
+  });
+  const career = parseCareer(raw);
+  if (!career) throw new Error("A IA não devolveu uma análise de perfil válida.");
+  return career;
 }
 
 /**

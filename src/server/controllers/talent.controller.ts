@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
+import { runCareerAnalysis } from "@/server/services/career.service";
 import {
   analyzeStandbyForApplication,
   analyzeStandbyForJob,
@@ -90,4 +91,14 @@ export async function analyzeStandbyForApplicationAction(applicationId: string) 
   const analyzed = await analyzeStandbyForApplication(manager.companyId, applicationId);
   revalidatePath(`/candidaturas/${applicationId}`);
   return { analyzed };
+}
+
+/** Agente de perfil: áreas, nota estimada e onde a pessoa seria bem aproveitada. */
+export async function analyzeCareerAction(applicationId: string) {
+  const manager = await requireManager();
+  if (!ID.test(applicationId)) return { ok: false as const, error: "Candidatura não encontrada." };
+  const result = await runCareerAnalysis(manager.companyId, applicationId);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/agentes");
+  return result.ok ? { ok: true as const, jobsCompared: result.jobsCompared } : result;
 }
