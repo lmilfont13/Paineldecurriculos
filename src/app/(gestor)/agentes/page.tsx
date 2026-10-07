@@ -59,7 +59,25 @@ function Status({ tone }: { tone: string }) {
 
 export default async function AgentesPage() {
   const manager = await requireManager();
-  const data = await getAgentCenterData(manager.companyId);
+
+  const emptyData = {
+    windowLabel: "Últimos 7 dias",
+    submitted: 0,
+    aiDone: 0,
+    aiProcessing: 0,
+    aiFailed: 0,
+    communications: 0,
+    recentApplications: [],
+    runs: [],
+    runMetrics: { total: 0, succeeded: 0, failed: 0, queued: 0, running: 0 },
+  };
+
+  let data = emptyData;
+  try {
+    data = await getAgentCenterData(manager.companyId);
+  } catch (error) {
+    console.error("[agentes] Falha ao carregar telemetria:", error);
+  }
   const runs = data.runs;
   const runMetrics = data.runMetrics;
 
