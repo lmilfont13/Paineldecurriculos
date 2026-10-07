@@ -68,3 +68,8 @@ export function updateJob(
 ) {
   return prisma.job.update({ where: { id }, data });
 }
+
+/** Exclui a vaga (perguntas da vaga saem em cascata). */
+export function deleteJob(id: string) {
+  return prisma.job.delete({ where: { id } });
+}

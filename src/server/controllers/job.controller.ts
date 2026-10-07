@@ -9,6 +9,7 @@ import { jobFormSchema } from "@/server/models/job.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   createCompanyJob,
+  deleteCompanyJob,
   trackWhatsappShare,
   updateCompanyJob,
 } from "@/server/services/job.service";
@@ -156,4 +157,31 @@ export async function setJobStatusAction(
   revalidatePath("/vagas");
   revalidatePath(`/vagas/${jobId}`);
   revalidatePath("/painel");
+}
+
+/** Exclui a vaga e as candidaturas dela (definitivo, com confirmação na tela). */
+export async function deleteJobAction(
+  jobId: string
+): Promise<{ ok: true; deletedApplications: number } | { ok: false; error: string }> {
+  const user = await requireManager();
+  const result = await deleteCompanyJob(user.companyId, jobId);
+  if (!result) return { ok: false, error: "Vaga não encontrada." };
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "VAGA_EXCLUIDA",
+      entityType: "VAGA",
+      entityId: jobId,
+      entityLabel: result.title,
+      metadata: { candidaturasExcluidas: result.deletedApplications },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  revalidatePath("/vagas");
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  revalidatePath("/agentes");
+  return { ok: true, deletedApplications: result.deletedApplications };
 }

@@ -9,9 +9,12 @@ import {
 import {
   countApplicationsByJobId,
   countPendingGroupedByJob,
+  findApplicationIdsByJob,
 } from "@/server/repositories/application.repository";
+import { deleteCompanyApplications } from "@/server/services/application.service";
 import {
   createJob,
+  deleteJob,
   findJobById,
   findJobsByCompanyId,
   findOpenJobsByCompanyId,
@@ -113,4 +116,27 @@ export async function updateCompanyJob(
       input.requirements !== undefined ? input.requirements || null : undefined,
     location: input.location !== undefined ? input.location || null : undefined,
   });
+}
+
+/**
+ * Exclui a vaga do tenant (definitivo). Antes, apaga as candidaturas dela
+ * pelo mesmo caminho da exclusão de candidatos, para que currículos e fotos
+ * também saiam do Storage (LGPD). Perguntas da vaga saem em cascata.
+ */
+export async function deleteCompanyJob(
+  companyId: string,
+  jobId: string
+): Promise<{ title: string; deletedApplications: number } | null> {
+  const job = await getCompanyJob(companyId, jobId);
+  if (!job) return null;
+
+  let deletedApplications = 0;
+  const ids = await findApplicationIdsByJob(companyId, jobId);
+  for (let i = 0; i < ids.length; i += 100) {
+    const { deleted } = await deleteCompanyApplications(companyId, ids.slice(i, i + 100));
+    deletedApplications += deleted.length;
+  }
+
+  await deleteJob(jobId);
+  return { title: job.title, deletedApplications };
 }
