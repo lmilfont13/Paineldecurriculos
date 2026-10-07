@@ -3,9 +3,8 @@ import "server-only";
 import { inngest } from "@/lib/inngest";
 import { runTriageWithTracking } from "@/server/services/ai.service";
 import { sweepStaleAgentRuns } from "@/server/services/agent-watchdog.service";
-import { notifyApplicationStatusChange } from "@/server/services/application.service";
+import { communicateStatusChange } from "@/server/services/application.service";
 import { runCompanyIntelligence } from "@/server/services/intelligence.service";
-import { findApplicationById, createAgentRun, updateAgentRun } from "@/server/repositories/application.repository";
 
 /**
  * Job em background (regra 2): candidatura salva → responde 200 →
@@ -54,35 +53,7 @@ export const applicationStatusChangedJob = inngest.createFunction(
       applicationId: string;
       status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
     };
-    const application = await findApplicationById(applicationId);
-    if (!application) return;
-
-    const run = await createAgentRun({
-      companyId: application.company.id,
-      applicationId,
-      agent: "COMMUNICATION",
-      eventName: "application/status-changed",
-    });
-    const startedAt = new Date();
-    await updateAgentRun(run.id, { status: "RUNNING", attempts: 1, startedAt });
-
-    try {
-      await notifyApplicationStatusChange(applicationId, status);
-      await updateAgentRun(run.id, {
-        status: "SUCCEEDED",
-        summary: `Candidato comunicado: ${status}.`,
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-    } catch (error) {
-      await updateAgentRun(run.id, {
-        status: "FAILED",
-        error: error instanceof Error ? error.message.slice(0, 500) : "Falha desconhecida.",
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-      throw error;
-    }
+    await communicateStatusChange(applicationId, status, { rethrow: true });
   }
 );
 

@@ -88,7 +88,7 @@ export async function getApplyPageData(
   if (!job) return null;
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
-  const { core, custom } = await listApplicationFormFields(company.id);
+  const { core, custom } = await listApplicationFormFields(company.id, job.id);
   const candidate = await getSessionCandidate();
   const prefillAnswers = candidate
     ? await getPrefillAnswers(candidate.id, company.id)

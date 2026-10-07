@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
+import { JobQuestions } from "@/components/gestor/job-questions";
 import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
@@ -188,6 +189,7 @@ export default async function VagaHubPage({
           aiScore: person.aiScore,
           aiState: person.aiState,
           createdAt: person.createdAt.toISOString(),
+          photoUrl: person.photoUrl,
         }))}
       />
 
@@ -258,6 +260,15 @@ export default async function VagaHubPage({
           </p>
         </section>
       </div>
+
+      {data.questions && (
+        <JobQuestions
+          jobId={job.id}
+          questions={data.questions.questions}
+          companyQuestions={data.questions.companyQuestions}
+          suggestions={data.questions.suggestions}
+        />
+      )}
     </>
   );
 }

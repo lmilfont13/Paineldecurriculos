@@ -5,6 +5,9 @@ import { readEnv } from "@/lib/env";
 const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "qwen/qwen3.8-27b";
 
+/** Identificação do modelo gravada em cada nota (Application.aiModel). */
+export const AI_MODEL_ID = `groq:${MODEL}`;
+
 export async function geminiGenerate(params: {
   system: string;
   prompt: string;
