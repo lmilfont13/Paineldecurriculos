@@ -197,6 +197,22 @@
   100% { transform: translateX(420%); }
 }
 
+/* Sala dos agentes: só o agente que está trabalhando se mexe. */
+@keyframes room-typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes room-screen {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes room-dot {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+
 @keyframes heroFloatReverse {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(1deg); }
   50% { transform: translate3d(0, 8px, 0) rotate(-1deg); }

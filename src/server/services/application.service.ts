@@ -582,3 +582,40 @@ export async function getAgentCenter(companyId: string) {
   await sweepStaleAgentRunsThrottled(companyId);
   return getAgentCenterData(companyId);
 }
+
+/**
+ * Exclusão definitiva de candidaturas pelo gestor. Regra 1: cada id é
+ * conferido contra a empresa da sessão (id de outro tenant é ignorado).
+ * Respostas, histórico, avisos e execuções de agente saem em cascata no
+ * banco; o PDF enviado só para a vaga sai do Storage (o do perfil do
+ * candidato e o de demonstração ficam). A conta do candidato não é apagada.
+ */
+export async function deleteCompanyApplications(
+  companyId: string,
+  ids: string[]
+): Promise<{ deleted: { id: string; name: string; jobTitle: string }[] }> {
+  const deleted: { id: string; name: string; jobTitle: string }[] = [];
+  const resumePaths: string[] = [];
+
+  for (const id of ids.slice(0, 100)) {
+    const application = await getCompanyApplication(companyId, id);
+    if (!application) continue;
+    await deleteApplication(id);
+    deleted.push({ id, name: application.name, jobTitle: application.job.title });
+    if (
+      application.resumeUrl &&
+      !application.resumeUrl.startsWith("profile/") &&
+      !isDemoResumePath(application.resumeUrl)
+    ) {
+      resumePaths.push(application.resumeUrl);
+    }
+  }
+
+  if (resumePaths.length > 0) {
+    runInBackground("remover currículos excluídos", async () => {
+      const supabase = createAdminClient();
+      await supabase.storage.from(RESUMES_BUCKET).remove(resumePaths);
+    });
+  }
+  return { deleted };
+}

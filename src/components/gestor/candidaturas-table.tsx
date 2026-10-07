@@ -6,7 +6,10 @@ import { useMemo, useState, useTransition } from "react";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { Toast } from "@/components/gestor/toast";
-import { bulkSetApplicationStatusAction } from "@/server/controllers/application.controller";
+import {
+  bulkSetApplicationStatusAction,
+  deleteApplicationsAction,
+} from "@/server/controllers/application.controller";
 import {
   appStatusLabels,
   formatAppliedAt,
@@ -99,6 +102,7 @@ export function CandidaturasTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
 
   /** Tudo menos a aba — é a base das contagens de cada aba (scent honesto). */
@@ -152,6 +156,18 @@ export function CandidaturasTable({
       const { updated } = await bulkSetApplicationStatusAction(ids, newStatus);
       setToast(
         `${updated} candidato${updated === 1 ? "" : "s"} movido${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}".`
+      );
+      setSelected(new Set());
+    });
+  }
+
+  function runDelete() {
+    const ids = [...selected];
+    setConfirmDelete(false);
+    startTransition(async () => {
+      const { deleted } = await deleteApplicationsAction(ids);
+      setToast(
+        `${deleted} candidatura${deleted === 1 ? "" : "s"} excluída${deleted === 1 ? "" : "s"}.`
       );
       setSelected(new Set());
     });
@@ -486,6 +502,14 @@ export function CandidaturasTable({
               {BULK_LABELS[target]}
             </button>
           ))}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setConfirmDelete(true)}
+            className="h-[34px] shrink-0 rounded-[10px] bg-[#c86b60]/25 px-4 text-xs font-medium text-[#f5b7b0] hover:bg-[#c86b60]/40 disabled:opacity-50"
+          >
+            Excluir
+          </button>
           {selected.size >= 2 && selected.size <= 3 && (
             <Link
               href={`/candidaturas/comparar?ids=${[...selected].join(",")}`}
@@ -543,6 +567,47 @@ export function CandidaturasTable({
                 }
               >
                 {confirm === "REJECTED" ? "Reprovar" : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exclusão definitiva — confirmação obrigatória */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="w-full max-w-[400px] rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-[#0a0a0a]">
+              Excluir {selected.size} candidatura
+              {selected.size === 1 ? "" : "s"}?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#71717a]">
+              Somem do painel junto com respostas, histórico, notas e
+              currículos enviados para a vaga. Ninguém é avisado. Não dá para
+              desfazer.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="h-10 rounded-2xl border border-[#e4e4e7] bg-white px-5 text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={runDelete}
+                className="h-10 rounded-2xl bg-[#c23b3b] px-5 text-[13px] font-medium text-white hover:opacity-90"
+              >
+                Excluir
               </button>
             </div>
           </div>
