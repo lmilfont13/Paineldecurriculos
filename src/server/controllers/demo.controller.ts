@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
-import { startTriageSimulation } from "@/server/services/simulation.service";
+import {
+  clearTriageSimulation,
+  startTriageSimulation,
+} from "@/server/services/simulation.service";
 
 /**
  * Sala de simulação (tela /agentes): 4 candidatos fictícios analisados um a
@@ -17,4 +20,14 @@ export async function runDemoTriage() {
   revalidatePath("/candidaturas");
 
   return { ok: true, ...result };
+}
+
+/** Remove as candidaturas fictícias da simulação (definitivo). */
+export async function clearDemoTriage() {
+  const manager = await requireManager();
+  const result = await clearTriageSimulation(manager.companyId);
+  revalidatePath("/agentes");
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  return result;
 }

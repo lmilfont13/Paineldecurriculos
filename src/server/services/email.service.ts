@@ -3,6 +3,7 @@ import "server-only";
 import { resend } from "@/lib/resend";
 import { brandForeground } from "@/server/models/company.model";
 import { appUrl, readEnv } from "@/lib/env";
+import type { EmailOutcome } from "@/server/models/communication.model";
 
 /**
  * Identidade de quem envia. Para o candidato, quem escreve é a empresa, não
@@ -77,15 +78,24 @@ function candidateFooter(brand: EmailBrand) {
   return `Você recebeu este e-mail porque se candidatou a uma vaga da ${esc(brand.name)}.`;
 }
 
+/** Remetente de teste do Resend: só entrega para o dono da conta. */
+const SANDBOX_SENDER = FROM_ADDRESS.toLowerCase().endsWith("@resend.dev");
+
 async function send(
   label: string,
   message: Parameters<NonNullable<typeof resend>["emails"]["send"]>[0]
-) {
-  if (!resend) return; // RESEND_API_KEY não configurada: e-mail vira no-op
+): Promise<EmailOutcome> {
+  if (!resend) return "off"; // RESEND_API_KEY não configurada: e-mail vira no-op
   try {
-    await resend.emails.send(message);
+    const { error } = await resend.emails.send(message);
+    if (error) {
+      console.error(`[email] Resend recusou ${label}:`, error);
+      return "failed";
+    }
+    return SANDBOX_SENDER ? "sandbox" : "sent";
   } catch (error) {
     console.error(`[email] Falha ao enviar ${label}:`, error);
+    return "failed";
   }
 }
 
@@ -156,7 +166,7 @@ export async function sendStatusUpdateEmail(params: {
   jobTitle: string;
   status: "INTERVIEW" | "APPROVED" | "REJECTED";
   applicationId: string;
-}): Promise<void> {
+}): Promise<EmailOutcome> {
   const { brand } = params;
   const job = `<strong style="color:#1c1917">${esc(params.jobTitle)}</strong>`;
   const company = esc(brand.name);
@@ -178,7 +188,7 @@ export async function sendStatusUpdateEmail(params: {
     },
   }[params.status];
 
-  await send("atualização de etapa", {
+  return send("atualização de etapa", {
     from: from(brand),
     to: params.to,
     subject: copy.subject,

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { runInBackground } from "@/lib/background";
@@ -12,6 +13,7 @@ import {
   createApplication,
   createStatusEvent,
   findApplicationByCandidateAndJob,
+  findDemoApplicationIds,
   updateAgentRun,
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
@@ -24,6 +26,7 @@ import {
   findOpenJobsByCompanyId,
 } from "@/server/repositories/job.repository";
 import { runTriageWithTracking } from "@/server/services/ai.service";
+import { deleteCompanyApplications } from "@/server/services/application.service";
 
 /** Vaga usada na simulação: a administrativa aberta, senão a primeira aberta. */
 async function getSimulationJob(companyId: string) {
@@ -88,6 +91,7 @@ export async function startTriageSimulation(companyId: string) {
         resumeUrl: person.resume,
         aiState: "WAITING",
         answers: [],
+        isDemo: true,
       });
       await createStatusEvent({
         applicationId: application.id,
@@ -99,6 +103,8 @@ export async function startTriageSimulation(companyId: string) {
       await updateApplicationAi(application.id, {
         aiScore: null,
         aiReasoning: null,
+        aiModel: null,
+        aiChecklist: Prisma.DbNull,
         aiState: "WAITING",
       });
     }
@@ -121,6 +127,7 @@ export async function startTriageSimulation(companyId: string) {
         eventName: "simulacao/triagem",
         runId: item.runId,
         stepPauseMs: SIMULATION_STEP_PAUSE_MS,
+        maxAttempts: 3,
       });
     }
     revalidatePath("/agentes");
@@ -131,4 +138,12 @@ export async function startTriageSimulation(companyId: string) {
     jobTitle: job.title,
     candidates: SIMULATION_CANDIDATES.map((c) => c.name),
   };
+}
+
+/** "Limpar simulação": exclui as candidaturas fictícias da empresa. */
+export async function clearTriageSimulation(companyId: string) {
+  const ids = await findDemoApplicationIds(companyId);
+  if (ids.length === 0) return { deleted: 0 };
+  const { deleted } = await deleteCompanyApplications(companyId, ids);
+  return { deleted: deleted.length };
 }
