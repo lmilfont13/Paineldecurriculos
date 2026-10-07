@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
+import { DeleteJobButton } from "@/components/gestor/delete-job-button";
 import { JobQuestions } from "@/components/gestor/job-questions";
 import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
@@ -111,7 +112,7 @@ export default async function VagaHubPage({
           </div>
           <p className="mt-1.5 text-sm text-[#71717a]">{meta}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/vagas/${job.id}/editar`}
             className="flex h-10 items-center rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
@@ -119,6 +120,11 @@ export default async function VagaHubPage({
             Editar vaga
           </Link>
           <JobStatusActions jobId={job.id} status={job.status} />
+          <DeleteJobButton
+            jobId={job.id}
+            jobTitle={job.title}
+            applicationCount={applications.length}
+          />
         </div>
       </div>
 

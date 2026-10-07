@@ -486,3 +486,12 @@ export async function findDemoApplicationIds(companyId: string) {
 export function updateApplicationPhoto(id: string, photoPath: string | null) {
   return prisma.application.update({ where: { id }, data: { photoPath } });
 }
+
+/** IDs das candidaturas de uma vaga do tenant (exclusão da vaga). */
+export async function findApplicationIdsByJob(companyId: string, jobId: string) {
+  const rows = await prisma.application.findMany({
+    where: { companyId, jobId },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
