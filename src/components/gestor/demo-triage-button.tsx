@@ -5,7 +5,7 @@ import { BrainCircuit, Loader2, Play } from "lucide-react";
 
 import { runDemoTriage } from "@/server/controllers/demo.controller";
 
-export function DemoTriageButton() {
+export function DemoTriageButton({ compact = false }: { compact?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
 
@@ -15,12 +15,34 @@ export function DemoTriageButton() {
       try {
         const response = await runDemoTriage();
         setResult(
-          `Simulação iniciada na vaga “${response.jobTitle}”: ${response.candidates.join(", ")} entraram na fila. Acompanhe acima — cada etapa aparece sozinha. No fim, veja as notas em Candidatos.`
+          `${response.candidates.length} candidatos na fila da vaga “${response.jobTitle}”. Acompanhe na sala; no fim, as notas ficam em Candidatos.`
         );
       } catch (error) {
         setResult(error instanceof Error ? error.message : "Não foi possível executar a demonstração.");
       }
     });
+  }
+
+  if (compact) {
+    return (
+      <div className="flex flex-col items-end gap-1.5">
+        <button
+          type="button"
+          onClick={run}
+          disabled={pending}
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-semibold shadow-sm hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+          style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
+        >
+          {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+          {pending ? "Preparando a fila..." : "Iniciar simulação"}
+        </button>
+        {result && (
+          <p className="max-w-[360px] text-right text-[11px] leading-4 text-[#71717a]" role="status">
+            {result}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
