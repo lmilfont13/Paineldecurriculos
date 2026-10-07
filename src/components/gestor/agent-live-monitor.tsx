@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Activity, BrainCircuit, CheckCircle2, Clock3, Loader2, Mail, XCircle, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-type Agent = "TRIAGE" | "COMMUNICATION";
+type Agent = "TRIAGE" | "COMMUNICATION" | "INTELLIGENCE";
 type RunStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type LiveAgentRun = {
@@ -22,7 +22,9 @@ export type LiveAgentRun = {
 };
 
 function agentLabel(agent: Agent) {
-  return agent === "TRIAGE" ? "Agente de Triagem" : "Agente de Comunicação";
+  if (agent === "TRIAGE") return "Agente de Triagem";
+  if (agent === "COMMUNICATION") return "Agente de Comunicação";
+  return "Agente de Inteligência";
 }
 
 function taskLabel(run: LiveAgentRun) {
@@ -32,9 +34,15 @@ function taskLabel(run: LiveAgentRun) {
       : "Analisando currículo e critérios da vaga";
   }
 
+  if (run.agent === "COMMUNICATION") {
+    return run.status === "QUEUED"
+      ? "Na fila para comunicação"
+      : "Preparando a atualização do candidato";
+  }
+
   return run.status === "QUEUED"
-    ? "Na fila para comunicação"
-    : "Preparando a atualização do candidato";
+    ? "Na fila para leitura do processo"
+    : "Analisando gargalos e indicadores do recrutamento";
 }
 
 function elapsedLabel(startedAt: string | null, createdAt: string) {
@@ -111,8 +119,10 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-[#e7e5e4]">
                     {run.agent === "TRIAGE" ? (
                       <BrainCircuit className="size-4 text-[#44403c]" />
-                    ) : (
+                     ) : run.agent === "COMMUNICATION" ? (
                       <Mail className="size-4 text-[#44403c]" />
+                    ) : (
+                      <BrainCircuit className="size-4 text-[#44403c]" />
                     )}
                   </span>
                   <div className="min-w-0">
