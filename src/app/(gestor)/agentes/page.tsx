@@ -72,12 +72,10 @@ export default async function AgentesPage() {
     runMetrics: { total: 0, succeeded: 0, failed: 0, queued: 0, running: 0 },
   };
 
-  let data = emptyData;
-  try {
-    data = await getAgentCenterData(manager.companyId);
-  } catch (error) {
+  const data = await getAgentCenterData(manager.companyId).catch((error) => {
     console.error("[agentes] Falha ao carregar telemetria:", error);
-  }
+    return emptyData;
+  });
   const runs = data.runs;
   const runMetrics = data.runMetrics;
 
