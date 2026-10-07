@@ -69,7 +69,7 @@ export default async function CandidaturaDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-[1080px]">
-      <LiveRefresh active={analyzing} />
+      <LiveRefresh active={analyzing} applicationIds={[app.id]} />
 
       <div className="mb-5 flex items-center justify-between gap-4">
         <Link

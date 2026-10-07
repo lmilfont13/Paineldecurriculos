@@ -1,7 +1,8 @@
 import "server-only";
 
 import { inngest } from "@/lib/inngest";
-import { analyzeApplication } from "@/server/services/ai.service";
+import { runTriageWithTracking } from "@/server/services/ai.service";
+import { sweepStaleAgentRuns } from "@/server/services/agent-watchdog.service";
 import { notifyApplicationStatusChange } from "@/server/services/application.service";
 import { runCompanyIntelligence } from "@/server/services/intelligence.service";
 import { findApplicationById, createAgentRun, updateAgentRun } from "@/server/repositories/application.repository";
@@ -18,38 +19,25 @@ export const analyzeApplicationJob = inngest.createFunction(
   },
   async ({ event }) => {
     const { applicationId } = event.data as { applicationId: string };
-    const application = await findApplicationById(applicationId);
-    if (!application) return;
-
-    const run = await createAgentRun({
-      companyId: application.company.id,
-      applicationId,
-      agent: "TRIAGE",
+    await runTriageWithTracking(applicationId, {
       eventName: "application/submitted",
+      rethrow: true,
     });
-    const startedAt = new Date();
-    await updateAgentRun(run.id, { status: "RUNNING", attempts: 1, startedAt });
-
-    try {
-      await analyzeApplication(applicationId);
-      await updateAgentRun(run.id, {
-        status: "SUCCEEDED",
-        summary: "Candidatura analisada pela IA.",
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-    } catch (error) {
-      await updateAgentRun(run.id, {
-        status: "FAILED",
-        error: error instanceof Error ? error.message.slice(0, 500) : "Falha desconhecida.",
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-      throw error;
-    }
   }
 );
 
+/**
+ * Watchdog (a cada 5 min): AgentRun QUEUED/RUNNING há mais de 5 minutos vira
+ * FAILED, e candidaturas presas em "Analisando…" voltam para reanálise.
+ */
+export const agentWatchdogJob = inngest.createFunction(
+  {
+    id: "agent-watchdog",
+    retries: 0,
+    triggers: [{ cron: "*/5 * * * *" }],
+  },
+  async () => sweepStaleAgentRuns()
+);
 
 /**
  * Agente de comunicação: uma mudança de etapa vira novidade no portal
@@ -111,4 +99,9 @@ export const companyIntelligenceJob = inngest.createFunction(
   }
 );
 
-export const inngestFunctions = [analyzeApplicationJob, applicationStatusChangedJob, companyIntelligenceJob];
+export const inngestFunctions = [
+  analyzeApplicationJob,
+  applicationStatusChangedJob,
+  companyIntelligenceJob,
+  agentWatchdogJob,
+];

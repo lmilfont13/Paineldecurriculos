@@ -1,20 +1,27 @@
 import "server-only";
 
+import { runInBackground } from "@/lib/background";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { inngest } from "@/lib/inngest";
+import { trySendEvent } from "@/lib/inngest";
 import { getCompanyById } from "@/server/services/company.service";
 import {
-  MAX_RESUME_BYTES,
-  RESUME_MIME,
+  applicationResumePrefix,
+  isAllowedResumePath,
+  isDemoResumePath,
+  profileResumePrefix,
   type ApplicationInput,
+  type ResumeUploadTarget,
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
+  countActiveAgentRuns,
   countApplicationsByCompany,
   createApplication,
   createStatusEvent,
   deleteApplication,
+  findAiStates,
+  getAgentCenterData,
   findAppliedJobIds,
   findApplicationByCandidateAndJob,
   findApplicationById,
@@ -46,8 +53,13 @@ import {
 } from "@/server/services/email.service";
 import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
 import { findJobById } from "@/server/repositories/job.repository";
-
-const RESUMES_BUCKET = "resumes";
+import { runTriageWithTracking } from "@/server/services/ai.service";
+import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
+import {
+  RESUMES_BUCKET,
+  createResumeUploadTarget,
+  verifyUploadedResume,
+} from "@/server/services/resume-storage.service";
 
 /** Para o candidato, quem escreve é a empresa: nome, símbolo e cor dela. */
 function emailBrand(company: {
@@ -111,17 +123,17 @@ export async function setApplicationStatus(
   }
 
   if (status !== application.status) {
-    try {
-      // O gestor não espera e-mail/notificação: o evento é processado em
-      // background. O fallback mantém a comunicação funcionando enquanto o
-      // Inngest de produção não estiver configurado.
-      await inngest.send({
-        name: "application/status-changed",
-        data: { applicationId: id, status },
-      });
-    } catch (error) {
-      console.error("[inngest] Falha ao enfileirar mudança de status:", error);
-      void notifyApplicationStatusChange(id, status).catch(() => {});
+    // O gestor não espera e-mail/notificação: o evento é processado em
+    // background. O fallback em after() mantém a comunicação funcionando
+    // enquanto o Inngest de produção não estiver configurado.
+    const queued = await trySendEvent({
+      name: "application/status-changed",
+      data: { applicationId: id, status },
+    });
+    if (!queued) {
+      runInBackground("comunicar mudança de status", () =>
+        notifyApplicationStatusChange(id, status)
+      );
     }
   }
   return updated;
@@ -135,24 +147,27 @@ export async function notifyApplicationStatusChange(
   const application = await findApplicationById(applicationId);
   if (!application) return;
 
-  void notifyStageChange({
-    candidateId: application.candidateId,
-    applicationId,
-    to: status,
-    companyName: application.company.name,
-    jobTitle: application.job.title,
-  }).catch(() => {});
-
-  if (status !== "PENDING" && application.email.includes("@")) {
-    void sendStatusUpdateEmail({
-      brand: emailBrand(application.company),
-      to: application.email,
-      candidateName: application.name,
-      jobTitle: application.job.title,
-      status,
+  // Roda dentro do job do Inngest ou de um after(): aqui dá para (e é
+  // preciso) esperar, senão a função termina antes do e-mail sair.
+  await Promise.allSettled([
+    notifyStageChange({
+      candidateId: application.candidateId,
       applicationId,
-    }).catch(() => {});
-  }
+      to: status,
+      companyName: application.company.name,
+      jobTitle: application.job.title,
+    }),
+    status !== "PENDING" && application.email.includes("@")
+      ? sendStatusUpdateEmail({
+          brand: emailBrand(application.company),
+          to: application.email,
+          candidateName: application.name,
+          jobTitle: application.job.title,
+          status,
+          applicationId,
+        })
+      : Promise.resolve(),
+  ]);
 }
 
 /** Respostas da última candidatura na empresa — pré-preenche extras (CA3). */
@@ -195,14 +210,7 @@ export async function requestReanalysis(
   const application = await getCompanyApplication(companyId, id);
   if (!application) return { ok: false };
   await updateApplicationAi(id, { aiState: "WAITING" });
-  try {
-    await inngest.send({
-      name: "application/submitted",
-      data: { applicationId: id },
-    });
-  } catch (error) {
-    console.error("[inngest] Falha ao reenfileirar análise:", error);
-  }
+  enqueueTriage(id);
   return { ok: true };
 }
 
@@ -241,30 +249,32 @@ export async function scheduleInterview(
   if (!company) return { ok: true };
   const when = formatInterviewAt(input.at);
 
-  void notifyInterviewScheduled({
-    candidateId: application.candidateId,
-    applicationId: id,
-    companyName: company.name,
-    jobTitle: application.job.title,
-    when,
-    mode: input.mode,
-    location: input.location,
-  }).catch(() => {});
-
-  if (application.email.includes("@")) {
-    const manager = await findManagerByCompanyId(companyId);
-    void sendInterviewScheduledEmail({
-      brand: emailBrand(company),
-      to: application.email,
-      candidateName: application.name,
+  runInBackground("avisar entrevista marcada", async () => {
+    await notifyInterviewScheduled({
+      candidateId: application.candidateId,
+      applicationId: id,
+      companyName: company.name,
       jobTitle: application.job.title,
       when,
       mode: input.mode,
       location: input.location,
-      managerEmail: manager?.email ?? null,
-      applicationId: id,
-    });
-  }
+    }).catch((e) => console.error("[notificação] entrevista:", e));
+
+    if (application.email.includes("@")) {
+      const manager = await findManagerByCompanyId(companyId);
+      await sendInterviewScheduledEmail({
+        brand: emailBrand(company),
+        to: application.email,
+        candidateName: application.name,
+        jobTitle: application.job.title,
+        when,
+        mode: input.mode,
+        location: input.location,
+        managerEmail: manager?.email ?? null,
+        applicationId: id,
+      });
+    }
+  });
   return { ok: true };
 }
 
@@ -281,26 +291,28 @@ export async function sendManagerMessage(
   const company = await getCompanyById(companyId);
   if (!company) return { ok: false };
 
-  void notifyManagerMessage({
-    candidateId: application.candidateId,
-    applicationId: id,
-    companyName: company.name,
-    jobTitle: application.job.title,
-    message: text,
-  }).catch(() => {});
-
-  if (application.email.includes("@")) {
-    const manager = await findManagerByCompanyId(companyId);
-    void sendManagerMessageEmail({
-      brand: emailBrand(company),
-      to: application.email,
-      candidateName: application.name,
+  runInBackground("enviar recado do gestor", async () => {
+    await notifyManagerMessage({
+      candidateId: application.candidateId,
+      applicationId: id,
+      companyName: company.name,
       jobTitle: application.job.title,
       message: text,
-      managerEmail: manager?.email ?? null,
-      applicationId: id,
-    });
-  }
+    }).catch((e) => console.error("[notificação] recado:", e));
+
+    if (application.email.includes("@")) {
+      const manager = await findManagerByCompanyId(companyId);
+      await sendManagerMessageEmail({
+        brand: emailBrand(company),
+        to: application.email,
+        candidateName: application.name,
+        jobTitle: application.job.title,
+        message: text,
+        managerEmail: manager?.email ?? null,
+        applicationId: id,
+      });
+    }
+  });
   return { ok: true };
 }
 
@@ -340,7 +352,8 @@ export async function withdrawApplication(
 
   if (
     application.resumeUrl &&
-    !application.resumeUrl.startsWith("profile/")
+    !application.resumeUrl.startsWith("profile/") &&
+    !isDemoResumePath(application.resumeUrl)
   ) {
     const supabase = createAdminClient();
     await supabase.storage.from(RESUMES_BUCKET).remove([application.resumeUrl]);
@@ -370,9 +383,11 @@ export async function getResumeSignedUrl(
   const application = await getCompanyApplication(companyId, applicationId);
   if (!application?.resumeUrl) return null;
 
-  if (application.resumeUrl.startsWith("demo/")) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-    return baseUrl ? `${baseUrl}/${application.resumeUrl}` : null;
+  // Demo: arquivo estático de /public. Caminho relativo — a rota monta a
+  // URL absoluta a partir do próprio request (não depende de
+  // NEXT_PUBLIC_APP_URL estar certa).
+  if (isDemoResumePath(application.resumeUrl)) {
+    return `/${application.resumeUrl}`;
   }
 
   const supabase = createAdminClient();
@@ -384,18 +399,57 @@ export async function getResumeSignedUrl(
 }
 
 /**
+ * Enfileira a triagem da IA. Com o Inngest configurado, vai como evento (com
+ * retries). Sem ele — ou se o envio falhar — roda em after(), depois da
+ * resposta, para a candidatura nunca ficar presa em "Aguardando análise".
+ */
+export function enqueueTriage(applicationId: string): void {
+  runInBackground("enfileirar triagem", async () => {
+    const queued = await trySendEvent({
+      name: "application/submitted",
+      data: { applicationId },
+    });
+    if (!queued) {
+      await runTriageWithTracking(applicationId, {
+        eventName: "application/submitted (fallback)",
+      });
+    }
+  });
+}
+
+/**
+ * Regra 5: URL assinada para o navegador subir o PDF direto no Storage.
+ * Só para vaga aberta da própria empresa; o caminho inclui o candidato,
+ * e o envio da candidatura só aceita caminhos com esse prefixo.
+ */
+export async function requestApplicationResumeUpload(
+  companyId: string,
+  jobId: string,
+  candidateId: string
+): Promise<ResumeUploadTarget | null> {
+  const job = await findJobById(jobId);
+  if (!job || job.companyId !== companyId || job.status !== "OPEN") return null;
+  return createResumeUploadTarget(
+    applicationResumePrefix(companyId, jobId, candidateId)
+  );
+}
+
+/**
  * Regra 2: a candidatura é salva e respondida imediatamente — a análise de IA
- * roda depois, em background (Inngest), e nunca bloqueia o candidato.
+ * roda depois, em background, e nunca bloqueia o candidato.
  * A IA só escreve aiScore/aiReasoning/aiState; AppStatus é decisão do gestor.
  *
  * CA1/CA2/CA6: exige candidato logado, impede candidatura duplicada e
  * salva os dados básicos no perfil para reaproveitar nas próximas vagas.
+ *
+ * Regra 5: o PDF já foi enviado pelo navegador direto ao Storage
+ * (requestApplicationResumeUpload); aqui chega só o caminho, que é validado.
  */
 export async function submitApplication(
   companyId: string,
   candidate: CandidateProfile,
   input: Omit<ApplicationInput, "slug">,
-  resume: File | null
+  uploadedResumePath: string | null
 ): Promise<SubmitApplicationResult> {
   const job = await findJobById(input.jobId);
   if (!job || job.companyId !== companyId || job.status !== "OPEN") {
@@ -424,28 +478,21 @@ export async function submitApplication(
     }
   }
 
-  // Regra 5: currículo só PDF, máx 5 MB, no Supabase Storage.
   // Sem arquivo novo, reaproveita o currículo salvo no perfil (CA3).
   let resumeUrl: string | null = candidate.resumeUrl;
-  if (resume && resume.size > 0) {
-    if (resume.type !== RESUME_MIME) {
-      return { ok: false, error: "O currículo deve ser um PDF." };
+  if (uploadedResumePath) {
+    const allowed =
+      isAllowedResumePath(
+        uploadedResumePath,
+        applicationResumePrefix(companyId, job.id, candidate.id)
+      ) ||
+      isAllowedResumePath(uploadedResumePath, profileResumePrefix(candidate.id));
+    if (!allowed) {
+      return { ok: false, error: "Currículo inválido. Envie o PDF novamente." };
     }
-    if (resume.size > MAX_RESUME_BYTES) {
-      return { ok: false, error: "O currículo deve ter no máximo 5 MB." };
-    }
-    const path = `${companyId}/${input.jobId}/${crypto.randomUUID()}.pdf`;
-    const supabase = createAdminClient();
-    const { error } = await supabase.storage
-      .from(RESUMES_BUCKET)
-      .upload(path, resume, { contentType: RESUME_MIME });
-    if (error) {
-      return {
-        ok: false,
-        error: "Não foi possível enviar o currículo. Tente novamente.",
-      };
-    }
-    resumeUrl = path;
+    const verified = await verifyUploadedResume(uploadedResumePath);
+    if (!verified.ok) return verified;
+    resumeUrl = uploadedResumePath;
   }
 
   const application = await createApplication({
@@ -476,46 +523,57 @@ export async function submitApplication(
   }).catch(() => {});
 
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
-  // IA roda em background via Inngest; e-mail é fire-and-forget.
-  try {
-    await inngest.send({
-      name: "application/submitted",
-      data: { applicationId: application.id },
-    });
-  } catch (error) {
-    console.error("[inngest] Falha ao enfileirar análise:", error);
-    // aiState permanece WAITING; o job pode ser redisparado depois
-  }
+  if (resumeUrl) enqueueTriage(application.id);
 
-  const company = await getCompanyById(companyId);
-  if (company) {
-    void notifyApplicationReceived({
-      candidateId: candidate.id,
-      applicationId: application.id,
-      companyName: company.name,
-      jobTitle: job.title,
-    }).catch(() => {});
-    void sendApplicationConfirmation({
-      brand: emailBrand(company),
-      to: application.email,
-      candidateName: application.name,
-      jobTitle: job.title,
-      applicationId: application.id,
-    });
-    // G14: avisa o gestor da empresa (fire-and-forget)
-    void findManagerByCompanyId(companyId).then((manager) => {
-      if (manager) {
-        void sendNewApplicationNotification({
-          brand: emailBrand(company),
-          to: manager.email,
-          candidateName: application.name,
-          jobTitle: job.title,
-          aiEnabled: Boolean(resumeUrl),
-          applicationId: application.id,
-        });
-      }
-    });
-  }
+  runInBackground("avisos da nova candidatura", async () => {
+    const company = await getCompanyById(companyId);
+    if (!company) return;
+    const manager = await findManagerByCompanyId(companyId);
+    await Promise.allSettled([
+      notifyApplicationReceived({
+        candidateId: candidate.id,
+        applicationId: application.id,
+        companyName: company.name,
+        jobTitle: job.title,
+      }),
+      sendApplicationConfirmation({
+        brand: emailBrand(company),
+        to: application.email,
+        candidateName: application.name,
+        jobTitle: job.title,
+        applicationId: application.id,
+      }),
+      // G14: avisa o gestor da empresa
+      manager
+        ? sendNewApplicationNotification({
+            brand: emailBrand(company),
+            to: manager.email,
+            candidateName: application.name,
+            jobTitle: job.title,
+            aiEnabled: Boolean(resumeUrl),
+            applicationId: application.id,
+          })
+        : Promise.resolve(),
+    ]);
+  });
 
   return { ok: true, applicationId: application.id };
+}
+
+/**
+ * Estado da IA de candidaturas do tenant + execuções de agente ativas, para o
+ * polling leve da UI (substitui router.refresh() em loop). Aproveita a
+ * consulta para rodar o watchdog de forma oportunista (no máx. 1×/min).
+ */
+export async function getAiProgress(companyId: string, ids: string[]) {
+  await sweepStaleAgentRunsThrottled(companyId);
+  const states = ids.length > 0 ? await findAiStates(companyId, ids) : [];
+  const activeRuns = await countActiveAgentRuns(companyId);
+  return { states, activeRuns };
+}
+
+/** Central de agentes: varre execuções travadas antes de montar a tela. */
+export async function getAgentCenter(companyId: string) {
+  await sweepStaleAgentRunsThrottled(companyId);
+  return getAgentCenterData(companyId);
 }

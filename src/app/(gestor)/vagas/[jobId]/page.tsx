@@ -82,7 +82,13 @@ export default async function VagaHubPage({
 
   return (
     <>
-      <LiveRefresh active={analyzing} />
+      <LiveRefresh
+        active={analyzing}
+        applicationIds={applications
+          .filter((a) => a.aiState === "WAITING" || a.aiState === "PROCESSING")
+          .map((a) => a.id)
+          .slice(0, 100)}
+      />
 
       <Link
         href="/vagas"

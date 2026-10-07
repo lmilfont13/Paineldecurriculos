@@ -8,10 +8,13 @@ import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
-import { submitApplicationAction } from "@/server/controllers/application.controller";
+import {
+  requestResumeUploadAction,
+  submitApplicationAction,
+} from "@/server/controllers/application.controller";
+import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
 
 const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
-const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
 type WizardData = {
   name: string;
@@ -46,6 +49,10 @@ export function ApplyWizard({
     answers: prefillAnswers,
   });
   const [resume, setResume] = useState<File | null>(null);
+  // Caminho no Storage do PDF já enviado — numa nova tentativa de envio da
+  // candidatura, não sobe o arquivo de novo.
+  const [uploadedPath, setUploadedPath] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -86,36 +93,62 @@ export function ApplyWizard({
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  function pickResume(file: File | null) {
+  async function pickResume(file: File | null) {
+    if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
-    if (file.type !== "application/pdf") {
-      setError("O currículo deve ser um PDF.");
-      return;
-    }
-    if (file.size > MAX_RESUME_BYTES) {
-      setError("O currículo deve ter no máximo 5 MB.");
+    const problem = await checkResumeFile(file);
+    if (problem) {
+      setError(problem);
       return;
     }
     setError(null);
     setResume(file);
+    setUploadedPath(null);
   }
 
   function submit() {
     setError(null);
-    const formData = new FormData();
-    formData.set("slug", company.slug);
-    formData.set("jobId", job.id);
-    formData.set("name", data.name.trim());
-    formData.set("phone", data.phone.trim());
-    formData.set("answers", JSON.stringify(data.answers));
-    if (resume) formData.set("resume", resume);
 
     startTransition(async () => {
-      const result = await submitApplicationAction(formData);
-      if (result.ok) {
-        setSent(true);
-      } else {
-        setError(result.error);
+      try {
+        // Regra 5: o PDF vai direto do navegador para o Storage; a action
+        // recebe só o caminho.
+        let resumePath = uploadedPath;
+        if (resume && !resumePath) {
+          setUploading(true);
+          const target = await requestResumeUploadAction(company.slug, job.id);
+          if (!target.ok) {
+            setError(target.error);
+            return;
+          }
+          const uploaded = await uploadResumeToStorage(resume, target);
+          if (!uploaded.ok) {
+            setError(uploaded.error);
+            return;
+          }
+          resumePath = target.path;
+          setUploadedPath(target.path);
+        }
+        setUploading(false);
+
+        const formData = new FormData();
+        formData.set("slug", company.slug);
+        formData.set("jobId", job.id);
+        formData.set("name", data.name.trim());
+        formData.set("phone", data.phone.trim());
+        formData.set("answers", JSON.stringify(data.answers));
+        if (resumePath) formData.set("resumePath", resumePath);
+
+        const result = await submitApplicationAction(formData);
+        if (result.ok) {
+          setSent(true);
+        } else {
+          setError(result.error);
+        }
+      } catch {
+        setError("Falha de conexão. Confira a internet e tente de novo.");
+      } finally {
+        setUploading(false);
       }
     });
   }
@@ -248,9 +281,9 @@ export function ApplyWizard({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="application/pdf"
+                    accept="application/pdf,.pdf"
                     className="hidden"
-                    onChange={(e) => pickResume(e.target.files?.[0] ?? null)}
+                    onChange={(e) => void pickResume(e.target.files?.[0] ?? null)}
                   />
                 </div>
                 {!resume && !candidate.resumeUrl && (
@@ -372,7 +405,9 @@ export function ApplyWizard({
               }}
             >
               {pending
-                ? "Enviando…"
+                ? uploading
+                  ? "Enviando currículo…"
+                  : "Enviando…"
                 : error
                   ? "Tentar enviar de novo"
                   : "Enviar candidatura"}{" "}

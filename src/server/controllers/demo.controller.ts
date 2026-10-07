@@ -1,6 +1,6 @@
 "use server";
 
-import { after } from "next/server";
+import { runInBackground } from "@/lib/background";
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
@@ -9,7 +9,6 @@ import {
   createApplication,
   createStatusEvent,
   findApplicationByCandidateAndJob,
-  updateAgentRun,
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
 import {
@@ -20,7 +19,7 @@ import {
   createJob,
   findOpenJobsByCompanyId,
 } from "@/server/repositories/job.repository";
-import { analyzeApplication } from "@/server/services/ai.service";
+import { runTriageWithTracking } from "@/server/services/ai.service";
 
 const DEMO_EMAIL = "marina.alves.costa@example.invalid";
 const DEMO_RESUME = "demo/curriculo-candidato-ficticio.pdf";
@@ -28,7 +27,7 @@ const DEMO_RESUME = "demo/curriculo-candidato-ficticio.pdf";
 export async function runDemoTriage() {
   const manager = await requireManager();
 
-  let jobs = await findOpenJobsByCompanyId(manager.companyId);
+  const jobs = await findOpenJobsByCompanyId(manager.companyId);
   let job = jobs[0];
 
   if (!job) {
@@ -100,40 +99,17 @@ export async function runDemoTriage() {
     eventName: "demo/triage-requested",
   });
 
-  after(async () => {
-    const startedAt = new Date();
-
-    await updateAgentRun(run.id, {
-      status: "RUNNING",
-      attempts: 1,
-      startedAt,
-      summary: "Demonstração iniciada: currículo fictício sendo analisado.",
+  // Roda depois da resposta com after() (a Vercel mantém a função viva).
+  // Se ainda assim ela for congelada, o watchdog fecha o AgentRun em 5 min.
+  const applicationId = application.id;
+  runInBackground("demo de triagem", async () => {
+    await runTriageWithTracking(applicationId, {
+      eventName: "demo/triage-requested",
+      runId: run.id,
     });
-
-    try {
-      await analyzeApplication(application.id);
-
-      await updateAgentRun(run.id, {
-        status: "SUCCEEDED",
-        summary: "Currículo fictício analisado pela IA com sucesso.",
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-    } catch (error) {
-      await updateAgentRun(run.id, {
-        status: "FAILED",
-        error:
-          error instanceof Error
-            ? error.message.slice(0, 500)
-            : "Falha desconhecida.",
-        durationMs: Date.now() - startedAt.getTime(),
-        finishedAt: new Date(),
-      });
-    }
-
     revalidatePath("/agentes");
     revalidatePath("/candidaturas");
-    revalidatePath(`/candidaturas/${application.id}`);
+    revalidatePath(`/candidaturas/${applicationId}`);
   });
   revalidatePath("/agentes");
   revalidatePath("/candidaturas");

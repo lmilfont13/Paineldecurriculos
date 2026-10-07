@@ -3,6 +3,65 @@ import { z } from "zod";
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB (regra 5)
 export const RESUME_MIME = "application/pdf";
 
+/**
+ * MIME types que o celular costuma informar para um PDF vindo do WhatsApp,
+ * Drive ou gerenciador de arquivos. Nesses casos a extensão decide, e o
+ * conteúdo é conferido pelos bytes iniciais ("%PDF-") antes do envio.
+ */
+const AMBIGUOUS_PDF_MIMES = new Set([
+  "",
+  "application/octet-stream",
+  "binary/octet-stream",
+  "application/x-pdf",
+  "application/acrobat",
+]);
+
+/** Aceita PDF pelo MIME ou, quando o MIME é ambíguo, pela extensão. */
+export function looksLikePdf(file: { name: string; type: string }): boolean {
+  if (file.type === RESUME_MIME) return true;
+  return (
+    AMBIGUOUS_PDF_MIMES.has(file.type) && /\.pdf$/i.test(file.name.trim())
+  );
+}
+
+/** Assinatura de arquivo PDF: os 5 primeiros bytes são "%PDF-". */
+export function hasPdfSignature(bytes: Uint8Array): boolean {
+  const sig = [0x25, 0x50, 0x44, 0x46, 0x2d];
+  return sig.every((b, i) => bytes[i] === b);
+}
+
+/** Destino de upload direto no Storage (URL assinada, válida por 2 h). */
+export type ResumeUploadTarget = { path: string; token: string };
+
+/**
+ * Prefixo do caminho de currículo que um candidato pode enviar para uma vaga.
+ * O servidor só aceita de volta caminhos que comecem com este prefixo — o
+ * candidato não consegue apontar a candidatura para o arquivo de outra pessoa.
+ */
+export function applicationResumePrefix(
+  companyId: string,
+  jobId: string,
+  candidateId: string
+): string {
+  return `${companyId}/${jobId}/${candidateId}/`;
+}
+
+export function profileResumePrefix(candidateId: string): string {
+  return `profile/${candidateId}/`;
+}
+
+/** Caminho válido: prefixo esperado + UUID + ".pdf", sem "..". */
+export function isAllowedResumePath(path: string, prefix: string): boolean {
+  if (!path.startsWith(prefix) || path.includes("..")) return false;
+  return /^[0-9a-f-]{36}\.pdf$/.test(path.slice(prefix.length));
+}
+
+/** Arquivo de demonstração servido de /public (não está no Storage). */
+export const DEMO_RESUME_PREFIX = "demo/";
+export function isDemoResumePath(path: string | null | undefined): boolean {
+  return Boolean(path?.startsWith(DEMO_RESUME_PREFIX));
+}
+
 export const applicationInputSchema = z.object({
   slug: z.string().min(1),
   jobId: z.string().min(1),

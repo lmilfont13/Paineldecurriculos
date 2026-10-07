@@ -1,9 +1,9 @@
 "use server";
 
-import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { inngest } from "@/lib/inngest";
+import { runInBackground } from "@/lib/background";
+import { trySendEvent } from "@/lib/inngest";
 import { requireManager } from "@/server/controllers/guards";
 import { createAgentRun } from "@/server/repositories/application.repository";
 import { runCompanyIntelligence } from "@/server/services/intelligence.service";
@@ -17,19 +17,14 @@ export async function requestCompanyIntelligence() {
     eventName: "company/intelligence-requested",
   });
 
-  try {
-    await inngest.send({
-      name: "company/intelligence-requested",
-      data: { companyId: manager.companyId, runId: run.id },
-    });
-  } catch (error) {
-    console.error("[inngest] Falha ao enfileirar inteligência:", error);
-    after(async () => {
-      try {
-        await runCompanyIntelligence(manager.companyId, run.id);
-      } catch {
-        // O serviço registra FAILED no AgentRun.
-      }
+  const queued = await trySendEvent({
+    name: "company/intelligence-requested",
+    data: { companyId: manager.companyId, runId: run.id },
+  });
+  if (!queued) {
+    // O serviço registra FAILED no AgentRun; o watchdog cobre o congelamento.
+    runInBackground("leitura de inteligência", async () => {
+      await runCompanyIntelligence(manager.companyId, run.id);
       revalidatePath("/agentes");
     });
   }

@@ -32,6 +32,62 @@ export async function updateAgentRun(
   return prisma.agentRun.update({ where: { id }, data });
 }
 
+const ACTIVE_RUN_STATUSES = ["QUEUED", "RUNNING"] as const;
+const ANALYZING_AI_STATES = ["WAITING", "PROCESSING"] as const;
+
+/**
+ * Watchdog: execuções QUEUED/RUNNING paradas há mais que o limite viram
+ * FAILED (a função foi congelada ou o evento nunca chegou). Candidaturas
+ * presas em "Analisando…" voltam como FAILED para o gestor poder reanalisar.
+ * Regra 2: só mexe em aiState, nunca em AppStatus.
+ */
+export async function failStaleAgentRuns(
+  cutoff: Date,
+  reason: string,
+  companyId?: string
+): Promise<{ runs: number; applications: number }> {
+  const scope = companyId ? { companyId } : {};
+  const now = new Date();
+
+  const runs = await prisma.agentRun.updateMany({
+    where: {
+      ...scope,
+      status: { in: [...ACTIVE_RUN_STATUSES] },
+      OR: [
+        { startedAt: { lt: cutoff } },
+        { startedAt: null, createdAt: { lt: cutoff } },
+      ],
+    },
+    data: { status: "FAILED", error: reason, finishedAt: now },
+  });
+
+  const applications = await prisma.application.updateMany({
+    where: {
+      ...scope,
+      aiState: { in: [...ANALYZING_AI_STATES] },
+      updatedAt: { lt: cutoff },
+    },
+    data: { aiState: "FAILED" },
+  });
+
+  return { runs: runs.count, applications: applications.count };
+}
+
+/** Estado da IA de algumas candidaturas do tenant (polling leve da UI). */
+export function findAiStates(companyId: string, ids: string[]) {
+  return prisma.application.findMany({
+    where: { companyId, id: { in: ids } },
+    select: { id: true, aiState: true },
+  });
+}
+
+/** Execuções ativas do tenant (polling leve da tela de agentes). */
+export function countActiveAgentRuns(companyId: string) {
+  return prisma.agentRun.count({
+    where: { companyId, status: { in: [...ACTIVE_RUN_STATUSES] } },
+  });
+}
+
 export async function getAgentRuns(companyId: string) {
   return prisma.agentRun.findMany({
     where: { companyId },
