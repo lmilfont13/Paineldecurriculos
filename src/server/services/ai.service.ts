@@ -16,9 +16,8 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
 const MAX_RESUME_CHARS = 12000;
 
 /**
- * Análise de aderência em background (via Inngest — regra 2: nunca no
- * caminho do candidato). Só escreve aiScore/aiReasoning/aiState; o
- * AppStatus é decisão manual do gestor, sempre.
+ * Análise de aderência em background. Só escreve aiScore/aiReasoning/aiState;
+ * o AppStatus é decisão manual do gestor, sempre.
  */
 export async function analyzeApplication(applicationId: string): Promise<void> {
   const application = await findApplicationById(applicationId);
@@ -32,25 +31,37 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
   await updateApplicationAi(applicationId, { aiState: "PROCESSING" });
 
   try {
-    // 1. Baixa o PDF do Storage e extrai o texto (regra 5: pdf-parse)
-    const supabase = createAdminClient();
-    const { data, error } = await supabase.storage
-      .from("resumes")
-      .download(application.resumeUrl);
-    if (error || !data) {
-      throw new Error(`Falha ao baixar currículo: ${error?.message}`);
+    let bytes: Uint8Array;
+
+    if (application.resumeUrl.startsWith("demo/")) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL não configurada para currículo demo.");
+      const response = await fetch(`${baseUrl}/${application.resumeUrl}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar currículo demo: HTTP ${response.status}`);
+      }
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } else {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase.storage
+        .from("resumes")
+        .download(application.resumeUrl);
+      if (error || !data) {
+        throw new Error(`Falha ao baixar currículo: ${error?.message}`);
+      }
+      bytes = new Uint8Array(await data.arrayBuffer());
     }
-    // unpdf: extração de texto pronta para serverless (sem DOMMatrix)
-    const pdf = await getDocumentProxy(new Uint8Array(await data.arrayBuffer()));
+
+    const pdf = await getDocumentProxy(bytes);
     const { text: resumeText } = await extractText(pdf, { mergePages: true });
 
-    // 2. Monta o contexto da vaga (critérios definidos pelo gestor)
     const criteria =
       application.job.aiCriteria.length > 0
         ? application.job.aiCriteria.map((c) => `- ${c}`).join("\n")
         : (application.job.requirements ?? "Sem critérios específicos.");
 
-    // 3. Chama o modelo com o prompt imutável (regra 3)
     const raw = await geminiGenerate({
       system: AI_PROMPT,
       prompt: `Vaga: ${application.job.title}\n\nCritérios de aderência:\n${criteria}\n\nCurrículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
@@ -74,6 +85,6 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
     });
   } catch (error) {
     await updateApplicationAi(applicationId, { aiState: "FAILED" });
-    throw error; // deixa o Inngest fazer retry
+    throw error;
   }
 }
