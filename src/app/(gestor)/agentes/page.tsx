@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 
 import { requireManager } from "@/server/controllers/guards";
+import { getAgentCenterData } from "@/server/repositories/application.repository";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
 
@@ -42,7 +43,8 @@ function Status({ tone }: { tone: string }) {
 }
 
 export default async function AgentesPage() {
-  await requireManager();
+  const manager = await requireManager();
+  const data = await getAgentCenterData(manager.companyId);
 
   return (
     <div className="mx-auto w-full max-w-[1080px]">
@@ -128,6 +130,69 @@ export default async function AgentesPage() {
             </article>
           );
         })}
+      </section>
+
+      <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {[
+          ["Candidaturas", data.submitted, "recebidas"],
+          ["Analisadas", data.aiDone, "pela triagem"],
+          ["Em processamento", data.aiProcessing, "agora"],
+          ["Falhas", data.aiFailed, "precisam atenção"],
+          ["Mudanças", data.communications, "nos últimos 7 dias"],
+        ].map(([label, value, detail]) => (
+          <div key={String(label)} className="rounded-2xl border border-[#e4e4e7] bg-white p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">{label}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#18181b]">{value}</p>
+            <p className="mt-1 text-[10px] text-[#a1a1aa]">{detail}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+        <div className="rounded-2xl border border-[#e4e4e7] bg-white p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">Atividade recente</p>
+              <h2 className="mt-1 text-base font-semibold text-[#18181b]">Últimas candidaturas processadas</h2>
+            </div>
+            <span className="rounded-full bg-[#fafaf9] px-2.5 py-1 text-[10px] text-[#71717a]">{data.windowLabel}</span>
+          </div>
+          <div className="mt-5 divide-y divide-[#f0efed]">
+            {data.recentApplications.map((application) => (
+              <div key={application.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium text-[#292524]">{application.name}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-[#a1a1aa]">{application.job.title}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {application.aiScore !== null && (
+                    <span className="rounded-full bg-[#f4f4f5] px-2 py-1 text-[10px] font-semibold text-[#52525b]">{application.aiScore}</span>
+                  )}
+                  <span className="rounded-full bg-[#fafaf9] px-2 py-1 text-[9px] font-medium text-[#71717a]">{application.aiState}</span>
+                </div>
+              </div>
+            ))}
+            {data.recentApplications.length === 0 && (
+              <p className="py-6 text-center text-[12px] text-[#a1a1aa]">Nenhuma atividade registrada ainda.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafaf9] p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">Saúde dos agentes</p>
+          <h2 className="mt-1 text-base font-semibold text-[#18181b]">Operação em segundo plano</h2>
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between rounded-xl bg-white px-3.5 py-3 ring-1 ring-[#eceae8]">
+              <span className="text-[11px] text-[#57534e]">Triagem</span>
+              <span className="text-[11px] font-semibold text-[#15803d]">ATIVO</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-white px-3.5 py-3 ring-1 ring-[#eceae8]">
+              <span className="text-[11px] text-[#57534e]">Comunicação</span>
+              <span className="text-[11px] font-semibold text-[#2563eb]">ATIVO</span>
+            </div>
+            <p className="pt-1 text-[10px] leading-5 text-[#a1a1aa]">Falhas ficam visíveis aqui para não desaparecerem silenciosamente no processo.</p>
+          </div>
+        </div>
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#e4e4e7] bg-[#171413] p-6 text-white">
