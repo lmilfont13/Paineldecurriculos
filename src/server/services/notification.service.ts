@@ -27,14 +27,14 @@ export async function notifyStageChange(params: {
   to: AppStatus;
   companyName: string;
   jobTitle: string;
-}): Promise<void> {
-  if (!params.candidateId) return; // candidatura antiga, sem conta ligada
+}): Promise<boolean> {
+  if (!params.candidateId) return false; // candidatura antiga, sem conta ligada
   const content = stageNotification(
     params.to,
     params.companyName,
     params.jobTitle
   );
-  if (!content) return;
+  if (!content) return false;
   await createNotification({
     candidateId: params.candidateId,
     applicationId: params.applicationId,
@@ -42,6 +42,7 @@ export async function notifyStageChange(params: {
     title: content.title,
     body: content.body,
   });
+  return true;
 }
 
 export async function notifyInterviewScheduled(params: {

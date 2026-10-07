@@ -16,6 +16,7 @@ import {
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
   countApplicationsByCompany,
+  createAgentRun,
   createApplication,
   createStatusEvent,
   deleteApplication,
@@ -29,12 +30,20 @@ import {
   findApplicationsByCandidate,
   findApplicationsByCompany,
   findLatestApplicationWithAnswers,
+  updateAgentRun,
   updateApplicationAi,
   updateApplicationStatus,
   updateInterview,
   updateManagerNotes,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
+import {
+  describeDelivery,
+  reachedCandidate,
+  type DeliveryReport,
+  type EmailOutcome,
+  type SiteOutcome,
+} from "@/server/models/communication.model";
 import {
   notifyApplicationReceived,
   notifyInterviewScheduled,
@@ -133,24 +142,30 @@ export async function setApplicationStatus(
     });
     if (!queued) {
       runInBackground("comunicar mudança de status", () =>
-        notifyApplicationStatusChange(id, status)
+        communicateStatusChange(id, status)
       );
     }
   }
   return updated;
 }
 
-/** Comunicação pós-mudança de status: novidade no portal e e-mail. */
+type StageStatus = "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
+
+/**
+ * Comunicação pós-mudança de status: novidade no portal e e-mail. Devolve o
+ * que aconteceu em cada canal (o e-mail pode "sair" e não chegar, quando o
+ * remetente ainda é o de teste do Resend).
+ */
 export async function notifyApplicationStatusChange(
   applicationId: string,
-  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
-) {
+  status: StageStatus
+): Promise<DeliveryReport | null> {
   const application = await findApplicationById(applicationId);
-  if (!application) return;
+  if (!application) return null;
 
   // Roda dentro do job do Inngest ou de um after(): aqui dá para (e é
   // preciso) esperar, senão a função termina antes do e-mail sair.
-  await Promise.allSettled([
+  const [site, email] = await Promise.allSettled([
     notifyStageChange({
       candidateId: application.candidateId,
       applicationId,
@@ -167,8 +182,63 @@ export async function notifyApplicationStatusChange(
           status,
           applicationId,
         })
-      : Promise.resolve(),
+      : Promise.resolve<EmailOutcome>("none"),
   ]);
+
+  const siteOutcome: SiteOutcome =
+    site.status === "rejected" ? "failed" : site.value ? "ok" : "no-account";
+  const emailOutcome: EmailOutcome =
+    email.status === "rejected" ? "failed" : email.value;
+  return { site: siteOutcome, email: emailOutcome };
+}
+
+/**
+ * Agente de Comunicação com rastreio: registra a execução (AgentRun) com o
+ * resultado de cada canal. Usado pelo job do Inngest e pelo plano B.
+ */
+export async function communicateStatusChange(
+  applicationId: string,
+  status: StageStatus,
+  options: { eventName?: string; rethrow?: boolean } = {}
+) {
+  const application = await findApplicationById(applicationId);
+  if (!application) return;
+  if (application.isDemo) return; // simulação: nunca fala com ninguém
+
+  const run = await createAgentRun({
+    companyId: application.company.id,
+    applicationId,
+    agent: "COMMUNICATION",
+    eventName: options.eventName ?? "application/status-changed",
+  });
+  const startedAt = new Date();
+  await updateAgentRun(run.id, { status: "RUNNING", attempts: 1, startedAt });
+
+  try {
+    const report = await notifyApplicationStatusChange(applicationId, status);
+    const ok = !!report && reachedCandidate(report);
+    await updateAgentRun(run.id, {
+      // Nada chegou ao candidato: fica como falha, para o gestor ver.
+      status: ok || !report ? "SUCCEEDED" : "FAILED",
+      summary: report
+        ? describeDelivery(status, report)
+        : "Candidatura não encontrada.",
+      error: ok || !report ? undefined : "Nenhum canal chegou ao candidato.",
+      durationMs: Date.now() - startedAt.getTime(),
+      finishedAt: new Date(),
+    });
+  } catch (error) {
+    await updateAgentRun(run.id, {
+      status: "FAILED",
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : "Falha desconhecida.",
+      durationMs: Date.now() - startedAt.getTime(),
+      finishedAt: new Date(),
+    });
+    if (options.rethrow) throw error;
+  }
 }
 
 /** Respostas da última candidatura na empresa — pré-preenche extras (CA3). */
@@ -413,6 +483,7 @@ export function enqueueTriage(applicationId: string): void {
     if (!queued) {
       await runTriageWithTracking(applicationId, {
         eventName: "application/submitted (fallback)",
+        maxAttempts: 3,
       });
     }
   });
@@ -504,7 +575,9 @@ export async function submitApplication(
     email: candidate.email,
     phone: input.phone || null,
     resumeUrl,
-    aiState: resumeUrl ? "WAITING" : "NO_RESUME",
+    // Toda candidatura entra na análise: com PDF, só com as respostas, ou as
+    // duas coisas. A própria análise marca NO_RESUME se não houver material.
+    aiState: "WAITING",
     answers,
   });
 
@@ -524,7 +597,7 @@ export async function submitApplication(
   }).catch(() => {});
 
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
-  if (resumeUrl) enqueueTriage(application.id);
+  enqueueTriage(application.id);
 
   runInBackground("avisos da nova candidatura", async () => {
     const company = await getCompanyById(companyId);
@@ -551,7 +624,7 @@ export async function submitApplication(
             to: manager.email,
             candidateName: application.name,
             jobTitle: job.title,
-            aiEnabled: Boolean(resumeUrl),
+            aiEnabled: true,
             applicationId: application.id,
           })
         : Promise.resolve(),

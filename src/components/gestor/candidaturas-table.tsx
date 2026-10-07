@@ -403,6 +403,11 @@ export function CandidaturasTable({
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                     {row.name}
+                    {row.isDemo && (
+                      <span className="ml-1.5 rounded-full bg-[#f5f3ff] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#6d28d9]">
+                        Demonstração
+                      </span>
+                    )}
                   </span>
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {row.jobTitle}
