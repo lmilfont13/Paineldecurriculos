@@ -43,58 +43,61 @@ export async function getAgentRuns(companyId: string) {
   });
 }
 
-export async function getAgentRunMetrics(companyId: string) {
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const [total, succeeded, failed, queued, running] = await Promise.all([
-    prisma.agentRun.count({ where: { companyId, createdAt: { gte: since } } }),
-    prisma.agentRun.count({ where: { companyId, status: "SUCCEEDED", createdAt: { gte: since } } }),
-    prisma.agentRun.count({ where: { companyId, status: "FAILED", createdAt: { gte: since } } }),
-    prisma.agentRun.count({ where: { companyId, status: "QUEUED" } }),
-    prisma.agentRun.count({ where: { companyId, status: "RUNNING" } }),
-  ]);
-  return { total, succeeded, failed, queued, running };
-}
-
-/** Métricas operacionais da Central de Agentes — sempre filtradas por empresa. */
 export async function getAgentCenterData(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [submitted, aiDone, aiProcessing, aiFailed, communications, recentApplications] =
-    await Promise.all([
-      prisma.application.count({ where: { companyId, createdAt: { gte: since } } }),
-      prisma.application.count({ where: { companyId, aiState: "DONE", updatedAt: { gte: since } } }),
-      prisma.application.count({ where: { companyId, aiState: "PROCESSING" } }),
-      prisma.application.count({ where: { companyId, aiState: "FAILED" } }),
-      prisma.statusEvent.count({
-        where: {
-          createdAt: { gte: since },
-          application: { companyId },
+  const [applications, communications, runs] = await Promise.all([
+    prisma.application.findMany({
+      where: { companyId },
+      orderBy: { updatedAt: "desc" },
+      take: 500,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        aiState: true,
+        aiScore: true,
+        createdAt: true,
+        updatedAt: true,
+        job: { select: { title: true } },
+      },
+    }),
+    prisma.statusEvent.count({
+      where: {
+        createdAt: { gte: since },
+        application: { companyId },
+      },
+    }),
+    prisma.agentRun.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: {
+        application: {
+          select: { name: true, job: { select: { title: true } } },
         },
-      }),
-      prisma.application.findMany({
-        where: { companyId },
-        orderBy: { updatedAt: "desc" },
-        take: 6,
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          aiState: true,
-          aiScore: true,
-          updatedAt: true,
-          job: { select: { title: true } },
-        },
-      }),
-    ]);
+      },
+    }),
+  ]);
+
+  const recentApplications = applications.slice(0, 6);
+  const recentRuns = runs;
+  const totalRuns = runs.filter((run) => run.createdAt >= since).length;
+  const succeeded = runs.filter((run) => run.createdAt >= since && run.status === "SUCCEEDED").length;
+  const failed = runs.filter((run) => run.createdAt >= since && run.status === "FAILED").length;
+  const queued = runs.filter((run) => run.status === "QUEUED").length;
+  const running = runs.filter((run) => run.status === "RUNNING").length;
 
   return {
     windowLabel: "Últimos 7 dias",
-    submitted,
-    aiDone,
-    aiProcessing,
-    aiFailed,
+    submitted: applications.filter((a) => a.createdAt >= since).length,
+    aiDone: applications.filter((a) => a.aiState === "DONE" && a.updatedAt >= since).length,
+    aiProcessing: applications.filter((a) => a.aiState === "PROCESSING").length,
+    aiFailed: applications.filter((a) => a.aiState === "FAILED").length,
     communications,
     recentApplications,
+    runs: recentRuns,
+    runMetrics: { total: totalRuns, succeeded, failed, queued, running },
   };
 }
 
