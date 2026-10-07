@@ -128,6 +128,22 @@ export default async function VagaHubPage({
         </div>
       </div>
 
+      {data.sourceFolders.length > 0 && (
+        <div className="mt-5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3 text-[12px] text-[#52525b]">
+          Vaga sugerida a partir do banco de talentos:{" "}
+          {data.sourceFolders.map((f, i) => (
+            <span key={f.id}>
+              {i > 0 && ", "}
+              <Link href={`/talentos/${f.id}`} className="font-medium text-[#0a0a0a] underline-offset-2 hover:underline">
+                {f.name}
+              </Link>{" "}
+              ({f.count} {f.count === 1 ? "candidato guardado" : "candidatos guardados"})
+            </span>
+          ))}
+          . {job.status === "DRAFT" ? "Revise o texto e publique; depois, mande o link para eles." : "Mande o link desta vaga para eles."}
+        </div>
+      )}
+
       {/* Sinais vitais — o que responde "essa vaga está andando?" */}
       <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-[#e4e4e7] bg-white p-5">

@@ -11,6 +11,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   VAGA_PUBLICADA:               { label: "Vaga publicada",          color: "bg-[#e4f6ec] text-[#1f7a4d]" },
   VAGA_PAUSADA:                 { label: "Vaga pausada",            color: "bg-[#fef3c7] text-[#92400e]" },
   VAGA_ENCERRADA:               { label: "Vaga encerrada",          color: "bg-[#f1f0ed] text-[#71717a]" },
+  VAGA_EXCLUIDA:                { label: "Vaga excluída",           color: "bg-[#fef2f2] text-[#b91c1c]" },
   CANDIDATURA_STATUS_ALTERADO:  { label: "Status alterado",         color: "bg-[#eff6ff] text-[#1d4ed8]" },
   CANDIDATURA_EXCLUIDA:         { label: "Candidatura excluída",    color: "bg-[#fef2f2] text-[#b91c1c]" },
   ENTREVISTA_AGENDADA:          { label: "Entrevista agendada",     color: "bg-[#f5f3ff] text-[#6d28d9]" },

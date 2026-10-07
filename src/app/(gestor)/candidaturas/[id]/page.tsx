@@ -8,6 +8,9 @@ import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
+import { TalentPoolCard } from "@/components/gestor/talent-pool-card";
+import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
+import { suggestTalentPool } from "@/server/models/talent.model";
 import { readChecklist } from "@/server/models/ai.model";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
 import {
@@ -46,6 +49,7 @@ export default async function CandidaturaDetailPage({
 }) {
   const { id } = await params;
   const app = await getCandidaturaDetail(id);
+  const talent = app ? await loadApplicationTalentInfo(app.id) : null;
   if (!app) notFound();
 
   const meets = app.aiScore !== null && app.aiScore >= app.job.aiMinScore;
@@ -330,6 +334,21 @@ export default async function CandidaturaDetailPage({
             candidateName={app.name}
             interview={interview}
           />
+
+          {talent && (
+            <TalentPoolCard
+              applicationId={app.id}
+              folders={talent.folders}
+              inFolders={talent.inFolders}
+              suggestedName={talent.suggestedName}
+              level={talent.level}
+              highlight={suggestTalentPool({
+                aiState: app.aiState,
+                aiScore: app.aiScore,
+                minScore: app.job.aiMinScore,
+              })}
+            />
+          )}
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">

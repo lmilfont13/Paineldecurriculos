@@ -108,3 +108,65 @@ export function readChecklist(value: unknown): ChecklistItem[] {
     }))
     .filter((v) => v.criterion);
 }
+
+export const PROFILE_LEVELS = ["Operacional", "Júnior", "Pleno", "Sênior", "Liderança"] as const;
+export type ProfileLevel = (typeof PROFILE_LEVELS)[number];
+
+export type ProfileSegment = {
+  /** Área ampla, ex.: "Logística", "Administrativo", "Vendas e trade". */
+  area: string | null;
+  /** Função, ex.: "Motorista e entregador". */
+  role: string | null;
+  level: ProfileLevel | null;
+};
+
+function cleanLabel(value: unknown, max: number): string | null {
+  const text = String(value ?? "")
+    .replace(/["“”'`]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[.;:,!]+$/, "")
+    .trim();
+  if (text.length < 3 || text.length > max) return null;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function normalizeLevel(value: unknown): ProfileLevel | null {
+  const v = String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!v) return null;
+  if (/lider|gest|coorden|supervis|gerent/.test(v)) return "Liderança";
+  if (/senior|especialista/.test(v)) return "Sênior";
+  if (/pleno/.test(v)) return "Pleno";
+  if (/junior|jr|estagi|trainee|assistente/.test(v)) return "Júnior";
+  if (/operac|auxiliar|basico/.test(v)) return "Operacional";
+  return null;
+}
+
+/**
+ * Segmentação do currículo pela IA (área, função, nível), usada para montar
+ * as pastas do banco de talentos. Aceita o formato antigo ("profile" texto).
+ */
+export function parseSegment(raw: string): ProfileSegment {
+  let profile: unknown;
+  try {
+    profile = (JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { profile?: unknown }).profile;
+  } catch {
+    return { area: null, role: null, level: null };
+  }
+  if (profile && typeof profile === "object") {
+    const p = profile as Record<string, unknown>;
+    return {
+      area: cleanLabel(p.area, 32),
+      role: cleanLabel(p.role ?? p.funcao, 48),
+      level: normalizeLevel(p.level ?? p.nivel),
+    };
+  }
+  return { area: null, role: cleanLabel(profile, 48), level: null };
+}
+
+/** Função resumida (compatível com o formato antigo). */
+export function parseProfile(raw: string): string | null {
+  return parseSegment(raw).role;
+}
