@@ -44,7 +44,11 @@ function Status({ tone }: { tone: string }) {
 
 export default async function AgentesPage() {
   const manager = await requireManager();
-  const [data, runMetrics, runs] = await Promise.all([\n    getAgentCenterData(manager.companyId),\n    getAgentRunMetrics(manager.companyId),\n    getAgentRuns(manager.companyId),\n  ]);
+  const [data, runMetrics, runs] = await Promise.all([
+    getAgentCenterData(manager.companyId),
+    getAgentRunMetrics(manager.companyId),
+    getAgentRuns(manager.companyId),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-[1080px]">
