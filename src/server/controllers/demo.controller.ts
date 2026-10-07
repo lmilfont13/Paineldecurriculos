@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
@@ -99,36 +100,41 @@ export async function runDemoTriage() {
     eventName: "demo/triage-requested",
   });
 
-  const startedAt = new Date();
-  await updateAgentRun(run.id, {
-    status: "RUNNING",
-    attempts: 1,
-    startedAt,
-    summary: "Demonstração iniciada: currículo fictício sendo analisado.",
+  after(async () => {
+    const startedAt = new Date();
+
+    await updateAgentRun(run.id, {
+      status: "RUNNING",
+      attempts: 1,
+      startedAt,
+      summary: "Demonstração iniciada: currículo fictício sendo analisado.",
+    });
+
+    try {
+      await analyzeApplication(application.id);
+
+      await updateAgentRun(run.id, {
+        status: "SUCCEEDED",
+        summary: "Currículo fictício analisado pela IA com sucesso.",
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+    } catch (error) {
+      await updateAgentRun(run.id, {
+        status: "FAILED",
+        error:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : "Falha desconhecida.",
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+    }
+
+    revalidatePath("/agentes");
+    revalidatePath("/candidaturas");
+    revalidatePath(`/candidaturas/${application.id}`);
   });
-
-  try {
-    await analyzeApplication(application.id);
-
-    await updateAgentRun(run.id, {
-      status: "SUCCEEDED",
-      summary: "Currículo fictício analisado pela IA com sucesso.",
-      durationMs: Date.now() - startedAt.getTime(),
-      finishedAt: new Date(),
-    });
-  } catch (error) {
-    await updateAgentRun(run.id, {
-      status: "FAILED",
-      error:
-        error instanceof Error
-          ? error.message.slice(0, 500)
-          : "Falha desconhecida.",
-      durationMs: Date.now() - startedAt.getTime(),
-      finishedAt: new Date(),
-    });
-    throw error;
-  }
-
   revalidatePath("/agentes");
   revalidatePath("/candidaturas");
   revalidatePath(`/candidaturas/${application.id}`);
