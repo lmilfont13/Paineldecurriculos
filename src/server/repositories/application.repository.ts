@@ -98,6 +98,79 @@ export async function getAgentCenterData(companyId: string) {
   };
 }
 
+export async function getCompanyIntelligenceSnapshot(companyId: string) {
+  const applications = await prisma.application.findMany({
+    where: { companyId },
+    select: {
+      status: true,
+      aiState: true,
+      aiScore: true,
+      createdAt: true,
+      job: {
+        select: {
+          title: true,
+          aiMinScore: true,
+          aiCriteria: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
+
+  const byJob = new Map<string, {
+    total: number;
+    analyzed: number;
+    qualified: number;
+    pending: number;
+    interview: number;
+    approved: number;
+    rejected: number;
+    scoreSum: number;
+    scored: number;
+    minScore: number;
+  }>();
+
+  for (const app of applications) {
+    const current = byJob.get(app.job.title) ?? {
+      total: 0, analyzed: 0, qualified: 0, pending: 0, interview: 0,
+      approved: 0, rejected: 0, scoreSum: 0, scored: 0, minScore: app.job.aiMinScore,
+    };
+
+    current.total += 1;
+    if (app.aiState === "DONE") current.analyzed += 1;
+    if (app.aiScore !== null) {
+      current.scored += 1;
+      current.scoreSum += app.aiScore;
+      if (app.aiScore >= app.job.aiMinScore) current.qualified += 1;
+    }
+    if (app.status === "PENDING") current.pending += 1;
+    if (app.status === "INTERVIEW") current.interview += 1;
+    if (app.status === "APPROVED") current.approved += 1;
+    if (app.status === "REJECTED") current.rejected += 1;
+    byJob.set(app.job.title, current);
+  }
+
+  const jobs = Array.from(byJob.entries()).map(([title, value]) => ({
+    title,
+    ...value,
+    averageScore: value.scored ? Math.round(value.scoreSum / value.scored) : null,
+    qualificationRate: value.scored ? Math.round((value.qualified / value.scored) * 100) : null,
+  }));
+
+  return {
+    totalApplications: applications.length,
+    analyzed: applications.filter((a) => a.aiState === "DONE").length,
+    processing: applications.filter((a) => a.aiState === "PROCESSING").length,
+    failed: applications.filter((a) => a.aiState === "FAILED").length,
+    averageScore: (() => {
+      const scored = applications.filter((a) => a.aiScore !== null);
+      return scored.length ? Math.round(scored.reduce((sum, a) => sum + (a.aiScore ?? 0), 0) / scored.length) : null;
+    })(),
+    jobs,
+  };
+}
+
 export function countApplicationsByJobId(jobId: string) {
   return prisma.application.count({ where: { jobId } });
 }
