@@ -22,6 +22,18 @@ const agents = [
     rule: "A IA nunca altera a etapa do candidato.",
   },
   {
+    name: "Agente de Inteligência",
+    label: "Leitura executiva do processo",
+    icon: Sparkles,
+    status: "ATIVO",
+    tone: "purple",
+    event: "company/intelligence-requested",
+    description:
+      "Cruza indicadores agregados do funil para encontrar gargalos, padrões de aderência e uma próxima ação para o gestor.",
+    outputs: ["Resumo executivo", "Gargalos", "Próxima ação"],
+    rule: "A IA analisa o processo; a decisão continua sendo do gestor.",
+  },
+  {
     name: "Agente de Comunicação",
     label: "Mudanças de etapa",
     icon: Mail,
