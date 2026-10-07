@@ -5,6 +5,56 @@ import type { AIState } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 
+
+export async function createAgentRun(data: {
+  companyId: string;
+  applicationId?: string;
+  agent: "TRIAGE" | "COMMUNICATION";
+  eventName: string;
+}) {
+  return prisma.agentRun.create({
+    data: { ...data, status: "QUEUED" },
+  });
+}
+
+export async function updateAgentRun(
+  id: string,
+  data: {
+    status?: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+    attempts?: number;
+    durationMs?: number;
+    summary?: string;
+    error?: string;
+    startedAt?: Date;
+    finishedAt?: Date;
+  }
+) {
+  return prisma.agentRun.update({ where: { id }, data });
+}
+
+export async function getAgentRuns(companyId: string) {
+  return prisma.agentRun.findMany({
+    where: { companyId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: {
+      application: { select: { name: true, job: { select: { title: true } } } },
+    },
+  });
+}
+
+export async function getAgentRunMetrics(companyId: string) {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [total, succeeded, failed, queued, running] = await Promise.all([
+    prisma.agentRun.count({ where: { companyId, createdAt: { gte: since } } }),
+    prisma.agentRun.count({ where: { companyId, status: "SUCCEEDED", createdAt: { gte: since } } }),
+    prisma.agentRun.count({ where: { companyId, status: "FAILED", createdAt: { gte: since } } }),
+    prisma.agentRun.count({ where: { companyId, status: "QUEUED" } }),
+    prisma.agentRun.count({ where: { companyId, status: "RUNNING" } }),
+  ]);
+  return { total, succeeded, failed, queued, running };
+}
+
 /** Métricas operacionais da Central de Agentes — sempre filtradas por empresa. */
 export async function getAgentCenterData(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
