@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
 import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
+import { DemoTriageButton } from "@/components/gestor/demo-triage-button";
 
 import { requireManager } from "@/server/controllers/guards";
-import { getAgentCenterData, getAgentRunMetrics, getAgentRuns } from "@/server/repositories/application.repository";
+import { getAgentCenterData } from "@/server/repositories/application.repository";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
 
@@ -58,11 +59,9 @@ function Status({ tone }: { tone: string }) {
 
 export default async function AgentesPage() {
   const manager = await requireManager();
-  const [data, runMetrics, runs] = await Promise.all([
-    getAgentCenterData(manager.companyId),
-    getAgentRunMetrics(manager.companyId),
-    getAgentRuns(manager.companyId),
-  ]);
+  const data = await getAgentCenterData(manager.companyId);
+  const runs = data.runs;
+  const runMetrics = data.runMetrics;
 
   const latestIntelligence = runs.find((run) => run.agent === "INTELLIGENCE");
 
@@ -108,6 +107,10 @@ export default async function AgentesPage() {
       <AgentLiveMonitor runs={liveRuns} />
 
       <IntelligenceAgentCard latestSummary={latestIntelligence?.summary ?? null} latestStatus={latestIntelligence?.status ?? null} />
+
+      <div className="mt-4">
+        <DemoTriageButton />
+      </div>
 
       <section className="mt-8 grid gap-4 lg:grid-cols-2">
         {agents.map((agent) => {
