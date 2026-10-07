@@ -78,6 +78,9 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
   const lastCompleted = runs.find(
     (run) => run.status === "SUCCEEDED" || run.status === "FAILED"
   );
+  const recentDone = runs
+    .filter((run) => run.status === "SUCCEEDED" || run.status === "FAILED")
+    .slice(0, 4);
 
   return (
     <section className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
@@ -95,7 +98,7 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
-              O estado é atualizado ao abrir ou ao solicitar uma nova leitura
+              Atualiza sozinho a cada etapa enquanto houver agentes trabalhando
             </p>
           </div>
         </div>
@@ -136,7 +139,9 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-[11px] font-semibold text-[#292524]">{agentLabel(run.agent)}</p>
-                    <p className="truncate text-[10px] text-[#a1a1aa]">{taskLabel(run)}</p>
+                    <p className="truncate text-[10px] text-[#a1a1aa]">
+                      {run.status === "RUNNING" && run.summary ? run.summary : taskLabel(run)}
+                    </p>
                   </div>
                 </div>
                 <span className="shrink-0 rounded-full bg-[#fff7e6] px-2 py-1 text-[9px] font-semibold text-[#a16207]">
@@ -170,7 +175,22 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
         </div>
       )}
 
-      {lastCompleted && (
+      {activeRuns.length > 0 && recentDone.length > 0 && (
+        <ul className="mt-4 space-y-2 border-t border-[#f0efed] pt-4">
+          {recentDone.map((run) => (
+            <li key={run.id} className="flex items-center gap-2 text-[10px] text-[#71717a]">
+              <StatusIcon status={run.status} />
+              <span className="min-w-0 truncate">
+                {run.status === "SUCCEEDED"
+                  ? (run.summary ?? "Concluída")
+                  : `Falhou: ${run.error ?? "erro desconhecido"}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {activeRuns.length === 0 && lastCompleted && (
         <div className="mt-4 flex items-center gap-2 border-t border-[#f0efed] pt-4">
           <StatusIcon status={lastCompleted.status} />
           <p className="min-w-0 truncate text-[10px] text-[#71717a]">

@@ -72,3 +72,21 @@ describe("isDemoResumePath", () => {
     expect(isDemoResumePath(null)).toBe(false);
   });
 });
+
+import { activeRunsSignature } from "@/server/models/simulation.model";
+
+describe("activeRunsSignature", () => {
+  it("muda quando a etapa muda e ignora execuções encerradas", () => {
+    const a = activeRunsSignature([
+      { id: "1", status: "RUNNING", summary: "Lendo o texto do PDF" },
+      { id: "2", status: "SUCCEEDED", summary: "Nota 80/100" },
+    ]);
+    const b = activeRunsSignature([
+      { id: "1", status: "RUNNING", summary: "Comparando 900 caracteres" },
+      { id: "2", status: "SUCCEEDED", summary: "Nota 80/100" },
+    ]);
+    expect(a).not.toBe(b);
+    expect(a).not.toContain("Nota");
+    expect(activeRunsSignature([])).toBe("");
+  });
+});

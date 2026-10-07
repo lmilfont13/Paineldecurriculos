@@ -50,24 +50,33 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
 
 const MAX_RESUME_CHARS = 12000;
 
+/** Etapa da triagem, mostrada ao vivo na tela de agentes. */
+export type TriageStepReporter = (label: string) => Promise<void>;
+
 /**
  * Análise de aderência em background. Só escreve aiScore/aiReasoning/aiState;
- * o AppStatus é decisão manual do gestor, sempre.
+ * o AppStatus é decisão manual do gestor, sempre. `onStep` recebe cada etapa
+ * (baixar, ler, consultar a IA) para a tela de agentes; retorna a nota.
  */
-export async function analyzeApplication(applicationId: string): Promise<void> {
+export async function analyzeApplication(
+  applicationId: string,
+  onStep: TriageStepReporter = async () => {}
+): Promise<{ score: number } | null> {
   const application = await findApplicationById(applicationId);
-  if (!application) return;
+  if (!application) return null;
 
   if (!application.resumeUrl) {
     await updateApplicationAi(applicationId, { aiState: "NO_RESUME" });
-    return;
+    return null;
   }
 
   await updateApplicationAi(applicationId, { aiState: "PROCESSING" });
 
   try {
+    await onStep("Baixando o currículo em PDF");
     const bytes = await loadResumeBytes(application.resumeUrl);
 
+    await onStep("Lendo o texto do PDF");
     const pdf = await getDocumentProxy(bytes);
     const { text: resumeText } = await extractText(pdf, { mergePages: true });
 
@@ -76,6 +85,9 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
         ? application.job.aiCriteria.map((c) => `- ${c}`).join("\n")
         : (application.job.requirements ?? "Sem critérios específicos.");
 
+    await onStep(
+      `Comparando ${resumeText.length.toLocaleString("pt-BR")} caracteres com os critérios da vaga`
+    );
     const raw = await geminiGenerate({
       system: AI_PROMPT,
       prompt: `Vaga: ${application.job.title}\n\nCritérios de aderência:\n${criteria}\n\nCurrículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
@@ -97,6 +109,7 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
       aiReasoning: String(parsed.reasoning ?? "").slice(0, 500),
       aiState: "DONE",
     });
+    return { score };
   } catch (error) {
     await updateApplicationAi(applicationId, { aiState: "FAILED" });
     throw error;
@@ -113,7 +126,13 @@ export async function analyzeApplication(applicationId: string): Promise<void> {
  */
 export async function runTriageWithTracking(
   applicationId: string,
-  options: { eventName: string; runId?: string; rethrow?: boolean }
+  options: {
+    eventName: string;
+    runId?: string;
+    rethrow?: boolean;
+    /** Pausa após cada etapa (só na simulação, para dar tempo de ver). */
+    stepPauseMs?: number;
+  }
 ): Promise<void> {
   const application = await findApplicationById(applicationId);
   if (!application) return;
@@ -130,13 +149,26 @@ export async function runTriageWithTracking(
     ).id;
 
   const startedAt = new Date();
-  await updateAgentRun(runId, { status: "RUNNING", attempts: 1, startedAt });
+  const pause = options.stepPauseMs ?? 0;
+  const step: TriageStepReporter = async (label) => {
+    await updateAgentRun(runId, { summary: label });
+    if (pause > 0) await new Promise((r) => setTimeout(r, pause));
+  };
+
+  await updateAgentRun(runId, {
+    status: "RUNNING",
+    attempts: 1,
+    startedAt,
+    summary: `Iniciando a análise de ${application.name}`,
+  });
 
   try {
-    await analyzeApplication(applicationId);
+    const result = await analyzeApplication(applicationId, step);
     await updateAgentRun(runId, {
       status: "SUCCEEDED",
-      summary: "Candidatura analisada pela IA.",
+      summary: result
+        ? `Nota ${result.score}/100 para ${application.name}`
+        : "Candidatura analisada pela IA.",
       durationMs: Date.now() - startedAt.getTime(),
       finishedAt: new Date(),
     });

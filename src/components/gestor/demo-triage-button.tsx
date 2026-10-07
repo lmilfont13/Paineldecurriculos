@@ -14,7 +14,9 @@ export function DemoTriageButton() {
     startTransition(async () => {
       try {
         const response = await runDemoTriage();
-        setResult(`Demonstração iniciada para ${response.candidateName}. Use “Atualizar” no monitor para acompanhar e abra a candidatura quando concluir.`);
+        setResult(
+          `Simulação iniciada na vaga “${response.jobTitle}”: ${response.candidates.join(", ")} entraram na fila. Acompanhe acima — cada etapa aparece sozinha. No fim, veja as notas em Candidatos.`
+        );
       } catch (error) {
         setResult(error instanceof Error ? error.message : "Não foi possível executar a demonstração.");
       }
@@ -33,10 +35,10 @@ export function DemoTriageButton() {
               Laboratório
             </p>
             <h2 className="mt-1 text-sm font-semibold text-[#18181b]">
-              Ver o Agente de Triagem trabalhando
+              Sala de simulação · Agente de Triagem
             </h2>
             <p className="mt-1 max-w-[650px] text-[11px] leading-5 text-[#71717a]">
-              Cria uma candidatura fictícia com currículo PDF real, executa a mesma análise de IA e registra a execução no monitor. Não envia e-mail para ninguém.
+              Coloca 4 candidatos fictícios na fila (perfis forte, médio e fraco), cada um com currículo em PDF, e mostra o agente baixando, lendo e avaliando um por vez. Leva cerca de 1 minuto. Não envia e-mail para ninguém.
             </p>
           </div>
         </div>
@@ -48,7 +50,7 @@ export function DemoTriageButton() {
           className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#171413] px-4 py-2.5 text-[11px] font-semibold text-white shadow-sm hover:bg-[#292321] disabled:cursor-wait disabled:opacity-70"
         >
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-          {pending ? "Agente trabalhando..." : "Executar demonstração"}
+          {pending ? "Preparando a fila..." : "Iniciar simulação"}
         </button>
       </div>
 

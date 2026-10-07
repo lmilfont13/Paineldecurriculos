@@ -3,12 +3,17 @@ import { unstable_rethrow } from "next/navigation";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
+import { activeRunsSignature } from "@/server/models/simulation.model";
 import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
 import { DemoTriageButton } from "@/components/gestor/demo-triage-button";
 
 import { loadAgentCenter } from "@/server/controllers/ai-status.controller";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
+
+// A sala de simulação roda 4 análises em sequência depois da resposta
+// (after()); o tempo da função precisa cobrir todas.
+export const maxDuration = 120;
 
 const agents = [
   {
@@ -125,7 +130,8 @@ export default async function AgentesPage() {
       <LiveRefresh
         active={runMetrics.queued + runMetrics.running > 0}
         watchActiveRuns
-        initialActiveRuns={runMetrics.queued + runMetrics.running}
+        initialSignature={activeRunsSignature(runs)}
+        intervalMs={2000}
       />
       <AgentLiveMonitor runs={liveRuns} />
 

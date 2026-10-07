@@ -6,6 +6,7 @@ import { useEffect } from "react";
 type AiProgress = {
   states: { id: string; aiState: string }[];
   activeRuns: number;
+  runsSignature: string;
 };
 
 const ANALYZING = new Set(["WAITING", "PROCESSING"]);
@@ -19,21 +20,21 @@ const ANALYZING = new Set(["WAITING", "PROCESSING"]);
  * router.refresh() UMA vez, quando algo de fato mudou.
  *
  * - `applicationIds`: candidaturas em análise na tela.
- * - `watchActiveRuns`: tela de agentes — atualiza quando a fila de execuções
- *   ativas diminui.
+ * - `watchActiveRuns`: tela de agentes — atualiza quando uma execução ativa
+ *   muda de etapa (`initialSignature` = como estavam ao renderizar).
  */
 export function LiveRefresh({
   active,
   applicationIds = [],
   watchActiveRuns = false,
-  initialActiveRuns = 0,
+  initialSignature = "",
   intervalMs = 5000,
   maxMs = 600000,
 }: {
   active: boolean;
   applicationIds?: string[];
   watchActiveRuns?: boolean;
-  initialActiveRuns?: number;
+  initialSignature?: string;
   intervalMs?: number;
   maxMs?: number;
 }) {
@@ -73,7 +74,7 @@ export function LiveRefresh({
         const data = (await res.json()) as AiProgress;
         const changed =
           data.states.some((s) => !ANALYZING.has(s.aiState)) ||
-          (watchActiveRuns && data.activeRuns < initialActiveRuns);
+          (watchActiveRuns && data.runsSignature !== initialSignature);
 
         if (changed) {
           stopped = true;
@@ -92,7 +93,7 @@ export function LiveRefresh({
       if (timer) clearTimeout(timer);
       controller?.abort();
     };
-  }, [active, idsKey, watchActiveRuns, initialActiveRuns, intervalMs, maxMs, router]);
+  }, [active, idsKey, watchActiveRuns, initialSignature, intervalMs, maxMs, router]);
 
   return null;
 }
