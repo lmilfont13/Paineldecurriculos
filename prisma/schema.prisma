@@ -281,6 +281,7 @@ model AgentRun {
 enum AgentType {
   TRIAGE
   COMMUNICATION
+  INTELLIGENCE
 }
 
 enum AgentRunStatus {
