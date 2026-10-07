@@ -2,6 +2,7 @@
 
 import {
   Briefcase,
+  Bot,
   ClipboardList,
   LayoutDashboard,
   LogOut,
