@@ -29,12 +29,13 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  users        User[]
-  jobs         Job[]
-  formFields   FormField[]
-  applications Application[]
-  auditLogs    AuditLog[]
-  agentRuns    AgentRun[]
+  users         User[]
+  jobs          Job[]
+  formFields    FormField[]
+  applications  Application[]
+  auditLogs     AuditLog[]
+  agentRuns     AgentRun[]
+  talentFolders TalentFolder[]
 }
 
 model User {
@@ -164,6 +165,7 @@ model Application {
   /// Candidatura da sala de simulação: fora de métricas, painel e Inteligência.
   isDemo       Boolean   @default(false)
   photoPath    String?
+  aiProfile    String?
   managerNotes String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -174,13 +176,14 @@ model Application {
   interviewMode     String? // "Videochamada" | "Presencial" | "Telefone"
   interviewLocation String? // link da chamada, endereço ou telefone
 
-  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  company       Company        @relation(fields: [companyId], references: [id])
-  candidate     Candidate?     @relation(fields: [candidateId], references: [id])
+  job           Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company       Company            @relation(fields: [companyId], references: [id])
+  candidate     Candidate?         @relation(fields: [candidateId], references: [id])
   answers       Answer[]
   statusEvents  StatusEvent[]
   notifications Notification[]
   agentRuns     AgentRun[]
+  talentItems   TalentFolderItem[]
 
   @@unique([candidateId, jobId])
   @@index([companyId, status, createdAt])
@@ -312,4 +315,31 @@ enum AgentRunStatus {
   RUNNING
   SUCCEEDED
   FAILED
+}
+
+/// Banco de talentos: pastas por perfil para candidatos que não servem para a
+/// vaga em que se inscreveram, mas podem servir para outras.
+model TalentFolder {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  createdAt DateTime @default(now())
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   TalentFolderItem[]
+
+  @@unique([companyId, name])
+}
+
+model TalentFolderItem {
+  id            String   @id @default(cuid())
+  folderId      String
+  applicationId String
+  addedAt       DateTime @default(now())
+
+  folder      TalentFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, applicationId])
+  @@index([applicationId])
 }

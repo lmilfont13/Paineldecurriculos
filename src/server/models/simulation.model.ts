@@ -3,6 +3,13 @@
  * reais em /public/demo, para ver o Agente de Triagem trabalhando etapa por
  * etapa. Os e-mails usam o domínio reservado .invalid — nunca recebem nada.
  */
+/** Quantos candidatos reais entram numa rodada da sala (cabe no tempo da função). */
+export const SIMULATION_REAL_LIMIT = 8;
+/** Pausa entre etapas com candidatos reais: dá para acompanhar sem demorar. */
+export const SIMULATION_REAL_STEP_PAUSE_MS = 700;
+
+export type SimulationJobOption = { id: string; title: string; count: number };
+
 export type SimulationCandidate = {
   email: string;
   name: string;

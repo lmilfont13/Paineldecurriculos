@@ -440,6 +440,7 @@ export function updateApplicationAi(
     aiReasoning?: string | null;
     aiModel?: string | null;
     aiChecklist?: Prisma.InputJsonValue | typeof Prisma.DbNull;
+    aiProfile?: string | null;
     aiState: "WAITING" | "PROCESSING" | "DONE" | "FAILED" | "NO_RESUME";
   }
 ) {
@@ -494,4 +495,31 @@ export async function findApplicationIdsByJob(companyId: string, jobId: string) 
     select: { id: true },
   });
   return rows.map((r) => r.id);
+}
+
+/**
+ * Candidaturas reais (não demonstração) para a sala de simulação: mais
+ * recentes primeiro, de uma vaga ou de todas.
+ */
+export function findRealApplicationsForSimulation(
+  companyId: string,
+  jobId: string | null,
+  limit: number
+) {
+  return prisma.application.findMany({
+    where: { companyId, isDemo: false, ...(jobId ? { jobId } : {}) },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { id: true, name: true },
+  });
+}
+
+/** Quantas candidaturas reais cada vaga tem (seletor da sala). */
+export async function countRealApplicationsByJob(companyId: string) {
+  const rows = await prisma.application.groupBy({
+    by: ["jobId"],
+    where: { companyId, isDemo: false },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.jobId, r._count._all]));
 }

@@ -108,3 +108,24 @@ export function readChecklist(value: unknown): ChecklistItem[] {
     }))
     .filter((v) => v.criterion);
 }
+
+/**
+ * Perfil profissional resumido pela IA (ex.: "Motorista e entregador"), usado
+ * para sugerir o nome da pasta no banco de talentos. Só área/função: corta
+ * aspas, pontuação final e qualquer coisa longa demais.
+ */
+export function parseProfile(raw: string): string | null {
+  let value: unknown;
+  try {
+    value = (JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { profile?: unknown }).profile;
+  } catch {
+    return null;
+  }
+  const text = String(value ?? "")
+    .replace(/["“”'`]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[.;:,!]+$/, "")
+    .trim();
+  if (text.length < 3 || text.length > 48) return null;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

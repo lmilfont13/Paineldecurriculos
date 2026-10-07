@@ -4,6 +4,7 @@ import {
   Briefcase,
   Bot,
   ClipboardList,
+  FolderOpen,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -16,6 +17,7 @@ const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
   { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
+  { href: "/talentos", label: "Talentos", Icon: FolderOpen },
   { href: "/agentes", label: "Agentes", Icon: Bot },
   { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList, secondary: true },
   { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings, secondary: true },
@@ -227,7 +229,7 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
     >
       {NAV.map((item) => {
         const active = isActive(pathname, item.href);
@@ -236,7 +238,7 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
             key={item.href}
             href={item.href}
             className={
-              "relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] " +
+              "relative flex h-16 min-w-0 flex-col items-center justify-center gap-1 truncate px-0.5 text-[10px] " +
               (active ? "font-medium text-[#0a0a0a]" : "text-[#71717a]")
             }
           >
