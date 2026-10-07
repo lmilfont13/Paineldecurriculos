@@ -11,18 +11,33 @@ import type {
 import { findUserByEmail } from "@/server/repositories/user.repository";
 
 /**
+ * E-mail da sessão, validado pela assinatura do JWT (getClaims).
+ *
+ * getClaims() verifica o access token localmente com a chave pública do
+ * projeto (JWKS, ES256, em cache) e só fala com o Auth server para renovar
+ * um token vencido. getUser() chamava /auth/v1/user em toda navegação
+ * (~1.000 chamadas/dia). `cache()` deduplica dentro do mesmo request.
+ */
+export const getVerifiedSessionEmail = cache(
+  async (): Promise<string | null> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return null;
+    const email = data.claims.email;
+    return typeof email === "string" && email.length > 0 ? email : null;
+  }
+);
+
+/**
  * Resolve o usuário da sessão Supabase para o usuário de domínio (tabela User).
  * Retorna null se não houver sessão ou se o e-mail não tiver cadastro interno.
  * `cache()` garante uma única resolução por request.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+  const email = await getVerifiedSessionEmail();
+  if (!email) return null;
 
-  const dbUser = await findUserByEmail(user.email);
+  const dbUser = await findUserByEmail(email);
   if (!dbUser) return null;
 
   return {

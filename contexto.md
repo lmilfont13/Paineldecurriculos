@@ -70,8 +70,8 @@ do Luckas.**
 | Serviço | Para que serve | Onde administrar |
 |---|---|---|
 | **GitHub** | Guarda o código. Repositório privado `milfontz/mt_triagem`. | github.com |
-| **Vercel** | Hospeda o site. Projeto `mt-triagem`, publica sozinho a cada push. Região: São Paulo (`gru1`). | vercel.com |
-| **Supabase** | Banco de dados, logins (gestor e candidatos) e arquivos: currículos no bucket privado `resumes` e logos no público `logos`. Projeto `hfdtitpcgauupvuifkut`, região São Paulo. | supabase.com |
+| **Vercel** | Hospeda o site. Projeto `mt-triagem`, publica sozinho a cada push. Região das funções: Oregon (`pdx1`, em `vercel.json`), a mesma do banco. | vercel.com |
+| **Supabase** | Banco de dados, logins (gestor e candidatos) e arquivos: currículos no bucket privado `resumes` e logos no público `logos`. Projeto "Sistema de Curriculos" (`xbjvwotigqkemjhdyqol`), região Oregon (`us-west-2`). | supabase.com |
 | **Google AI Studio (Gemini)** | A IA que lê os currículos. Modelo `gemini-flash-lite-latest`. | aistudio.google.com |
 | **Inngest** | Roda a leitura da IA em segundo plano, para o candidato nunca ficar esperando. App `triagem`, endereço `https://mt-triagem.vercel.app/api/inngest`. | inngest.com |
 | **Resend** | Envia os e-mails (confirmação, entrevista, recados, resultado). | resend.com |
@@ -133,14 +133,14 @@ atualize os dois lugares.
 
 | Variável | O que é | Onde pegar |
 |---|---|---|
-| `DATABASE_URL` | Conexão com o banco | Supabase → *Connect* → *Session pooler* |
-| `DIRECT_URL` | Conexão usada nas migrations | Mesma do pooler (veja a seção 9) |
+| `DATABASE_URL` | Conexão do site com o banco | Supabase → *Connect* → *Transaction pooler* (porta **6543**), com `?pgbouncer=true&connection_limit=1&pool_timeout=20` no fim |
+| `DIRECT_URL` | Conexão usada **só** nas migrations | Supabase → *Connect* → *Session pooler* (porta **5432**) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Endereço do projeto Supabase | Supabase → *Project Settings → API* |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública do Supabase | Supabase → *Project Settings → API* |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave de administrador do Supabase. **Secreta.** | Supabase → *Project Settings → API* |
 | `GEMINI_API_KEY` | Chave da IA | aistudio.google.com → *Get API key* |
-| `INNGEST_EVENT_KEY` | Envio de tarefas para o Inngest | Inngest → *Manage → Event Keys* |
-| `INNGEST_SIGNING_KEY` | Assinatura das tarefas do Inngest | Inngest → *Manage → Signing Key* |
+| `INNGEST_EVENT_KEY` | Envio de tarefas para o Inngest (ambiente **Production**) | Inngest → *Manage → Event Keys* |
+| `INNGEST_SIGNING_KEY` | Assinatura das tarefas do Inngest (ambiente **Production**) | Inngest → *Manage → Signing Key* |
 | `RESEND_API_KEY` | Envio de e-mails | Resend → *API Keys* |
 | `EMAIL_FROM_ADDRESS` | Remetente dos e-mails (opcional até verificar o domínio) | Um endereço do domínio verificado no Resend |
 | `NEXT_PUBLIC_APP_URL` | Endereço do site | `https://mt-triagem.vercel.app` em produção, `http://localhost:3000` no computador |
@@ -239,11 +239,12 @@ candidato.** Existem testes automáticos que conferem isso nos avisos.
 | Sintoma | Causa | Solução |
 |---|---|---|
 | `EPERM: operation not permitted` ao rodar `npm run build` | O OneDrive trava a pasta `.next` | Pare o `npm run dev`, apague a pasta `.next` e rode de novo. Melhor ainda: deixe o projeto fora do OneDrive. |
-| `Can't reach database server at db.hfdtitpcgauupvuifkut...` | O endereço direto do Supabase só funciona em redes com IPv6 | Use o endereço do *Session pooler* (`aws-1-sa-east-1.pooler.supabase.com`) no `DATABASE_URL` e no `DIRECT_URL`. |
+| `Can't reach database server at db.<projeto>.supabase.co` | O endereço direto do Supabase só funciona em redes com IPv6 | Use o pooler: *Transaction pooler* (6543) no `DATABASE_URL` e *Session pooler* (5432) no `DIRECT_URL`. |
+| `P2024: Timed out fetching a new connection` | Fila de queries na única conexão por função | Confira a `DATABASE_URL` (porta 6543, `connection_limit=1`, `pool_timeout=20`). No código, evite `Promise.all` com várias queries: use `await` em sequência. |
 | Erro de tipo no build da Vercel falando de campo que existe | Cliente do Prisma desatualizado | Já resolvido: o build roda `prisma generate`. Se voltar, confira o script `build` no `package.json`. |
 | Pedido para atualizar o Prisma para a versão 7 | A versão 7 é incompatível com este projeto | Mantenha na 6. |
 | IA com erro de cota | Os modelos Gemini 2.x estão bloqueados para a chave atual | Use `gemini-flash-lite-latest` (já configurado em `src/lib/gemini.ts`). |
-| A IA não roda, o candidato fica em "Analisando…" | Inngest sem chave ou app não sincronizado | Confira as duas chaves do Inngest na Vercel e, no Inngest, sincronize o app com `https://mt-triagem.vercel.app/api/inngest`. |
+| A IA não roda, o candidato fica em "Analisando…" | Inngest sem chave ou app não sincronizado | Confira as duas chaves do Inngest na Vercel (Production) e, no Inngest, sincronize o app com `https://mt-triagem.vercel.app/api/inngest`. Sem as chaves, a análise roda pelo plano B (`after()`), e um vigia marca como falha qualquer execução parada há mais de 5 minutos — o gestor pode mandar reanalisar. |
 | Código do Next.js que o Claude sugere não funciona | Este projeto usa o Next.js 16, diferente do que muita documentação mostra | Peça ao Claude para ler a documentação em `node_modules/next/dist/docs/` (o AGENTS.md já pede isso). |
 
 ---

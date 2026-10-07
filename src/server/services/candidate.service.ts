@@ -29,6 +29,7 @@ import {
   updateCandidate,
 } from "@/server/repositories/candidate.repository";
 import { findUserByEmail } from "@/server/repositories/user.repository";
+import { getVerifiedSessionEmail } from "@/server/services/auth.service";
 
 /**
  * Candidato da sessão (3ª classe de sessão, separada do staff — CA1).
@@ -36,13 +37,11 @@ import { findUserByEmail } from "@/server/repositories/user.repository";
  */
 export const getSessionCandidate = cache(
   async (): Promise<CandidateProfile | null> => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.email) return null;
+    // JWT validado localmente (getClaims) — sem ida ao Auth server.
+    const email = await getVerifiedSessionEmail();
+    if (!email) return null;
 
-    const candidate = await findCandidateByEmail(user.email);
+    const candidate = await findCandidateByEmail(email);
     if (!candidate) return null;
     return {
       id: candidate.id,
