@@ -52,7 +52,7 @@ describe("runTriageWithTracking (sala de simulação)", () => {
     generate
       .mockResolvedValueOnce('{"score": 88, "reasoning": "Experiência sólida."}')
       .mockResolvedValueOnce(
-        '{"criteria":[{"criterion":"Excel","met":"sim","evidence":"Power BI e planilhas"}]}'
+        '{"criteria":[{"criterion":"Excel","met":"sim","evidence":"Power BI e planilhas"}],"profile":"analista administrativo"}'
       );
 
     await runTriageWithTracking("app1", { eventName: "simulacao/triagem", runId: "run1" });
@@ -70,9 +70,14 @@ describe("runTriageWithTracking (sala de simulação)", () => {
     // Regra 2: a IA só mexe nos campos de IA, nunca no status
     const last = aiUpdates.at(-1)!;
     expect(Object.keys(last).sort()).toEqual(
-      ["aiChecklist", "aiModel", "aiReasoning", "aiScore", "aiState"]
+      ["aiChecklist", "aiModel", "aiProfile", "aiReasoning", "aiScore", "aiState"]
     );
-    expect(last).toMatchObject({ aiScore: 88, aiState: "DONE", aiModel: "groq:teste" });
+    expect(last).toMatchObject({
+      aiScore: 88,
+      aiState: "DONE",
+      aiModel: "groq:teste",
+      aiProfile: "Analista administrativo",
+    });
     expect(last.aiChecklist).toEqual([
       { criterion: "Excel", met: "sim", evidence: "Power BI e planilhas" },
       { criterion: "E-commerce", met: "não", evidence: "" },
