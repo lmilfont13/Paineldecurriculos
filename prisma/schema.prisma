@@ -34,6 +34,7 @@ model Company {
   formFields   FormField[]
   applications Application[]
   auditLogs    AuditLog[]
+  agentRuns    AgentRun[]
 }
 
 model User {
@@ -160,6 +161,7 @@ model Application {
   answers       Answer[]
   statusEvents  StatusEvent[]
   notifications Notification[]
+  agentRuns     AgentRun[]
 
   @@unique([candidateId, jobId])
   @@index([companyId, status, createdAt])
@@ -250,4 +252,40 @@ model AuditLog {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, createdAt(sort: Desc)])
+}
+
+
+model AgentRun {
+  id            String        @id @default(cuid())
+  companyId     String
+  applicationId String?
+  agent         AgentType
+  eventName     String
+  status        AgentRunStatus @default(QUEUED)
+  attempts      Int           @default(0)
+  durationMs    Int?
+  summary       String?
+  error         String?
+  createdAt     DateTime      @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  application   Application?  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, agent, status, createdAt])
+  @@index([applicationId, createdAt])
+}
+
+enum AgentType {
+  TRIAGE
+  COMMUNICATION
+}
+
+enum AgentRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
 }
