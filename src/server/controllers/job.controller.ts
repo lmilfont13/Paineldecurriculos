@@ -13,6 +13,7 @@ import {
   trackWhatsappShare,
   updateCompanyJob,
 } from "@/server/services/job.service";
+import { queueStandbyForJob } from "@/server/services/talent.service";
 
 export type JobFormState = { error: string } | null;
 
@@ -53,6 +54,8 @@ export async function createJobAction(
       entityLabel: parsed.data.title,
     });
   } catch { /* auditoria nunca bloqueia a ação principal */ }
+  // Vaga no ar: confere o banco de talentos em stand-by em segundo plano.
+  if (isPublish) queueStandbyForJob(user.companyId, job.id);
   revalidatePath("/vagas");
   redirect("/vagas");
 }
@@ -137,6 +140,7 @@ export async function setJobStatusAction(
 ): Promise<void> {
   const user = await requireManager();
   const updated = await updateCompanyJob(user.companyId, jobId, { status });
+  if (updated && status === "OPEN") queueStandbyForJob(user.companyId, jobId);
   const actionMap = {
     OPEN: "VAGA_PUBLICADA",
     PAUSED: "VAGA_PAUSADA",

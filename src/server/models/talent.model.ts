@@ -34,7 +34,6 @@ export type TalentFolderSummary = {
   id: string;
   name: string;
   area: string | null;
-  jobId: string | null;
   count: number;
 };
 
