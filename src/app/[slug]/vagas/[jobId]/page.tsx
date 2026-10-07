@@ -17,6 +17,7 @@ import {
   getJobDetailPageData,
   getPublicSession,
 } from "@/server/controllers/public.controller";
+import { appUrl } from "@/lib/env";
 
 export async function generateMetadata({
   params,
@@ -37,13 +38,13 @@ export default async function PublicJobDetailPage({
   params: Promise<{ slug: string; jobId: string }>;
 }) {
   const { slug, jobId } = await params;
-  const [data, candidate] = await Promise.all([
-    getJobDetailPageData(slug, jobId),
-    getPublicSession(),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const data = await getJobDetailPageData(slug, jobId);
+  const candidate = await getPublicSession();
   if (!data) notFound();
   const { company, job, applicantCount } = data;
-  const publicJobUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${company.slug}/vagas/${job.id}`;
+  const publicJobUrl = `${appUrl()}/${company.slug}/vagas/${job.id}`;
   const bullets = requirementsToBullets(job.requirements);
   const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
   const tags = [

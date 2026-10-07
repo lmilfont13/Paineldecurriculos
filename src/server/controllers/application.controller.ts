@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { runInBackground } from "@/lib/background";
 import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
 import {
@@ -12,6 +13,7 @@ import { interviewSchema } from "@/server/models/interview.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   getCompanyApplication,
+  requestApplicationResumeUpload,
   requestReanalysis,
   saveManagerNotes,
   scheduleInterview,
@@ -214,7 +216,7 @@ export async function setApplicationStatusAction(
   if (updated) {
     // Auditoria é importante, mas nunca deve aumentar o tempo percebido
     // da ação principal.
-    void (async () => {
+    runInBackground("auditoria de status", async () => {
       try {
         const app = await getCompanyApplication(user.companyId, applicationId);
         await createAuditLog({
@@ -232,7 +234,7 @@ export async function setApplicationStatusAction(
           },
         });
       } catch { /* auditoria nunca bloqueia a ação principal */ }
-    })();
+    });
   }
   revalidatePath("/candidaturas");
   revalidatePath(`/candidaturas/${applicationId}`);
@@ -278,11 +280,42 @@ export async function submitApplicationAction(
     return { ok: false, error: "Empresa não encontrada." };
   }
 
-  const resume = formData.get("resume");
+  const resumePath = String(formData.get("resumePath") ?? "").trim();
   return submitApplication(
     company.id,
     candidate,
     parsed.data,
-    resume instanceof File ? resume : null
+    resumePath || null
   );
+}
+
+/**
+ * Regra 5: destino assinado para o navegador subir o PDF direto no Storage
+ * (sem passar pelo limite de corpo das funções da Vercel).
+ */
+export async function requestResumeUploadAction(
+  slug: string,
+  jobId: string
+): Promise<
+  { ok: true; path: string; token: string } | { ok: false; error: string }
+> {
+  const candidate = await getSessionCandidate();
+  if (!candidate) {
+    return { ok: false, error: "Sua sessão expirou. Entre novamente." };
+  }
+  const company = await getPublicCompanyBySlug(slug);
+  if (!company) return { ok: false, error: "Empresa não encontrada." };
+
+  const target = await requestApplicationResumeUpload(
+    company.id,
+    jobId,
+    candidate.id
+  );
+  if (!target) {
+    return {
+      ok: false,
+      error: "Não foi possível preparar o envio do currículo. Tente novamente.",
+    };
+  }
+  return { ok: true, ...target };
 }

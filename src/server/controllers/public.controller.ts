@@ -44,7 +44,10 @@ export async function getJobsPageData(
 ): Promise<{ company: PublicCompany; jobs: PublicJob[]; appliedJobIds: string[] } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
-  const [jobs, candidate] = await Promise.all([listOpenJobs(company.id), getSessionCandidate()]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const jobs = await listOpenJobs(company.id);
+  const candidate = await getSessionCandidate();
   const appliedJobIds = candidate
     ? await getAppliedJobIds(candidate.id, jobs.map((j) => j.id))
     : [];
@@ -83,16 +86,16 @@ export async function getApplyPageData(
   if (!company) return null;
   const job = await getOpenJob(company.id, jobId);
   if (!job) return null;
-  const [{ core, custom }, candidate] = await Promise.all([
-    listApplicationFormFields(company.id),
-    getSessionCandidate(),
-  ]);
-  const [prefillAnswers, alreadyAppliedId] = candidate
-    ? await Promise.all([
-        getPrefillAnswers(candidate.id, company.id),
-        getExistingApplicationId(candidate.id, job.id),
-      ])
-    : [{}, null];
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const { core, custom } = await listApplicationFormFields(company.id);
+  const candidate = await getSessionCandidate();
+  const prefillAnswers = candidate
+    ? await getPrefillAnswers(candidate.id, company.id)
+    : {};
+  const alreadyAppliedId = candidate
+    ? await getExistingApplicationId(candidate.id, job.id)
+    : null;
   return {
     company,
     job,
@@ -149,10 +152,10 @@ export async function getMinhasCandidaturasData(slug: string) {
   if (!candidate) {
     return { company, candidate: null, applications: [], unread: [] };
   }
-  const [applications, notifications] = await Promise.all([
-    listCandidateApplications(candidate.id),
-    listCandidateNotifications(candidate.id),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const applications = await listCandidateApplications(candidate.id);
+  const notifications = await listCandidateNotifications(candidate.id);
   return {
     company,
     candidate,

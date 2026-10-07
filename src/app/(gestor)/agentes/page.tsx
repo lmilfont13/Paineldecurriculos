@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { unstable_rethrow } from "next/navigation";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
+import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
 import { DemoTriageButton } from "@/components/gestor/demo-triage-button";
 
-import { requireManager } from "@/server/controllers/guards";
-import { getAgentCenterData } from "@/server/repositories/application.repository";
+import { loadAgentCenter } from "@/server/controllers/ai-status.controller";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
 
@@ -58,8 +59,6 @@ function Status({ tone }: { tone: string }) {
 }
 
 export default async function AgentesPage() {
-  const manager = await requireManager();
-
   const emptyData = {
     windowLabel: "Últimos 7 dias",
     submitted: 0,
@@ -72,10 +71,13 @@ export default async function AgentesPage() {
     runMetrics: { total: 0, succeeded: 0, failed: 0, queued: 0, running: 0 },
   };
 
-  const data = await getAgentCenterData(manager.companyId).catch((error) => {
-    console.error("[agentes] Falha ao carregar telemetria:", error);
-    return emptyData;
-  });
+  const data = await loadAgentCenter()
+    .then((r) => r.data)
+    .catch((error) => {
+      unstable_rethrow(error); // redirect() do guard precisa propagar
+      console.error("[agentes] Falha ao carregar telemetria:", error);
+      return emptyData;
+    });
   const runs = data.runs;
   const runMetrics = data.runMetrics;
 
@@ -120,6 +122,11 @@ export default async function AgentesPage() {
         </div>
       </div>
 
+      <LiveRefresh
+        active={runMetrics.queued + runMetrics.running > 0}
+        watchActiveRuns
+        initialActiveRuns={runMetrics.queued + runMetrics.running}
+      />
       <AgentLiveMonitor runs={liveRuns} />
 
       <IntelligenceAgentCard latestSummary={latestIntelligence?.summary ?? null} latestStatus={latestIntelligence?.status ?? null} />

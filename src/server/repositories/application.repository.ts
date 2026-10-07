@@ -32,6 +32,62 @@ export async function updateAgentRun(
   return prisma.agentRun.update({ where: { id }, data });
 }
 
+const ACTIVE_RUN_STATUSES = ["QUEUED", "RUNNING"] as const;
+const ANALYZING_AI_STATES = ["WAITING", "PROCESSING"] as const;
+
+/**
+ * Watchdog: execuções QUEUED/RUNNING paradas há mais que o limite viram
+ * FAILED (a função foi congelada ou o evento nunca chegou). Candidaturas
+ * presas em "Analisando…" voltam como FAILED para o gestor poder reanalisar.
+ * Regra 2: só mexe em aiState, nunca em AppStatus.
+ */
+export async function failStaleAgentRuns(
+  cutoff: Date,
+  reason: string,
+  companyId?: string
+): Promise<{ runs: number; applications: number }> {
+  const scope = companyId ? { companyId } : {};
+  const now = new Date();
+
+  const runs = await prisma.agentRun.updateMany({
+    where: {
+      ...scope,
+      status: { in: [...ACTIVE_RUN_STATUSES] },
+      OR: [
+        { startedAt: { lt: cutoff } },
+        { startedAt: null, createdAt: { lt: cutoff } },
+      ],
+    },
+    data: { status: "FAILED", error: reason, finishedAt: now },
+  });
+
+  const applications = await prisma.application.updateMany({
+    where: {
+      ...scope,
+      aiState: { in: [...ANALYZING_AI_STATES] },
+      updatedAt: { lt: cutoff },
+    },
+    data: { aiState: "FAILED" },
+  });
+
+  return { runs: runs.count, applications: applications.count };
+}
+
+/** Estado da IA de algumas candidaturas do tenant (polling leve da UI). */
+export function findAiStates(companyId: string, ids: string[]) {
+  return prisma.application.findMany({
+    where: { companyId, id: { in: ids } },
+    select: { id: true, aiState: true },
+  });
+}
+
+/** Execuções ativas do tenant (polling leve da tela de agentes). */
+export function countActiveAgentRuns(companyId: string) {
+  return prisma.agentRun.count({
+    where: { companyId, status: { in: [...ACTIVE_RUN_STATUSES] } },
+  });
+}
+
 export async function getAgentRuns(companyId: string) {
   return prisma.agentRun.findMany({
     where: { companyId },
@@ -46,39 +102,38 @@ export async function getAgentRuns(companyId: string) {
 export async function getAgentCenterData(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [applications, communications, runs] = await Promise.all([
-    prisma.application.findMany({
-      where: { companyId },
-      orderBy: { updatedAt: "desc" },
-      take: 500,
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        aiState: true,
-        aiScore: true,
-        createdAt: true,
-        updatedAt: true,
-        job: { select: { title: true } },
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira.
+  const applications = await prisma.application.findMany({
+    where: { companyId },
+    orderBy: { updatedAt: "desc" },
+    take: 500,
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiState: true,
+      aiScore: true,
+      createdAt: true,
+      updatedAt: true,
+      job: { select: { title: true } },
+    },
+  });
+  const communications = await prisma.statusEvent.count({
+    where: {
+      createdAt: { gte: since },
+      application: { companyId },
+    },
+  });
+  const runs = await prisma.agentRun.findMany({
+    where: { companyId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: {
+      application: {
+        select: { name: true, job: { select: { title: true } } },
       },
-    }),
-    prisma.statusEvent.count({
-      where: {
-        createdAt: { gte: since },
-        application: { companyId },
-      },
-    }),
-    prisma.agentRun.findMany({
-      where: { companyId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: {
-        application: {
-          select: { name: true, job: { select: { title: true } } },
-        },
-      },
-    }),
-  ]);
+    },
+  });
 
   const recentApplications = applications.slice(0, 6);
   const recentRuns = runs;

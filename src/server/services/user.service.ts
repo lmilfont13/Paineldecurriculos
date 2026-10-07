@@ -7,6 +7,7 @@ import {
   findUsersByCompany,
   prismaCreateManagerUser,
 } from "@/server/repositories/user.repository";
+import { appUrl } from "@/lib/env";
 
 export function listCompanyUsers(companyId: string) {
   return findUsersByCompany(companyId);
@@ -40,7 +41,7 @@ export async function inviteManager(
     type: "recovery",
     email,
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha`,
+      redirectTo: `${appUrl()}/redefinir-senha`,
     },
   });
 

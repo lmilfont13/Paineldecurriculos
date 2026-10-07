@@ -9,9 +9,15 @@ import type {
   CandidateProfile,
 } from "@/server/models/candidate.model";
 import {
-  MAX_RESUME_BYTES,
-  RESUME_MIME,
+  isAllowedResumePath,
+  profileResumePrefix,
+  type ResumeUploadTarget,
 } from "@/server/models/application.model";
+import {
+  RESUMES_BUCKET,
+  createResumeUploadTarget,
+  verifyUploadedResume,
+} from "@/server/services/resume-storage.service";
 import {
   anonymizeApplicationsByCandidate,
   findResumePathsByCandidate,
@@ -23,6 +29,7 @@ import {
   updateCandidate,
 } from "@/server/repositories/candidate.repository";
 import { findUserByEmail } from "@/server/repositories/user.repository";
+import { getVerifiedSessionEmail } from "@/server/services/auth.service";
 
 /**
  * Candidato da sessão (3ª classe de sessão, separada do staff — CA1).
@@ -30,13 +37,11 @@ import { findUserByEmail } from "@/server/repositories/user.repository";
  */
 export const getSessionCandidate = cache(
   async (): Promise<CandidateProfile | null> => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.email) return null;
+    // JWT validado localmente (getClaims) — sem ida ao Auth server.
+    const email = await getVerifiedSessionEmail();
+    if (!email) return null;
 
-    const candidate = await findCandidateByEmail(user.email);
+    const candidate = await findCandidateByEmail(email);
     if (!candidate) return null;
     return {
       id: candidate.id,
@@ -128,25 +133,26 @@ export function updateCandidateProfile(
   return updateCandidate(candidateId, data);
 }
 
-/** CA5: sobe um novo currículo do perfil (regra 5: PDF ≤ 5 MB). */
-export async function uploadProfileResume(
+/**
+ * CA5 · Regra 5: URL assinada para o navegador subir o PDF do perfil direto
+ * no Storage (o arquivo não passa pela server action).
+ */
+export function requestProfileResumeUpload(
+  candidateId: string
+): Promise<ResumeUploadTarget | null> {
+  return createResumeUploadTarget(profileResumePrefix(candidateId));
+}
+
+/** Confere o PDF enviado pelo navegador antes de vinculá-lo ao perfil. */
+export async function verifyProfileResume(
   candidateId: string,
-  file: File
+  path: string
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
-  if (file.type !== RESUME_MIME) {
-    return { ok: false, error: "O currículo deve ser um PDF." };
+  if (!isAllowedResumePath(path, profileResumePrefix(candidateId))) {
+    return { ok: false, error: "Currículo inválido. Envie o PDF novamente." };
   }
-  if (file.size > MAX_RESUME_BYTES) {
-    return { ok: false, error: "O currículo deve ter no máximo 5 MB." };
-  }
-  const path = `profile/${candidateId}/${crypto.randomUUID()}.pdf`;
-  const supabase = createAdminClient();
-  const { error } = await supabase.storage
-    .from("resumes")
-    .upload(path, file, { contentType: RESUME_MIME });
-  if (error) {
-    return { ok: false, error: "Falha ao enviar o currículo. Tente novamente." };
-  }
+  const verified = await verifyUploadedResume(path);
+  if (!verified.ok) return verified;
   return { ok: true, path };
 }
 
@@ -167,7 +173,9 @@ export async function deleteCandidateAccount(candidate: {
   const paths = new Set(await findResumePathsByCandidate(candidate.id));
   if (candidate.resumeUrl) paths.add(candidate.resumeUrl);
   if (paths.size > 0) {
-    await admin.storage.from("resumes").remove([...paths]);
+    await admin.storage
+      .from(RESUMES_BUCKET)
+      .remove([...paths].filter((p) => !p.startsWith("demo/")));
   }
 
   // 2. Anonimiza candidaturas e apaga o perfil

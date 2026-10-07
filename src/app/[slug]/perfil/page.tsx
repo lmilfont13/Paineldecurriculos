@@ -20,10 +20,10 @@ export default async function PerfilPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [company, candidate] = await Promise.all([
-    getTenant(slug),
-    getPublicSession(),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const company = await getTenant(slug);
+  const candidate = await getPublicSession();
   if (!company) notFound();
   if (!candidate) {
     redirect(`/${slug}/entrar?next=${encodeURIComponent(`/${slug}/perfil`)}`);

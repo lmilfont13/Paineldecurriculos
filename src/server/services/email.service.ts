@@ -2,6 +2,7 @@ import "server-only";
 
 import { resend } from "@/lib/resend";
 import { brandForeground } from "@/server/models/company.model";
+import { appUrl, readEnv } from "@/lib/env";
 
 /**
  * Identidade de quem envia. Para o candidato, quem escreve é a empresa, não
@@ -14,9 +15,9 @@ export type EmailBrand = {
   logoUrl: string | null;
 };
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+const APP_URL = appUrl();
 /** Endereço de envio. Com domínio verificado no Resend, troque por um da empresa. */
-const FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || "onboarding@resend.dev";
+const FROM_ADDRESS = readEnv("EMAIL_FROM_ADDRESS") || "onboarding@resend.dev";
 
 function from(brand: EmailBrand) {
   return `${brand.name.replace(/[<>"]/g, "")} <${FROM_ADDRESS}>`;

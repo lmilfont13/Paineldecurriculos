@@ -16,10 +16,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   const { empresa } = await searchParams;
   const slug = empresa === "plataforma" ? null : (empresa ?? (await getDefaultCompanySlug()));
-  const [company, companies] = await Promise.all([
-    slug ? getPublicCompanyBySlug(slug) : null,
-    listPublicCompanies(),
-  ]);
+  // Sequencial: com connection_limit=1 o Promise.all só enfileira na
+  // mesma conexão e aumenta o risco de P2024 (pool_timeout).
+  const company = slug ? await getPublicCompanyBySlug(slug) : null;
+  const companies = await listPublicCompanies();
 
   return (
     <main className="min-h-screen bg-[#f4f2ef] text-[#1c1917]" style={{ ...(company ? (brandCssVars(company) as React.CSSProperties) : {}) }}>

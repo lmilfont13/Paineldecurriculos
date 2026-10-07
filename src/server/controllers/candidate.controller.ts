@@ -17,7 +17,8 @@ import {
   loginCandidate,
   signupCandidate,
   updateCandidateProfile,
-  uploadProfileResume,
+  requestProfileResumeUpload,
+  verifyProfileResume,
 } from "@/server/services/candidate.service";
 
 export type CandidateAuthState = { error: string } | null;
@@ -83,12 +84,13 @@ export async function updateProfileAction(
   const phone = String(formData.get("phone") ?? "").trim();
   if (name.length < 2) return { error: "Informe seu nome completo." };
 
+  // Regra 5: o PDF já foi enviado pelo navegador direto ao Storage.
   let resumeUrl: string | null | undefined = undefined;
-  const resume = formData.get("resume");
-  if (resume instanceof File && resume.size > 0) {
-    const uploaded = await uploadProfileResume(candidate.id, resume);
-    if (!uploaded.ok) return { error: uploaded.error };
-    resumeUrl = uploaded.path;
+  const resumePath = String(formData.get("resumePath") ?? "").trim();
+  if (resumePath) {
+    const verified = await verifyProfileResume(candidate.id, resumePath);
+    if (!verified.ok) return { error: verified.error };
+    resumeUrl = verified.path;
   }
 
   await updateCandidateProfile(candidate.id, {
@@ -98,6 +100,19 @@ export async function updateProfileAction(
   });
   revalidatePath(`/${slug}/perfil`);
   return null;
+}
+
+/** CA5 · Destino assinado para subir o PDF do perfil direto no Storage. */
+export async function requestProfileResumeUploadAction(): Promise<
+  { ok: true; path: string; token: string } | { ok: false; error: string }
+> {
+  const candidate = await getSessionCandidate();
+  if (!candidate) return { ok: false, error: "Sessão expirada. Entre novamente." };
+  const target = await requestProfileResumeUpload(candidate.id);
+  if (!target) {
+    return { ok: false, error: "Não foi possível preparar o envio do currículo." };
+  }
+  return { ok: true, ...target };
 }
 
 /** Retirar candidatura — decisão do candidato, apaga o registro. */

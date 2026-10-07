@@ -1,5 +1,7 @@
 import "server-only";
 
+import { readEnv } from "@/lib/env";
+
 const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "qwen/qwen3.8-27b";
 
@@ -9,7 +11,7 @@ export async function geminiGenerate(params: {
   maxTokens?: number;
   json?: boolean;
 }): Promise<string> {
-  const key = process.env.GROQ_API_KEY;
+  const key = readEnv("GROQ_API_KEY");
   if (!key) throw new Error("GROQ_API_KEY não configurada");
 
   const res = await fetch(ENDPOINT, {

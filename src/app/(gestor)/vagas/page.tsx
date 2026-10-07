@@ -9,6 +9,7 @@ import {
   jobStatusLabels,
   workModeLabels,
 } from "@/server/models/job.model";
+import { appUrl } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Vagas · Triagem" };
 
@@ -26,7 +27,7 @@ const statusStyles = {
 export default async function VagasPage() {
   const { companySlug, jobs } = await getVagasPageData();
   const openCount = jobs.filter((j) => j.status === "OPEN").length;
-  const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${companySlug}/vagas`;
+  const publicUrl = `${appUrl()}/${companySlug}/vagas`;
 
   return (
     <>

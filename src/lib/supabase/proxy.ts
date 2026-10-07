@@ -8,6 +8,8 @@ const PROTECTED_PREFIXES = [
   "/candidaturas",
   "/formulario",
   "/configuracoes",
+  "/agentes",
+  "/auditoria",
   "/admin",
 ];
 
@@ -22,9 +24,9 @@ function isProtectedPath(pathname: string): boolean {
  * redireciona para /login quem acessa área protegida sem sessão.
  */
 export async function updateSession(request: NextRequest) {
-  // Performance: só as rotas protegidas precisam do getUser() (round-trip de
-  // auth) na borda. Nas páginas públicas, a sessão do candidato é resolvida
-  // na própria página quando necessário — evita uma chamada de auth por acesso.
+  // Performance: só as rotas protegidas validam a sessão na borda. Nas
+  // páginas públicas, a sessão do candidato é resolvida na própria página
+  // quando necessário.
   if (!isProtectedPath(request.nextUrl.pathname)) {
     return NextResponse.next({ request });
   }
@@ -32,8 +34,8 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),
     {
       cookies: {
         getAll() {
@@ -52,11 +54,15 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Importante: não inserir lógica entre createServerClient e auth.getUser(),
-  // e sempre retornar o supabaseResponse para não perder cookies de sessão.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Importante: não inserir lógica entre createServerClient e
+  // auth.getClaims(), e sempre retornar o supabaseResponse para não perder
+  // cookies de sessão.
+  //
+  // getClaims() renova o token se estiver vencendo e valida o JWT localmente
+  // com a chave pública do projeto (JWKS em cache, ES256) — sem chamar
+  // /auth/v1/user a cada navegação, como o getUser() fazia.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   if (!user && isProtectedPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();

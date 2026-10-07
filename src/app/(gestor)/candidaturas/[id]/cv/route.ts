@@ -5,7 +5,7 @@ import { getResumeSignedUrl } from "@/server/services/application.service";
 
 /** Download do currículo: redireciona para URL assinada do Storage privado. */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await requireManager();
@@ -17,5 +17,7 @@ export async function GET(
       { status: 404 }
     );
   }
-  return NextResponse.redirect(url);
+  // URL assinada do Storage (absoluta) ou arquivo demo de /public (relativo,
+  // resolvido contra o próprio request).
+  return NextResponse.redirect(new URL(url, request.url));
 }

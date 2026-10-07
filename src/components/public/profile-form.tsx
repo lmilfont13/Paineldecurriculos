@@ -5,9 +5,11 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
   deleteAccountAction,
+  requestProfileResumeUploadAction,
   updateProfileAction,
   type CandidateAuthState,
 } from "@/server/controllers/candidate.controller";
+import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
 
 const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
@@ -29,13 +31,31 @@ export function ProfileForm({
   const [deleting, startDelete] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, startUpload] = useTransition();
 
   return (
     <div className="space-y-6">
       <form
         action={(formData) => {
-          setSaved(true);
-          formAction(formData);
+          setUploadError(null);
+          // Regra 5: o PDF sobe direto do navegador para o Storage; a action
+          // recebe só o caminho (sem o limite de corpo da Vercel).
+          const file = formData.get("resume");
+          formData.delete("resume");
+          startUpload(async () => {
+            if (file instanceof File && file.size > 0) {
+              const problem = await checkResumeFile(file);
+              if (problem) return setUploadError(problem);
+              const target = await requestProfileResumeUploadAction();
+              if (!target.ok) return setUploadError(target.error);
+              const uploaded = await uploadResumeToStorage(file, target);
+              if (!uploaded.ok) return setUploadError(uploaded.error);
+              formData.set("resumePath", target.path);
+            }
+            setSaved(true);
+            formAction(formData);
+          });
         }}
         className="space-y-5 rounded-3xl border border-[#e4e4e7] bg-white p-6"
       >
@@ -106,33 +126,33 @@ export function ProfileForm({
               ref={fileRef}
               type="file"
               name="resume"
-              accept="application/pdf"
+              accept="application/pdf,.pdf"
               className="hidden"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
           </div>
         </div>
 
-        {state?.error && (
+        {(uploadError ?? state?.error) && (
           <p role="alert" className="text-sm text-red-600">
-            {state.error}
+            {uploadError ?? state?.error}
           </p>
         )}
-        {saved && !state?.error && !pending && (
+        {saved && !uploadError && !state?.error && !pending && !uploading && (
           <p className="text-sm text-[#1f7a4d]">Perfil atualizado.</p>
         )}
 
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || uploading}
             className="h-10 rounded-2xl px-6 text-sm font-medium hover:opacity-90 disabled:opacity-60"
             style={{
               backgroundColor: "var(--brand-primary)",
               color: "var(--brand-foreground)",
             }}
           >
-            {pending ? "Salvando…" : "Salvar perfil"}
+            {uploading ? "Enviando currículo…" : pending ? "Salvando…" : "Salvar perfil"}
           </button>
         </div>
       </form>

@@ -45,6 +45,8 @@ model User {
   role      Role     @default(MANAGER)
   createdAt DateTime @default(now())
   company   Company? @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
 }
 
 enum Role {
@@ -53,25 +55,27 @@ enum Role {
 }
 
 model Job {
-  id           String    @id @default(cuid())
-  companyId    String
-  title        String
-  description  String
-  requirements String?
-  location     String?
-  contract     Contract  @default(CLT)
-  workMode     WorkMode  @default(REMOTE)
-  status       JobStatus @default(DRAFT)
-  aiCriteria   String[]  @default([])
-  aiMinScore      Int       @default(70)
-  whatsappShares  Int       @default(0)
+  id             String    @id @default(cuid())
+  companyId      String
+  title          String
+  description    String
+  requirements   String?
+  location       String?
+  contract       Contract  @default(CLT)
+  workMode       WorkMode  @default(REMOTE)
+  status         JobStatus @default(DRAFT)
+  aiCriteria     String[]  @default([])
+  aiMinScore     Int       @default(70)
+  whatsappShares Int       @default(0)
   /// Quando a vaga entrou no ar pela última vez ("publicada há X dias").
-  publishedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications Application[]
+
+  @@index([companyId, status])
 }
 
 enum Contract {
@@ -106,6 +110,8 @@ model FormField {
 
   company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   answers Answer[]
+
+  @@index([companyId, order])
 }
 
 enum FieldType {
@@ -185,6 +191,7 @@ model Notification {
   application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([candidateId, readAt])
+  @@index([applicationId])
 }
 
 enum NotificationType {
@@ -233,6 +240,9 @@ model Answer {
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   field       FormField   @relation(fields: [fieldId], references: [id])
+
+  @@index([applicationId])
+  @@index([fieldId])
 }
 
 /// Trilha de auditoria — quem fez o quê e quando, por empresa.
@@ -254,24 +264,23 @@ model AuditLog {
   @@index([companyId, createdAt(sort: Desc)])
 }
 
-
 model AgentRun {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   companyId     String
   applicationId String?
   agent         AgentType
   eventName     String
   status        AgentRunStatus @default(QUEUED)
-  attempts      Int           @default(0)
+  attempts      Int            @default(0)
   durationMs    Int?
   summary       String?
   error         String?
-  createdAt     DateTime      @default(now())
+  createdAt     DateTime       @default(now())
   startedAt     DateTime?
   finishedAt    DateTime?
 
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  application   Application?  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([companyId, createdAt])
   @@index([companyId, agent, status, createdAt])
