@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { CompareActions } from "@/components/gestor/compare-actions";
 import { getCompareData } from "@/server/controllers/gestor.controller";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 
 export const metadata: Metadata = { title: "Comparar candidatos · Triagem" };
 
@@ -57,9 +57,11 @@ export default async function CompararPage({
               )}
 
               <div className="flex flex-col items-center pt-2">
-                <span className="flex size-[52px] items-center justify-center rounded-full bg-[#1c1917] text-[15px] font-bold text-white">
-                  {personInitials(app.name)}
-                </span>
+                <CandidateAvatar
+                  name={app.name}
+                  photoUrl={app.photoUrl}
+                  className="flex size-[52px] items-center justify-center rounded-full bg-[#1c1917] text-[15px] font-bold text-white"
+                />
                 <h2 className="mt-3 text-[15px] font-semibold text-[#0a0a0a]">
                   {app.name}
                 </h2>

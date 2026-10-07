@@ -35,6 +35,8 @@ export default async function CandidaturasPage({
     jobId: app.job.id,
     jobTitle: app.job.title,
     aiMinScore: app.job.aiMinScore,
+    isDemo: app.isDemo,
+    photoUrl: app.photoUrl,
   }));
 
   return (

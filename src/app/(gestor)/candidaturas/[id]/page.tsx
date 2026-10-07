@@ -8,6 +8,7 @@ import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
+import { readChecklist } from "@/server/models/ai.model";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
 import {
   appStatusLabels,
@@ -15,7 +16,7 @@ import {
   formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import {
   interviewSummary,
   isPastInterview,
@@ -57,6 +58,7 @@ export default async function CandidaturaDetailPage({
     ...customAnswers.map((a) => [a.field.label, a.value] as [string, string]),
   ];
   const analyzing = app.aiState === "WAITING" || app.aiState === "PROCESSING";
+  const checklist = readChecklist(app.aiChecklist);
 
   const interview = app.interviewAt
     ? {
@@ -91,12 +93,19 @@ export default async function CandidaturaDetailPage({
               Candidatura · {app.job.title}
             </p>
             <div className="mt-5 flex items-center gap-4">
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm">
-                {personInitials(app.name)}
-              </span>
+              <CandidateAvatar
+                name={app.name}
+                photoUrl={app.photoUrl}
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm"
+              />
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
                   {app.name}
+                  {app.isDemo && (
+                    <span className="ml-2 rounded-full bg-[#f5f3ff] px-2 py-0.5 align-middle text-[11px] font-medium text-[#6d28d9]">
+                      Demonstração
+                    </span>
+                  )}
                 </h1>
                 <p className="mt-1 text-xs text-[#71717a]">
                   Candidatou-se em {formatAppliedAt(app.createdAt, true)}
@@ -164,6 +173,12 @@ export default async function CandidaturaDetailPage({
                       : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
                   </span>
                 </div>
+                {app.aiModel && (
+                  <p className="mt-3 text-[11px] text-[#a1a1aa]">
+                    Analisado por {app.aiModel.replace(/^groq:/, "")}
+                    {app.resumeUrl ? "" : ", só com as respostas do formulário"}
+                  </p>
+                )}
               </>
             ) : (
               <div className="mt-5 rounded-xl bg-[#fafaf9] p-4 text-sm text-[#71717a]">
@@ -172,7 +187,7 @@ export default async function CandidaturaDetailPage({
                     <span className="size-2 animate-pulse rounded-full bg-[#8a8781]" />
                   )}
                   {app.aiState === "NO_RESUME"
-                    ? "Sem currículo, então a IA não fez a leitura. Avalie pelas respostas abaixo."
+                    ? "Não havia material para a IA ler (sem PDF legível e sem respostas). Avalie pelo que está abaixo."
                     : app.aiState === "FAILED"
                       ? "A análise falhou. Você pode pedir uma nova tentativa."
                       : "Analisando o currículo… o resultado aparece aqui em instantes."}
@@ -180,13 +195,48 @@ export default async function CandidaturaDetailPage({
               </div>
             )}
 
-            {app.aiState === "FAILED" && app.resumeUrl && (
+            {(app.aiState === "FAILED" || app.aiState === "NO_RESUME") && (
               <div className="mt-4">
                 <ReanalyzeButton applicationId={app.id} />
               </div>
             )}
 
-            {app.job.aiCriteria.length > 0 && (
+            {checklist.length > 0 ? (
+              <div className="mt-6 border-t border-[#e4e4e7] pt-5">
+                <h3 className="text-[13px] font-semibold text-[#0a0a0a]">
+                  Critério por critério
+                </h3>
+                <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
+                  Explica a nota; não muda o cálculo dela.
+                </p>
+                <ul className="mt-3 space-y-2.5">
+                  {checklist.map((item) => (
+                    <li key={item.criterion} className="flex gap-2.5 text-[12px] leading-5">
+                      <span
+                        aria-hidden
+                        className={
+                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold " +
+                          (item.met === "sim"
+                            ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                            : item.met === "parcial"
+                              ? "bg-[#fff7e6] text-[#a16207]"
+                              : "bg-[#f4f4f5] text-[#a1a1aa]")
+                        }
+                      >
+                        {item.met === "sim" ? "✓" : item.met === "parcial" ? "~" : "–"}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="font-medium text-[#0a0a0a]">{item.criterion}</span>
+                        <span className="sr-only">: {item.met === "sim" ? "atende" : item.met === "parcial" ? "atende em parte" : "não encontrado"}</span>
+                        {item.evidence && (
+                          <span className="block text-[#71717a]">{item.evidence}</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : app.job.aiCriteria.length > 0 && (
               <div className="mt-6 border-t border-[#e4e4e7] pt-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
                   Critérios avaliados

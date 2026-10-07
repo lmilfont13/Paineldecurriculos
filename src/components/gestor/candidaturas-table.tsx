@@ -26,7 +26,7 @@ import {
   type SortKey,
   type StageKey,
 } from "@/server/models/candidate-list.model";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 
 export type { CandidaturaRow };
 
@@ -397,12 +397,19 @@ export function CandidaturasTable({
                 href={`/candidaturas/${row.id}`}
                 className="flex min-w-0 items-center gap-3 focus-visible:outline-none"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
-                  {personInitials(row.name)}
-                </span>
+                <CandidateAvatar
+                  name={row.name}
+                  photoUrl={row.photoUrl}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
+                />
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                     {row.name}
+                    {row.isDemo && (
+                      <span className="ml-1.5 rounded-full bg-[#f5f3ff] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#6d28d9]">
+                        Demonstração
+                      </span>
+                    )}
                   </span>
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {row.jobTitle}

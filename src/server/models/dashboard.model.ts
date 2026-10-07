@@ -40,6 +40,7 @@ export type PriorityApplication = {
   status: AppStatus;
   meetsMinimum: boolean;
   createdAt: Date;
+  photoPath: string | null;
 };
 
 export function personInitials(name: string): string {

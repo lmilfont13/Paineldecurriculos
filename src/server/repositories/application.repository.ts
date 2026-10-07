@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AIState } from "@prisma/client";
+import { Prisma, type AIState } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -104,8 +104,9 @@ export async function getAgentCenterData(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   // Sequencial: com connection_limit=1 o Promise.all só enfileira.
+  // Números reais: a simulação (isDemo) fica de fora.
   const applications = await prisma.application.findMany({
-    where: { companyId },
+    where: { companyId, isDemo: false },
     orderBy: { updatedAt: "desc" },
     take: 500,
     select: {
@@ -122,7 +123,7 @@ export async function getAgentCenterData(companyId: string) {
   const communications = await prisma.statusEvent.count({
     where: {
       createdAt: { gte: since },
-      application: { companyId },
+      application: { companyId, isDemo: false },
     },
   });
   const runs = await prisma.agentRun.findMany({
@@ -158,8 +159,9 @@ export async function getAgentCenterData(companyId: string) {
 }
 
 export async function getCompanyIntelligenceSnapshot(companyId: string) {
+  // A leitura da Inteligência olha só candidaturas reais (sem simulação).
   const applications = await prisma.application.findMany({
-    where: { companyId },
+    where: { companyId, isDemo: false },
     select: {
       status: true,
       aiState: true,
@@ -241,6 +243,7 @@ export function countApplicationsByCompany(
   return prisma.application.count({
     where: {
       companyId,
+      isDemo: false,
       ...(filters?.since ? { createdAt: { gte: filters.since } } : {}),
       ...(filters?.status ? { status: filters.status } : {}),
     },
@@ -251,16 +254,25 @@ export function countApplicationsByCompany(
 export async function countPendingGroupedByJob(companyId: string) {
   const groups = await prisma.application.groupBy({
     by: ["jobId"],
-    where: { companyId, status: "PENDING" },
+    where: { companyId, status: "PENDING", isDemo: false },
     _count: { _all: true },
   });
   return new Map(groups.map((g) => [g.jobId, g._count._all]));
 }
 
-/** Candidaturas com a vaga (para score vs. aiMinScore e listas do gestor). */
-export function findApplicationsByCompany(companyId: string) {
+/**
+ * Candidaturas com a vaga (para score vs. aiMinScore e listas do gestor).
+ * `includeDemo: false` tira a simulação (painel e números).
+ */
+export function findApplicationsByCompany(
+  companyId: string,
+  options: { includeDemo?: boolean } = {}
+) {
   return prisma.application.findMany({
-    where: { companyId },
+    where: {
+      companyId,
+      ...(options.includeDemo === false ? { isDemo: false } : {}),
+    },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     include: { job: { select: { id: true, title: true, aiMinScore: true } } },
   });
@@ -303,10 +315,14 @@ export function findLatestApplicationWithAnswers(
 /** Caminhos de currículo no Storage ligados ao candidato (CA8). */
 export async function findResumePathsByCandidate(candidateId: string) {
   const apps = await prisma.application.findMany({
-    where: { candidateId, resumeUrl: { not: null } },
-    select: { resumeUrl: true },
+    where: {
+      candidateId,
+      OR: [{ resumeUrl: { not: null } }, { photoPath: { not: null } }],
+    },
+    select: { resumeUrl: true, photoPath: true },
   });
-  return apps.map((a) => a.resumeUrl!).filter(Boolean);
+  // Currículos e fotos recortadas (LGPD: tudo sai junto com a conta).
+  return apps.flatMap((a) => [a.resumeUrl, a.photoPath]).filter((p): p is string => !!p);
 }
 
 /**
@@ -321,6 +337,7 @@ export function anonymizeApplicationsByCandidate(candidateId: string) {
       email: "conta-excluida",
       phone: null,
       resumeUrl: null,
+      photoPath: null,
     },
   });
 }
@@ -421,6 +438,8 @@ export function updateApplicationAi(
   data: {
     aiScore?: number | null;
     aiReasoning?: string | null;
+    aiModel?: string | null;
+    aiChecklist?: Prisma.InputJsonValue | typeof Prisma.DbNull;
     aiState: "WAITING" | "PROCESSING" | "DONE" | "FAILED" | "NO_RESUME";
   }
 ) {
@@ -444,6 +463,7 @@ export function createApplication(data: {
   resumeUrl: string | null;
   aiState: AIState;
   answers: { fieldId: string; value: string }[];
+  isDemo?: boolean;
 }) {
   const { answers, ...application } = data;
   return prisma.application.create({
@@ -452,4 +472,17 @@ export function createApplication(data: {
       answers: { create: answers },
     },
   });
+}
+/** Candidaturas da sala de simulação (para "Limpar simulação"). */
+export async function findDemoApplicationIds(companyId: string) {
+  const rows = await prisma.application.findMany({
+    where: { companyId, isDemo: true },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
+/** Foto recortada do currículo (null quando o PDF não tem foto). */
+export function updateApplicationPhoto(id: string, photoPath: string | null) {
+  return prisma.application.update({ where: { id }, data: { photoPath } });
 }

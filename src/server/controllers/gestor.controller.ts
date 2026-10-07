@@ -13,6 +13,7 @@ import {
   getCompanyApplication,
   listCompanyApplications,
 } from "@/server/services/application.service";
+import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getCompanyById } from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
 import { getDashboard } from "@/server/services/dashboard.service";
@@ -55,7 +56,9 @@ export async function getCandidaturasPageData(jobId?: string) {
   const { user } = await getGestorShell();
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
-  const applications = await listCompanyApplications(user.companyId, jobId);
+  const applications = await withPhotoUrls(
+    await listCompanyApplications(user.companyId, jobId)
+  );
   const jobs = await listCompanyJobs(user.companyId);
   return { applications, jobs };
 }
@@ -65,7 +68,9 @@ export async function getVagaDetailData(jobId: string) {
   const { user, company } = await getGestorShell();
   const job = await getCompanyJob(user.companyId, jobId);
   if (!job) return null;
-  const applications = await listCompanyApplications(user.companyId, jobId);
+  const applications = await withPhotoUrls(
+    await listCompanyApplications(user.companyId, jobId)
+  );
   return {
     job,
     companySlug: company.slug,
@@ -76,7 +81,10 @@ export async function getVagaDetailData(jobId: string) {
 
 export async function getCandidaturaDetail(id: string) {
   const { user } = await getGestorShell();
-  return getCompanyApplication(user.companyId, id);
+  const application = await getCompanyApplication(user.companyId, id);
+  if (!application) return null;
+  const [withPhoto] = await withPhotoUrls([application]);
+  return withPhoto;
 }
 
 /** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
@@ -88,7 +96,7 @@ export async function getCompareData(ids: string[]) {
     const application = await getCompanyApplication(user.companyId, id);
     if (application) applications.push(application);
   }
-  return applications;
+  return withPhotoUrls(applications);
 }
 
 export async function getJobForEdit(jobId: string) {
@@ -103,7 +111,7 @@ export async function getPainelData(): Promise<{
   companySlug: string;
   publicUrl: string;
   stats: DashboardStats;
-  priority: PriorityApplication[];
+  priority: (PriorityApplication & { photoUrl: string | null })[];
   jobs: JobProgress[];
 }> {
   const { user, company } = await getGestorShell();
@@ -114,7 +122,7 @@ export async function getPainelData(): Promise<{
     companySlug: company.slug,
     publicUrl: `${appUrl()}/${company.slug}/vagas`,
     stats,
-    priority,
+    priority: await withPhotoUrls(priority),
     jobs,
   };
 }

@@ -25,7 +25,7 @@ export async function getDashboard(companyId: string): Promise<{
   const since7d = new Date(Date.now() - WEEK_MS);
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
-  const applications = await findApplicationsByCompany(companyId);
+  const applications = await findApplicationsByCompany(companyId, { includeDemo: false });
   const allJobs = await findJobsByCompanyId(companyId);
 
   const waitingList = applications.filter((a) => a.status === "PENDING");
@@ -58,6 +58,7 @@ export async function getDashboard(companyId: string): Promise<{
       status: a.status,
       meetsMinimum: a.aiScore !== null && a.aiScore >= a.job.aiMinScore,
       createdAt: a.createdAt,
+      photoPath: a.photoPath,
     }))
     .sort((a, b) => {
       const byWait = a.createdAt.getTime() - b.createdAt.getTime();
