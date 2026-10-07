@@ -341,6 +341,7 @@ export default async function CandidaturaDetailPage({
               folders={talent.folders}
               inFolders={talent.inFolders}
               suggestedName={talent.suggestedName}
+              level={talent.level}
               highlight={suggestTalentPool({
                 aiState: app.aiState,
                 aiScore: app.aiScore,

@@ -14,6 +14,7 @@ import {
   listCompanyApplications,
 } from "@/server/services/application.service";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
+import { listFoldersForJob } from "@/server/services/talent.service";
 import { getCompanyById } from "@/server/services/company.service";
 import {
   getJobQuestions,
@@ -75,9 +76,11 @@ export async function getVagaDetailData(jobId: string) {
     await listCompanyApplications(user.companyId, jobId)
   );
   const questions = await getJobQuestions(user.companyId, jobId);
+  const sourceFolders = await listFoldersForJob(user.companyId, jobId);
   return {
     job,
     questions,
+    sourceFolders,
     companySlug: company.slug,
     publicUrl: `${appUrl()}/${company.slug}/vagas/${job.id}`,
     applications,

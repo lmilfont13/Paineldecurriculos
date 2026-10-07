@@ -441,6 +441,8 @@ export function updateApplicationAi(
     aiModel?: string | null;
     aiChecklist?: Prisma.InputJsonValue | typeof Prisma.DbNull;
     aiProfile?: string | null;
+    aiArea?: string | null;
+    aiLevel?: string | null;
     aiState: "WAITING" | "PROCESSING" | "DONE" | "FAILED" | "NO_RESUME";
   }
 ) {

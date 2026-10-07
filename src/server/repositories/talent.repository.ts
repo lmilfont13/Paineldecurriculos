@@ -16,6 +16,7 @@ export function findTalentFolder(companyId: string, folderId: string) {
   return prisma.talentFolder.findFirst({
     where: { id: folderId, companyId },
     include: {
+      job: { select: { id: true, title: true, status: true } },
       items: {
         orderBy: { addedAt: "desc" },
         include: {
@@ -26,10 +27,20 @@ export function findTalentFolder(companyId: string, folderId: string) {
               aiScore: true,
               aiState: true,
               aiProfile: true,
+              aiArea: true,
+              aiLevel: true,
               photoPath: true,
               status: true,
               createdAt: true,
-              job: { select: { title: true, aiMinScore: true } },
+              job: {
+                select: {
+                  title: true,
+                  aiMinScore: true,
+                  location: true,
+                  contract: true,
+                  workMode: true,
+                },
+              },
             },
           },
         },
@@ -38,8 +49,21 @@ export function findTalentFolder(companyId: string, folderId: string) {
   });
 }
 
-export function createTalentFolder(companyId: string, name: string) {
-  return prisma.talentFolder.create({ data: { companyId, name } });
+export function createTalentFolder(companyId: string, name: string, area: string | null) {
+  return prisma.talentFolder.create({ data: { companyId, name, area } });
+}
+
+/** Liga a pasta à vaga criada a partir dela. */
+export function setTalentFolderJob(id: string, jobId: string) {
+  return prisma.talentFolder.update({ where: { id }, data: { jobId } });
+}
+
+/** Pastas que deram origem a esta vaga (banner no hub da vaga). */
+export function findTalentFoldersByJob(companyId: string, jobId: string) {
+  return prisma.talentFolder.findMany({
+    where: { companyId, jobId },
+    include: { _count: { select: { items: true } } },
+  });
 }
 
 export function renameTalentFolder(id: string, name: string) {

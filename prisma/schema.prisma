@@ -73,9 +73,10 @@ model Job {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  applications Application[]
-  formFields   FormField[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications  Application[]
+  formFields    FormField[]
+  talentFolders TalentFolder[]
 
   @@index([companyId, status])
 }
@@ -166,6 +167,9 @@ model Application {
   isDemo       Boolean   @default(false)
   photoPath    String?
   aiProfile    String?
+  /// Segmentação do currículo pela IA: área (ex.: Logística) e nível.
+  aiArea       String?
+  aiLevel      String?
   managerNotes String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -323,9 +327,14 @@ model TalentFolder {
   id        String   @id @default(cuid())
   companyId String
   name      String
+  /// Área do perfil (agrupa as pastas na tela). Ex.: "Logística".
+  area      String?
+  /// Vaga criada a partir desta pasta (rascunho sugerido pela IA).
+  jobId     String?
   createdAt DateTime @default(now())
 
   company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
   items   TalentFolderItem[]
 
   @@unique([companyId, name])

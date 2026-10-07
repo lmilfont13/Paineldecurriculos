@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
 
+import { JobFromFolderButton } from "@/components/gestor/job-from-folder-button";
 import { saveToTalentFolderAction } from "@/server/controllers/talent.controller";
 import { sameFolderName, type TalentFolderSummary } from "@/server/models/talent.model";
 
@@ -17,12 +18,14 @@ export function TalentPoolCard({
   folders,
   inFolders,
   suggestedName,
+  level,
   highlight,
 }: {
   applicationId: string;
   folders: TalentFolderSummary[];
   inFolders: string[];
   suggestedName: string;
+  level: string | null;
   highlight: boolean;
 }) {
   const saved = folders.filter((f) => inFolders.includes(f.id));
@@ -64,24 +67,38 @@ export function TalentPoolCard({
         <FolderOpen className="size-3.5" aria-hidden /> Banco de talentos
       </p>
 
+      {suggestedName && (
+        <p className="mt-3 text-[12px] text-[#52525b]">
+          Perfil do currículo: <strong className="font-semibold text-[#0a0a0a]">{suggestedName}</strong>
+          {level ? ` · ${level}` : ""}
+        </p>
+      )}
+
       {highlight && saved.length === 0 && !open && (
-        <p className="mt-3 text-[12px] leading-5 text-[#78350f]">
-          Ficou abaixo do mínimo desta vaga. Se o perfil é bom para outras vagas, guarde numa pasta de potenciais candidatos.
+        <p className="mt-2 text-[12px] leading-5 text-[#78350f]">
+          Ficou abaixo do mínimo desta vaga. Se o perfil é bom para outras vagas, guarde numa pasta de potenciais candidatos e, se fizer sentido, abra uma vaga para esse perfil.
         </p>
       )}
 
       {saved.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <ul className="mt-3 space-y-2.5">
           {saved.map((f) => (
-            <Link
-              key={f.id}
-              href={`/talentos/${f.id}`}
-              className="rounded-full bg-[#f4f4f5] px-2.5 py-1 text-[11px] font-medium text-[#0a0a0a] hover:bg-[#e4e4e7]"
-            >
-              {f.name}
-            </Link>
+            <li key={f.id} className="rounded-xl bg-[#fafaf9] px-3 py-2.5 ring-1 ring-[#f4f4f5]">
+              <Link
+                href={`/talentos/${f.id}`}
+                className="block truncate text-[12px] font-semibold text-[#0a0a0a] hover:underline"
+              >
+                {f.name}
+              </Link>
+              <span className="text-[11px] text-[#a1a1aa]">
+                {f.count} {f.count === 1 ? "candidato" : "candidatos"} nesta pasta
+              </span>
+              <div className="mt-2">
+                <JobFromFolderButton folderId={f.id} jobId={f.jobId} variant="subtle" />
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {open ? (

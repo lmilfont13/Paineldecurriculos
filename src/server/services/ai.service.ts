@@ -14,7 +14,8 @@ import {
   buildAnswersText,
   hasMaterial,
   parseChecklist,
-  parseProfile,
+  parseSegment,
+  type ProfileSegment,
   type ChecklistItem,
 } from "@/server/models/ai.model";
 import {
@@ -69,8 +70,11 @@ export type TriageStepReporter = (label: string) => Promise<void>;
  */
 const CHECKLIST_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Para cada critério da vaga, diga se o material do candidato mostra evidência.
-Resuma também o perfil profissional do candidato em até 4 palavras, só área e função (ex.: "Motorista e entregador", "Assistente administrativo"), sem dados pessoais.
-Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ], "profile": "perfil em até 4 palavras" }`;
+Classifique também o perfil profissional pelo que o material mostra, sem dados pessoais:
+- area: área ampla em até 3 palavras (ex.: "Logística", "Administrativo", "Vendas e trade marketing", "Atendimento")
+- role: função em até 4 palavras (ex.: "Motorista e entregador", "Promotor de vendas")
+- level: um de "Operacional", "Júnior", "Pleno", "Sênior", "Liderança"
+Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ], "profile": { "area": "...", "role": "...", "level": "..." } }`;
 
 /**
  * Checklist por critério + perfil resumido. Uma chamada só, separada do
@@ -80,7 +84,7 @@ Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": 
 async function buildChecklist(
   criteria: string[],
   material: string
-): Promise<{ checklist: ChecklistItem[] | null; profile: string | null }> {
+): Promise<{ checklist: ChecklistItem[] | null; segment: ProfileSegment }> {
   try {
     const raw = await geminiGenerate({
       system: CHECKLIST_PROMPT,
@@ -92,12 +96,12 @@ async function buildChecklist(
     });
     return {
       checklist: criteria.length > 0 ? parseChecklist(raw, criteria) : null,
-      profile: parseProfile(raw),
+      segment: parseSegment(raw),
     };
   } catch (error) {
     // Complementar: se falhar, a nota continua valendo.
     console.error("[ia] Falha no checklist por critério:", error);
-    return { checklist: null, profile: null };
+    return { checklist: null, segment: { area: null, role: null, level: null } };
   }
 }
 
@@ -186,14 +190,16 @@ export async function analyzeApplication(
     await onStep(
       criteriaList.length > 0 ? "Conferindo critério por critério" : "Resumindo o perfil"
     );
-    const { checklist, profile } = await buildChecklist(criteriaList, material);
+    const { checklist, segment } = await buildChecklist(criteriaList, material);
 
     await updateApplicationAi(applicationId, {
       aiScore: score,
       aiReasoning: String(parsed.reasoning ?? "").slice(0, 500),
       aiModel: AI_MODEL_ID,
       aiChecklist: checklist ?? Prisma.DbNull,
-      aiProfile: profile,
+      aiProfile: segment.role,
+      aiArea: segment.area,
+      aiLevel: segment.level,
       aiState: "DONE",
     });
     return { score };
