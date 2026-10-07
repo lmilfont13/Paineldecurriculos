@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { unstable_rethrow } from "next/navigation";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
+import { AgentRoom } from "@/components/gestor/agent-room";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
@@ -133,6 +134,7 @@ export default async function AgentesPage() {
         initialSignature={activeRunsSignature(runs)}
         intervalMs={2000}
       />
+      <AgentRoom runs={liveRuns} />
       <AgentLiveMonitor runs={liveRuns} />
 
       <IntelligenceAgentCard latestSummary={latestIntelligence?.summary ?? null} latestStatus={latestIntelligence?.status ?? null} />

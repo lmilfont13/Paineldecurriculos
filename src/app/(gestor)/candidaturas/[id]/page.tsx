@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DecisionBlock } from "@/components/gestor/decision-block";
+import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
@@ -316,6 +317,13 @@ export default async function CandidaturaDetailPage({
               </a>
             )}
           </section>
+
+          <div className="flex justify-center pt-1">
+            <DeleteApplicationButton
+              applicationId={app.id}
+              candidateName={app.name}
+            />
+          </div>
         </aside>
       </div>
     </div>

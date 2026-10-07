@@ -12,6 +12,7 @@ import {
 import { interviewSchema } from "@/server/models/interview.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
+  deleteCompanyApplications,
   getCompanyApplication,
   requestApplicationResumeUpload,
   requestReanalysis,
@@ -318,4 +319,40 @@ export async function requestResumeUploadAction(
     };
   }
   return { ok: true, ...target };
+}
+
+/**
+ * Exclui candidaturas (detalhe ou ação em massa). Definitivo: some do
+ * painel, das contagens e da área do candidato. Fica registrado na auditoria.
+ */
+export async function deleteApplicationsAction(
+  applicationIds: string[]
+): Promise<{ deleted: number }> {
+  const user = await requireManager();
+  const { deleted } = await deleteCompanyApplications(
+    user.companyId,
+    applicationIds
+  );
+
+  runInBackground("auditoria de exclusão", async () => {
+    for (const app of deleted) {
+      await createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        action: "CANDIDATURA_EXCLUIDA",
+        entityType: "CANDIDATURA",
+        entityId: app.id,
+        entityLabel: app.name,
+        metadata: { jobTitle: app.jobTitle },
+      }).catch(() => {});
+    }
+  });
+
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  revalidatePath("/vagas");
+  revalidatePath("/agentes");
+  return { deleted: deleted.length };
 }
