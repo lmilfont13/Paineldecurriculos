@@ -82,9 +82,10 @@ export function findAiStates(companyId: string, ids: string[]) {
 }
 
 /** Execuções ativas do tenant (polling leve da tela de agentes). */
-export function countActiveAgentRuns(companyId: string) {
-  return prisma.agentRun.count({
+export function findActiveAgentRuns(companyId: string) {
+  return prisma.agentRun.findMany({
     where: { companyId, status: { in: [...ACTIVE_RUN_STATUSES] } },
+    select: { id: true, status: true, summary: true },
   });
 }
 

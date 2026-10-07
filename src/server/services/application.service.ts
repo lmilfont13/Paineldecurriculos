@@ -15,11 +15,11 @@ import {
 } from "@/server/models/application.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import {
-  countActiveAgentRuns,
   countApplicationsByCompany,
   createApplication,
   createStatusEvent,
   deleteApplication,
+  findActiveAgentRuns,
   findAiStates,
   getAgentCenterData,
   findAppliedJobIds,
@@ -54,6 +54,7 @@ import {
 import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
 import { findJobById } from "@/server/repositories/job.repository";
 import { runTriageWithTracking } from "@/server/services/ai.service";
+import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
   RESUMES_BUCKET,
@@ -568,8 +569,12 @@ export async function submitApplication(
 export async function getAiProgress(companyId: string, ids: string[]) {
   await sweepStaleAgentRunsThrottled(companyId);
   const states = ids.length > 0 ? await findAiStates(companyId, ids) : [];
-  const activeRuns = await countActiveAgentRuns(companyId);
-  return { states, activeRuns };
+  const runs = await findActiveAgentRuns(companyId);
+  return {
+    states,
+    activeRuns: runs.length,
+    runsSignature: activeRunsSignature(runs),
+  };
 }
 
 /** Central de agentes: varre execuções travadas antes de montar a tela. */
