@@ -191,7 +191,7 @@
   50% { transform: translate3d(0, -9px, 0) rotate(1deg); }
 }
 
-@keyframes heroFloatReverse {
+@keyframes agent-progress {\n  0% { transform: translateX(-120%); }\n  50% { transform: translateX(180%); }\n  100% { transform: translateX(420%); }\n}\n\n@keyframes heroFloatReverse {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(1deg); }
   50% { transform: translate3d(0, 8px, 0) rotate(-1deg); }
 }
