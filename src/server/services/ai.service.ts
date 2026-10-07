@@ -22,6 +22,7 @@ import {
   updateAgentRun,
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
+import { captureResumePhoto } from "@/server/services/resume-photo.service";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
 /**
@@ -119,6 +120,16 @@ export async function analyzeApplication(
       await onStep("Lendo o texto do PDF");
       const pdf = await getDocumentProxy(bytes);
       resumeText = (await extractText(pdf, { mergePages: true })).text;
+
+      // Foto: só referência visual para o gestor. Fica fora do material da
+      // IA (regra 3). PDF sem texto é página escaneada, não tem foto à parte.
+      if (resumeText.trim().length >= 40) {
+        await captureResumePhoto(pdf, {
+          companyId: application.company.id,
+          applicationId,
+          currentPath: application.photoPath ?? null,
+        });
+      }
     } else {
       await onStep("Sem PDF: lendo as respostas do formulário");
     }

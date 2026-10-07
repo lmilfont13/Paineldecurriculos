@@ -5,7 +5,7 @@ import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getPainelData } from "@/server/controllers/gestor.controller";
 import { formatWaiting } from "@/server/models/application.model";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { jobStatusLabels } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Painel · Triagem" };
@@ -248,9 +248,11 @@ export default async function PainelPage() {
                 href={`/candidaturas/${app.id}`}
                 className="flex items-center gap-3.5 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] focus-visible:bg-[#fafaf9] focus-visible:outline-none"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
-                  {personInitials(app.name)}
-                </span>
+                <CandidateAvatar
+                  name={app.name}
+                  photoUrl={app.photoUrl}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                     {app.name}

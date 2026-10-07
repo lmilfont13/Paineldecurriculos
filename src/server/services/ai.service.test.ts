@@ -9,6 +9,7 @@ const app = {
   resumeUrl: "demo/curriculo-ficticio-rafael.pdf",
   answers: [] as { value: string; field: { label: string; type: string } }[],
   company: { id: "co1" },
+  photoPath: null as string | null,
   job: { title: "Assistente Administrativo", aiCriteria: ["Excel", "E-commerce"], requirements: null },
 };
 const aiUpdates: Record<string, unknown>[] = [];
@@ -30,6 +31,10 @@ vi.mock("@/lib/gemini", () => ({
   geminiGenerate: (...a: unknown[]) => generate(...a),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+const captureResumePhoto = vi.fn(async () => false);
+vi.mock("@/server/services/resume-photo.service", () => ({
+  captureResumePhoto: (...a: unknown[]) => captureResumePhoto(...(a as [])),
+}));
 
 import { runTriageWithTracking } from "@/server/services/ai.service";
 
@@ -37,6 +42,7 @@ beforeEach(() => {
   for (const k of Object.keys(runs)) delete runs[k];
   aiUpdates.length = 0;
   generate.mockReset();
+  captureResumePhoto.mockClear();
   app.resumeUrl = "demo/curriculo-ficticio-rafael.pdf";
   app.answers = [];
 });
@@ -71,6 +77,13 @@ describe("runTriageWithTracking (sala de simulação)", () => {
       { criterion: "Excel", met: "sim", evidence: "Power BI e planilhas" },
       { criterion: "E-commerce", met: "não", evidence: "" },
     ]);
+    // Foto: procurada no PDF, mas nunca vai para a IA (regra 3)
+    expect(captureResumePhoto).toHaveBeenCalledTimes(1);
+    expect(captureResumePhoto.mock.calls[0]).toContainEqual({
+      companyId: "co1",
+      applicationId: "app1",
+      currentPath: null,
+    });
     // O texto do PDF real chegou ao prompt; o prompt da nota é o imutável
     expect(generate.mock.calls[0][0].prompt).toContain("Power BI");
     expect(generate.mock.calls[0][0].system).toContain(

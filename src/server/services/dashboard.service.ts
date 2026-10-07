@@ -58,6 +58,7 @@ export async function getDashboard(companyId: string): Promise<{
       status: a.status,
       meetsMinimum: a.aiScore !== null && a.aiScore >= a.job.aiMinScore,
       createdAt: a.createdAt,
+      photoPath: a.photoPath,
     }))
     .sort((a, b) => {
       const byWait = a.createdAt.getTime() - b.createdAt.getTime();

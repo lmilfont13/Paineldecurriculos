@@ -315,10 +315,14 @@ export function findLatestApplicationWithAnswers(
 /** Caminhos de currículo no Storage ligados ao candidato (CA8). */
 export async function findResumePathsByCandidate(candidateId: string) {
   const apps = await prisma.application.findMany({
-    where: { candidateId, resumeUrl: { not: null } },
-    select: { resumeUrl: true },
+    where: {
+      candidateId,
+      OR: [{ resumeUrl: { not: null } }, { photoPath: { not: null } }],
+    },
+    select: { resumeUrl: true, photoPath: true },
   });
-  return apps.map((a) => a.resumeUrl!).filter(Boolean);
+  // Currículos e fotos recortadas (LGPD: tudo sai junto com a conta).
+  return apps.flatMap((a) => [a.resumeUrl, a.photoPath]).filter((p): p is string => !!p);
 }
 
 /**
@@ -333,6 +337,7 @@ export function anonymizeApplicationsByCandidate(candidateId: string) {
       email: "conta-excluida",
       phone: null,
       resumeUrl: null,
+      photoPath: null,
     },
   });
 }
@@ -475,4 +480,9 @@ export async function findDemoApplicationIds(companyId: string) {
     select: { id: true },
   });
   return rows.map((r) => r.id);
+}
+
+/** Foto recortada do currículo (null quando o PDF não tem foto). */
+export function updateApplicationPhoto(id: string, photoPath: string | null) {
+  return prisma.application.update({ where: { id }, data: { photoPath } });
 }

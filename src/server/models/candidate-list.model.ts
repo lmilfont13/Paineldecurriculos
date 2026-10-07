@@ -17,6 +17,7 @@ export type CandidaturaRow = {
   aiMinScore: number;
   /** Candidatura da sala de simulação (mostra o selo "Demonstração"). */
   isDemo?: boolean;
+  photoUrl?: string | null;
 };
 
 export type StageKey = AppStatusKey | "ALL";

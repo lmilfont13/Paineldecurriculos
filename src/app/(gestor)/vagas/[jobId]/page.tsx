@@ -188,6 +188,7 @@ export default async function VagaHubPage({
           aiScore: person.aiScore,
           aiState: person.aiState,
           createdAt: person.createdAt.toISOString(),
+          photoUrl: person.photoUrl,
         }))}
       />
 

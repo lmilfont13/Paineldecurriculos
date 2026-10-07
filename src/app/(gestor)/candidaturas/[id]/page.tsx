@@ -16,7 +16,7 @@ import {
   formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import {
   interviewSummary,
   isPastInterview,
@@ -93,9 +93,11 @@ export default async function CandidaturaDetailPage({
               Candidatura · {app.job.title}
             </p>
             <div className="mt-5 flex items-center gap-4">
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm">
-                {personInitials(app.name)}
-              </span>
+              <CandidateAvatar
+                name={app.name}
+                photoUrl={app.photoUrl}
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm"
+              />
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
                   {app.name}

@@ -63,6 +63,7 @@ import {
 import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
 import { findJobById } from "@/server/repositories/job.repository";
 import { runTriageWithTracking } from "@/server/services/ai.service";
+import { removeResumePhotos } from "@/server/services/resume-photo.service";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
@@ -429,6 +430,7 @@ export async function withdrawApplication(
     const supabase = createAdminClient();
     await supabase.storage.from(RESUMES_BUCKET).remove([application.resumeUrl]);
   }
+  if (application.photoPath) await removeResumePhotos([application.photoPath]);
   await deleteApplication(applicationId);
   return { ok: true };
 }
@@ -682,6 +684,7 @@ export async function deleteCompanyApplications(
     ) {
       resumePaths.push(application.resumeUrl);
     }
+    if (application.photoPath) resumePaths.push(application.photoPath);
   }
 
   if (resumePaths.length > 0) {

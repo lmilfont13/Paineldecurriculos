@@ -5,7 +5,7 @@ import type React from "react";
 import type { AIState } from "@prisma/client";
 import { setApplicationStatusAction } from "@/server/controllers/application.controller";
 import { appStatusLabels, formatWaiting, type AppStatusKey } from "@/server/models/application.model";
-import { personInitials } from "@/server/models/dashboard.model";
+import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { Toast } from "@/components/gestor/toast";
 
@@ -15,7 +15,7 @@ const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d", hint: "Prontos para avançar" },
   { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa", hint: "Fora do processo" },
 ];
-type PipelinePerson = { id:string; name:string; status:AppStatusKey; aiScore:number|null; aiState:AIState|null; createdAt:string };
+type PipelinePerson = { id:string; name:string; status:AppStatusKey; aiScore:number|null; aiState:AIState|null; createdAt:string; photoUrl?:string|null };
 
 export function VagaPipeline({ applications, aiMinScore }: { applications: PipelinePerson[]; aiMinScore:number }) {
   const [people,setPeople]=useState(applications);
@@ -47,7 +47,7 @@ export function VagaPipeline({ applications, aiMinScore }: { applications: Pipel
           <div className="space-y-2 p-2">
             {rows.length===0&&<div className={`flex min-h-[120px] items-center justify-center rounded-lg border border-dashed text-center ${active?"border-[#811201]/30 text-[#811201]":"border-[#e8e5e1] text-[#b4aea8]"}`}><span className="text-[11px]">{active?"Solte para mover":"Nenhum candidato"}</span></div>}
             {rows.map(person=><div key={person.id} draggable onDragStart={e=>onDragStart(e,person.id)} onDragEnd={()=>{setDraggingId(null);setOverStage(null)}} className={`group rounded-xl border bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all ${draggingId===person.id?"scale-[0.98] border-[#811201]/30 opacity-45":"border-[#e8e5e1] hover:-translate-y-0.5 hover:border-[#d4d0ca] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)]"}`}>
-              <div className="flex items-start gap-2.5"><span className="mt-0.5 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-full bg-[#1c1917] text-[9px] font-bold text-white active:cursor-grabbing">{personInitials(person.name)}</span><Link href={"/candidaturas/"+person.id} draggable={false} className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-[#0a0a0a]">{person.name}</span>{stage.key==="PENDING"&&<span className="mt-0.5 block text-[10px] font-medium text-[#b07818]">espera {formatWaiting(new Date(person.createdAt))}</span>}</Link><span className="select-none text-[13px] text-[#c5c0bb] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden>⋮⋮</span></div>
+              <div className="flex items-start gap-2.5"><CandidateAvatar name={person.name} photoUrl={person.photoUrl} className="pointer-events-none mt-0.5 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-full bg-[#1c1917] text-[9px] font-bold text-white active:cursor-grabbing" /><Link href={"/candidaturas/"+person.id} draggable={false} className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-[#0a0a0a]">{person.name}</span>{stage.key==="PENDING"&&<span className="mt-0.5 block text-[10px] font-medium text-[#b07818]">espera {formatWaiting(new Date(person.createdAt))}</span>}</Link><span className="select-none text-[13px] text-[#c5c0bb] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden>⋮⋮</span></div>
               <div className="mt-2 flex items-center justify-between gap-2"><AiScoreChip aiScore={person.aiScore} aiState={person.aiState ?? "WAITING"} meetsMinimum={person.aiScore!==null&&person.aiScore>=aiMinScore}/><Link href={"/candidaturas/"+person.id} draggable={false} className="text-[10px] font-medium opacity-0 transition-opacity group-hover:opacity-100" style={{color:"var(--brand-primary)"}}>Abrir ›</Link></div>
             </div>)}
           </div>
