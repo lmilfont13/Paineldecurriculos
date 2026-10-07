@@ -13,16 +13,14 @@ export function IntelligenceAgentCard({
   latestStatus: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | null;
 }) {
   const [pending, startTransition] = useTransition();
-  const [requested, setRequested] = useState(false);
 
   function runAgent() {
     startTransition(async () => {
       await requestCompanyIntelligence();
-      setRequested(true);
     });
   }
 
-  const working = pending || requested || latestStatus === "QUEUED" || latestStatus === "RUNNING";
+  const working = pending || latestStatus === "QUEUED" || latestStatus === "RUNNING";
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border border-[#dedbd7] bg-[#171413] text-white">
