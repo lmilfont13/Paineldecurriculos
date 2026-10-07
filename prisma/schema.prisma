@@ -73,10 +73,10 @@ model Job {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications  Application[]
   formFields    FormField[]
-  talentFolders TalentFolder[]
+  talentMatches TalentMatch[]
 
   @@index([companyId, status])
 }
@@ -188,6 +188,7 @@ model Application {
   notifications Notification[]
   agentRuns     AgentRun[]
   talentItems   TalentFolderItem[]
+  talentMatches TalentMatch[]
 
   @@unique([candidateId, jobId])
   @@index([companyId, status, createdAt])
@@ -329,12 +330,9 @@ model TalentFolder {
   name      String
   /// Área do perfil (agrupa as pastas na tela). Ex.: "Logística".
   area      String?
-  /// Vaga criada a partir desta pasta (rascunho sugerido pela IA).
-  jobId     String?
   createdAt DateTime @default(now())
 
   company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  job     Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
   items   TalentFolderItem[]
 
   @@unique([companyId, name])
@@ -351,4 +349,24 @@ model TalentFolderItem {
 
   @@unique([folderId, applicationId])
   @@index([applicationId])
+}
+
+/// Stand-by: candidato do banco de talentos analisado contra outra vaga
+/// (sem candidatura nova). Só a nota/justificativa da IA; a etapa da
+/// candidatura original nunca muda (regra 2).
+model TalentMatch {
+  id            String   @id @default(cuid())
+  companyId     String
+  applicationId String
+  jobId         String
+  score         Int?
+  reasoning     String?
+  state         AIState  @default(WAITING)
+  updatedAt     DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  job         Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, jobId])
+  @@index([companyId, jobId])
 }

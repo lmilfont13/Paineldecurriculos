@@ -105,6 +105,64 @@ async function buildChecklist(
   }
 }
 
+type ScorableJob = { title: string; aiCriteria: string[]; requirements: string | null };
+
+function composeMaterial(resumeText: string, answersText: string): string {
+  return [
+    resumeText.trim() && `Currículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
+    answersText && `Respostas do formulário de candidatura:\n${answersText.slice(0, 4000)}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** Nota de aderência a uma vaga, sempre com o AI_PROMPT imutável (regra 3). */
+async function scoreMaterial(
+  job: ScorableJob,
+  material: string
+): Promise<{ score: number; reasoning: string }> {
+  const criteria =
+    job.aiCriteria.length > 0
+      ? job.aiCriteria.map((c) => `- ${c}`).join("\n")
+      : (job.requirements ?? "Sem critérios específicos.");
+  const raw = await geminiGenerate({
+    system: AI_PROMPT,
+    prompt: `Vaga: ${job.title}\n\nCritérios de aderência:\n${criteria}\n\n${material}`,
+    maxTokens: 300,
+    json: true,
+  });
+  const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
+    score?: unknown;
+    reasoning?: unknown;
+  };
+  const score = Math.round(Number(parsed.score));
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    throw new Error(`Score inválido retornado pela IA: ${raw}`);
+  }
+  return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500) };
+}
+
+/**
+ * Stand-by: nota do currículo de uma candidatura contra OUTRA vaga (banco de
+ * talentos). Não grava nada na candidatura — quem chama guarda o resultado à
+ * parte (TalentMatch). Sem material, devolve null.
+ */
+export async function scoreApplicationAgainstJob(
+  applicationId: string,
+  job: ScorableJob
+): Promise<{ score: number; reasoning: string } | null> {
+  const application = await findApplicationById(applicationId);
+  if (!application) return null;
+  const answersText = buildAnswersText(application.answers);
+  let resumeText = "";
+  if (application.resumeUrl) {
+    const pdf = await getDocumentProxy(await loadResumeBytes(application.resumeUrl));
+    resumeText = (await extractText(pdf, { mergePages: true })).text;
+  }
+  if (!hasMaterial(resumeText, answersText)) return null;
+  return scoreMaterial(job, composeMaterial(resumeText, answersText));
+}
+
 /**
  * Análise de aderência em background. Só escreve aiScore/aiReasoning/aiState
  * (e o modelo/checklist que explicam a nota); o AppStatus é decisão manual do
@@ -156,36 +214,12 @@ export async function analyzeApplication(
     }
 
     const criteriaList = application.job.aiCriteria;
-    const criteria =
-      criteriaList.length > 0
-        ? criteriaList.map((c) => `- ${c}`).join("\n")
-        : (application.job.requirements ?? "Sem critérios específicos.");
-
-    const material = [
-      resumeText.trim() && `Currículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
-      answersText && `Respostas do formulário de candidatura:\n${answersText.slice(0, 4000)}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const material = composeMaterial(resumeText, answersText);
 
     await onStep(
       `Comparando ${material.length.toLocaleString("pt-BR")} caracteres com os critérios da vaga`
     );
-    const raw = await geminiGenerate({
-      system: AI_PROMPT,
-      prompt: `Vaga: ${application.job.title}\n\nCritérios de aderência:\n${criteria}\n\n${material}`,
-      maxTokens: 300,
-      json: true,
-    });
-
-    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
-      score?: unknown;
-      reasoning?: unknown;
-    };
-    const score = Math.round(Number(parsed.score));
-    if (!Number.isFinite(score) || score < 0 || score > 100) {
-      throw new Error(`Score inválido retornado pela IA: ${raw}`);
-    }
+    const { score, reasoning } = await scoreMaterial(application.job, material);
 
     await onStep(
       criteriaList.length > 0 ? "Conferindo critério por critério" : "Resumindo o perfil"
@@ -194,7 +228,7 @@ export async function analyzeApplication(
 
     await updateApplicationAi(applicationId, {
       aiScore: score,
-      aiReasoning: String(parsed.reasoning ?? "").slice(0, 500),
+      aiReasoning: reasoning,
       aiModel: AI_MODEL_ID,
       aiChecklist: checklist ?? Prisma.DbNull,
       aiProfile: segment.role,

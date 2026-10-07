@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { DeleteJobButton } from "@/components/gestor/delete-job-button";
+import { StandbySection } from "@/components/gestor/standby-section";
 import { JobQuestions } from "@/components/gestor/job-questions";
 import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
@@ -25,6 +26,9 @@ import {
 } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Vaga · Triagem" };
+
+// "Conferir banco de talentos" analisa até 8 candidatos em stand-by.
+export const maxDuration = 60;
 
 const STAGES: { key: AppStatusKey; label: string; accent: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818" },
@@ -128,21 +132,6 @@ export default async function VagaHubPage({
         </div>
       </div>
 
-      {data.sourceFolders.length > 0 && (
-        <div className="mt-5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-4 py-3 text-[12px] text-[#52525b]">
-          Vaga sugerida a partir do banco de talentos:{" "}
-          {data.sourceFolders.map((f, i) => (
-            <span key={f.id}>
-              {i > 0 && ", "}
-              <Link href={`/talentos/${f.id}`} className="font-medium text-[#0a0a0a] underline-offset-2 hover:underline">
-                {f.name}
-              </Link>{" "}
-              ({f.count} {f.count === 1 ? "candidato guardado" : "candidatos guardados"})
-            </span>
-          ))}
-          . {job.status === "DRAFT" ? "Revise o texto e publique; depois, mande o link para eles." : "Mande o link desta vaga para eles."}
-        </div>
-      )}
 
       {/* Sinais vitais — o que responde "essa vaga está andando?" */}
       <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -282,6 +271,17 @@ export default async function VagaHubPage({
           </p>
         </section>
       </div>
+
+      <StandbySection
+        jobId={job.id}
+        jobTitle={job.title}
+        minScore={job.aiMinScore}
+        isOpen={job.status === "OPEN"}
+        publicUrl={publicUrl}
+        companyName={data.companyName}
+        people={data.standby.people}
+        poolSize={data.standby.poolSize}
+      />
 
       {data.questions && (
         <JobQuestions

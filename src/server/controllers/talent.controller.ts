@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
-import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
-  createJobFromFolder,
+  analyzeStandbyForApplication,
+  analyzeStandbyForJob,
   deleteCompanyTalentFolder,
   getApplicationTalentInfo,
   getTalentFolder,
@@ -74,29 +74,20 @@ export async function deleteTalentFolderAction(folderId: string) {
   return { ok };
 }
 
-/** Sugere a vaga para o perfil da pasta (rascunho para revisar). */
-export async function createJobFromFolderAction(folderId: string) {
+/** Hub da vaga: confere o banco de talentos para esta vaga agora. */
+export async function analyzeStandbyForJobAction(jobId: string) {
   const manager = await requireManager();
-  if (!ID.test(folderId)) return { ok: false as const, error: "Pasta não encontrada." };
-  const result = await createJobFromFolder(manager.companyId, folderId);
-  if (result.ok && !result.existed) {
-    try {
-      await createAuditLog({
-        companyId: manager.companyId,
-        userId: manager.id,
-        userEmail: manager.email,
-        userName: manager.name,
-        action: "VAGA_CRIADA",
-        entityType: "VAGA",
-        entityId: result.jobId,
-        metadata: { origem: "banco de talentos", pasta: folderId },
-      });
-    } catch { /* auditoria nunca bloqueia a ação principal */ }
-  }
-  if (result.ok) {
-    revalidatePath("/vagas");
-    revalidatePath("/talentos");
-    revalidatePath(`/talentos/${folderId}`);
-  }
-  return result;
+  if (!ID.test(jobId)) return { analyzed: 0 };
+  const analyzed = await analyzeStandbyForJob(manager.companyId, jobId);
+  revalidatePath(`/vagas/${jobId}`);
+  return { analyzed };
+}
+
+/** Detalhe do candidato: confere de novo com as vagas abertas. */
+export async function analyzeStandbyForApplicationAction(applicationId: string) {
+  const manager = await requireManager();
+  if (!ID.test(applicationId)) return { analyzed: 0 };
+  const analyzed = await analyzeStandbyForApplication(manager.companyId, applicationId);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return { analyzed };
 }

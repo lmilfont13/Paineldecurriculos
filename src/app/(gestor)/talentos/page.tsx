@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Briefcase, FolderOpen } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 
 import { TalentFolderActions } from "@/components/gestor/talent-folder-actions";
 import { loadTalentFolders } from "@/server/controllers/talent.controller";
@@ -24,7 +24,7 @@ export default async function TalentosPage() {
         <h1 className="text-2xl font-bold text-[#0a0a0a]">Banco de talentos</h1>
         <p className="mt-2 max-w-[640px] text-sm text-[#71717a]">
           Candidatos com bom perfil que não combinaram com a vaga em que se inscreveram, separados por área e função
-          do currículo. De cada pasta dá para sugerir uma vaga nova para aquele perfil.
+          do currículo. Eles ficam em stand-by: quando abrir uma vaga parecida, a IA confere quem combina.
         </p>
       </div>
 
@@ -72,11 +72,6 @@ export default async function TalentosPage() {
                           <span className="block truncate text-[14px] font-semibold text-[#0a0a0a]">{label}</span>
                           <span className="flex items-center gap-1.5 text-[12px] text-[#71717a]">
                             {folder.count} {folder.count === 1 ? "candidato" : "candidatos"}
-                            {folder.jobId && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-[#1f7a4d]">
-                                · <Briefcase className="size-3" aria-hidden /> vaga criada
-                              </span>
-                            )}
                           </span>
                         </Link>
                         <TalentFolderActions folderId={folder.id} name={folder.name} />

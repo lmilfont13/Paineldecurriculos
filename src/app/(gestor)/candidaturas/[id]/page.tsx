@@ -42,6 +42,9 @@ function historyLine(
 
 export const metadata: Metadata = { title: "Candidatura · Triagem" };
 
+// Guardar no banco de talentos já confere com até 5 vagas abertas.
+export const maxDuration = 60;
+
 export default async function CandidaturaDetailPage({
   params,
 }: {
@@ -342,6 +345,7 @@ export default async function CandidaturaDetailPage({
               inFolders={talent.inFolders}
               suggestedName={talent.suggestedName}
               level={talent.level}
+              matches={talent.matches}
               highlight={suggestTalentPool({
                 aiState: app.aiState,
                 aiScore: app.aiScore,

@@ -2,16 +2,48 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
+import { FolderOpen, FolderPlus, Loader2, RefreshCw } from "lucide-react";
 
-import { JobFromFolderButton } from "@/components/gestor/job-from-folder-button";
-import { saveToTalentFolderAction } from "@/server/controllers/talent.controller";
+import {
+  analyzeStandbyForApplicationAction,
+  saveToTalentFolderAction,
+} from "@/server/controllers/talent.controller";
 import { sameFolderName, type TalentFolderSummary } from "@/server/models/talent.model";
+
+export type StandbyMatch = {
+  jobId: string;
+  jobTitle: string;
+  minScore: number;
+  score: number | null;
+  state: string;
+};
+
+/** Nota do stand-by: verde se passa do mínimo da vaga, cinza se não. */
+export function MatchScore({ match }: { match: { score: number | null; state: string; minScore: number } }) {
+  if (match.state !== "DONE" || match.score === null) {
+    const label =
+      match.state === "FAILED" ? "falhou" : match.state === "NO_RESUME" ? "sem material" : "analisando…";
+    return <span className="shrink-0 text-[11px] text-[#a1a1aa]">{label}</span>;
+  }
+  const meets = match.score >= match.minScore;
+  return (
+    <span
+      className={
+        "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold " +
+        (meets ? "bg-[#e4f6ec] text-[#1f7a4d]" : "bg-[#f4f4f5] text-[#71717a]")
+      }
+    >
+      {match.score}
+      {meets ? " · combina" : ""}
+    </span>
+  );
+}
 
 /**
  * Banco de talentos no detalhe do candidato. Quando a nota fica abaixo do
  * mínimo da vaga, o card vem em destaque: não serve para esta vaga, mas pode
- * servir para outra. A pasta nova já vem com o perfil resumido pela IA.
+ * servir para outra. Guardado, o candidato fica em stand-by e a IA o confere
+ * com as vagas abertas parecidas (e com as próximas que forem publicadas).
  */
 export function TalentPoolCard({
   applicationId,
@@ -19,6 +51,7 @@ export function TalentPoolCard({
   inFolders,
   suggestedName,
   level,
+  matches,
   highlight,
 }: {
   applicationId: string;
@@ -26,6 +59,7 @@ export function TalentPoolCard({
   inFolders: string[];
   suggestedName: string;
   level: string | null;
+  matches: StandbyMatch[];
   highlight: boolean;
 }) {
   const saved = folders.filter((f) => inFolders.includes(f.id));
@@ -52,7 +86,23 @@ export function TalentPoolCard({
         return;
       }
       setOpen(false);
-      setMessage(`Guardado na pasta “${result.folderName}”.`);
+      setMessage(
+        result.analyzed > 0
+          ? `Guardado em “${result.folderName}” e conferido com ${result.analyzed} ${result.analyzed === 1 ? "vaga aberta" : "vagas abertas"}.`
+          : `Guardado em “${result.folderName}”. Fica em stand-by até abrir uma vaga parecida.`
+      );
+    });
+  }
+
+  function recheck() {
+    setMessage(null);
+    startTransition(async () => {
+      const { analyzed } = await analyzeStandbyForApplicationAction(applicationId);
+      setMessage(
+        analyzed > 0
+          ? `Conferido com ${analyzed} ${analyzed === 1 ? "vaga aberta" : "vagas abertas"}.`
+          : "Nenhuma outra vaga aberta para conferir agora."
+      );
     });
   }
 
@@ -76,7 +126,7 @@ export function TalentPoolCard({
 
       {highlight && saved.length === 0 && !open && (
         <p className="mt-2 text-[12px] leading-5 text-[#78350f]">
-          Ficou abaixo do mínimo desta vaga. Se o perfil é bom para outras vagas, guarde numa pasta de potenciais candidatos e, se fizer sentido, abra uma vaga para esse perfil.
+          Ficou abaixo do mínimo desta vaga. Se o perfil é bom para outras vagas, guarde numa pasta: ele fica em stand-by e a IA confere com as vagas parecidas.
         </p>
       )}
 
@@ -93,12 +143,45 @@ export function TalentPoolCard({
               <span className="text-[11px] text-[#a1a1aa]">
                 {f.count} {f.count === 1 ? "candidato" : "candidatos"} nesta pasta
               </span>
-              <div className="mt-2">
-                <JobFromFolderButton folderId={f.id} jobId={f.jobId} variant="subtle" />
-              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {saved.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold text-[#0a0a0a]">
+              Em stand-by · vagas abertas parecidas
+            </p>
+            <button
+              type="button"
+              onClick={recheck}
+              disabled={pending}
+              aria-label="Conferir de novo com as vagas abertas"
+              title="Conferir de novo com as vagas abertas"
+              className="rounded-md p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
+            >
+              <RefreshCw className={"size-3.5" + (pending ? " animate-spin" : "")} />
+            </button>
+          </div>
+          {matches.length === 0 ? (
+            <p className="mt-1.5 text-[11px] leading-4 text-[#71717a]">
+              Nenhuma vaga aberta parecida ainda. Quando você publicar uma vaga, a IA confere quem está em stand-by.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {matches.map((m) => (
+                <li key={m.jobId} className="flex items-center justify-between gap-2 text-[12px]">
+                  <Link href={`/vagas/${m.jobId}`} className="min-w-0 truncate text-[#0a0a0a] hover:underline">
+                    {m.jobTitle}
+                  </Link>
+                  <MatchScore match={m} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {open ? (
@@ -150,7 +233,7 @@ export function TalentPoolCard({
               style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />}
-              Guardar
+              {pending ? "Guardando e analisando…" : "Guardar"}
             </button>
             <button
               type="button"
@@ -181,7 +264,7 @@ export function TalentPoolCard({
         </p>
       )}
       <p className="mt-2 text-[10px] leading-4 text-[#a1a1aa]">
-        Não muda a etapa e o candidato não é avisado.
+        Não muda a etapa nem a nota desta vaga, e o candidato não é avisado.
       </p>
     </section>
   );

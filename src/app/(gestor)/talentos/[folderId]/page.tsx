@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
-import { JobFromFolderButton } from "@/components/gestor/job-from-folder-button";
 import { RemoveFromFolderButton } from "@/components/gestor/talent-folder-actions";
 import { loadTalentFolder } from "@/server/controllers/talent.controller";
 import { appStatusLabels } from "@/server/models/application.model";
@@ -40,16 +39,7 @@ export default async function TalentFolderPage({
             {levels ? ` · ${levels}` : ""}
           </p>
         </div>
-        {folder.people.length > 0 && (
-          <JobFromFolderButton folderId={folder.id} jobId={folder.job?.id ?? null} />
-        )}
       </div>
-      {!folder.job && folder.people.length > 0 && (
-        <p className="mt-3 max-w-[620px] text-[12px] text-[#71717a]">
-          “Sugerir vaga” escreve um rascunho com título, descrição, requisitos e critérios para esse perfil, a partir
-          das funções e níveis guardados aqui (sem dados pessoais). A vaga fica em rascunho até você revisar e publicar.
-        </p>
-      )}
 
       <div className="mt-6 divide-y divide-[#e4e4e7] overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white">
         {folder.people.length === 0 && (
@@ -69,6 +59,11 @@ export default async function TalentFolderPage({
                   {[person.aiProfile, person.aiLevel].filter(Boolean).join(" · ")}
                   {person.aiProfile || person.aiLevel ? " · " : ""}se inscreveu em {person.job.title}
                 </span>
+                {person.talentMatches[0] && (
+                  <span className="mt-0.5 block truncate text-[11px] font-medium text-[#1f7a4d]">
+                    Combina com {person.talentMatches[0].job.title} ({person.talentMatches[0].score})
+                  </span>
+                )}
               </span>
             </Link>
             <span className="hidden text-[11px] text-[#a1a1aa] sm:block">
@@ -84,7 +79,7 @@ export default async function TalentFolderPage({
         ))}
       </div>
       <p className="mt-3 text-[11px] text-[#a1a1aa]">
-        A nota é a da vaga em que a pessoa se inscreveu, não de uma vaga nova.
+        A nota ao lado é a da vaga em que a pessoa se inscreveu. Em verde, a vaga aberta em que ela foi melhor na análise de stand-by.
       </p>
     </>
   );
