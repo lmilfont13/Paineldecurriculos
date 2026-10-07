@@ -203,7 +203,7 @@ export function AgentRoom({ runs }: { runs: LiveAgentRun[] }) {
   return (
     <section
       aria-label="Sala dos agentes"
-      className="mt-8 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white"
+      className="mt-5 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-5">
         <h2 className="text-base font-semibold text-[#18181b]">Sala dos agentes</h2>
