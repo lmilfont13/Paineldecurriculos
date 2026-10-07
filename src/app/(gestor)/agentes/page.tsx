@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { AgentLiveMonitor } from "@/components/gestor/agent-live-monitor";
+import { IntelligenceAgentCard } from "@/components/gestor/intelligence-agent-card";
 
 import { requireManager } from "@/server/controllers/guards";
 import { getAgentCenterData, getAgentRunMetrics, getAgentRuns } from "@/server/repositories/application.repository";
@@ -51,6 +52,8 @@ export default async function AgentesPage() {
     getAgentRuns(manager.companyId),
   ]);
 
+  const latestIntelligence = runs.find((run) => run.agent === "INTELLIGENCE");
+
   const liveRuns = runs.map((run) => ({
     id: run.id,
     agent: run.agent,
@@ -91,6 +94,8 @@ export default async function AgentesPage() {
       </div>
 
       <AgentLiveMonitor runs={liveRuns} />
+
+      <IntelligenceAgentCard latestSummary={latestIntelligence?.summary ?? null} latestStatus={latestIntelligence?.status ?? null} />
 
       <section className="mt-8 grid gap-4 lg:grid-cols-2">
         {agents.map((agent) => {
