@@ -369,6 +369,12 @@ export async function getResumeSignedUrl(
 ): Promise<string | null> {
   const application = await getCompanyApplication(companyId, applicationId);
   if (!application?.resumeUrl) return null;
+
+  if (application.resumeUrl.startsWith("demo/")) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+    return baseUrl ? `${baseUrl}/${application.resumeUrl}` : null;
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(RESUMES_BUCKET)
