@@ -6,13 +6,18 @@ import { revalidatePath } from "next/cache";
 import { runInBackground } from "@/lib/background";
 import {
   SIMULATION_CANDIDATES,
+  SIMULATION_REAL_LIMIT,
+  SIMULATION_REAL_STEP_PAUSE_MS,
   SIMULATION_STEP_PAUSE_MS,
+  type SimulationJobOption,
 } from "@/server/models/simulation.model";
 import {
   createAgentRun,
   createApplication,
+  countRealApplicationsByJob,
   createStatusEvent,
   findApplicationByCandidateAndJob,
+  findRealApplicationsForSimulation,
   findDemoApplicationIds,
   updateAgentRun,
   updateApplicationAi,
@@ -23,6 +28,7 @@ import {
 } from "@/server/repositories/candidate.repository";
 import {
   createJob,
+  findJobsByCompanyId,
   findOpenJobsByCompanyId,
 } from "@/server/repositories/job.repository";
 import { runTriageWithTracking } from "@/server/services/ai.service";
@@ -146,4 +152,74 @@ export async function clearTriageSimulation(companyId: string) {
   if (ids.length === 0) return { deleted: 0 };
   const { deleted } = await deleteCompanyApplications(companyId, ids);
   return { deleted: deleted.length };
+}
+
+/** Vagas com candidatos reais, para escolher na sala. */
+export async function getSimulationJobOptions(
+  companyId: string
+): Promise<{ total: number; jobs: SimulationJobOption[] }> {
+  const counts = await countRealApplicationsByJob(companyId);
+  const jobs = await findJobsByCompanyId(companyId);
+  const options = jobs
+    .map((job) => ({ id: job.id, title: job.title, count: counts.get(job.id) ?? 0 }))
+    .filter((job) => job.count > 0)
+    .sort((a, b) => b.count - a.count);
+  return { total: options.reduce((sum, j) => sum + j.count, 0), jobs: options };
+}
+
+/**
+ * Sala com candidatos reais: reanalisa até SIMULATION_REAL_LIMIT candidaturas
+ * (as mais recentes da vaga escolhida, ou de todas), uma por vez, com cada
+ * etapa visível. Regra 2: só os campos da IA mudam — etapa, notas e
+ * comunicação ficam como estão; ninguém é avisado.
+ */
+export async function startRealTriageSimulation(
+  companyId: string,
+  jobId: string | null
+): Promise<{ jobTitle: string; candidates: string[]; capped: boolean }> {
+  const options = await getSimulationJobOptions(companyId);
+  const job = jobId ? options.jobs.find((j) => j.id === jobId) : null;
+  if (jobId && !job) return { jobTitle: "", candidates: [], capped: false };
+
+  const apps = await findRealApplicationsForSimulation(
+    companyId,
+    job?.id ?? null,
+    SIMULATION_REAL_LIMIT
+  );
+  const available = job ? job.count : options.total;
+  const queue: { applicationId: string; runId: string }[] = [];
+
+  for (const app of apps) {
+    await updateApplicationAi(app.id, { aiState: "WAITING" });
+    const run = await createAgentRun({
+      companyId,
+      applicationId: app.id,
+      agent: "TRIAGE",
+      eventName: "simulacao/triagem-real",
+    });
+    await updateAgentRun(run.id, { summary: "Na fila da sala" });
+    queue.push({ applicationId: app.id, runId: run.id });
+  }
+
+  if (queue.length > 0) {
+    runInBackground("sala com candidatos reais", async () => {
+      for (const item of queue) {
+        await runTriageWithTracking(item.applicationId, {
+          eventName: "simulacao/triagem-real",
+          runId: item.runId,
+          stepPauseMs: SIMULATION_REAL_STEP_PAUSE_MS,
+          maxAttempts: 3,
+        });
+      }
+      revalidatePath("/agentes");
+      revalidatePath("/candidaturas");
+      revalidatePath("/painel");
+    });
+  }
+
+  return {
+    jobTitle: job?.title ?? "todas as vagas",
+    candidates: apps.map((a) => a.name),
+    capped: available > apps.length,
+  };
 }
