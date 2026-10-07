@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Bot, BrainCircuit, Mail, ShieldCheck, Sparkles, Zap } from "lucide-react";
 
 import { requireManager } from "@/server/controllers/guards";
-import { getAgentCenterData } from "@/server/repositories/application.repository";
+import { getAgentCenterData, getAgentRunMetrics, getAgentRuns } from "@/server/repositories/application.repository";
 
 export const metadata: Metadata = { title: "Agentes · Triagem" };
 
@@ -44,7 +44,7 @@ function Status({ tone }: { tone: string }) {
 
 export default async function AgentesPage() {
   const manager = await requireManager();
-  const data = await getAgentCenterData(manager.companyId);
+  const [data, runMetrics, runs] = await Promise.all([\n    getAgentCenterData(manager.companyId),\n    getAgentRunMetrics(manager.companyId),\n    getAgentRuns(manager.companyId),\n  ]);
 
   return (
     <div className="mx-auto w-full max-w-[1080px]">
@@ -192,6 +192,41 @@ export default async function AgentesPage() {
             </div>
             <p className="pt-1 text-[10px] leading-5 text-[#a1a1aa]">Falhas ficam visíveis aqui para não desaparecerem silenciosamente no processo.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a1a1aa]">Execuções dos agentes</p>
+            <h2 className="mt-1 text-base font-semibold text-[#18181b]">Histórico operacional</h2>
+          </div>
+          <div className="flex gap-2 text-[10px] text-[#71717a]">
+            <span className="rounded-full bg-[#f4f4f5] px-2.5 py-1">{runMetrics.succeeded{'}'} concluídas</span>
+            <span className="rounded-full bg-[#fef2f2] px-2.5 py-1 text-[#b91c1c]">{runMetrics.failed{'}'} falhas</span>
+          </div>
+        </div>
+        <div className="mt-5 divide-y divide-[#f0efed]">
+          {runs.map((run) => (
+            <div key={run.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#fafaf9] ring-1 ring-[#e7e5e4]">
+                  {run.agent === "TRIAGE" ? <BrainCircuit className="size-3.5" /> : <Mail className="size-3.5" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-[#292524]">{run.agent === "TRIAGE" ? "Triagem" : "Comunicação"} · {run.application?.name ?? "Candidatura"}</p>
+                  <p className="truncate text-[10px] text-[#a1a1aa]">{run.application?.job.title ?? "—"} · {run.summary ?? run.eventName}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {run.durationMs !== null && <span className="text-[10px] text-[#a1a1aa]">{run.durationMs} ms</span>}
+                <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${run.status === "SUCCEEDED" ? "bg-[#f0fdf4] text-[#15803d]" : run.status === "FAILED" ? "bg-[#fef2f2] text-[#b91c1c]" : "bg-[#f4f4f5] text-[#71717a]"}`}>
+                  {run.status === "SUCCEEDED" ? "CONCLUÍDO" : run.status === "FAILED" ? "FALHOU" : run.status}
+                </span>
+              </div>
+            </div>
+          ))}
+          {runs.length === 0 && <p className="py-6 text-center text-[12px] text-[#a1a1aa]">As próximas execuções aparecerão aqui.</p>}
         </div>
       </section>
 
