@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BrainCircuit, CheckCircle2, Clock3, Loader2, Mail, XCircle, Zap } from "lucide-react";
+import { Activity, BrainCircuit, CheckCircle2, Clock3, Loader2, Mail, RefreshCw, XCircle, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Agent = "TRIAGE" | "COMMUNICATION" | "INTELLIGENCE";
@@ -65,11 +65,10 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setNow(Date.now());
-      router.refresh();
-    }, 5000);
+    }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [router]);
+  }, []);
 
   const activeRuns = useMemo(
     () => runs.filter((run) => run.status === "QUEUED" || run.status === "RUNNING"),
@@ -96,13 +95,23 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
-              Atualização automática a cada 5 segundos
+              O estado é atualizado ao abrir ou ao solicitar uma nova leitura
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-[#a1a1aa]">
-          <Clock3 className="size-3.5" />
-          {new Date(now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-[10px] text-[#a1a1aa]">
+            <Clock3 className="size-3.5" />
+            {new Date(now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </div>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#57534e] transition hover:bg-[#fafaf9]"
+          >
+            <RefreshCw className="size-3" />
+            Atualizar
+          </button>
         </div>
       </div>
 
