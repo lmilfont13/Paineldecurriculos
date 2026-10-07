@@ -17,6 +17,7 @@ import { getCompanyById } from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
 import { getDashboard } from "@/server/services/dashboard.service";
 import { getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
+import { appUrl } from "@/lib/env";
 
 /** Dados do shell do gestor (sidebar/topbar) — 1x por request. */
 export const getGestorShell = cache(async () => {
@@ -40,7 +41,7 @@ export async function getConfiguracoesData() {
   const { company } = await getGestorShell();
   return {
     company,
-    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas`,
+    publicUrl: `${appUrl()}/${company.slug}/vagas`,
   };
 }
 
@@ -68,7 +69,7 @@ export async function getVagaDetailData(jobId: string) {
   return {
     job,
     companySlug: company.slug,
-    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas/${job.id}`,
+    publicUrl: `${appUrl()}/${company.slug}/vagas/${job.id}`,
     applications,
   };
 }
@@ -111,7 +112,7 @@ export async function getPainelData(): Promise<{
     userName: user.name ?? user.email,
     companyName: company.name,
     companySlug: company.slug,
-    publicUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${company.slug}/vagas`,
+    publicUrl: `${appUrl()}/${company.slug}/vagas`,
     stats,
     priority,
     jobs,

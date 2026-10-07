@@ -9,6 +9,7 @@ import type {
   SessionUser,
 } from "@/server/models/user.model";
 import { findUserByEmail } from "@/server/repositories/user.repository";
+import { appUrl } from "@/lib/env";
 
 /**
  * E-mail da sessão, validado pela assinatura do JWT (getClaims).
@@ -64,7 +65,7 @@ export function isAdmin(user: SessionUser): user is AdminUser {
 export async function sendPasswordReset(email: string): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/redefinir-senha`,
+    redirectTo: `${appUrl()}/redefinir-senha`,
   });
 }
 

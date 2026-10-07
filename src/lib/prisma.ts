@@ -14,7 +14,7 @@ export const prisma =
   new PrismaClient({
     datasources: {
       db: {
-        url: normalizeDatabaseUrl(process.env.DATABASE_URL),
+        url: normalizeDatabaseUrl(process.env.DATABASE_URL?.trim()),
       },
     },
   });

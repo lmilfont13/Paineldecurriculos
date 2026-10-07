@@ -1,5 +1,7 @@
 import { Inngest } from "inngest";
 
+import { readEnv } from "@/lib/env";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
@@ -12,10 +14,11 @@ const isProduction = process.env.NODE_ENV === "production";
  * Sem elas, `inngestConfigured` é false e quem enfileira trabalho roda o
  * fallback em `after()` (src/lib/background.ts) em vez de perder o evento.
  */
+const eventKey = readEnv("INNGEST_EVENT_KEY");
+const signingKey = readEnv("INNGEST_SIGNING_KEY");
+
 export const inngestConfigured =
-  !isProduction ||
-  (Boolean(process.env.INNGEST_EVENT_KEY) &&
-    Boolean(process.env.INNGEST_SIGNING_KEY));
+  !isProduction || (Boolean(eventKey) && Boolean(signingKey));
 
 if (isProduction && !inngestConfigured) {
   console.warn(
@@ -33,6 +36,9 @@ if (isProduction && !inngestConfigured) {
 export const inngest = new Inngest({
   id: "triagem",
   isDev: !isProduction,
+  // Passadas já sem "\r\n" (ver lib/env.ts); sem isso o SDK lê o valor cru.
+  ...(eventKey ? { eventKey } : {}),
+  ...(signingKey ? { signingKey } : {}),
 });
 
 /**

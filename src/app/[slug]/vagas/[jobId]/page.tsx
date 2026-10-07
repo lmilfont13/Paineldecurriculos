@@ -17,6 +17,7 @@ import {
   getJobDetailPageData,
   getPublicSession,
 } from "@/server/controllers/public.controller";
+import { appUrl } from "@/lib/env";
 
 export async function generateMetadata({
   params,
@@ -43,7 +44,7 @@ export default async function PublicJobDetailPage({
   const candidate = await getPublicSession();
   if (!data) notFound();
   const { company, job, applicantCount } = data;
-  const publicJobUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${company.slug}/vagas/${job.id}`;
+  const publicJobUrl = `${appUrl()}/${company.slug}/vagas/${job.id}`;
   const bullets = requirementsToBullets(job.requirements);
   const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
   const tags = [
