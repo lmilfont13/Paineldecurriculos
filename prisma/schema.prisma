@@ -74,6 +74,7 @@ model Job {
 
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications Application[]
+  formFields   FormField[]
 
   @@index([companyId, status])
 }
@@ -107,11 +108,15 @@ model FormField {
   options   String[]  @default([])
   order     Int
   isCore    Boolean   @default(false)
+  /// null = pergunta da empresa (todas as vagas); preenchido = só desta vaga.
+  jobId     String?
 
   company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
   answers Answer[]
 
   @@index([companyId, order])
+  @@index([jobId])
 }
 
 enum FieldType {

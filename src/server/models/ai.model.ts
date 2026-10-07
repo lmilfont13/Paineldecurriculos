@@ -17,11 +17,24 @@ const SKIPPED_FIELD_TYPES = new Set(["FILE_UPLOAD", "DATE"]);
  * Respostas do formulário como texto para a IA. Pula anexos e datas (data de
  * nascimento, por exemplo, não deve pesar: a IA ignora idade — regra 3).
  */
+/**
+ * Perguntas que tocam idade, sexo, família etc. podem existir por exigência
+ * legal (ex.: "Tem 18 anos ou mais?"), mas a resposta não vai para a IA
+ * (regra 3): o gestor confere, a nota não.
+ */
+const SENSITIVE_LABEL =
+  /\b(idade|anos ou mais|maior de idade|nascimento|sexo|g[eê]nero|estado civil|filhos|religi|ra[cç]a|etnia|defici[eê]ncia|gravid)/i;
+
+export function isSensitiveQuestion(label: string): boolean {
+  return SENSITIVE_LABEL.test(label);
+}
+
 export function buildAnswersText(
   answers: { value: string; field: { label: string; type: string } }[]
 ): string {
   return answers
     .filter((a) => !SKIPPED_FIELD_TYPES.has(a.field.type))
+    .filter((a) => !isSensitiveQuestion(a.field.label))
     .map((a) => ({ label: a.field.label.trim(), value: a.value.trim() }))
     .filter((a) => a.label && a.value)
     .map((a) => `${a.label}: ${a.value}`)

@@ -14,6 +14,7 @@ describe("buildAnswersText", () => {
       { value: "1990-01-01", field: { label: "Nascimento", type: "DATE" } },
       { value: "x.pdf", field: { label: "Currículo", type: "FILE_UPLOAD" } },
       { value: "  ", field: { label: "Vazia", type: "TEXT" } },
+      { value: "Sim", field: { label: "Tem 18 anos ou mais?", type: "YES_NO" } },
     ]);
     expect(text).toBe("Experiência: 5 anos em loja");
   });

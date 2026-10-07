@@ -60,7 +60,7 @@ import {
   sendStatusUpdateEmail,
   type EmailBrand,
 } from "@/server/services/email.service";
-import { findFormFieldsByCompanyId } from "@/server/repositories/form-field.repository";
+import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
 import { runTriageWithTracking } from "@/server/services/ai.service";
 import { removeResumePhotos } from "@/server/services/resume-photo.service";
@@ -535,7 +535,7 @@ export async function submitApplication(
   }
 
   // Valida respostas contra os campos definidos pela empresa
-  const fields = await findFormFieldsByCompanyId(companyId);
+  const fields = await findFieldsForJob(companyId, job.id);
   const fieldById = new Map(fields.map((f) => [f.id, f]));
   const answers: { fieldId: string; value: string }[] = [];
 

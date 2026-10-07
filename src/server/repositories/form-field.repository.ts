@@ -2,9 +2,18 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 
+/** Perguntas da empresa (valem para todas as vagas). */
 export function findFormFieldsByCompanyId(companyId: string) {
   return prisma.formField.findMany({
-    where: { companyId },
+    where: { companyId, jobId: null },
+    orderBy: { order: "asc" },
+  });
+}
+
+/** Perguntas só desta vaga (o tenant entra no filtro — regra 1). */
+export function findJobFormFields(companyId: string, jobId: string) {
+  return prisma.formField.findMany({
+    where: { companyId, jobId },
     orderBy: { order: "asc" },
   });
 }
@@ -21,6 +30,7 @@ export function createFormField(data: {
   options: string[];
   order: number;
   isCore: boolean;
+  jobId?: string | null;
 }) {
   return prisma.formField.create({ data });
 }

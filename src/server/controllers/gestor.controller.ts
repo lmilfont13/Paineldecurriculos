@@ -15,7 +15,10 @@ import {
 } from "@/server/services/application.service";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getCompanyById } from "@/server/services/company.service";
-import { listApplicationFormFields } from "@/server/services/form.service";
+import {
+  getJobQuestions,
+  listApplicationFormFields,
+} from "@/server/services/form.service";
 import { getDashboard } from "@/server/services/dashboard.service";
 import { getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
 import { appUrl } from "@/lib/env";
@@ -71,8 +74,10 @@ export async function getVagaDetailData(jobId: string) {
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
+  const questions = await getJobQuestions(user.companyId, jobId);
   return {
     job,
+    questions,
     companySlug: company.slug,
     publicUrl: `${appUrl()}/${company.slug}/vagas/${job.id}`,
     applications,
