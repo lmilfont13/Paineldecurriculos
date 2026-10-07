@@ -4,6 +4,50 @@ import type { AIState } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
+
+/** Métricas operacionais da Central de Agentes — sempre filtradas por empresa. */
+export async function getAgentCenterData(companyId: string) {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [submitted, aiDone, aiProcessing, aiFailed, communications, recentApplications] =
+    await Promise.all([
+      prisma.application.count({ where: { companyId, createdAt: { gte: since } } }),
+      prisma.application.count({ where: { companyId, aiState: "DONE", updatedAt: { gte: since } } }),
+      prisma.application.count({ where: { companyId, aiState: "PROCESSING" } }),
+      prisma.application.count({ where: { companyId, aiState: "FAILED" } }),
+      prisma.statusEvent.count({
+        where: {
+          createdAt: { gte: since },
+          application: { companyId },
+        },
+      }),
+      prisma.application.findMany({
+        where: { companyId },
+        orderBy: { updatedAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          aiState: true,
+          aiScore: true,
+          updatedAt: true,
+          job: { select: { title: true } },
+        },
+      }),
+    ]);
+
+  return {
+    windowLabel: "Últimos 7 dias",
+    submitted,
+    aiDone,
+    aiProcessing,
+    aiFailed,
+    communications,
+    recentApplications,
+  };
+}
+
 export function countApplicationsByJobId(jobId: string) {
   return prisma.application.count({ where: { jobId } });
 }
