@@ -14,7 +14,7 @@ export function DemoTriageButton() {
     startTransition(async () => {
       try {
         const response = await runDemoTriage();
-        setResult(`${response.candidateName} analisada. Abra a candidatura para ver o score.`);
+        setResult(`Demonstração iniciada para ${response.candidateName}. Use “Atualizar” no monitor para acompanhar e abra a candidatura quando concluir.`);
       } catch (error) {
         setResult(error instanceof Error ? error.message : "Não foi possível executar a demonstração.");
       }
