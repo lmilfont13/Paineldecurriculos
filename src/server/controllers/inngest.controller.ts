@@ -3,6 +3,7 @@ import "server-only";
 import { inngest } from "@/lib/inngest";
 import { analyzeApplication } from "@/server/services/ai.service";
 import { notifyApplicationStatusChange } from "@/server/services/application.service";
+import { runCompanyIntelligence } from "@/server/services/intelligence.service";
 import { findApplicationById, createAgentRun, updateAgentRun } from "@/server/repositories/application.repository";
 
 /**
@@ -97,4 +98,17 @@ export const applicationStatusChangedJob = inngest.createFunction(
   }
 );
 
-export const inngestFunctions = [analyzeApplicationJob, applicationStatusChangedJob];
+
+export const companyIntelligenceJob = inngest.createFunction(
+  {
+    id: "company-intelligence",
+    retries: 2,
+    triggers: [{ event: "company/intelligence-requested" }],
+  },
+  async ({ event }) => {
+    const { companyId, runId } = event.data as { companyId: string; runId: string };
+    await runCompanyIntelligence(companyId, runId);
+  }
+);
+
+export const inngestFunctions = [analyzeApplicationJob, applicationStatusChangedJob, companyIntelligenceJob];
