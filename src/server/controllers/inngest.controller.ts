@@ -3,6 +3,7 @@ import "server-only";
 import { inngest } from "@/lib/inngest";
 import { analyzeApplication } from "@/server/services/ai.service";
 import { notifyApplicationStatusChange } from "@/server/services/application.service";
+import { findApplicationById, createAgentRun, updateAgentRun } from "@/server/repositories/application.repository";
 
 /**
  * Job em background (regra 2): candidatura salva → responde 200 →
@@ -16,7 +17,35 @@ export const analyzeApplicationJob = inngest.createFunction(
   },
   async ({ event }) => {
     const { applicationId } = event.data as { applicationId: string };
-    await analyzeApplication(applicationId);
+    const application = await findApplicationById(applicationId);
+    if (!application) return;
+
+    const run = await createAgentRun({
+      companyId: application.company.id,
+      applicationId,
+      agent: "TRIAGE",
+      eventName: "application/submitted",
+    });
+    const startedAt = new Date();
+    await updateAgentRun(run.id, { status: "RUNNING", attempts: 1, startedAt });
+
+    try {
+      await analyzeApplication(applicationId);
+      await updateAgentRun(run.id, {
+        status: "SUCCEEDED",
+        summary: "Candidatura analisada pela IA.",
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+    } catch (error) {
+      await updateAgentRun(run.id, {
+        status: "FAILED",
+        error: error instanceof Error ? error.message.slice(0, 500) : "Falha desconhecida.",
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+      throw error;
+    }
   }
 );
 
@@ -36,7 +65,35 @@ export const applicationStatusChangedJob = inngest.createFunction(
       applicationId: string;
       status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
     };
-    await notifyApplicationStatusChange(applicationId, status);
+    const application = await findApplicationById(applicationId);
+    if (!application) return;
+
+    const run = await createAgentRun({
+      companyId: application.company.id,
+      applicationId,
+      agent: "COMMUNICATION",
+      eventName: "application/status-changed",
+    });
+    const startedAt = new Date();
+    await updateAgentRun(run.id, { status: "RUNNING", attempts: 1, startedAt });
+
+    try {
+      await notifyApplicationStatusChange(applicationId, status);
+      await updateAgentRun(run.id, {
+        status: "SUCCEEDED",
+        summary: `Candidato comunicado: ${status}.`,
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+    } catch (error) {
+      await updateAgentRun(run.id, {
+        status: "FAILED",
+        error: error instanceof Error ? error.message.slice(0, 500) : "Falha desconhecida.",
+        durationMs: Date.now() - startedAt.getTime(),
+        finishedAt: new Date(),
+      });
+      throw error;
+    }
   }
 );
 
