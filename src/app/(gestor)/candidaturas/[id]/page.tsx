@@ -8,7 +8,9 @@ import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
+import { CareerCard } from "@/components/gestor/career-card";
 import { TalentPoolCard } from "@/components/gestor/talent-pool-card";
+import { readCareer } from "@/server/models/career.model";
 import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
 import { suggestTalentPool } from "@/server/models/talent.model";
 import { readChecklist } from "@/server/models/ai.model";
@@ -42,7 +44,7 @@ function historyLine(
 
 export const metadata: Metadata = { title: "Candidatura · Triagem" };
 
-// Guardar no banco de talentos já confere com até 5 vagas abertas.
+// Banco de talentos (até 5 vagas) e análise de perfil (até 3) rodam na hora.
 export const maxDuration = 60;
 
 export default async function CandidaturaDetailPage({
@@ -261,6 +263,12 @@ export default async function CandidaturaDetailPage({
               </div>
             )}
           </section>
+
+          <CareerCard
+            applicationId={app.id}
+            career={readCareer(app.aiCareer)}
+            matches={talent?.matches ?? []}
+          />
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <h2 className="text-sm font-semibold text-[#0a0a0a]">

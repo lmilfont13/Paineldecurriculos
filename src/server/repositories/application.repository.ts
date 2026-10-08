@@ -525,3 +525,8 @@ export async function countRealApplicationsByJob(companyId: string) {
   });
   return new Map(rows.map((r) => [r.jobId, r._count._all]));
 }
+
+/** Análise de perfil sob demanda (não mexe em etapa nem na nota da vaga). */
+export function updateApplicationCareer(id: string, aiCareer: Prisma.InputJsonValue) {
+  return prisma.application.update({ where: { id }, data: { aiCareer } });
+}

@@ -170,6 +170,9 @@ model Application {
   /// Segmentação do currículo pela IA: área (ex.: Logística) e nível.
   aiArea       String?
   aiLevel      String?
+  /// Análise de perfil sob demanda: áreas em que a pessoa se sairia bem,
+  /// nota estimada por área e resumo de onde seria bem aproveitada.
+  aiCareer     Json?
   managerNotes String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

@@ -164,7 +164,7 @@ export async function deleteCompanyTalentFolder(companyId: string, folderId: str
 }
 
 
-async function scoreStandby(
+export async function scoreStandby(
   companyId: string,
   applicationId: string,
   job: { id: string; title: string; aiCriteria: string[]; requirements: string | null }

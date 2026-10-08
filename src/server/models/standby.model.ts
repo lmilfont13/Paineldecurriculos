@@ -78,3 +78,6 @@ export function whatsappInvite(params: {
     `que combina com o seu perfil: ${params.jobTitle}. Se tiver interesse, é só se candidatar por aqui: ${params.url}`;
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
+
+/** Na análise de perfil, quantas vagas abertas comparar. */
+export const CAREER_JOBS_LIMIT = 3;
