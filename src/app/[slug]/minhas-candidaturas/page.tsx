@@ -186,7 +186,11 @@ export default async function MinhasCandidaturasPage({
             return (
               <Link
                 key={app.id}
-                href={`/${slug}/minhas-candidaturas/${app.id}`}
+                href={
+                  app.preRegistered
+                    ? `/${slug}/vagas/${app.jobId}/candidatar`
+                    : `/${slug}/minhas-candidaturas/${app.id}`
+                }
                 className="group block rounded-2xl border border-[#e8e3de] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d6d0ca] hover:shadow-[0_8px_24px_rgba(28,25,23,0.06)] md:p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -202,7 +206,7 @@ export default async function MinhasCandidaturasPage({
                     className={`flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold ${status.className}`}
                   >
                     <span className="size-1.5 rounded-full bg-current" />
-                    {status.label}
+                    {app.preRegistered ? "Falta completar" : status.label}
                   </span>
                 </div>
                 <div className="mt-4 border-t border-[#f0ece8] pt-4">
@@ -210,11 +214,13 @@ export default async function MinhasCandidaturasPage({
                     Próximo passo
                   </p>
                   <p className="mt-1 text-[13px] leading-6 text-[#57534e]">
-                    {whatHappensNow(
-                      app.status,
-                      app.company.name,
-                      app.interviewAt ? formatInterviewAt(app.interviewAt) : null
-                    )}
+                    {app.preRegistered
+                      ? `A ${app.company.name} já iniciou sua candidatura. Toque aqui para completar: envie o currículo e responda as perguntas (uns 3 minutos).`
+                      : whatHappensNow(
+                          app.status,
+                          app.company.name,
+                          app.interviewAt ? formatInterviewAt(app.interviewAt) : null
+                        )}
                   </p>
                 </div>
               </Link>

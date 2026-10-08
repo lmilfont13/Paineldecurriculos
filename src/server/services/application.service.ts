@@ -30,6 +30,8 @@ import {
   findApplicationsByCandidate,
   findApplicationsByCompany,
   findLatestApplicationWithAnswers,
+  completePreRegisteredApplication,
+  updateApplicationResume,
   updateAgentRun,
   updateApplicationAi,
   updateApplicationStatus,
@@ -50,7 +52,8 @@ import {
   notifyManagerMessage,
   notifyStageChange,
 } from "@/server/services/notification.service";
-import { findManagerByCompanyId } from "@/server/repositories/user.repository";
+import { findManagerByCompanyId, findUserByEmail } from "@/server/repositories/user.repository";
+import { createCandidate, findCandidateByEmail } from "@/server/repositories/candidate.repository";
 import { updateCandidateProfile } from "@/server/services/candidate.service";
 import {
   sendApplicationConfirmation,
@@ -268,7 +271,9 @@ export async function getExistingApplicationId(
   jobId: string
 ): Promise<string | null> {
   const existing = await findApplicationByCandidateAndJob(candidateId, jobId);
-  return existing?.id ?? null;
+  // Cadastro rápido do gestor ainda não conta: o candidato precisa completar.
+  if (!existing || existing.preRegistered) return null;
+  return existing.id;
 }
 
 /**
@@ -530,7 +535,8 @@ export async function submitApplication(
     return { ok: false, error: "Esta vaga não está mais aberta." };
   }
 
-  if (await findApplicationByCandidateAndJob(candidate.id, job.id)) {
+  const existing = await findApplicationByCandidateAndJob(candidate.id, job.id);
+  if (existing && !existing.preRegistered) {
     return { ok: false, error: "Você já se candidatou a esta vaga." };
   }
 
@@ -552,8 +558,9 @@ export async function submitApplication(
     }
   }
 
-  // Sem arquivo novo, reaproveita o currículo salvo no perfil (CA3).
-  let resumeUrl: string | null = candidate.resumeUrl;
+  // Sem arquivo novo, reaproveita o currículo salvo no perfil (CA3) ou o
+  // que o gestor já anexou no cadastro rápido.
+  let resumeUrl: string | null = candidate.resumeUrl ?? existing?.resumeUrl ?? null;
   if (uploadedResumePath) {
     const allowed =
       isAllowedResumePath(
@@ -569,19 +576,28 @@ export async function submitApplication(
     resumeUrl = uploadedResumePath;
   }
 
-  const application = await createApplication({
-    jobId: job.id,
-    companyId,
-    candidateId: candidate.id,
-    name: input.name,
-    email: candidate.email,
-    phone: input.phone || null,
-    resumeUrl,
-    // Toda candidatura entra na análise: com PDF, só com as respostas, ou as
-    // duas coisas. A própria análise marca NO_RESUME se não houver material.
-    aiState: "WAITING",
-    answers,
-  });
+  // Cadastro rápido do gestor: o candidato completa a mesma candidatura
+  // (mantém histórico e notas); senão, cria uma nova.
+  const application = existing
+    ? await completePreRegisteredApplication(existing.id, {
+        name: input.name,
+        phone: input.phone || null,
+        resumeUrl,
+        answers,
+      })
+    : await createApplication({
+        jobId: job.id,
+        companyId,
+        candidateId: candidate.id,
+        name: input.name,
+        email: candidate.email,
+        phone: input.phone || null,
+        resumeUrl,
+        // Toda candidatura entra na análise: com PDF, só com as respostas, ou as
+        // duas coisas. A própria análise marca NO_RESUME se não houver material.
+        aiState: "WAITING",
+        answers,
+      });
 
   // CA2: o que o candidato preencheu vira perfil para as próximas vagas
   await updateCandidateProfile(candidate.id, {
@@ -590,13 +606,16 @@ export async function submitApplication(
     resumeUrl,
   });
 
-  // Timeline: registra o envio (primeiro evento da candidatura)
-  await createStatusEvent({
-    applicationId: application.id,
-    from: null,
-    to: "PENDING",
-    actor: "candidato",
-  }).catch(() => {});
+  // Timeline: registra o envio (primeiro evento da candidatura). No cadastro
+  // rápido, o primeiro evento já foi gravado quando o gestor cadastrou.
+  if (!existing) {
+    await createStatusEvent({
+      applicationId: application.id,
+      from: null,
+      to: "PENDING",
+      actor: "candidato",
+    }).catch(() => {});
+  }
 
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
   enqueueTriage(application.id);
@@ -694,4 +713,98 @@ export async function deleteCompanyApplications(
     });
   }
   return { deleted };
+}
+
+/**
+ * Cadastro rápido pelo gestor: só com o e-mail (nome e telefone opcionais)
+ * cria o candidato e a candidatura na vaga, marcada como "incompleta". O
+ * candidato completa depois pelo link da vaga, criando a senha com o mesmo
+ * e-mail. Nada é analisado até ter currículo ou respostas.
+ */
+export async function preRegisterCandidates(
+  companyId: string,
+  jobId: string,
+  entries: { email: string; name: string; phone: string | null }[]
+): Promise<{
+  jobTitle: string;
+  created: { id: string; email: string; name: string; phone: string | null }[];
+  skipped: { email: string; reason: string }[];
+} | null> {
+  const job = await findJobById(jobId);
+  if (!job || job.companyId !== companyId) return null;
+
+  const created: { id: string; email: string; name: string; phone: string | null }[] = [];
+  const skipped: { email: string; reason: string }[] = [];
+
+  for (const entry of entries) {
+    if (await findUserByEmail(entry.email)) {
+      skipped.push({ email: entry.email, reason: "é e-mail de alguém da equipe" });
+      continue;
+    }
+    const candidate =
+      (await findCandidateByEmail(entry.email)) ??
+      (await createCandidate({ email: entry.email, name: entry.name, authId: null }));
+    if (await findApplicationByCandidateAndJob(candidate.id, job.id)) {
+      skipped.push({ email: entry.email, reason: "já está nesta vaga" });
+      continue;
+    }
+    const application = await createApplication({
+      jobId: job.id,
+      companyId,
+      candidateId: candidate.id,
+      name: candidate.authId ? candidate.name : entry.name,
+      email: entry.email,
+      phone: entry.phone ?? candidate.phone ?? null,
+      resumeUrl: candidate.resumeUrl ?? null,
+      aiState: candidate.resumeUrl ? "WAITING" : "NO_RESUME",
+      answers: [],
+      preRegistered: true,
+    });
+    await createStatusEvent({
+      applicationId: application.id,
+      from: null,
+      to: "PENDING",
+      actor: "gestor",
+    }).catch(() => {});
+    // Quem já tinha currículo no perfil entra direto na análise.
+    if (candidate.resumeUrl) enqueueTriage(application.id);
+    created.push({ id: application.id, email: entry.email, name: application.name, phone: application.phone });
+  }
+  return { jobTitle: job.title, created, skipped };
+}
+
+/** URL assinada para o gestor anexar o PDF (ex.: currículo recebido por e-mail). */
+export async function requestManagerResumeUpload(
+  companyId: string,
+  applicationId: string
+): Promise<ResumeUploadTarget | null> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application?.candidateId) return null;
+  return createResumeUploadTarget(
+    applicationResumePrefix(companyId, application.jobId, application.candidateId)
+  );
+}
+
+/**
+ * Gestor anexou o currículo: confere o arquivo (regra 5), grava na
+ * candidatura (e no perfil, se o candidato ainda não tem) e manda para a IA.
+ */
+export async function attachManagerResume(
+  companyId: string,
+  applicationId: string,
+  path: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application?.candidateId) return { ok: false, error: "Candidatura não encontrada." };
+  const prefix = applicationResumePrefix(companyId, application.jobId, application.candidateId);
+  if (!isAllowedResumePath(path, prefix)) {
+    return { ok: false, error: "Currículo inválido. Envie o PDF novamente." };
+  }
+  const verified = await verifyUploadedResume(path);
+  if (!verified.ok) return verified;
+  await updateApplicationResume(applicationId, path);
+  const candidate = await findCandidateByEmail(application.email);
+  if (candidate && !candidate.resumeUrl) await updateCandidateProfile(candidate.id, { resumeUrl: path });
+  enqueueTriage(applicationId);
+  return { ok: true };
 }

@@ -9,6 +9,8 @@ import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import { CareerCard } from "@/components/gestor/career-card";
+import { ManagerIntakeCard } from "@/components/gestor/manager-intake-card";
+import { getIntakeInvite } from "@/server/controllers/intake.controller";
 import { TalentPoolCard } from "@/components/gestor/talent-pool-card";
 import { readCareer } from "@/server/models/career.model";
 import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
@@ -55,6 +57,10 @@ export default async function CandidaturaDetailPage({
   const { id } = await params;
   const app = await getCandidaturaDetail(id);
   const talent = app ? await loadApplicationTalentInfo(app.id) : null;
+  const intake =
+    app && (app.preRegistered || !app.resumeUrl)
+      ? await getIntakeInvite(app.id, app.job.id, app.job.title, app.name, app.email, app.phone)
+      : null;
   if (!app) notFound();
 
   const meets = app.aiScore !== null && app.aiScore >= app.job.aiMinScore;
@@ -110,6 +116,11 @@ export default async function CandidaturaDetailPage({
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
                   {app.name}
+                  {app.preRegistered && (
+                    <span className="ml-2 rounded-full bg-[#fff7e6] px-2 py-0.5 align-middle text-[11px] font-medium text-[#a16207]">
+                      Cadastro incompleto
+                    </span>
+                  )}
                   {app.isDemo && (
                     <span className="ml-2 rounded-full bg-[#f5f3ff] px-2 py-0.5 align-middle text-[11px] font-medium text-[#6d28d9]">
                       Demonstração
@@ -117,7 +128,7 @@ export default async function CandidaturaDetailPage({
                   )}
                 </h1>
                 <p className="mt-1 text-xs text-[#71717a]">
-                  Candidatou-se em {formatAppliedAt(app.createdAt, true)}
+                  {app.preRegistered ? "Cadastrado por você em" : "Candidatou-se em"} {formatAppliedAt(app.createdAt, true)}
                   {app.status === "PENDING" && (
                     <>
                       {" · "}
@@ -345,6 +356,16 @@ export default async function CandidaturaDetailPage({
             candidateName={app.name}
             interview={interview}
           />
+
+          {(app.preRegistered || !app.resumeUrl) && intake && (
+            <ManagerIntakeCard
+              applicationId={app.id}
+              preRegistered={app.preRegistered}
+              hasResume={!!app.resumeUrl}
+              invite={intake.invite}
+              whatsapp={intake.whatsapp}
+            />
+          )}
 
           {talent && (
             <TalentPoolCard

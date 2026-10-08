@@ -236,11 +236,19 @@ export function CandidaturasTable({
           )}
         </p>
         </div>
-        {pendingTotal > 0 && (
-          <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>
-            Triar agora →
+        <div className="flex items-center gap-2">
+          <Link
+            href="/candidaturas/novo"
+            className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
+          >
+            + Adicionar por e-mail
           </Link>
-        )}
+          {pendingTotal > 0 && (
+            <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>
+              Triar agora →
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Etapas do funil com contagem — onde está o trabalho, sem filtrar às cegas */}
@@ -405,6 +413,11 @@ export function CandidaturasTable({
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                     {row.name}
+                    {row.preRegistered && (
+                      <span className="ml-1.5 rounded-full bg-[#fff7e6] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#a16207]">
+                        Cadastro incompleto
+                      </span>
+                    )}
                     {row.isDemo && (
                       <span className="ml-1.5 rounded-full bg-[#f5f3ff] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#6d28d9]">
                         Demonstração

@@ -24,3 +24,8 @@ export function updateCandidate(
 ) {
   return prisma.candidate.update({ where: { id }, data });
 }
+
+/** Cadastro rápido virou conta: liga o usuário de login ao candidato. */
+export function linkCandidateAuth(id: string, authId: string | null, name: string) {
+  return prisma.candidate.update({ where: { id }, data: { authId, name } });
+}

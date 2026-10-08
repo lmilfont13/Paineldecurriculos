@@ -26,6 +26,7 @@ import {
   createCandidate,
   deleteCandidate,
   findCandidateByEmail,
+  linkCandidateAuth,
   updateCandidate,
 } from "@/server/repositories/candidate.repository";
 import { findUserByEmail } from "@/server/repositories/user.repository";
@@ -68,7 +69,10 @@ export async function signupCandidate(input: {
       error: "Este e-mail pertence a uma conta de equipe da plataforma.",
     };
   }
-  if (await findCandidateByEmail(input.email)) {
+  // Cadastro rápido feito pela empresa (sem senha ainda): a pessoa cria a
+  // senha agora e assume o cadastro, com as candidaturas que já existem.
+  const existing = await findCandidateByEmail(input.email);
+  if (existing?.authId) {
     return {
       ok: false,
       error: "Este e-mail já tem conta. Use a aba Entrar.",
@@ -84,12 +88,21 @@ export async function signupCandidate(input: {
   if (authError && !/already|registered/i.test(authError.message)) {
     return { ok: false, error: "Não foi possível criar a conta. Tente novamente." };
   }
+  if (authError && existing) {
+    // Já existe login com este e-mail, mas não ligado ao candidato: não
+    // trocamos a senha de ninguém por aqui.
+    return { ok: false, error: "Este e-mail já tem conta. Use a aba Entrar." };
+  }
 
-  await createCandidate({
-    email: input.email,
-    name: input.name,
-    authId: created?.user?.id ?? null,
-  });
+  if (existing) {
+    await linkCandidateAuth(existing.id, created?.user?.id ?? null, input.name);
+  } else {
+    await createCandidate({
+      email: input.email,
+      name: input.name,
+      authId: created?.user?.id ?? null,
+    });
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
@@ -116,7 +129,17 @@ export async function loginCandidate(input: {
   }
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(input);
-  if (error) return { ok: false, error: "E-mail ou senha incorretos." };
+  if (error) {
+    // Cadastro rápido feito pela empresa ainda sem senha: orienta a criar.
+    if (!candidate.authId) {
+      return {
+        ok: false,
+        error:
+          "A empresa já iniciou seu cadastro com este e-mail. Use a aba Criar conta para criar sua senha.",
+      };
+    }
+    return { ok: false, error: "E-mail ou senha incorretos." };
+  }
   return { ok: true };
 }
 
