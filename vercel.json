@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["pdx1"]
+  "regions": ["pdx1"],
+  "ignoreCommand": "if [ -n \"$VERCEL_PROJECT_ID\" ] && [ \"$VERCEL_PROJECT_ID\" != \"prj_SchxjrmAIuYQoFfZvIhdhk59u1Fm\" ]; then echo 'Projeto antigo (paineldecurriculos): build ignorado. O site é o paineldecurriculos-ptsc.'; exit 0; fi; exit 1"
 }
