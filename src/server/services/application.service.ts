@@ -65,7 +65,18 @@ import {
 } from "@/server/services/email.service";
 import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
-import { runTriageWithTracking } from "@/server/services/ai.service";
+import {
+  extractResumeContact,
+  readResumeText,
+  runTriageWithTracking,
+} from "@/server/services/ai.service";
+import {
+  BATCH_RESUME_LIMIT,
+  batchResumePrefix,
+  findContacts,
+  guessName,
+  isValidEmail,
+} from "@/server/models/intake.model";
 import { removeResumePhotos } from "@/server/services/resume-photo.service";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
@@ -803,8 +814,97 @@ export async function attachManagerResume(
   const verified = await verifyUploadedResume(path);
   if (!verified.ok) return verified;
   await updateApplicationResume(applicationId, path);
-  const candidate = await findCandidateByEmail(application.email);
-  if (candidate && !candidate.resumeUrl) await updateCandidateProfile(candidate.id, { resumeUrl: path });
   enqueueTriage(applicationId);
   return { ok: true };
+}
+
+/** Lote de PDFs: URLs assinadas para o navegador subir direto ao Storage. */
+export async function requestBatchResumeUploads(
+  companyId: string,
+  jobId: string,
+  count: number
+): Promise<ResumeUploadTarget[] | null> {
+  const job = await findJobById(jobId);
+  if (!job || job.companyId !== companyId) return null;
+  const targets: ResumeUploadTarget[] = [];
+  for (let i = 0; i < Math.min(Math.max(count, 0), BATCH_RESUME_LIMIT); i++) {
+    const target = await createResumeUploadTarget(batchResumePrefix(companyId, jobId));
+    if (target) targets.push(target);
+  }
+  return targets;
+}
+
+export type BatchImportResult =
+  | { status: "created"; id: string; name: string; email: string; phone: string | null }
+  | { status: "exists"; id: string; name: string; email: string }
+  | { status: "needs_email"; name: string }
+  | { status: "skipped"; reason: string };
+
+/**
+ * Pré-cadastro a partir de um PDF do lote: lê o currículo, tira nome, e-mail
+ * e telefone (texto primeiro, IA para completar), cria o candidato e a
+ * candidatura incompleta já com o currículo e manda para a análise. Sem
+ * e-mail no PDF, pede para o gestor digitar (emailOverride).
+ */
+export async function importBatchResume(
+  companyId: string,
+  jobId: string,
+  path: string,
+  fileName: string,
+  emailOverride?: string
+): Promise<BatchImportResult> {
+  const job = await findJobById(jobId);
+  if (!job || job.companyId !== companyId) return { status: "skipped", reason: "vaga não encontrada" };
+  if (!isAllowedResumePath(path, batchResumePrefix(companyId, jobId))) {
+    return { status: "skipped", reason: "arquivo inválido" };
+  }
+  const verified = await verifyUploadedResume(path);
+  if (!verified.ok) return { status: "skipped", reason: verified.error };
+
+  let text = "";
+  try {
+    text = await readResumeText(path);
+  } catch (error) {
+    console.error("[lote] PDF ilegível:", error);
+  }
+  const found = findContacts(text);
+  let ai: { name: string | null; email: string | null; phone: string | null } = {
+    name: null,
+    email: null,
+    phone: null,
+  };
+  // O texto do PDF costuma vir sem quebras de linha: o nome sai mais certo
+  // pela IA (só contato). Sem IA, cai na adivinhação pelo texto/arquivo.
+  if (text.trim().length >= 40) {
+    ai = await extractResumeContact(text).catch(() => ai);
+  }
+  const override = emailOverride?.trim().toLowerCase();
+  const email = (override && isValidEmail(override) ? override : null) ?? found.email ?? ai.email;
+  const name = ai.name ?? guessName(text, fileName);
+  const phone = found.phone ?? ai.phone;
+  if (!email) return { status: "needs_email", name };
+
+  if (await findUserByEmail(email)) return { status: "skipped", reason: "é e-mail de alguém da equipe" };
+  const candidate =
+    (await findCandidateByEmail(email)) ?? (await createCandidate({ email, name, authId: null }));
+  const existing = await findApplicationByCandidateAndJob(candidate.id, job.id);
+  if (existing) return { status: "exists", id: existing.id, name: existing.name, email };
+
+  const application = await createApplication({
+    jobId: job.id,
+    companyId,
+    candidateId: candidate.id,
+    name: candidate.authId ? candidate.name : name,
+    email,
+    phone: phone ?? candidate.phone ?? null,
+    resumeUrl: path,
+    aiState: "WAITING",
+    answers: [],
+    preRegistered: true,
+  });
+  await createStatusEvent({ applicationId: application.id, from: null, to: "PENDING", actor: "gestor" }).catch(
+    () => {}
+  );
+  enqueueTriage(application.id);
+  return { status: "created", id: application.id, name: application.name, email, phone: application.phone };
 }

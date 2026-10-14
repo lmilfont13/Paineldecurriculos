@@ -74,3 +74,76 @@ export function intakeInviteText(params: {
     `crie sua senha com o e-mail ${params.email}: ${params.url}`
   );
 }
+
+/** Quantos PDFs por lote (cada um é lido e analisado). */
+export const BATCH_RESUME_LIMIT = 30;
+
+/** Pasta dos PDFs subidos em lote pelo gestor (antes de saber quem é a pessoa). */
+export function batchResumePrefix(companyId: string, jobId: string): string {
+  return `${companyId}/${jobId}/lote/`;
+}
+
+const EMAIL_IN_TEXT = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const PHONE_IN_TEXT = /(?:\+?55[\s.-]?)?\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}/g;
+
+/** Contatos achados no texto do currículo (sem IA). */
+export function findContacts(text: string): { email: string | null; phone: string | null } {
+  const email = text.match(EMAIL_IN_TEXT)?.[0]?.toLowerCase() ?? null;
+  const phone =
+    (text.match(PHONE_IN_TEXT) ?? [])
+      .map((p) => p.trim())
+      .find((p) => {
+        const d = p.replace(/\D/g, "");
+        return d.length >= 10 && d.length <= 13;
+      }) ?? null;
+  return { email, phone };
+}
+
+/**
+ * Nome provável: a primeira linha do currículo com 2 a 5 palavras só de
+ * letras (é como quase todo currículo começa). Senão, o nome do arquivo.
+ */
+export function guessName(text: string, fileName: string): string {
+  const line = text
+    .split(/\r?\n/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .find((l) => {
+      const words = l.split(" ");
+      return (
+        words.length >= 2 &&
+        words.length <= 5 &&
+        /^[A-Za-zÀ-ÿ' .-]+$/.test(l) &&
+        !/curr[ií]culo|resume|vitae/i.test(l)
+      );
+    });
+  if (line) {
+    return line
+      .toLowerCase()
+      .split(" ")
+      .map((w) => (["da", "de", "do", "das", "dos", "e"].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+      .join(" ");
+  }
+  const base = fileName.replace(/\.pdf$/i, "").replace(/curr[ií]culo|cv|resume/gi, " ");
+  return nameFromEmail(`${base}@x`).trim() || "Candidato sem nome";
+}
+
+/** Lê {name, email, phone} devolvido pela IA; campos inválidos viram null. */
+export function parseContactJson(raw: string): { name: string | null; email: string | null; phone: string | null } {
+  try {
+    const data = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as Record<string, unknown>;
+    const name = String(data.name ?? "").replace(/\s+/g, " ").trim();
+    const email = String(data.email ?? "").trim().toLowerCase();
+    const phone = String(data.phone ?? "").trim();
+    return {
+      name: name.length >= 3 && name.length <= 80 ? name : null,
+      email: EMAIL.test(email) ? email : null,
+      phone: phone.replace(/\D/g, "").length >= 10 ? phone.slice(0, 30) : null,
+    };
+  } catch {
+    return { name: null, email: null, phone: null };
+  }
+}
+
+export function isValidEmail(value: string): boolean {
+  return EMAIL.test(value.trim().toLowerCase());
+}

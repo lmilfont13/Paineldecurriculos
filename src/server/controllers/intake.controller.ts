@@ -8,9 +8,16 @@ import { intakeInviteText, parseIntakeList } from "@/server/models/intake.model"
 import { whatsappNumber } from "@/server/models/standby.model";
 import {
   attachManagerResume,
+  importBatchResume,
   preRegisterCandidates,
+  requestBatchResumeUploads,
   requestManagerResumeUpload,
 } from "@/server/services/application.service";
+import { getCompanyJob } from "@/server/services/job.service";
+
+async function getJobTitle(companyId: string, jobId: string) {
+  return (await getCompanyJob(companyId, jobId))?.title ?? "a vaga";
+}
 import { getCompanyById } from "@/server/services/company.service";
 
 /** Cadastro rápido pelo gestor. O tenant vem sempre da sessão (regra 1). */
@@ -90,6 +97,50 @@ export async function getIntakeInvite(applicationId: string, jobId: string, jobT
   const number = whatsappNumber(phone);
   return {
     applicationId,
+    invite,
+    whatsapp: number ? `https://wa.me/${number}?text=${encodeURIComponent(invite)}` : null,
+  };
+}
+
+/** Lote de PDFs · passo 1: URLs para subir os arquivos direto ao Storage. */
+export async function requestBatchUploadsAction(jobId: string, count: number) {
+  const manager = await requireManager();
+  if (!ID.test(jobId)) return null;
+  return requestBatchResumeUploads(manager.companyId, jobId, Number(count) || 0);
+}
+
+/** Lote de PDFs · passo 2 (um por arquivo): lê, pré-cadastra e manda analisar. */
+export async function importBatchResumeAction(
+  jobId: string,
+  path: string,
+  fileName: string,
+  email?: string
+) {
+  const manager = await requireManager();
+  if (!ID.test(jobId)) return { status: "skipped" as const, reason: "vaga não encontrada" };
+  const result = await importBatchResume(
+    manager.companyId,
+    jobId,
+    String(path ?? ""),
+    String(fileName ?? "").slice(0, 200),
+    email ? String(email).slice(0, 200) : undefined
+  );
+  if (result.status !== "created") return result;
+
+  const company = await getCompanyById(manager.companyId);
+  const url = `${appUrl()}/${company?.slug ?? ""}/vagas/${jobId}/candidatar`;
+  const job = await getJobTitle(manager.companyId, jobId);
+  const invite = intakeInviteText({
+    name: result.name,
+    company: company?.name ?? "empresa",
+    jobTitle: job,
+    url,
+    email: result.email,
+  });
+  const number = whatsappNumber(result.phone);
+  revalidatePath("/candidaturas");
+  return {
+    ...result,
     invite,
     whatsapp: number ? `https://wa.me/${number}?text=${encodeURIComponent(invite)}` : null,
   };

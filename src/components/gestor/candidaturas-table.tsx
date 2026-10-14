@@ -241,7 +241,7 @@ export function CandidaturasTable({
             href="/candidaturas/novo"
             className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
           >
-            + Adicionar por e-mail
+            + Adicionar candidatos
           </Link>
           {pendingTotal > 0 && (
             <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>

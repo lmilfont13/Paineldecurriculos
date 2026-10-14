@@ -49,3 +49,35 @@ describe("intakeInviteText", () => {
     expect(text).toContain("https://x/vaga");
   });
 });
+
+import { findContacts, guessName, parseContactJson } from "@/server/models/intake.model";
+
+describe("leitura de contatos do currículo", () => {
+  const text = `MARIA APARECIDA DA SILVA
+Promotora de vendas
+Fortaleza - CE · maria.silva@gmail.com · (85) 98888-7777
+Experiência: 2019-2024 Supermercado X`;
+
+  it("acha e-mail e telefone", () => {
+    expect(findContacts(text)).toEqual({ email: "maria.silva@gmail.com", phone: "(85) 98888-7777" });
+    expect(findContacts("sem contato")).toEqual({ email: null, phone: null });
+  });
+
+  it("adivinha o nome pela primeira linha, senão pelo arquivo", () => {
+    expect(guessName(text, "cv.pdf")).toBe("Maria Aparecida da Silva");
+    expect(guessName("Currículo\n2019 - 2024", "Curriculo_Joao_Pedro.pdf")).toBe("Joao Pedro");
+  });
+
+  it("valida o que a IA devolve", () => {
+    expect(parseContactJson('{"name":"Ana Lima","email":"ANA@X.COM","phone":"85 99999-0000"}')).toEqual({
+      name: "Ana Lima",
+      email: "ana@x.com",
+      phone: "85 99999-0000",
+    });
+    expect(parseContactJson('{"name":"","email":"invalido","phone":"12"}')).toEqual({
+      name: null,
+      email: null,
+      phone: null,
+    });
+  });
+});
