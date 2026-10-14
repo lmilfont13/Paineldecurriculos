@@ -13,6 +13,7 @@ import { interviewSchema } from "@/server/models/interview.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
+  extractApplicationPhoto,
   getApplicationSummaries,
   getCompanyApplication,
   requestApplicationResumeUpload,
@@ -179,6 +180,18 @@ export async function suggestMessageAction(
   } catch {
     return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
   }
+}
+
+/** Re-extrai a foto do currículo sem re-rodar a análise de IA. */
+export async function reextractPhotoAction(
+  applicationId: string
+): Promise<{ ok: boolean; message: string }> {
+  const user = await requireManager();
+  const found = await extractApplicationPhoto(user.companyId, applicationId);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return found
+    ? { ok: true, message: "Foto extraída com sucesso." }
+    : { ok: false, message: "Nenhuma foto encontrada no currículo." };
 }
 
 /** Reenfileira a análise de IA (FAILED/NO_RESUME com currículo novo). */

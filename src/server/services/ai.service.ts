@@ -44,7 +44,7 @@ export async function readDemoResume(resumePath: string): Promise<Uint8Array> {
   return new Uint8Array(await readFile(file));
 }
 
-async function loadResumeBytes(resumePath: string): Promise<Uint8Array> {
+export async function loadResumeBytes(resumePath: string): Promise<Uint8Array> {
   if (isDemoResumePath(resumePath)) return readDemoResume(resumePath);
 
   const supabase = createAdminClient();

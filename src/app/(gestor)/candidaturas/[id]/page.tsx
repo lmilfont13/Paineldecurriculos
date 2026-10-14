@@ -8,6 +8,7 @@ import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { MessageBox } from "@/components/gestor/message-box";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
+import { ReextractPhotoButton } from "@/components/gestor/reextract-photo-button";
 import { CareerCard } from "@/components/gestor/career-card";
 import { ManagerIntakeCard } from "@/components/gestor/manager-intake-card";
 import { getIntakeInvite } from "@/server/controllers/intake.controller";
@@ -218,6 +219,12 @@ export default async function CandidaturaDetailPage({
             {(app.aiState === "FAILED" || app.aiState === "NO_RESUME") && (
               <div className="mt-4">
                 <ReanalyzeButton applicationId={app.id} />
+              </div>
+            )}
+
+            {app.resumeUrl && !app.photoPath && (
+              <div className="mt-4">
+                <ReextractPhotoButton applicationId={app.id} />
               </div>
             )}
 

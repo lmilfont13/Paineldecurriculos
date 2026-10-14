@@ -69,6 +69,7 @@ import { findJobById } from "@/server/repositories/job.repository";
 import {
   extractResumeContact,
   generateCandidateSummary,
+  loadResumeBytes,
   readResumeText,
   runTriageWithTracking,
   type CandidateSummary,
@@ -82,7 +83,10 @@ import {
   guessName,
   isValidEmail,
 } from "@/server/models/intake.model";
-import { removeResumePhotos } from "@/server/services/resume-photo.service";
+import {
+  captureResumePhoto,
+  removeResumePhotos,
+} from "@/server/services/resume-photo.service";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
@@ -290,6 +294,26 @@ export async function getExistingApplicationId(
   // Cadastro rápido do gestor ainda não conta: o candidato precisa completar.
   if (!existing || existing.preRegistered) return null;
   return existing.id;
+}
+
+/**
+ * Re-extrai a foto do currículo sem re-rodar a análise de IA. Útil para
+ * candidatos já analisados cujo currículo tem foto mas ela não foi capturada
+ * (ex.: antes do relaxamento dos filtros de proporção). Não toca em aiState.
+ */
+export async function extractApplicationPhoto(
+  companyId: string,
+  applicationId: string
+): Promise<boolean> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application?.resumeUrl) return false;
+  const { getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(await loadResumeBytes(application.resumeUrl));
+  return captureResumePhoto(pdf, {
+    companyId,
+    applicationId,
+    currentPath: application.photoPath ?? null,
+  });
 }
 
 /**
