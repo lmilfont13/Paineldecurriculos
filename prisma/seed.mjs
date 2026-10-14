@@ -28,7 +28,7 @@ async function main() {
   const { error: bucketError } = await supabase.storage.createBucket("resumes", {
     public: false,
     fileSizeLimit: "5MB",
-    allowedMimeTypes: ["application/pdf"],
+    allowedMimeTypes: ["application/pdf", "image/jpeg"],
   });
   if (bucketError && !/already exists/i.test(bucketError.message)) {
     throw new Error(`Storage bucket: ${bucketError.message}`);

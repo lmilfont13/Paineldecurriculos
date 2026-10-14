@@ -48,9 +48,22 @@ export async function captureResumePhoto(
       .toBuffer();
 
     const path = photoStoragePath(target.companyId, target.applicationId);
-    const { error } = await createAdminClient()
-      .storage.from(RESUMES_BUCKET)
-      .upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
+    const storage = createAdminClient().storage;
+    const upload = () =>
+      storage
+        .from(RESUMES_BUCKET)
+        .upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
+    let { error } = await upload();
+    if (error && /mime type/i.test(error.message)) {
+      // O bucket nasceu só com PDF (seed). Libera JPEG (continua privado) e repete.
+      const { error: bucketError } = await storage.updateBucket(RESUMES_BUCKET, {
+        public: false,
+        fileSizeLimit: "5MB",
+        allowedMimeTypes: ["application/pdf", "image/jpeg"],
+      });
+      if (bucketError) throw new Error(bucketError.message);
+      ({ error } = await upload());
+    }
     if (error) throw new Error(error.message);
 
     await updateApplicationPhoto(target.applicationId, path);
