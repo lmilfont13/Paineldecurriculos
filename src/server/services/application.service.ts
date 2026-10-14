@@ -916,13 +916,17 @@ export async function importBatchResume(
 
 /**
  * Resumos gerenciais de candidaturas selecionadas para a diretoria.
- * Regra 1: cada id é validado pelo tenant. Máximo 20 para não explodir o tempo.
+ * Regra 1: cada id é validado pelo tenant. Sequencial para não estourar o
+ * limite de tokens/minuto do Groq no plano gratuito.
  */
 export async function getApplicationSummaries(
   companyId: string,
   applicationIds: string[]
 ): Promise<CandidateSummary[]> {
-  const owned = await findApplicationsByIds(companyId, applicationIds.slice(0, 20));
-  const ownedIds = owned.map((a) => a.id);
-  return Promise.all(ownedIds.map((id) => generateCandidateSummary(id)));
+  const owned = await findApplicationsByIds(companyId, applicationIds.slice(0, 10));
+  const results: CandidateSummary[] = [];
+  for (const { id } of owned) {
+    results.push(await generateCandidateSummary(id));
+  }
+  return results;
 }
