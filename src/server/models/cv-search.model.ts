@@ -27,6 +27,7 @@ export type CandidateCvCard = {
   salaryExpectation?: string | null;
   education?: string | null;
   languages?: string | null;
+  skills?: string[];
 };
 
 export type CvSearchFilters = {
@@ -38,6 +39,7 @@ export type CvSearchFilters = {
   minScore: number | null;
   onlyWithPhoto: boolean;
   onlyWithPdf: boolean;
+  onlyRemote?: boolean;
 };
 
 export type CvSearchSort = "score" | "recent" | "name";
@@ -48,11 +50,74 @@ export type FacetCount = {
   count: number;
 };
 
+const COMMON_SKILLS = [
+  "React",
+  "Node.js",
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "SQL",
+  "PostgreSQL",
+  "AWS",
+  "Docker",
+  "Git",
+  "Figma",
+  "UX/UI",
+  "Next.js",
+  "Excel Avançado",
+  "Power BI",
+  "Contabilidade",
+  "Sped Fiscal",
+  "Conciliação",
+  "Tributário",
+  "Vendas B2B",
+  "Inside Sales",
+  "CRM",
+  "Marketing Digital",
+  "SEO",
+  "Tráfego Pago",
+  "Logística",
+  "Supply Chain",
+  "Gestão de Estoque",
+  "ERP",
+  "Liderança",
+  "Inglês Avançado",
+  "Inglês Fluente",
+  "Espanhol",
+  "CNH B",
+  "CNH D",
+];
+
+/** Identifica competências e ferramentas a partir do texto do currículo e perfil IA. */
+export function extractCandidateSkills(
+  resumeText: string | null,
+  profile: string | null
+): string[] {
+  const combined = `${profile ?? ""} ${resumeText ?? ""}`.toLowerCase();
+  if (!combined.trim()) return [];
+
+  const detected: string[] = [];
+  for (const skill of COMMON_SKILLS) {
+    const s = skill.toLowerCase();
+    // Verifica palavra inteira ou termo
+    if (combined.includes(s)) {
+      detected.push(skill);
+      if (detected.length >= 6) break;
+    }
+  }
+  return detected;
+}
+
 /** Extrai trecho relevante do currículo em torno do termo pesquisado (com contexto). */
 export function extractResumeSnippet(text: string | null, keyword: string): string | null {
   if (!text || !keyword || keyword.trim().length < 2) return null;
   const clean = text.replace(/\s+/g, " ");
-  const q = keyword.trim().toLowerCase();
+
+  // Suporte para buscar primeira palavra de busca composta
+  const firstWord = keyword.trim().split(/\s+/)[0]?.toLowerCase();
+  if (!firstWord) return null;
+
+  const q = firstWord;
   const index = clean.toLowerCase().indexOf(q);
   if (index === -1) return null;
 
@@ -97,6 +162,30 @@ export function computeLevelFacets(candidates: CandidateCvCard[]): FacetCount[] 
     });
 }
 
+/** Busca booleana simples: avalia AND / OR / NOT ou palavras soltas. */
+function matchesBooleanSearch(text: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  // Se tiver operador NOT (ex: "vendas NOT junior")
+  if (q.includes(" not ")) {
+    const [includePart, excludePart] = q.split(" not ");
+    const includesOk = matchesBooleanSearch(text, includePart);
+    const excludesFound = excludePart.split(/\s+/).some((term) => text.includes(term.trim()));
+    return includesOk && !excludesFound;
+  }
+
+  // Se tiver operador OR (ex: "react or python")
+  if (q.includes(" or ")) {
+    const terms = q.split(" or ");
+    return terms.some((t) => matchesBooleanSearch(text, t.trim()));
+  }
+
+  // Se tiver operador AND ou múltiplos termos
+  const terms = q.replace(/ and /g, " ").split(/\s+/).filter(Boolean);
+  return terms.every((term) => text.includes(term));
+}
+
 /** Aplica todos os filtros facetados e busca textual. */
 export function filterCandidates(
   candidates: CandidateCvCard[],
@@ -105,25 +194,27 @@ export function filterCandidates(
   const q = filters.keyword.trim().toLowerCase();
 
   return candidates.filter((item) => {
-    // 1. Busca por palavra-chave no texto completo do CV, nome, e-mail, cargo e raciocínio IA
+    // 1. Busca textual inteligente (booleana e em todo o material)
     if (q) {
-      const matchName = item.name.toLowerCase().includes(q);
-      const matchEmail = item.email.toLowerCase().includes(q);
-      const matchProfile = (item.aiProfile ?? "").toLowerCase().includes(q);
-      const matchArea = (item.aiArea ?? "").toLowerCase().includes(q);
-      const matchJob = item.job.title.toLowerCase().includes(q);
-      const matchReasoning = (item.aiReasoning ?? "").toLowerCase().includes(q);
-      const matchText = (item.resumeText ?? "").toLowerCase().includes(q);
+      const allText = [
+        item.name,
+        item.email,
+        item.phone ?? "",
+        item.aiProfile ?? "",
+        item.aiArea ?? "",
+        item.aiLevel ?? "",
+        item.job.title,
+        item.aiReasoning ?? "",
+        item.salaryExpectation ?? "",
+        item.education ?? "",
+        item.languages ?? "",
+        ...(item.skills ?? []),
+        item.resumeText ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
 
-      if (
-        !matchName &&
-        !matchEmail &&
-        !matchProfile &&
-        !matchArea &&
-        !matchJob &&
-        !matchReasoning &&
-        !matchText
-      ) {
+      if (!matchesBooleanSearch(allText, q)) {
         return false;
       }
     }
@@ -162,6 +253,11 @@ export function filterCandidates(
 
     // 8. Filtro apenas com PDF
     if (filters.onlyWithPdf && !item.resumeUrl) {
+      return false;
+    }
+
+    // 9. Filtro Remoto
+    if (filters.onlyRemote && item.job.workMode !== "REMOTE") {
       return false;
     }
 

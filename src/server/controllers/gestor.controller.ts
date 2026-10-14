@@ -14,7 +14,7 @@ import {
   listCompanyApplications,
   listApplicationsForCvSearch,
 } from "@/server/services/application.service";
-import type { CandidateCvCard } from "@/server/models/cv-search.model";
+import { extractCandidateSkills, type CandidateCvCard } from "@/server/models/cv-search.model";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getStandbyForJob } from "@/server/services/talent.service";
 import { getCompanyById } from "@/server/services/company.service";
@@ -119,6 +119,7 @@ export async function getBuscarCvsData() {
       salaryExpectation,
       education,
       languages,
+      skills: extractCandidateSkills(app.resumeText, app.aiProfile),
     };
   });
 
