@@ -19,6 +19,10 @@ export type CandidaturaRow = {
   isDemo?: boolean;
   preRegistered?: boolean;
   photoUrl?: string | null;
+  /** Perfil profissional identificado pela IA (área, função, nível). */
+  aiArea?: string | null;
+  aiProfile?: string | null;
+  aiLevel?: string | null;
 };
 
 export type StageKey = AppStatusKey | "ALL";

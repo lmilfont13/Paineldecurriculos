@@ -102,6 +102,7 @@ export function CandidaturasTable({
   const [sort, setSort] = useState<SortKey>("WAITING");
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -380,9 +381,99 @@ export function CandidaturasTable({
           />
           Só quem atende o mínimo
         </label>
+
+        <div className="ml-auto flex h-10 items-center gap-0.5 rounded-xl border border-[#e4e4e7] bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-label="Visão lista"
+            className={"flex h-8 w-8 items-center justify-center rounded-lg text-base transition-colors " + (viewMode === "list" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+          >☰</button>
+          <button
+            type="button"
+            onClick={() => setViewMode("cards")}
+            aria-label="Visão cards"
+            className={"flex h-8 w-8 items-center justify-center rounded-lg text-base transition-colors " + (viewMode === "cards" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+          >▦</button>
+        </div>
       </div>
 
+      {/* Cards de perfil */}
+      {viewMode === "cards" && (
+        <div className="mt-5">
+          {filtered.length === 0 && (
+            <p className="py-8 text-center text-sm text-[#71717a]">Nenhum candidato nesta etapa.</p>
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {visible.map((row) => {
+              const isSelected = selected.has(row.id);
+              const levelColors: Record<string, string> = {
+                Operacional: "bg-[#f1f0ed] text-[#57534e]",
+                Júnior: "bg-[#e4f6ec] text-[#1f7a4d]",
+                Pleno: "bg-[#e8f0fe] text-[#1a56db]",
+                Sênior: "bg-[#f5f3ff] text-[#6d28d9]",
+                Liderança: "bg-[#fef9c3] text-[#854d0e]",
+              };
+              const levelClass = row.aiLevel ? (levelColors[row.aiLevel] ?? "bg-[#f1f0ed] text-[#57534e]") : "";
+              return (
+                <div
+                  key={row.id}
+                  className={"relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggle(row.id)}
+                    aria-label={`Selecionar ${row.name}`}
+                    className={"absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full border-2 transition-colors " + (isSelected ? "border-[#0a0a0a] bg-[#0a0a0a]" : "border-[#d4d4d8] bg-white")}
+                  >
+                    {isSelected && <span className="text-[10px] text-white">✓</span>}
+                  </button>
+
+                  <Link href={`/candidaturas/${row.id}`} className="flex flex-col items-center px-4 pb-4 pt-5 focus-visible:outline-none">
+                    <CandidateAvatar
+                      name={row.name}
+                      photoUrl={row.photoUrl}
+                      className="size-16 shrink-0 rounded-full bg-[#1c1917] text-lg font-bold text-white flex items-center justify-center object-cover"
+                    />
+                    <p className="mt-3 line-clamp-2 text-center text-[13px] font-semibold text-[#0a0a0a] leading-snug">{row.name}</p>
+                    {row.aiArea && (
+                      <p className="mt-0.5 text-center text-[11px] text-[#71717a] line-clamp-1">{row.aiArea}</p>
+                    )}
+                    {row.aiProfile && (
+                      <p className="mt-0.5 text-center text-[12px] text-[#3f3f46] font-medium line-clamp-1">{row.aiProfile}</p>
+                    )}
+                    {row.aiLevel && (
+                      <span className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + levelClass}>{row.aiLevel}</span>
+                    )}
+                    {!row.aiArea && !row.aiProfile && !row.aiLevel && (
+                      <p className="mt-2 text-[11px] text-[#a1a1aa]">{row.aiState === "DONE" ? "Sem perfil identificado" : row.aiState === "FAILED" ? "Análise falhou" : "Analisando…"}</p>
+                    )}
+                  </Link>
+
+                  <div className="border-t border-[#f1f0ed] px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-[11px] text-[#71717a] truncate">{row.jobTitle}</span>
+                    {row.aiScore !== null && (
+                      <span className={"ml-2 shrink-0 text-[11px] font-semibold " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {filtered.length > visible.length && (
+            <button
+              type="button"
+              onClick={() => setLimit((l) => l + PAGE)}
+              className="mt-4 w-full rounded-xl border border-[#e4e4e7] bg-white py-3 text-[13px] font-medium text-[#71717a] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+            >
+              Mostrar mais ({filtered.length - visible.length} restantes)
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Lista */}
+      {viewMode === "list" && (
       <div className="mt-5 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <div
           className={`hidden md:grid ${cols} items-center gap-4 border-b border-[#e4e4e7] px-5 py-3`}
@@ -523,6 +614,7 @@ export function CandidaturasTable({
           </button>
         )}
       </div>
+      )}
 
       <div className="mt-4 flex justify-end">
         <button

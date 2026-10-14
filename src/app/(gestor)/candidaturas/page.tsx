@@ -38,6 +38,9 @@ export default async function CandidaturasPage({
     isDemo: app.isDemo,
     preRegistered: app.preRegistered,
     photoUrl: app.photoUrl,
+    aiArea: app.aiArea,
+    aiProfile: app.aiProfile,
+    aiLevel: app.aiLevel,
   }));
 
   return (
