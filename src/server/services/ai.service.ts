@@ -333,15 +333,14 @@ export async function analyzeApplication(
       const pdf = await getDocumentProxy(bytes);
       resumeText = (await extractText(pdf, { mergePages: true })).text;
 
-      // Foto: só referência visual para o gestor. Fica fora do material da
-      // IA (regra 3). PDF sem texto é página escaneada, não tem foto à parte.
-      if (resumeText.trim().length >= 40) {
-        await captureResumePhoto(pdf, {
-          companyId: application.company.id,
-          applicationId,
-          currentPath: application.photoPath ?? null,
-        });
-      }
+      // Foto: referência visual para o gestor — sempre tentada, mesmo em PDFs
+      // com pouco texto extraído. captureResumePhoto retorna false sem lançar
+      // se não encontrar imagem com cara de foto. A IA não recebe a foto (regra 3).
+      await captureResumePhoto(pdf, {
+        companyId: application.company.id,
+        applicationId,
+        currentPath: application.photoPath ?? null,
+      });
     } else {
       await onStep("Sem PDF: lendo as respostas do formulário");
     }
