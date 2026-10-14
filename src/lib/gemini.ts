@@ -8,16 +8,11 @@ const MODEL = "qwen/qwen3.8-27b";
 /** Identificação do modelo gravada em cada nota (Application.aiModel). */
 export const AI_MODEL_ID = `groq:${MODEL}`;
 
-export async function geminiGenerate(params: {
-  system: string;
-  prompt: string;
-  maxTokens?: number;
-  json?: boolean;
-}): Promise<string> {
-  const key = readEnv("GROQ_API_KEY");
-  if (!key) throw new Error("GROQ_API_KEY não configurada");
-
-  const res = await fetch(ENDPOINT, {
+async function callGroq(
+  key: string,
+  params: { system: string; prompt: string; maxTokens?: number; json?: boolean }
+): Promise<Response> {
+  return fetch(ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -34,6 +29,26 @@ export async function geminiGenerate(params: {
       ...(params.json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
+}
+
+export async function geminiGenerate(params: {
+  system: string;
+  prompt: string;
+  maxTokens?: number;
+  json?: boolean;
+}): Promise<string> {
+  const key = readEnv("GROQ_API_KEY");
+  if (!key) throw new Error("GROQ_API_KEY não configurada");
+
+  // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
+  const delays = [15_000, 45_000];
+  let res = await callGroq(key, params);
+
+  for (const delay of delays) {
+    if (res.status !== 429) break;
+    await new Promise((r) => setTimeout(r, delay));
+    res = await callGroq(key, params);
+  }
 
   if (!res.ok) {
     const body = await res.text();
