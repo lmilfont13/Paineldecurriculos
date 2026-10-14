@@ -181,6 +181,88 @@ async function loadApplicationMaterial(applicationId: string): Promise<string | 
   return composeMaterial(resumeText, answersText);
 }
 
+export type CandidateSummary = {
+  applicationId: string;
+  name: string;
+  jobTitle: string;
+  resumo: string;
+  pontos_fortes: string[];
+  justificativa: string;
+  error?: string;
+};
+
+const SUMMARY_SYSTEM_PROMPT = `Você é um especialista em RH preparando um relatório conciso para a diretoria.
+Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
+Retorne JSON com exatamente estas 3 chaves:
+{
+  "resumo": "visão geral do perfil profissional em 2-3 linhas",
+  "pontos_fortes": ["ponto forte 1", "ponto forte 2", "ponto forte 3"],
+  "justificativa": "1-2 frases explicando por que vale a pena entrevistar este candidato"
+}`;
+
+/** Resumo gerencial de uma candidatura para a diretoria. Prompt separado — não altera o AI_PROMPT (regra 3). */
+export async function generateCandidateSummary(
+  applicationId: string
+): Promise<CandidateSummary> {
+  const application = await findApplicationById(applicationId);
+  if (!application) {
+    return {
+      applicationId,
+      name: "Desconhecido",
+      jobTitle: "",
+      resumo: "",
+      pontos_fortes: [],
+      justificativa: "",
+      error: "Candidatura não encontrada.",
+    };
+  }
+  const material = await loadApplicationMaterial(applicationId);
+  if (!material) {
+    return {
+      applicationId,
+      name: application.name,
+      jobTitle: application.job.title,
+      resumo: "",
+      pontos_fortes: [],
+      justificativa: "",
+      error: "Sem currículo ou respostas para analisar.",
+    };
+  }
+  try {
+    const raw = await geminiGenerate({
+      system: SUMMARY_SYSTEM_PROMPT,
+      prompt: `Vaga: ${application.job.title}\n\n${material}`,
+      maxTokens: 500,
+      json: true,
+    });
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
+      resumo?: unknown;
+      pontos_fortes?: unknown;
+      justificativa?: unknown;
+    };
+    return {
+      applicationId,
+      name: application.name,
+      jobTitle: application.job.title,
+      resumo: String(parsed.resumo ?? "").slice(0, 600),
+      pontos_fortes: Array.isArray(parsed.pontos_fortes)
+        ? (parsed.pontos_fortes as unknown[]).map((p) => String(p).slice(0, 200)).slice(0, 5)
+        : [],
+      justificativa: String(parsed.justificativa ?? "").slice(0, 400),
+    };
+  } catch (error) {
+    return {
+      applicationId,
+      name: application.name,
+      jobTitle: application.job.title,
+      resumo: "",
+      pontos_fortes: [],
+      justificativa: "",
+      error: error instanceof Error ? error.message.slice(0, 200) : "Falha na IA.",
+    };
+  }
+}
+
 /**
  * Stand-by: nota do currículo de uma candidatura contra OUTRA vaga (banco de
  * talentos). Não grava nada na candidatura — quem chama guarda o resultado à

@@ -13,6 +13,7 @@ import { interviewSchema } from "@/server/models/interview.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
+  getApplicationSummaries,
   getCompanyApplication,
   requestApplicationResumeUpload,
   requestReanalysis,
@@ -21,7 +22,10 @@ import {
   sendManagerMessage,
   setApplicationStatus,
   submitApplication,
+  type CandidateSummary,
 } from "@/server/services/application.service";
+
+export { type CandidateSummary };
 import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
 
@@ -319,6 +323,20 @@ export async function requestResumeUploadAction(
     };
   }
   return { ok: true, ...target };
+}
+
+export type CandidateReportResult =
+  | { ok: true; reports: CandidateSummary[] }
+  | { ok: false; error: string };
+
+/** Relatório gerencial: resumos de candidatos selecionados para a diretoria. */
+export async function generateCandidatesReportAction(
+  applicationIds: string[]
+): Promise<CandidateReportResult> {
+  if (!applicationIds.length) return { ok: false, error: "Nenhum candidato selecionado." };
+  const user = await requireManager();
+  const reports = await getApplicationSummaries(user.companyId, applicationIds);
+  return { ok: true, reports };
 }
 
 /**

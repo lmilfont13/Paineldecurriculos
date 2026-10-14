@@ -9,6 +9,8 @@ import { Toast } from "@/components/gestor/toast";
 import {
   bulkSetApplicationStatusAction,
   deleteApplicationsAction,
+  generateCandidatesReportAction,
+  type CandidateSummary,
 } from "@/server/controllers/application.controller";
 import {
   appStatusLabels,
@@ -103,6 +105,8 @@ export function CandidaturasTable({
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [report, setReport] = useState<CandidateSummary[] | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   /** Tudo menos a aba — é a base das contagens de cada aba (scent honesto). */
@@ -171,6 +175,37 @@ export function CandidaturasTable({
       );
       setSelected(new Set());
     });
+  }
+
+  async function generateReport() {
+    setReportLoading(true);
+    const result = await generateCandidatesReportAction([...selected]);
+    setReportLoading(false);
+    if (result.ok) {
+      setReport(result.reports);
+    } else {
+      setToast(result.error);
+    }
+  }
+
+  function copyReportText() {
+    if (!report) return;
+    const lines = report.map((r) => {
+      const pontos = r.pontos_fortes.map((p) => `  • ${p}`).join("\n");
+      return [
+        `${r.name} — ${r.jobTitle}`,
+        r.resumo,
+        r.pontos_fortes.length > 0 ? `Pontos fortes:\n${pontos}` : "",
+        r.justificativa ? `Por que entrevistar: ${r.justificativa}` : "",
+        r.error ? `(Atenção: ${r.error})` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    });
+    navigator.clipboard
+      .writeText(lines.join("\n\n---\n\n"))
+      .then(() => setToast("Relatório copiado."))
+      .catch(() => setToast("Falha ao copiar."));
   }
 
   function exportCsv() {
@@ -540,6 +575,14 @@ export function CandidaturasTable({
           )}
           <button
             type="button"
+            disabled={pending || reportLoading}
+            onClick={generateReport}
+            className="h-[34px] shrink-0 rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
+          >
+            {reportLoading ? "Gerando…" : "Relatório p/ direção"}
+          </button>
+          <button
+            type="button"
             onClick={() => setSelected(new Set())}
             aria-label="Limpar seleção"
             className="ml-1 text-sm text-white/60 hover:text-white"
@@ -629,6 +672,85 @@ export function CandidaturasTable({
               >
                 Excluir
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal do relatório gerencial */}
+      {report && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-6"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReport(null)}
+        >
+          <div
+            className="my-8 w-full max-w-[640px] rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#e4e4e7] px-6 py-4">
+              <h2 className="text-base font-semibold text-[#0a0a0a]">
+                Relatório para a diretoria ({report.length})
+              </h2>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={copyReportText}
+                  className="text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
+                >
+                  Copiar texto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReport(null)}
+                  aria-label="Fechar"
+                  className="text-sm text-[#a1a1aa] hover:text-[#0a0a0a]"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="divide-y divide-[#e4e4e7]">
+              {report.map((r) => (
+                <div key={r.applicationId} className="px-6 py-5">
+                  <p className="text-[13px] font-semibold text-[#0a0a0a]">
+                    {r.name}
+                    <span className="ml-2 font-normal text-[#71717a]">{r.jobTitle}</span>
+                  </p>
+                  {r.error && (
+                    <p className="mt-1 text-xs text-[#c23b3b]">{r.error}</p>
+                  )}
+                  {r.resumo && (
+                    <p className="mt-2 text-sm leading-relaxed text-[#3f3f46]">{r.resumo}</p>
+                  )}
+                  {r.pontos_fortes.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                        Pontos fortes
+                      </p>
+                      <ul className="mt-1.5 space-y-1">
+                        {r.pontos_fortes.map((p, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-[#3f3f46]">
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#22c55e]" />
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {r.justificativa && (
+                    <div className="mt-3 rounded-xl bg-[#f7f7f6] px-4 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                        Por que vale a pena entrevistar
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-[#3f3f46]">
+                        {r.justificativa}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>

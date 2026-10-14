@@ -73,6 +73,14 @@ export async function failStaleAgentRuns(
   return { runs: runs.count, applications: applications.count };
 }
 
+/** Candidaturas por IDs, sempre filtradas pelo tenant (para o relatório gerencial). */
+export function findApplicationsByIds(companyId: string, ids: string[]) {
+  return prisma.application.findMany({
+    where: { companyId, id: { in: ids } },
+    select: { id: true },
+  });
+}
+
 /** Estado da IA de algumas candidaturas do tenant (polling leve da UI). */
 export function findAiStates(companyId: string, ids: string[]) {
   return prisma.application.findMany({

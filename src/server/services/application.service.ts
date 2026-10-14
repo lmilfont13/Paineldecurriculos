@@ -29,6 +29,7 @@ import {
   findApplicationForCandidate,
   findApplicationsByCandidate,
   findApplicationsByCompany,
+  findApplicationsByIds,
   findLatestApplicationWithAnswers,
   completePreRegisteredApplication,
   updateApplicationResume,
@@ -67,9 +68,13 @@ import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
 import {
   extractResumeContact,
+  generateCandidateSummary,
   readResumeText,
   runTriageWithTracking,
+  type CandidateSummary,
 } from "@/server/services/ai.service";
+
+export { type CandidateSummary };
 import {
   BATCH_RESUME_LIMIT,
   batchResumePrefix,
@@ -907,4 +912,17 @@ export async function importBatchResume(
   );
   enqueueTriage(application.id);
   return { status: "created", id: application.id, name: application.name, email, phone: application.phone };
+}
+
+/**
+ * Resumos gerenciais de candidaturas selecionadas para a diretoria.
+ * Regra 1: cada id é validado pelo tenant. Máximo 20 para não explodir o tempo.
+ */
+export async function getApplicationSummaries(
+  companyId: string,
+  applicationIds: string[]
+): Promise<CandidateSummary[]> {
+  const owned = await findApplicationsByIds(companyId, applicationIds.slice(0, 20));
+  const ownedIds = owned.map((a) => a.id);
+  return Promise.all(ownedIds.map((id) => generateCandidateSummary(id)));
 }
