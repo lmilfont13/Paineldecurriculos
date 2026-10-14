@@ -70,7 +70,7 @@ describe("runTriageWithTracking (sala de simulação)", () => {
     // Regra 2: a IA só mexe nos campos de IA, nunca no status
     const last = aiUpdates.at(-1)!;
     expect(Object.keys(last).sort()).toEqual(
-      ["aiArea", "aiChecklist", "aiLevel", "aiModel", "aiProfile", "aiReasoning", "aiScore", "aiState"]
+      ["aiArea", "aiChecklist", "aiLevel", "aiModel", "aiProfile", "aiReasoning", "aiScore", "aiState", "resumeText"]
     );
     expect(last).toMatchObject({
       aiScore: 88,

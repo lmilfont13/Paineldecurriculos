@@ -168,6 +168,8 @@ model Application {
   /// Cadastro rápido feito pelo gestor (só e-mail): o candidato completa depois.
   preRegistered Boolean   @default(false)
   photoPath     String?
+  /// Texto extraído do PDF do currículo — alimenta a busca por conteúdo.
+  resumeText    String?
   aiProfile     String?
   /// Segmentação do currículo pela IA: área (ex.: Logística) e nível.
   aiArea        String?

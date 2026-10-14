@@ -14,6 +14,8 @@ import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
   extractApplicationPhoto,
+  extractPhotosBulk,
+  searchCompanyApplicationIds,
   getApplicationSummaries,
   getCompanyApplication,
   requestApplicationResumeUpload,
@@ -192,6 +194,23 @@ export async function reextractPhotoAction(
   return found
     ? { ok: true, message: "Foto extraída com sucesso." }
     : { ok: false, message: "Nenhuma foto encontrada no currículo." };
+}
+
+/** Extrai fotos em lote: dos ids selecionados, ou de todos que ainda não têm foto. */
+export async function extractPhotosBulkAction(
+  applicationIds?: string[]
+): Promise<{ processed: number; found: number }> {
+  const user = await requireManager();
+  const ids = applicationIds?.length ? applicationIds.slice(0, 100) : undefined;
+  const result = await extractPhotosBulk(user.companyId, ids);
+  revalidatePath("/candidaturas");
+  return result;
+}
+
+/** Busca por conteúdo (nome, e-mail, perfil e texto do currículo). */
+export async function searchCandidatesAction(term: string): Promise<string[]> {
+  const user = await requireManager();
+  return searchCompanyApplicationIds(user.companyId, String(term ?? ""));
 }
 
 /** Reenfileira a análise de IA (FAILED/NO_RESUME com currículo novo). */

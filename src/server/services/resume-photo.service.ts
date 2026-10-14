@@ -27,8 +27,12 @@ export async function captureResumePhoto(
   target: { companyId: string; applicationId: string; currentPath: string | null }
 ): Promise<boolean> {
   try {
-    const images = await extractImages(pdf, 1);
-    const index = pickPhotoIndex(images);
+    let images = await extractImages(pdf, 1);
+    let index = pickPhotoIndex(images);
+    if (index === null && pdf.numPages > 1) {
+      images = await extractImages(pdf, 2);
+      index = pickPhotoIndex(images);
+    }
     if (index === null) {
       if (target.currentPath) await updateApplicationPhoto(target.applicationId, null);
       return false;

@@ -38,6 +38,8 @@ import {
   updateApplicationStatus,
   updateInterview,
   updateManagerNotes,
+  searchApplicationIds,
+  updateApplicationResumeText,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import {
@@ -307,13 +309,52 @@ export async function extractApplicationPhoto(
 ): Promise<boolean> {
   const application = await getCompanyApplication(companyId, applicationId);
   if (!application?.resumeUrl) return false;
-  const { getDocumentProxy } = await import("unpdf");
+  const { getDocumentProxy, extractText } = await import("unpdf");
   const pdf = await getDocumentProxy(await loadResumeBytes(application.resumeUrl));
+  // Aproveita a leitura do PDF para indexar o texto (busca por conteúdo).
+  if (!application.resumeText) {
+    try {
+      const text = (await extractText(pdf, { mergePages: true })).text.trim();
+      if (text) await updateApplicationResumeText(applicationId, text.slice(0, 100_000));
+    } catch (error) {
+      console.error("[busca] Não foi possível indexar o texto do currículo:", error);
+    }
+  }
   return captureResumePhoto(pdf, {
     companyId,
     applicationId,
     currentPath: application.photoPath ?? null,
   });
+}
+
+/**
+ * Extrai fotos (e indexa o texto) de várias candidaturas do tenant, em série
+ * para não estourar memória/conexões. Sem ids = todas com PDF e sem foto.
+ */
+export async function extractPhotosBulk(
+  companyId: string,
+  ids?: string[]
+): Promise<{ processed: number; found: number }> {
+  const all = await findApplicationsByCompany(companyId);
+  const targets = all
+    .filter((a) => a.resumeUrl && (ids ? ids.includes(a.id) : !a.photoPath))
+    .slice(0, 40);
+  let found = 0;
+  for (const app of targets) {
+    try {
+      if (await extractApplicationPhoto(companyId, app.id)) found += 1;
+    } catch (error) {
+      console.error("[foto] Falha em lote:", app.id, error);
+    }
+  }
+  return { processed: targets.length, found };
+}
+
+/** Busca por nome, e-mail, perfil e conteúdo do currículo (sempre do tenant). */
+export async function searchCompanyApplicationIds(companyId: string, term: string) {
+  const q = term.trim();
+  if (q.length < 2) return [];
+  return searchApplicationIds(companyId, q.slice(0, 100));
 }
 
 /**

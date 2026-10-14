@@ -372,6 +372,7 @@ export async function analyzeApplication(
       aiProfile: segment.role,
       aiArea: segment.area,
       aiLevel: segment.level,
+      resumeText: resumeText.trim() ? resumeText.trim().slice(0, 100_000) : undefined,
       aiState: "DONE",
     });
     return { score };

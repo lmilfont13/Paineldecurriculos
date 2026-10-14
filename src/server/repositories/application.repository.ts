@@ -283,7 +283,31 @@ export function findApplicationsByCompany(
     },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     include: { job: { select: { id: true, title: true, aiMinScore: true } } },
+    omit: { resumeText: true },
   });
+}
+
+/** Busca por conteúdo: ids das candidaturas do tenant cujo nome/e-mail/currículo contêm o termo. */
+export async function searchApplicationIds(companyId: string, term: string) {
+  const rows = await prisma.application.findMany({
+    where: {
+      companyId,
+      OR: [
+        { resumeText: { contains: term, mode: "insensitive" } },
+        { name: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
+        { aiProfile: { contains: term, mode: "insensitive" } },
+        { aiArea: { contains: term, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+    take: 500,
+  });
+  return rows.map((r) => r.id);
+}
+
+export function updateApplicationResumeText(id: string, resumeText: string) {
+  return prisma.application.update({ where: { id }, data: { resumeText } });
 }
 
 /** IDs de vagas em que o candidato já tem candidatura (para indicador na lista). */
@@ -451,6 +475,7 @@ export function updateApplicationAi(
     aiProfile?: string | null;
     aiArea?: string | null;
     aiLevel?: string | null;
+    resumeText?: string | null;
     aiState: "WAITING" | "PROCESSING" | "DONE" | "FAILED" | "NO_RESUME";
   }
 ) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
@@ -9,6 +9,8 @@ import { Toast } from "@/components/gestor/toast";
 import {
   bulkSetApplicationStatusAction,
   deleteApplicationsAction,
+  extractPhotosBulkAction,
+  searchCandidatesAction,
   generateCandidatesReportAction,
   type CandidateSummary,
 } from "@/server/controllers/application.controller";
@@ -102,7 +104,10 @@ export function CandidaturasTable({
   const [sort, setSort] = useState<SortKey>("WAITING");
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
+  const [viewMode, setViewMode] = useState<"list" | "cards">("cards");
+  const [onlyPhoto, setOnlyPhoto] = useState(false);
+  const [contentMatches, setContentMatches] = useState<Set<string> | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -110,10 +115,49 @@ export function CandidaturasTable({
   const [reportLoading, setReportLoading] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  // Busca no conteúdo do currículo (servidor), com debounce; nome/e-mail filtram na hora.
+  useEffect(() => {
+    const term = search.trim();
+    if (term.length < 2) {
+      setContentMatches(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      searchCandidatesAction(term)
+        .then((ids) => {
+          if (!cancelled) setContentMatches(new Set(ids));
+        })
+        .catch(() => {
+          if (!cancelled) setContentMatches(null);
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [search]);
+
+  async function extractPhotos(ids?: string[]) {
+    setPhotoBusy(true);
+    try {
+      const r = await extractPhotosBulkAction(ids);
+      setToast(
+        r.processed === 0
+          ? "Nenhum currículo pendente de foto."
+          : `${r.found} foto(s) extraída(s) de ${r.processed} currículo(s).`
+      );
+    } catch {
+      setToast("Não foi possível extrair as fotos agora.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   /** Tudo menos a aba — é a base das contagens de cada aba (scent honesto). */
   const scoped = useMemo(
-    () => applyFilters(rows, { search, jobId, onlyMeets }),
-    [rows, search, jobId, onlyMeets]
+    () => applyFilters(rows, { search, jobId, onlyMeets, onlyPhoto, contentMatches }),
+    [rows, search, jobId, onlyMeets, onlyPhoto, contentMatches]
   );
   const counts = useMemo(() => countByStage(scoped), [scoped]);
   const filtered = useMemo(
@@ -279,6 +323,14 @@ export function CandidaturasTable({
           >
             + Adicionar candidatos
           </Link>
+          <button
+            type="button"
+            disabled={photoBusy}
+            onClick={() => extractPhotos()}
+            className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-60"
+          >
+            {photoBusy ? "Extraindo fotos…" : "Extrair fotos dos currículos"}
+          </button>
           {pendingTotal > 0 && (
             <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>
               Triar agora →
@@ -337,7 +389,7 @@ export function CandidaturasTable({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar nome ou e-mail…"
+            placeholder="Buscar nome, e-mail ou palavra no currículo…"
             aria-label="Buscar candidatos"
             className="w-full bg-transparent text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
           />
@@ -380,6 +432,16 @@ export function CandidaturasTable({
             className="size-3.5 accent-[#0a0a0a]"
           />
           Só quem atende o mínimo
+        </label>
+
+        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
+          <input
+            type="checkbox"
+            checked={onlyPhoto}
+            onChange={(e) => setOnlyPhoto(e.target.checked)}
+            className="size-3.5 accent-[#0a0a0a]"
+          />
+          Somente com foto
         </label>
 
         <div className="ml-auto flex h-10 items-center gap-0.5 rounded-xl border border-[#e4e4e7] bg-white p-1">
@@ -656,6 +718,14 @@ export function CandidaturasTable({
             className="h-[34px] shrink-0 rounded-[10px] bg-[#c86b60]/25 px-4 text-xs font-medium text-[#f5b7b0] hover:bg-[#c86b60]/40 disabled:opacity-50"
           >
             Excluir
+          </button>
+          <button
+            type="button"
+            disabled={pending || photoBusy}
+            onClick={() => extractPhotos([...selected])}
+            className="h-[34px] shrink-0 rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
+          >
+            {photoBusy ? "Extraindo…" : "Extrair fotos"}
           </button>
           {selected.size >= 2 && selected.size <= 3 && (
             <Link
