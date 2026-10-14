@@ -9,6 +9,7 @@ import { Prisma } from "@prisma/client";
 
 import { AI_MODEL_ID, geminiGenerate } from "@/lib/gemini";
 import { parseCareer, type CareerProfile } from "@/server/models/career.model";
+import { parseContactJson } from "@/server/models/intake.model";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDemoResumePath } from "@/server/models/application.model";
 import {
@@ -141,6 +142,29 @@ async function scoreMaterial(
     throw new Error(`Score inválido retornado pela IA: ${raw}`);
   }
   return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500) };
+}
+
+/** Texto de um PDF do Storage (ou da demonstração). */
+export async function readResumeText(resumePath: string): Promise<string> {
+  const pdf = await getDocumentProxy(await loadResumeBytes(resumePath));
+  return (await extractText(pdf, { mergePages: true })).text;
+}
+
+/**
+ * Lote de currículos: tira nome, e-mail e telefone do texto para o
+ * pré-cadastro. Só contato — não avalia nada (a nota segue o AI_PROMPT).
+ */
+const CONTACT_PROMPT = `Extraia do currículo apenas os dados de contato do candidato.
+Retorne JSON: { "name": "nome completo", "email": "e-mail ou vazio", "phone": "telefone ou vazio" }`;
+
+export async function extractResumeContact(text: string) {
+  const raw = await geminiGenerate({
+    system: CONTACT_PROMPT,
+    prompt: text.slice(0, 3000),
+    maxTokens: 120,
+    json: true,
+  });
+  return parseContactJson(raw);
 }
 
 /** Currículo (texto do PDF) + respostas de uma candidatura, ou null sem material. */

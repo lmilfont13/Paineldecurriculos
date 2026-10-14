@@ -36,6 +36,7 @@ export default async function CandidaturasPage({
     jobTitle: app.job.title,
     aiMinScore: app.job.aiMinScore,
     isDemo: app.isDemo,
+    preRegistered: app.preRegistered,
     photoUrl: app.photoUrl,
   }));
 

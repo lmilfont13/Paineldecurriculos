@@ -467,6 +467,7 @@ export function createApplication(data: {
   aiState: AIState;
   answers: { fieldId: string; value: string }[];
   isDemo?: boolean;
+  preRegistered?: boolean;
 }) {
   const { answers, ...application } = data;
   return prisma.application.create({
@@ -529,4 +530,37 @@ export async function countRealApplicationsByJob(companyId: string) {
 /** Análise de perfil sob demanda (não mexe em etapa nem na nota da vaga). */
 export function updateApplicationCareer(id: string, aiCareer: Prisma.InputJsonValue) {
   return prisma.application.update({ where: { id }, data: { aiCareer } });
+}
+
+/**
+ * O candidato completou o cadastro rápido feito pelo gestor: troca dados,
+ * currículo e respostas e volta a candidatura para a fila da IA.
+ */
+export function completePreRegisteredApplication(
+  id: string,
+  data: {
+    name: string;
+    phone: string | null;
+    resumeUrl: string | null;
+    answers: { fieldId: string; value: string }[];
+  }
+) {
+  const { answers, ...rest } = data;
+  return prisma.$transaction(async (tx) => {
+    await tx.answer.deleteMany({ where: { applicationId: id } });
+    return tx.application.update({
+      where: { id },
+      data: {
+        ...rest,
+        preRegistered: false,
+        aiState: "WAITING",
+        answers: { create: answers },
+      },
+    });
+  });
+}
+
+/** Currículo anexado pelo gestor (ex.: recebido por e-mail). */
+export function updateApplicationResume(id: string, resumeUrl: string) {
+  return prisma.application.update({ where: { id }, data: { resumeUrl, aiState: "WAITING" } });
 }
