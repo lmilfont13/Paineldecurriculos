@@ -40,6 +40,7 @@ import {
   updateManagerNotes,
   searchApplicationIds,
   updateApplicationResumeText,
+  findApplicationsForCvSearch,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import {
@@ -88,6 +89,7 @@ import {
 import {
   captureResumePhoto,
   removeResumePhotos,
+  withPhotoUrls,
 } from "@/server/services/resume-photo.service";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
@@ -126,6 +128,12 @@ export async function listCompanyApplications(
   return jobId
     ? applications.filter((a) => a.job.id === jobId)
     : applications;
+}
+
+/** Busca avançada de CVs (nível Michelin): lista enriquecida com fotos assinadas e respostas. */
+export async function listApplicationsForCvSearch(companyId: string) {
+  const raw = await findApplicationsForCvSearch(companyId);
+  return withPhotoUrls(raw);
 }
 
 /** Detalhe da candidatura (E4) — sempre valida a posse pelo tenant. */

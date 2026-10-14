@@ -12,7 +12,9 @@ import {
   countPendingApplications,
   getCompanyApplication,
   listCompanyApplications,
+  listApplicationsForCvSearch,
 } from "@/server/services/application.service";
+import type { CandidateCvCard } from "@/server/models/cv-search.model";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getStandbyForJob } from "@/server/services/talent.service";
 import { getCompanyById } from "@/server/services/company.service";
@@ -65,6 +67,62 @@ export async function getCandidaturasPageData(jobId?: string) {
   );
   const jobs = await listCompanyJobs(user.companyId);
   return { applications, jobs };
+}
+
+/** Busca avançada de CVs (nível Michelin): base aberta de currículos com busca facetada. */
+export async function getBuscarCvsData() {
+  const { user } = await getGestorShell();
+  const rawApps = await listApplicationsForCvSearch(user.companyId);
+  const jobs = await listCompanyJobs(user.companyId);
+
+  const candidates: CandidateCvCard[] = rawApps.map((app) => {
+    // Procura respostas relevantes nas perguntas customizadas
+    let salaryExpectation: string | null = null;
+    let education: string | null = null;
+    let languages: string | null = null;
+
+    for (const ans of app.answers) {
+      const label = ans.field.label.toLowerCase();
+      if (label.includes("salar") || label.includes("pretens")) {
+        salaryExpectation = ans.value;
+      } else if (label.includes("escolar") || label.includes("formaç") || label.includes("curso")) {
+        education = ans.value;
+      } else if (label.includes("idioma") || label.includes("inglês")) {
+        languages = ans.value;
+      }
+    }
+
+    return {
+      id: app.id,
+      name: app.name,
+      email: app.email,
+      phone: app.phone,
+      photoUrl: app.photoUrl,
+      resumeUrl: app.resumeUrl,
+      resumeText: app.resumeText,
+      aiProfile: app.aiProfile,
+      aiArea: app.aiArea,
+      aiLevel: app.aiLevel,
+      aiScore: app.aiScore,
+      aiReasoning: app.aiReasoning,
+      aiChecklist: app.aiChecklist,
+      status: app.status,
+      createdAt: app.createdAt.toISOString(),
+      job: {
+        id: app.job.id,
+        title: app.job.title,
+        location: app.job.location,
+        workMode: app.job.workMode,
+        contract: app.job.contract,
+        aiMinScore: app.job.aiMinScore,
+      },
+      salaryExpectation,
+      education,
+      languages,
+    };
+  });
+
+  return { candidates, jobs };
 }
 
 /** Hub da vaga: o processo inteiro em um lugar (funil, sinais, critérios). */

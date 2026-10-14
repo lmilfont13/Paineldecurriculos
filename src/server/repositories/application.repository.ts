@@ -287,6 +287,37 @@ export function findApplicationsByCompany(
   });
 }
 
+/** Busca avançada de CVs (nível Michelin): dados enriquecidos para busca facetada e snippets. */
+export function findApplicationsForCvSearch(companyId: string) {
+  return prisma.application.findMany({
+    where: { companyId },
+    orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          location: true,
+          workMode: true,
+          contract: true,
+          aiMinScore: true,
+        },
+      },
+      answers: {
+        select: {
+          value: true,
+          field: {
+            select: {
+              label: true,
+              type: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 /** Busca por conteúdo: ids das candidaturas do tenant cujo nome/e-mail/currículo contêm o termo. */
 export async function searchApplicationIds(companyId: string, term: string) {
   const rows = await prisma.application.findMany({

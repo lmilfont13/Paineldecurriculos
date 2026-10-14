@@ -318,6 +318,12 @@ export function CandidaturasTable({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/buscar-cvs"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 text-[12px] font-semibold text-amber-900 transition hover:bg-amber-100"
+          >
+            🔍 Buscar CVs
+          </Link>
+          <Link
             href="/candidaturas/novo"
             className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
           >
