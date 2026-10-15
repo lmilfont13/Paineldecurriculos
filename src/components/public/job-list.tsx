@@ -12,6 +12,7 @@ import {
   workModeLabels,
   type PublicJob,
 } from "@/server/models/job.model";
+import { StructuredJobDescription } from "@/components/public/structured-job-description";
 
 /* ─── helpers ─────────────────────────────────────────────── */
 
@@ -124,7 +125,7 @@ function JobPreviewPanel({
       </div>
 
       <div className="mt-6 flex-1 space-y-5 text-[14px] leading-7 text-[#57534e]">
-        <p className="whitespace-pre-line">{job.description}</p>
+        <StructuredJobDescription text={job.description} collapsible />
         {bullets.length > 0 && (
           <div>
             <p className="mb-2 text-[13px] font-semibold text-[#1c1917]">O que buscamos</p>

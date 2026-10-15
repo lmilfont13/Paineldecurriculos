@@ -13,6 +13,7 @@ import {
   requirementsToBullets,
   workModeLabels,
 } from "@/server/models/job.model";
+import { StructuredJobDescription } from "@/components/public/structured-job-description";
 import {
   getJobDetailPageData,
   getPublicSession,
@@ -86,9 +87,9 @@ export default async function PublicJobDetailPage({
             <h2 className="mt-10 text-[15px] font-semibold text-[#1c1917]">
               Sobre a vaga
             </h2>
-            <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-[#57534e]">
-              {job.description}
-            </p>
+            <div className="mt-3">
+              <StructuredJobDescription text={job.description} />
+            </div>
 
             {bullets.length > 0 && (
               <>
