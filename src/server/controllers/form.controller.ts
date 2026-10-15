@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
 import { formFieldInputSchema } from "@/server/models/form.model";
+import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 import {
   addFormField,
   removeFormField,
@@ -33,6 +34,12 @@ export async function addFormFieldAction(
   }
   if (parsed.data.type === "DROPDOWN" && parsed.data.options.length < 2) {
     return { error: "Dropdown precisa de pelo menos 2 opções." };
+  }
+  if (isRedundantWithCoreProfile(parsed.data.label)) {
+    return {
+      error:
+        "Este campo já é coletado nativamente no perfil essencial do candidato (bairro, pretensão salarial, CNH, nascimento, contato ou currículo). Mantenha o cadastro limpo para não cansar o candidato.",
+    };
   }
   await addFormField(user.companyId, parsed.data);
   revalidatePath("/configuracoes/formulario");

@@ -13,7 +13,20 @@ import {
   type FormBuilderState,
 } from "@/server/controllers/form.controller";
 
-const CORE_FIXED = ["Nome completo", "E-mail", "Telefone", "Currículo (PDF)"];
+const CORE_FIXED = [
+  "Nome completo",
+  "E-mail",
+  "Telefone / WhatsApp",
+  "Data de nascimento (Idade)",
+  "Bairro, Cidade e Estado (UF)",
+  "Função pretendida",
+  "Pretensão salarial",
+  "Modalidade preferida (Presencial / Híbrido / Remoto)",
+  "Disponibilidade (Imediata / 15 dias / Negociável)",
+  "Possui CNH? (Não / A / B / AB / C, D, E)",
+  "PCD (Pessoa com Deficiência)",
+  "Currículo (PDF com análise profunda por IA)",
+];
 
 /** Construtor de formulário (/formulario) — padrão do frame A5 do Figma. */
 export function FormBuilder({ fields }: { fields: PublicFormField[] }) {
@@ -32,20 +45,30 @@ export function FormBuilder({ fields }: { fields: PublicFormField[] }) {
 
   return (
     <div className="max-w-[560px]">
+      <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-[12px] text-emerald-900">
+        <p className="font-semibold text-emerald-950 flex items-center gap-1.5">
+          <span>✨</span> Cadastro Limpo & Sem Redundâncias
+        </p>
+        <p className="mt-1 text-emerald-800 leading-relaxed">
+          Os 12 itens abaixo já são solicitados automaticamente a todos os candidatos.
+          Evite criar campos para dados que a plataforma já obtém nativamente ou que a IA extrai do PDF.
+        </p>
+      </div>
+
       <p className="text-sm font-medium text-[#0a0a0a]">
-        Núcleo (fixo em todas as empresas)
+        Perfil essencial coletado nativamente ({CORE_FIXED.length})
       </p>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {CORE_FIXED.map((label) => (
           <li
             key={label}
-            className="flex h-10 items-center justify-between rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-4"
+            className="flex h-9 items-center justify-between rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-3.5"
           >
-            <span className="text-[13px] font-medium text-[#0a0a0a]">
+            <span className="text-[12px] font-medium text-[#0a0a0a]">
               {label}
             </span>
-            <span className="rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[9px] font-medium text-[#71717a]">
-              fixo
+            <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[9px] font-medium text-[#71717a]">
+              nativo
             </span>
           </li>
         ))}

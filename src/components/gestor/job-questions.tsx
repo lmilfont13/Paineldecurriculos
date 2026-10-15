@@ -4,7 +4,10 @@ import { useActionState, useState, useTransition } from "react";
 import { Check, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import type { PublicFormField } from "@/server/models/form.model";
-import type { QuestionSuggestion } from "@/server/models/question-catalog.model";
+import {
+  isRedundantWithCoreProfile,
+  type QuestionSuggestion,
+} from "@/server/models/question-catalog.model";
 import {
   addCustomQuestionAction,
   addSuggestedQuestionAction,
@@ -100,6 +103,15 @@ export function JobQuestions({
 
   return (
     <section className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-5">
+      <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3.5 text-[12px] text-indigo-950">
+        <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
+          <Sparkles className="size-3.5 text-indigo-600" /> Cadastro Limpo & Alta Conversão
+        </div>
+        <p className="mt-1 text-indigo-800/90 leading-relaxed">
+          Nome, contato, data de nascimento, bairro, cidade, pretensão salarial, CNH, modelo de trabalho e experiências do currículo <strong>já são solicitados nativamente</strong>. Use as perguntas abaixo apenas para requisitos operacionais ou rotinas específicas desta vaga.
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <h2 className="text-[13px] font-semibold text-[#0a0a0a]">Perguntas desta vaga</h2>
@@ -115,18 +127,27 @@ export function JobQuestions({
         </p>
       ) : (
         <ul className="mt-4 space-y-2">
-          {questions.map((q) => (
-            <li
-              key={q.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[#e4e4e7] px-3.5 py-2.5"
-            >
-              <span className="min-w-0">
-                <span className="block text-[12px] font-medium text-[#0a0a0a]">{q.label}</span>
-                <span className="text-[10px] text-[#a1a1aa]">
-                  {TYPE_LABELS[q.type] ?? q.type}
-                  {q.type === "DROPDOWN" && `: ${q.options.join(", ")}`}
+          {questions.map((q) => {
+            const isRedundant = isRedundantWithCoreProfile(q.label);
+            return (
+              <li
+                key={q.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-[#e4e4e7] px-3.5 py-2.5"
+              >
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2">
+                    <span className="block text-[12px] font-medium text-[#0a0a0a]">{q.label}</span>
+                    {isRedundant && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200">
+                        ⚡ Já coletado no cadastro
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-[#a1a1aa]">
+                    {TYPE_LABELS[q.type] ?? q.type}
+                    {q.type === "DROPDOWN" && `: ${q.options.join(", ")}`}
+                  </span>
                 </span>
-              </span>
               <span className="flex shrink-0 items-center gap-3">
                 <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-[#52525b]">
                   <input
@@ -151,7 +172,8 @@ export function JobQuestions({
                 </button>
               </span>
             </li>
-          ))}
+          );
+        })}
         </ul>
       )}
 

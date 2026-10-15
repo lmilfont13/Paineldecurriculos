@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
 import { formFieldInputSchema } from "@/server/models/form.model";
+import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 import {
   addCatalogQuestionToJob,
   addJobQuestion,
@@ -54,6 +55,12 @@ export async function addCustomQuestionAction(
   }
   if (parsed.data.type === "DROPDOWN" && parsed.data.options.length < 2) {
     return { error: "Lista de opções precisa de pelo menos 2 opções." };
+  }
+  if (isRedundantWithCoreProfile(parsed.data.label)) {
+    return {
+      error:
+        "Essa pergunta já é coletada nativamente no perfil do candidato (bairro, pretensão salarial, CNH, nascimento, contato ou currículo). Mantenha o cadastro limpo para não cansar o candidato.",
+    };
   }
   const created = await addJobQuestion(user.companyId, jobId, parsed.data);
   refresh(jobId);

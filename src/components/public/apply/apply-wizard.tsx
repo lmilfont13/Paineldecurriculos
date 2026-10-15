@@ -13,6 +13,7 @@ import {
   submitApplicationAction,
 } from "@/server/controllers/application.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 
 const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
 
@@ -85,12 +86,21 @@ export function ApplyWizard({
   const setAnswer = (fieldId: string, value: string) =>
     setData((d) => ({ ...d, answers: { ...d.answers, [fieldId]: value } }));
 
+  const filteredCoreFields = useMemo(
+    () => coreFields.filter((f) => !isRedundantWithCoreProfile(f.label)),
+    [coreFields]
+  );
+  const filteredCustomFields = useMemo(
+    () => customFields.filter((f) => !isRedundantWithCoreProfile(f.label)),
+    [customFields]
+  );
+
   const stepError = useMemo(() => {
     if (step === 0) {
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
     }
-    const fields = step === 1 ? coreFields : step === 2 ? customFields : [];
+    const fields = step === 1 ? filteredCoreFields : step === 2 ? filteredCustomFields : [];
     for (const field of fields) {
       if (
         field.required &&
@@ -101,7 +111,7 @@ export function ApplyWizard({
       }
     }
     return null;
-  }, [step, data, coreFields, customFields]);
+  }, [step, data, filteredCoreFields, filteredCustomFields]);
 
   function next() {
     if (stepError) {
@@ -171,7 +181,26 @@ export function ApplyWizard({
         if (data.hasCnh) formData.set("hasCnh", data.hasCnh);
         formData.set("isPcd", String(data.isPcd));
         if (data.pcdDetails) formData.set("pcdDetails", data.pcdDetails.trim());
-        formData.set("answers", JSON.stringify(data.answers));
+
+        // Preenche automaticamente campos que eram redundantes para compatibilidade retroativa
+        const mergedAnswers = { ...data.answers };
+        for (const field of [...coreFields, ...customFields]) {
+          if (!mergedAnswers[field.id] && isRedundantWithCoreProfile(field.label)) {
+            const norm = field.label.toLowerCase();
+            if (norm.includes("salari") || norm.includes("pretens")) {
+              mergedAnswers[field.id] = data.salaryExpectation;
+            } else if (norm.includes("bairro")) {
+              mergedAnswers[field.id] = data.neighborhood;
+            } else if (norm.includes("cidade")) {
+              mergedAnswers[field.id] = data.city;
+            } else if (norm.includes("cnh") || norm.includes("habilit")) {
+              mergedAnswers[field.id] = data.hasCnh;
+            } else if (norm.includes("nasciment") || norm.includes("idade")) {
+              mergedAnswers[field.id] = data.birthDate;
+            }
+          }
+        }
+        formData.set("answers", JSON.stringify(mergedAnswers));
         if (resumePath) formData.set("resumePath", resumePath);
 
         const result = await submitApplicationAction(formData);
@@ -427,7 +456,7 @@ export function ApplyWizard({
                 )}
               </div>
 
-              {coreFields.map((field) => (
+              {filteredCoreFields.map((field) => (
                 <DynamicField
                   key={field.id}
                   field={field}
@@ -482,12 +511,12 @@ export function ApplyWizard({
               title={`Perguntas da ${company.name}`}
               subtitle="Mais algumas perguntas sobre você."
             >
-              {customFields.length === 0 && (
+              {filteredCustomFields.length === 0 && (
                 <p className="text-sm text-[#71717a]">
                   Não há mais perguntas. Pode continuar.
                 </p>
               )}
-              {customFields.map((field) => (
+              {filteredCustomFields.map((field) => (
                 <DynamicField
                   key={field.id}
                   field={field}

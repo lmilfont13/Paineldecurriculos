@@ -65,29 +65,87 @@ export function normalizeText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-export type QuestionSuggestion = CatalogQuestion & { recommended: boolean };
+/**
+ * Detecta se uma pergunta é redundante com os dados que já são coletados
+ * de forma nativa e obrigatória no perfil do candidato (bairro, pretensão,
+ * CNH, data de nascimento/idade, contato e currículo PDF).
+ */
+export function isRedundantWithCoreProfile(label: string): boolean {
+  const norm = normalizeText(label).trim();
+  const redundantPatterns = [
+    "pretensao salarial",
+    "faixa salarial",
+    "pretensao de salario",
+    "qual seu salario",
+    "quanto quer ganhar",
+    "bairro e cidade",
+    "qual bairro",
+    "onde voce mora",
+    "qual sua cidade",
+    "tem 18 anos",
+    "maior de idade",
+    "data de nascimento",
+    "sua idade",
+    "quantos anos",
+    "tem cnh",
+    "possui cnh",
+    "categoria da cnh",
+    "habilitacao cnh",
+    "pessoa com deficiencia",
+    "e pcd",
+    "curriculo em pdf",
+    "anexe seu curriculo",
+    "seu telefone",
+    "seu whatsapp",
+    "seu email",
+    "nome completo",
+  ];
+  return redundantPatterns.some((pattern) => norm.includes(pattern));
+}
+
+export type QuestionSuggestion = CatalogQuestion & {
+  recommended: boolean;
+  isCoreProfileDuplicate?: boolean;
+};
 
 /**
  * Sugestões para a vaga: recomendadas primeiro (palavras do texto da vaga
  * casam com a pergunta), depois o resto do banco. Esconde o que a vaga ou a
  * empresa já pergunta (mesmo texto).
+ * Quando `filterCoreDuplicates` for true, oculta perguntas que duplicam o perfil essencial.
  */
 export function suggestQuestions(
   jobText: string,
-  existingLabels: string[]
+  existingLabels: string[],
+  options?: { filterCoreDuplicates?: boolean }
 ): QuestionSuggestion[] {
   const text = ` ${normalizeText(jobText)} `;
   const existing = new Set(existingLabels.map((l) => normalizeText(l).trim()));
-  return QUESTION_CATALOG.filter((q) => !existing.has(normalizeText(q.label).trim()))
-    .map((q, index) => ({
-      q,
-      index,
-      score: q.keywords.filter((k) => text.includes(k)).length,
-    }))
+  const filterCore = Boolean(options?.filterCoreDuplicates);
+
+  return QUESTION_CATALOG.filter((q) => {
+    if (existing.has(normalizeText(q.label).trim())) return false;
+    if (filterCore && isRedundantWithCoreProfile(q.label)) return false;
+    return true;
+  })
+    .map((q, index) => {
+      const isCore = isRedundantWithCoreProfile(q.label);
+      return {
+        q,
+        index,
+        score: q.keywords.filter((k) => text.includes(k)).length,
+        isCoreProfileDuplicate: isCore,
+      };
+    })
     .sort((a, b) => Number(b.score > 0) - Number(a.score > 0) || a.index - b.index)
-    .map(({ q, score }) => ({ ...q, recommended: score > 0 }));
+    .map(({ q, score, isCoreProfileDuplicate }) => ({
+      ...q,
+      recommended: score > 0,
+      isCoreProfileDuplicate,
+    }));
 }
 
 export function findCatalogQuestion(id: string): CatalogQuestion | null {
   return QUESTION_CATALOG.find((q) => q.id === id) ?? null;
 }
+

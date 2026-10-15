@@ -132,7 +132,8 @@ export async function getJobQuestions(
     companyQuestions: companyFields.filter((f) => !f.isCore).map((f) => f.label),
     suggestions: suggestQuestions(
       jobText,
-      [...companyFields, ...jobFields].map((f) => f.label)
+      [...companyFields, ...jobFields].map((f) => f.label),
+      { filterCoreDuplicates: true }
     ),
   };
 }
