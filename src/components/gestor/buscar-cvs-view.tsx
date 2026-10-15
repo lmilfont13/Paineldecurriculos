@@ -6,9 +6,12 @@ import {
   Award,
   BookOpen,
   Briefcase,
+  Calendar,
+  Car,
   Check,
   ChevronRight,
   Command,
+  Compass,
   Copy,
   DollarSign,
   Download,
@@ -18,6 +21,8 @@ import {
   FileText,
   Filter,
   GraduationCap,
+  HeartHandshake,
+  Home,
   Keyboard,
   Languages,
   Layers,
@@ -28,6 +33,7 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  Target,
   User,
   X,
   Zap,
@@ -36,8 +42,11 @@ import {
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { extractPhotosBulkAction } from "@/server/controllers/application.controller";
 import {
+  calculateAge,
   computeAreaFacets,
+  computeDesiredRoleFacets,
   computeLevelFacets,
+  computeNeighborhoodFacets,
   extractResumeSnippet,
   filterCandidates,
   sortCandidates,
@@ -72,6 +81,14 @@ export function BuscarCvsView({
     onlyWithPhoto: false,
     onlyWithPdf: false,
     onlyRemote: false,
+    selectedNeighborhood: "",
+    selectedCity: "",
+    selectedDesiredRole: "",
+    selectedWorkPreference: "",
+    selectedCnh: "",
+    onlyPcd: false,
+    ageBracket: "",
+    salaryBracket: "",
   });
 
   const [sort, setSort] = useState<CvSearchSort>("score");
@@ -80,6 +97,8 @@ export function BuscarCvsView({
   const [drawerTab, setDrawerTab] = useState<"pdf" | "ai" | "text">("pdf");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [areaSearch, setAreaSearch] = useState("");
+  const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
+  const [roleSearch, setRoleSearch] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showHotkeysHelp, setShowHotkeysHelp] = useState(true);
   const [isExtractingPhotos, startPhotoExtraction] = useTransition();
@@ -90,13 +109,27 @@ export function BuscarCvsView({
   // Facetas calculadas da base inteira
   const allAreas = useMemo(() => computeAreaFacets(candidates), [candidates]);
   const allLevels = useMemo(() => computeLevelFacets(candidates), [candidates]);
+  const allNeighborhoods = useMemo(() => computeNeighborhoodFacets(candidates), [candidates]);
+  const allRoles = useMemo(() => computeDesiredRoleFacets(candidates), [candidates]);
 
-  // Áreas filtradas pelo mini-campo de busca da sidebar
+  // Filtros de busca rápida dentro das listas da sidebar
   const visibleAreas = useMemo(() => {
     if (!areaSearch.trim()) return allAreas;
     const q = areaSearch.toLowerCase();
     return allAreas.filter((a) => a.label.toLowerCase().includes(q));
   }, [allAreas, areaSearch]);
+
+  const visibleNeighborhoods = useMemo(() => {
+    if (!neighborhoodSearch.trim()) return allNeighborhoods;
+    const q = neighborhoodSearch.toLowerCase();
+    return allNeighborhoods.filter((n) => n.label.toLowerCase().includes(q));
+  }, [allNeighborhoods, neighborhoodSearch]);
+
+  const visibleRoles = useMemo(() => {
+    if (!roleSearch.trim()) return allRoles;
+    const q = roleSearch.toLowerCase();
+    return allRoles.filter((r) => r.label.toLowerCase().includes(q));
+  }, [allRoles, roleSearch]);
 
   // Candidatos filtrados e ordenados
   const filtered = useMemo(() => filterCandidates(candidates, filters), [candidates, filters]);
@@ -116,7 +149,15 @@ export function BuscarCvsView({
     filters.minScore !== null ||
     filters.onlyWithPhoto ||
     filters.onlyWithPdf ||
-    Boolean(filters.onlyRemote);
+    Boolean(filters.onlyRemote) ||
+    Boolean(filters.selectedNeighborhood) ||
+    Boolean(filters.selectedCity) ||
+    Boolean(filters.selectedDesiredRole) ||
+    Boolean(filters.selectedWorkPreference) ||
+    Boolean(filters.selectedCnh) ||
+    Boolean(filters.onlyPcd) ||
+    Boolean(filters.ageBracket) ||
+    Boolean(filters.salaryBracket);
 
   // Power Recruiter Keyboard Navigation (J/K, Enter, W, C, /, Esc)
   useEffect(() => {
@@ -218,8 +259,18 @@ export function BuscarCvsView({
       onlyWithPhoto: false,
       onlyWithPdf: false,
       onlyRemote: false,
+      selectedNeighborhood: "",
+      selectedCity: "",
+      selectedDesiredRole: "",
+      selectedWorkPreference: "",
+      selectedCnh: "",
+      onlyPcd: false,
+      ageBracket: "",
+      salaryBracket: "",
     });
     setAreaSearch("");
+    setNeighborhoodSearch("");
+    setRoleSearch("");
     setSelectedIndex(0);
   }
 
@@ -522,6 +573,187 @@ export function BuscarCvsView({
                 </select>
               </div>
             )}
+
+            {/* 5. Função Pretendida */}
+            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                  <Target className="size-3 text-indigo-600" /> Função Pretendida
+                </span>
+                {filters.selectedDesiredRole && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoleSearch("");
+                      setFilters((p) => ({ ...p, selectedDesiredRole: "" }));
+                    }}
+                    className="text-[10px] text-red-600 hover:underline"
+                  >
+                    limpar
+                  </button>
+                )}
+              </div>
+              <input
+                type="text"
+                value={filters.selectedDesiredRole || roleSearch}
+                onChange={(e) => {
+                  setRoleSearch(e.target.value);
+                  setFilters((p) => ({ ...p, selectedDesiredRole: e.target.value }));
+                }}
+                placeholder="Ex: Assistente, Vendedor…"
+                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
+              />
+              {visibleRoles.length > 0 && !filters.selectedDesiredRole && (
+                <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto pr-1">
+                  {visibleRoles.slice(0, 6).map((role) => (
+                    <button
+                      key={role.key}
+                      type="button"
+                      onClick={() => setFilters((p) => ({ ...p, selectedDesiredRole: role.key }))}
+                      className="rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-2 py-0.5 text-[10px] text-[#3f3f46] hover:bg-stone-100 transition"
+                    >
+                      {role.label} <span className="font-mono text-[#a1a1aa]">({role.count})</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 6. Bairro e Região */}
+            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                  <Home className="size-3 text-emerald-600" /> Bairro / Região
+                </span>
+                {filters.selectedNeighborhood && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeighborhoodSearch("");
+                      setFilters((p) => ({ ...p, selectedNeighborhood: "" }));
+                    }}
+                    className="text-[10px] text-red-600 hover:underline"
+                  >
+                    limpar
+                  </button>
+                )}
+              </div>
+              <input
+                type="text"
+                value={filters.selectedNeighborhood || neighborhoodSearch}
+                onChange={(e) => {
+                  setNeighborhoodSearch(e.target.value);
+                  setFilters((p) => ({ ...p, selectedNeighborhood: e.target.value }));
+                }}
+                placeholder="Ex: Centro, Aldeota…"
+                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
+              />
+              {visibleNeighborhoods.length > 0 && !filters.selectedNeighborhood && (
+                <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto pr-1">
+                  {visibleNeighborhoods.slice(0, 6).map((neigh) => (
+                    <button
+                      key={neigh.key}
+                      type="button"
+                      onClick={() => setFilters((p) => ({ ...p, selectedNeighborhood: neigh.key }))}
+                      className="rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-2 py-0.5 text-[10px] text-[#3f3f46] hover:bg-stone-100 transition"
+                    >
+                      {neigh.label} <span className="font-mono text-[#a1a1aa]">({neigh.count})</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 7. Faixa Etária */}
+            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                <Calendar className="size-3 text-blue-600" /> Faixa Etária
+              </span>
+              <select
+                value={filters.ageBracket || ""}
+                onChange={(e) => setFilters((p) => ({ ...p, ageBracket: e.target.value }))}
+                className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-2 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+              >
+                <option value="">Todas as idades</option>
+                <option value="18_24">18 a 24 anos (Jovem Aprendiz / Início)</option>
+                <option value="25_34">25 a 34 anos (Pleno desenvolvimento)</option>
+                <option value="35_44">35 a 44 anos (Maduro / Especialista)</option>
+                <option value="45_54">45 a 54 anos</option>
+                <option value="55_PLUS">55+ anos (Talento Sênior 50+)</option>
+              </select>
+            </div>
+
+            {/* 8. Pretensão Salarial */}
+            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                <DollarSign className="size-3 text-emerald-600" /> Pretensão Salarial
+              </span>
+              <select
+                value={filters.salaryBracket || ""}
+                onChange={(e) => setFilters((p) => ({ ...p, salaryBracket: e.target.value }))}
+                className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-2 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+              >
+                <option value="">Qualquer pretensão</option>
+                <option value="Até R$ 2.000">Até R$ 2.000</option>
+                <option value="R$ 2.000 a R$ 3.500">R$ 2.000 a R$ 3.500</option>
+                <option value="R$ 3.500 a R$ 5.000">R$ 3.500 a R$ 5.000</option>
+                <option value="R$ 5.000 a R$ 8.000">R$ 5.000 a R$ 8.000</option>
+                <option value="R$ 8.000 a R$ 12.000">R$ 8.000 a R$ 12.000</option>
+                <option value="Acima de R$ 12.000">Acima de R$ 12.000</option>
+              </select>
+            </div>
+
+            {/* 9. Modalidade & Habilitação CNH */}
+            <div className="mt-5 space-y-3 border-t border-[#f4f4f5] pt-4">
+              <div>
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                  <Compass className="size-3 text-stone-600" /> Modalidade de Trabalho
+                </span>
+                <select
+                  value={filters.selectedWorkPreference || ""}
+                  onChange={(e) =>
+                    setFilters((p) => ({ ...p, selectedWorkPreference: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                >
+                  <option value="">Qualquer modalidade</option>
+                  <option value="ONSITE">Presencial</option>
+                  <option value="HYBRID">Híbrido</option>
+                  <option value="REMOTE">100% Remoto</option>
+                </select>
+              </div>
+
+              <div>
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                  <Car className="size-3 text-stone-600" /> Carteira CNH
+                </span>
+                <select
+                  value={filters.selectedCnh || ""}
+                  onChange={(e) => setFilters((p) => ({ ...p, selectedCnh: e.target.value }))}
+                  className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                >
+                  <option value="">Qualquer / Não exige CNH</option>
+                  <option value="A">Categoria A (Moto)</option>
+                  <option value="B">Categoria B (Carro)</option>
+                  <option value="AB">Categoria AB (Carro e Moto)</option>
+                  <option value="C_D_E">Categoria C/D/E (Pesados)</option>
+                </select>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer rounded-xl bg-purple-50/70 border border-purple-200/80 p-2.5">
+                  <input
+                    type="checkbox"
+                    checked={filters.onlyPcd || false}
+                    onChange={(e) => setFilters((p) => ({ ...p, onlyPcd: e.target.checked }))}
+                    className="size-4 rounded border-purple-300 text-purple-700 focus:ring-purple-600"
+                  />
+                  <span className="text-xs font-bold text-purple-900 flex items-center gap-1">
+                    <HeartHandshake className="size-3.5 text-purple-700" /> Apenas Candidatos PCD
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
         </aside>
 
@@ -641,8 +873,23 @@ export function BuscarCvsView({
                           {/* Título de Cargo / Perfil em Destaque */}
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="truncate text-base sm:text-lg font-bold text-[#0a0a0a]">
-                              {item.aiProfile || item.name}
+                              {item.desiredRole || item.aiProfile || item.name}
                             </h2>
+                            {item.desiredRole && item.aiProfile && item.desiredRole !== item.aiProfile && (
+                              <span className="rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-900 flex items-center gap-1">
+                                <Target className="size-3 text-indigo-600" /> Pretende: {item.desiredRole}
+                              </span>
+                            )}
+                            {item.isPcd && (
+                              <span className="rounded-md bg-purple-100 border border-purple-300 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">
+                                ♿ PCD
+                              </span>
+                            )}
+                            {item.age !== null && item.age !== undefined && (
+                              <span className="rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-900">
+                                🎂 {item.age} anos
+                              </span>
+                            )}
                             {item.aiLevel && (
                               <span
                                 className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${levelBadgeClass}`}
@@ -657,23 +904,26 @@ export function BuscarCvsView({
                             )}
                           </div>
 
-                          {/* Nome Real + Vaga + Localização */}
+                          {/* Nome Real + Vaga + Localização / Bairro */}
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#71717a]">
                             <span className="font-semibold text-[#0a0a0a]">{item.name}</span>
+                            <span>•</span>
+                            {(item.neighborhood || item.city) ? (
+                              <span className="flex items-center gap-1 font-medium text-emerald-950 bg-emerald-50/80 rounded px-1.5 py-0.5 border border-emerald-200/60">
+                                <MapPin className="size-3 text-emerald-600" />
+                                {[item.neighborhood, item.city].filter(Boolean).join(", ")}{item.state ? ` - ${item.state}` : ""}
+                              </span>
+                            ) : item.job.location ? (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="size-3 text-[#a1a1aa]" />
+                                {item.job.location}
+                              </span>
+                            ) : null}
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               <Briefcase className="size-3 text-[#a1a1aa]" />
                               {item.job.title}
                             </span>
-                            {item.job.location && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="size-3 text-[#a1a1aa]" />
-                                  {item.job.location}
-                                </span>
-                              </>
-                            )}
                           </div>
 
                           {/* Resumo da IA */}
@@ -716,11 +966,37 @@ export function BuscarCvsView({
                           )}
 
                           {/* Metadados Extras estruturados */}
-                          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#71717a]">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#71717a]">
                             {item.salaryExpectation && (
-                              <span className="flex items-center gap-1 text-emerald-800 font-medium">
+                              <span className="flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                                 <DollarSign className="size-3.5 text-emerald-600" />
-                                {item.salaryExpectation}
+                                Pretensão: {item.salaryExpectation}
+                              </span>
+                            )}
+                            {item.workPreference && item.workPreference !== "ANY" && (
+                              <span className="flex items-center gap-1 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700">
+                                <Compass className="size-3 text-stone-500" />
+                                {item.workPreference === "ONSITE"
+                                  ? "Presencial"
+                                  : item.workPreference === "HYBRID"
+                                  ? "Híbrido"
+                                  : "100% Remoto"}
+                              </span>
+                            )}
+                            {item.hasCnh && item.hasCnh !== "NONE" && (
+                              <span className="flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                <Car className="size-3 text-blue-600" />
+                                CNH {item.hasCnh}
+                              </span>
+                            )}
+                            {item.availability && item.availability !== "NEGOTIABLE" && (
+                              <span className="flex items-center gap-1 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700">
+                                ⏱️ Início{" "}
+                                {item.availability === "IMMEDIATE"
+                                  ? "Imediato"
+                                  : item.availability === "15_DAYS"
+                                  ? "em 15 dias"
+                                  : "em 30 dias"}
                               </span>
                             )}
                             {item.education && (
@@ -999,6 +1275,92 @@ export function BuscarCvsView({
                         <span className="text-[10px] text-[#a1a1aa]">Telefone</span>
                         <p className="font-semibold text-[#0a0a0a]">
                           {selectedCandidate.phone || "Não informado"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Critérios Essenciais de Triagem (Cadastro do Candidato) */}
+                  <div className="rounded-2xl border border-stone-200 bg-[#fafaf9] p-4 space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#0a0a0a] flex items-center gap-1.5">
+                      <Target className="size-3.5 text-indigo-600" />
+                      Dados Essenciais de Triagem
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Função Pretendida</span>
+                        <p className="font-bold text-indigo-900">
+                          {selectedCandidate.desiredRole || "Não especificada"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Pretensão Salarial</span>
+                        <p className="font-semibold text-emerald-800">
+                          {selectedCandidate.salaryExpectation || "A combinar"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Data de Nasc. / Idade</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {selectedCandidate.birthDate
+                            ? `${new Date(selectedCandidate.birthDate).toLocaleDateString("pt-BR")}${
+                                selectedCandidate.age ? ` (${selectedCandidate.age} anos)` : ""
+                              }`
+                            : selectedCandidate.age
+                            ? `${selectedCandidate.age} anos`
+                            : "Não informada"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Localização / Bairro</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {[selectedCandidate.neighborhood, selectedCandidate.city, selectedCandidate.state]
+                            .filter(Boolean)
+                            .join(" - ") || "Não informado"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Modalidade Preferida</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {selectedCandidate.workPreference === "ONSITE"
+                            ? "Presencial"
+                            : selectedCandidate.workPreference === "HYBRID"
+                            ? "Híbrido"
+                            : selectedCandidate.workPreference === "REMOTE"
+                            ? "100% Remoto"
+                            : "Qualquer modalidade"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Disponibilidade</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {selectedCandidate.availability === "IMMEDIATE"
+                            ? "Imediata"
+                            : selectedCandidate.availability === "15_DAYS"
+                            ? "Em até 15 dias"
+                            : selectedCandidate.availability === "30_DAYS"
+                            ? "Em até 30 dias"
+                            : "A combinar"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Carteira CNH</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {!selectedCandidate.hasCnh || selectedCandidate.hasCnh === "NONE"
+                            ? "Não possui CNH"
+                            : `Categoria ${selectedCandidate.hasCnh}`}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#71717a]">Condição PCD</span>
+                        <p className="font-medium text-[#0a0a0a]">
+                          {selectedCandidate.isPcd ? (
+                            <span className="font-bold text-purple-900">
+                              Sim {selectedCandidate.pcdDetails ? `(${selectedCandidate.pcdDetails})` : ""}
+                            </span>
+                          ) : (
+                            "Não"
+                          )}
                         </p>
                       </div>
                     </div>

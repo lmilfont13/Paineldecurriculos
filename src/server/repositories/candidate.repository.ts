@@ -20,7 +20,22 @@ export function deleteCandidate(id: string) {
 
 export function updateCandidate(
   id: string,
-  data: Partial<{ name: string; phone: string | null; resumeUrl: string | null }>
+  data: Partial<{
+    name: string;
+    phone: string | null;
+    resumeUrl: string | null;
+    birthDate: Date | null;
+    city: string | null;
+    state: string | null;
+    neighborhood: string | null;
+    desiredRole: string | null;
+    salaryExpectation: string | null;
+    workPreference: string | null;
+    availability: string | null;
+    hasCnh: string | null;
+    isPcd: boolean;
+    pcdDetails: string | null;
+  }>
 ) {
   return prisma.candidate.update({ where: { id }, data });
 }

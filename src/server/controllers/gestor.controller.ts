@@ -14,7 +14,11 @@ import {
   listCompanyApplications,
   listApplicationsForCvSearch,
 } from "@/server/services/application.service";
-import { extractCandidateSkills, type CandidateCvCard } from "@/server/models/cv-search.model";
+import {
+  calculateAge,
+  extractCandidateSkills,
+  type CandidateCvCard,
+} from "@/server/models/cv-search.model";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getStandbyForJob } from "@/server/services/talent.service";
 import { getCompanyById } from "@/server/services/company.service";
@@ -92,6 +96,9 @@ export async function getBuscarCvsData() {
       }
     }
 
+    const effectiveSalary = app.salaryExpectation || salaryExpectation;
+    const age = calculateAge(app.birthDate);
+
     return {
       id: app.id,
       name: app.name,
@@ -116,10 +123,21 @@ export async function getBuscarCvsData() {
         contract: app.job.contract,
         aiMinScore: app.job.aiMinScore,
       },
-      salaryExpectation,
+      salaryExpectation: effectiveSalary,
       education,
       languages,
       skills: extractCandidateSkills(app.resumeText, app.aiProfile),
+      birthDate: app.birthDate ? app.birthDate.toISOString() : null,
+      age,
+      city: app.city,
+      state: app.state,
+      neighborhood: app.neighborhood,
+      desiredRole: app.desiredRole,
+      workPreference: app.workPreference,
+      availability: app.availability,
+      hasCnh: app.hasCnh,
+      isPcd: app.isPcd,
+      pcdDetails: app.pcdDetails,
     };
   });
 

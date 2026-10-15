@@ -665,6 +665,21 @@ export async function submitApplication(
     resumeUrl = uploadedResumePath;
   }
 
+  const rawBirthDate = input.birthDate;
+  const birthDate = rawBirthDate
+    ? new Date(rawBirthDate)
+    : candidate.birthDate ?? null;
+  const city = input.city ?? candidate.city ?? null;
+  const state = input.state ?? candidate.state ?? null;
+  const neighborhood = input.neighborhood ?? candidate.neighborhood ?? null;
+  const desiredRole = input.desiredRole ?? candidate.desiredRole ?? null;
+  const salaryExpectation = input.salaryExpectation ?? candidate.salaryExpectation ?? null;
+  const workPreference = input.workPreference ?? candidate.workPreference ?? null;
+  const availability = input.availability ?? candidate.availability ?? null;
+  const hasCnh = input.hasCnh ?? candidate.hasCnh ?? null;
+  const isPcd = input.isPcd ?? candidate.isPcd ?? false;
+  const pcdDetails = input.pcdDetails ?? candidate.pcdDetails ?? null;
+
   // Cadastro rápido do gestor: o candidato completa a mesma candidatura
   // (mantém histórico e notas); senão, cria uma nova.
   const application = existing
@@ -672,6 +687,17 @@ export async function submitApplication(
         name: input.name,
         phone: input.phone || null,
         resumeUrl,
+        birthDate,
+        city,
+        state,
+        neighborhood,
+        desiredRole,
+        salaryExpectation,
+        workPreference,
+        availability,
+        hasCnh,
+        isPcd,
+        pcdDetails,
         answers,
       })
     : await createApplication({
@@ -682,6 +708,17 @@ export async function submitApplication(
         email: candidate.email,
         phone: input.phone || null,
         resumeUrl,
+        birthDate,
+        city,
+        state,
+        neighborhood,
+        desiredRole,
+        salaryExpectation,
+        workPreference,
+        availability,
+        hasCnh,
+        isPcd,
+        pcdDetails,
         // Toda candidatura entra na análise: com PDF, só com as respostas, ou as
         // duas coisas. A própria análise marca NO_RESUME se não houver material.
         aiState: "WAITING",
@@ -693,6 +730,17 @@ export async function submitApplication(
     name: input.name,
     phone: input.phone || null,
     resumeUrl,
+    birthDate,
+    city,
+    state,
+    neighborhood,
+    desiredRole,
+    salaryExpectation,
+    workPreference,
+    availability,
+    hasCnh,
+    isPcd,
+    pcdDetails,
   });
 
   // Timeline: registra o envio (primeiro evento da candidatura). No cadastro

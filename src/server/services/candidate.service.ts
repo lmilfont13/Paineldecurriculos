@@ -50,6 +50,17 @@ export const getSessionCandidate = cache(
       name: candidate.name,
       phone: candidate.phone,
       resumeUrl: candidate.resumeUrl,
+      birthDate: candidate.birthDate,
+      city: candidate.city,
+      state: candidate.state,
+      neighborhood: candidate.neighborhood,
+      desiredRole: candidate.desiredRole,
+      salaryExpectation: candidate.salaryExpectation,
+      workPreference: candidate.workPreference,
+      availability: candidate.availability,
+      hasCnh: candidate.hasCnh,
+      isPcd: candidate.isPcd,
+      pcdDetails: candidate.pcdDetails,
     };
   }
 );
@@ -151,7 +162,7 @@ export async function emailBelongsToCandidate(email: string): Promise<boolean> {
 /** Atualiza o perfil reaproveitável do candidato (CA2/CA5). */
 export function updateCandidateProfile(
   candidateId: string,
-  data: Partial<{ name: string; phone: string | null; resumeUrl: string | null }>
+  data: Parameters<typeof updateCandidate>[1]
 ) {
   return updateCandidate(candidateId, data);
 }

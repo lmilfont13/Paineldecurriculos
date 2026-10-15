@@ -294,6 +294,17 @@ export async function submitApplicationAction(
     jobId: formData.get("jobId"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    birthDate: formData.get("birthDate") || undefined,
+    city: formData.get("city") || undefined,
+    state: formData.get("state") || undefined,
+    neighborhood: formData.get("neighborhood") || undefined,
+    desiredRole: formData.get("desiredRole") || undefined,
+    salaryExpectation: formData.get("salaryExpectation") || undefined,
+    workPreference: formData.get("workPreference") || undefined,
+    availability: formData.get("availability") || undefined,
+    hasCnh: formData.get("hasCnh") || undefined,
+    isPcd: formData.get("isPcd") === "true",
+    pcdDetails: formData.get("pcdDetails") || undefined,
     answers,
   });
   if (!parsed.success) {

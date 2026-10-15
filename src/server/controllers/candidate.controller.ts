@@ -93,10 +93,63 @@ export async function updateProfileAction(
     resumeUrl = verified.path;
   }
 
+  const rawBirthDate = String(formData.get("birthDate") ?? "").trim();
+  let birthDate: Date | null | undefined = undefined;
+  if (rawBirthDate) {
+    const d = new Date(rawBirthDate);
+    if (!isNaN(d.getTime())) {
+      birthDate = d;
+    }
+  } else if (formData.has("birthDate")) {
+    birthDate = null;
+  }
+
+  const neighborhood = formData.has("neighborhood")
+    ? String(formData.get("neighborhood") ?? "").trim() || null
+    : undefined;
+  const city = formData.has("city")
+    ? String(formData.get("city") ?? "").trim() || null
+    : undefined;
+  const state = formData.has("state")
+    ? String(formData.get("state") ?? "").trim() || null
+    : undefined;
+  const desiredRole = formData.has("desiredRole")
+    ? String(formData.get("desiredRole") ?? "").trim() || null
+    : undefined;
+  const salaryExpectation = formData.has("salaryExpectation")
+    ? String(formData.get("salaryExpectation") ?? "").trim() || null
+    : undefined;
+  const workPreference = formData.has("workPreference")
+    ? String(formData.get("workPreference") ?? "").trim() || null
+    : undefined;
+  const availability = formData.has("availability")
+    ? String(formData.get("availability") ?? "").trim() || null
+    : undefined;
+  const hasCnh = formData.has("hasCnh")
+    ? String(formData.get("hasCnh") ?? "").trim() || null
+    : undefined;
+  const isPcd = formData.has("isPcd")
+    ? formData.get("isPcd") === "true" || formData.get("isPcd") === "on"
+    : undefined;
+  const pcdDetails = formData.has("pcdDetails")
+    ? String(formData.get("pcdDetails") ?? "").trim() || null
+    : undefined;
+
   await updateCandidateProfile(candidate.id, {
     name,
     phone: phone || null,
     ...(resumeUrl !== undefined ? { resumeUrl } : {}),
+    ...(birthDate !== undefined ? { birthDate } : {}),
+    ...(neighborhood !== undefined ? { neighborhood } : {}),
+    ...(city !== undefined ? { city } : {}),
+    ...(state !== undefined ? { state } : {}),
+    ...(desiredRole !== undefined ? { desiredRole } : {}),
+    ...(salaryExpectation !== undefined ? { salaryExpectation } : {}),
+    ...(workPreference !== undefined ? { workPreference } : {}),
+    ...(availability !== undefined ? { availability } : {}),
+    ...(hasCnh !== undefined ? { hasCnh } : {}),
+    ...(isPcd !== undefined ? { isPcd } : {}),
+    ...(pcdDetails !== undefined ? { pcdDetails } : {}),
   });
   revalidatePath(`/${slug}/perfil`);
   return null;

@@ -19,6 +19,17 @@ const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
 type WizardData = {
   name: string;
   phone: string;
+  birthDate: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  desiredRole: string;
+  salaryExpectation: string;
+  workPreference: string;
+  availability: string;
+  hasCnh: string;
+  isPcd: boolean;
+  pcdDetails: string;
   answers: Record<string, string>;
 };
 
@@ -46,6 +57,19 @@ export function ApplyWizard({
   const [data, setData] = useState<WizardData>({
     name: candidate.name,
     phone: candidate.phone ?? "",
+    birthDate: candidate.birthDate
+      ? new Date(candidate.birthDate).toISOString().split("T")[0]
+      : "",
+    neighborhood: candidate.neighborhood ?? "",
+    city: candidate.city ?? "",
+    state: candidate.state ?? "",
+    desiredRole: candidate.desiredRole ?? "",
+    salaryExpectation: candidate.salaryExpectation ?? "",
+    workPreference: candidate.workPreference ?? "ANY",
+    availability: candidate.availability ?? "IMMEDIATE",
+    hasCnh: candidate.hasCnh ?? "NONE",
+    isPcd: Boolean(candidate.isPcd),
+    pcdDetails: candidate.pcdDetails ?? "",
     answers: prefillAnswers,
   });
   const [resume, setResume] = useState<File | null>(null);
@@ -136,6 +160,17 @@ export function ApplyWizard({
         formData.set("jobId", job.id);
         formData.set("name", data.name.trim());
         formData.set("phone", data.phone.trim());
+        if (data.birthDate) formData.set("birthDate", data.birthDate);
+        if (data.neighborhood) formData.set("neighborhood", data.neighborhood.trim());
+        if (data.city) formData.set("city", data.city.trim());
+        if (data.state) formData.set("state", data.state.trim().toUpperCase());
+        if (data.desiredRole) formData.set("desiredRole", data.desiredRole.trim());
+        if (data.salaryExpectation) formData.set("salaryExpectation", data.salaryExpectation.trim());
+        if (data.workPreference) formData.set("workPreference", data.workPreference);
+        if (data.availability) formData.set("availability", data.availability);
+        if (data.hasCnh) formData.set("hasCnh", data.hasCnh);
+        formData.set("isPcd", String(data.isPcd));
+        if (data.pcdDetails) formData.set("pcdDetails", data.pcdDetails.trim());
         formData.set("answers", JSON.stringify(data.answers));
         if (resumePath) formData.set("resumePath", resumePath);
 
@@ -209,7 +244,7 @@ export function ApplyWizard({
           {step === 0 && (
             <StepShell
               title="Vamos começar por você"
-              subtitle="Só o básico pra gente te identificar."
+              subtitle="Só o básico pra gente te identificar e adequar as vagas da sua região."
             >
               <Field label="Nome completo">
                 <TextInput
@@ -219,6 +254,27 @@ export function ApplyWizard({
                   autoComplete="name"
                 />
               </Field>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Data de nascimento">
+                  <input
+                    type="date"
+                    value={data.birthDate}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, birthDate: e.target.value }))
+                    }
+                    className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                  />
+                </Field>
+                <Field label="Telefone / WhatsApp">
+                  <TextInput
+                    type="tel"
+                    value={data.phone}
+                    onChange={(v) => setData((d) => ({ ...d, phone: v }))}
+                    placeholder="(85) 9 0000-0000"
+                    autoComplete="tel"
+                  />
+                </Field>
+              </div>
               <Field label="E-mail">
                 <input
                   type="email"
@@ -229,23 +285,148 @@ export function ApplyWizard({
                   title="E-mail da sua conta"
                 />
               </Field>
-              <Field label="Telefone / WhatsApp">
-                <TextInput
-                  type="tel"
-                  value={data.phone}
-                  onChange={(v) => setData((d) => ({ ...d, phone: v }))}
-                  placeholder="(85) 9 0000-0000"
-                  autoComplete="tel"
-                />
-              </Field>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Bairro">
+                  <TextInput
+                    value={data.neighborhood}
+                    onChange={(v) => setData((d) => ({ ...d, neighborhood: v }))}
+                    placeholder="Seu bairro"
+                  />
+                </Field>
+                <Field label="Cidade">
+                  <TextInput
+                    value={data.city}
+                    onChange={(v) => setData((d) => ({ ...d, city: v }))}
+                    placeholder="Sua cidade"
+                  />
+                </Field>
+                <Field label="Estado (UF)">
+                  <TextInput
+                    value={data.state}
+                    onChange={(v) =>
+                      setData((d) => ({
+                        ...d,
+                        state: v.slice(0, 2).toUpperCase(),
+                      }))
+                    }
+                    placeholder="UF (ex: SP)"
+                  />
+                </Field>
+              </div>
             </StepShell>
           )}
 
           {step === 1 && (
             <StepShell
               title="Seu perfil profissional"
-              subtitle="Conte um pouco sobre sua experiência."
+              subtitle="Critérios rápidos para os recrutadores localizarem seu perfil sem você precisar digitar todo o currículo."
             >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Função pretendida / Cargo de interesse">
+                  <TextInput
+                    value={data.desiredRole}
+                    onChange={(v) => setData((d) => ({ ...d, desiredRole: v }))}
+                    placeholder="Ex: Assistente Administrativo, Vendedor"
+                  />
+                </Field>
+                <Field label="Pretensão salarial">
+                  <input
+                    list="apply-salary-options"
+                    value={data.salaryExpectation}
+                    onChange={(e) =>
+                      setData((d) => ({
+                        ...d,
+                        salaryExpectation: e.target.value,
+                      }))
+                    }
+                    placeholder="Selecione ou digite"
+                    className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                  />
+                  <datalist id="apply-salary-options">
+                    <option value="A combinar" />
+                    <option value="Até R$ 2.000" />
+                    <option value="R$ 2.000 a R$ 3.500" />
+                    <option value="R$ 3.500 a R$ 5.000" />
+                    <option value="R$ 5.000 a R$ 8.000" />
+                    <option value="R$ 8.000 a R$ 12.000" />
+                    <option value="Acima de R$ 12.000" />
+                  </datalist>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Modalidade preferida">
+                  <select
+                    value={data.workPreference}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, workPreference: e.target.value }))
+                    }
+                    className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                  >
+                    <option value="ANY">Qualquer modalidade</option>
+                    <option value="ONSITE">Presencial</option>
+                    <option value="HYBRID">Híbrido</option>
+                    <option value="REMOTE">100% Remoto</option>
+                  </select>
+                </Field>
+                <Field label="Disponibilidade">
+                  <select
+                    value={data.availability}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, availability: e.target.value }))
+                    }
+                    className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                  >
+                    <option value="IMMEDIATE">Imediata</option>
+                    <option value="15_DAYS">Até 15 dias</option>
+                    <option value="30_DAYS">Até 30 dias</option>
+                    <option value="NEGOTIABLE">A combinar</option>
+                  </select>
+                </Field>
+                <Field label="Possui CNH?">
+                  <select
+                    value={data.hasCnh}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, hasCnh: e.target.value }))
+                    }
+                    className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+                  >
+                    <option value="NONE">Não possui</option>
+                    <option value="A">Cat. A (Moto)</option>
+                    <option value="B">Cat. B (Carro)</option>
+                    <option value="AB">Cat. AB (Carro e Moto)</option>
+                    <option value="C_D_E">Cat. C/D/E (Pesados)</option>
+                  </select>
+                </Field>
+              </div>
+
+              <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={data.isPcd}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, isPcd: e.target.checked }))
+                    }
+                    className="size-4 rounded border-gray-300 text-[#0a0a0a] focus:ring-[#0a0a0a]"
+                  />
+                  <span className="text-xs font-medium text-[#0a0a0a]">
+                    Sou Pessoa com Deficiência (PCD)
+                  </span>
+                </label>
+                {data.isPcd && (
+                  <div className="mt-2">
+                    <TextInput
+                      value={data.pcdDetails}
+                      onChange={(v) =>
+                        setData((d) => ({ ...d, pcdDetails: v }))
+                      }
+                      placeholder="Detalhes ou laudo (opcional)"
+                    />
+                  </div>
+                )}
+              </div>
+
               {coreFields.map((field) => (
                 <DynamicField
                   key={field.id}
@@ -337,6 +518,24 @@ export function ApplyWizard({
                 <ReviewRow label="Nome" value={data.name} />
                 <ReviewRow label="E-mail" value={candidate.email} />
                 <ReviewRow label="Telefone" value={data.phone} />
+                {data.birthDate && (
+                  <ReviewRow
+                    label="Data de nascimento"
+                    value={new Date(data.birthDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                  />
+                )}
+                {(data.neighborhood || data.city) && (
+                  <ReviewRow
+                    label="Localização"
+                    value={[data.neighborhood, data.city, data.state].filter(Boolean).join(" - ")}
+                  />
+                )}
+                {data.desiredRole && (
+                  <ReviewRow label="Função pretendida" value={data.desiredRole} />
+                )}
+                {data.salaryExpectation && (
+                  <ReviewRow label="Pretensão salarial" value={data.salaryExpectation} />
+                )}
                 {[...coreFields, ...customFields]
                   .filter((f) => (data.answers[f.id] ?? "").trim())
                   .map((f) => (

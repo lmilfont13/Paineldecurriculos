@@ -138,6 +138,20 @@ model Candidate {
   name      String
   phone     String?
   resumeUrl String?
+
+  /// Dados essenciais para triagem e busca sem redundância com o currículo:
+  birthDate         DateTime?
+  city              String?
+  state             String?
+  neighborhood      String?
+  desiredRole       String?
+  salaryExpectation String?
+  workPreference    String? // "REMOTE" | "HYBRID" | "ONSITE" | "ANY"
+  availability      String? // "IMMEDIATE" | "15_DAYS" | "30_DAYS" | "NEGOTIABLE"
+  hasCnh            String? // "NONE" | "A" | "B" | "AB" | "C_D_E"
+  isPcd             Boolean   @default(false)
+  pcdDetails        String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -154,6 +168,20 @@ model Application {
   email         String
   phone         String?
   resumeUrl     String?
+
+  /// Dados essenciais copiados do candidato ou capturados na candidatura:
+  birthDate         DateTime?
+  city              String?
+  state             String?
+  neighborhood      String?
+  desiredRole       String?
+  salaryExpectation String?
+  workPreference    String?
+  availability      String?
+  hasCnh            String?
+  isPcd             Boolean   @default(false)
+  pcdDetails        String?
+
   status        AppStatus @default(PENDING)
   aiState       AIState   @default(WAITING)
   aiScore       Int?
@@ -202,6 +230,8 @@ model Application {
   @@index([jobId, status])
   @@index([companyId, aiScore])
   @@index([companyId, isDemo])
+  @@index([companyId, neighborhood])
+  @@index([companyId, desiredRole])
 }
 
 /// Novidade do processo na visão do candidato — o mesmo evento que vira

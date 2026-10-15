@@ -528,6 +528,17 @@ export function createApplication(data: {
   email: string;
   phone: string | null;
   resumeUrl: string | null;
+  birthDate?: Date | null;
+  city?: string | null;
+  state?: string | null;
+  neighborhood?: string | null;
+  desiredRole?: string | null;
+  salaryExpectation?: string | null;
+  workPreference?: string | null;
+  availability?: string | null;
+  hasCnh?: string | null;
+  isPcd?: boolean;
+  pcdDetails?: string | null;
   aiState: AIState;
   answers: { fieldId: string; value: string }[];
   isDemo?: boolean;
@@ -606,6 +617,17 @@ export function completePreRegisteredApplication(
     name: string;
     phone: string | null;
     resumeUrl: string | null;
+    birthDate?: Date | null;
+    city?: string | null;
+    state?: string | null;
+    neighborhood?: string | null;
+    desiredRole?: string | null;
+    salaryExpectation?: string | null;
+    workPreference?: string | null;
+    availability?: string | null;
+    hasCnh?: string | null;
+    isPcd?: boolean;
+    pcdDetails?: string | null;
     answers: { fieldId: string; value: string }[];
   }
 ) {

@@ -28,6 +28,19 @@ export type CandidateCvCard = {
   education?: string | null;
   languages?: string | null;
   skills?: string[];
+
+  // Campos essenciais sem redundância com o currículo:
+  birthDate?: string | null; // ISO
+  age?: number | null;
+  city?: string | null;
+  state?: string | null;
+  neighborhood?: string | null;
+  desiredRole?: string | null;
+  workPreference?: string | null;
+  availability?: string | null;
+  hasCnh?: string | null;
+  isPcd?: boolean;
+  pcdDetails?: string | null;
 };
 
 export type CvSearchFilters = {
@@ -40,6 +53,16 @@ export type CvSearchFilters = {
   onlyWithPhoto: boolean;
   onlyWithPdf: boolean;
   onlyRemote?: boolean;
+
+  // Novos filtros refinados:
+  selectedNeighborhood?: string;
+  selectedCity?: string;
+  selectedDesiredRole?: string;
+  selectedWorkPreference?: string;
+  selectedCnh?: string;
+  onlyPcd?: boolean;
+  ageBracket?: string; // "18_24" | "25_34" | "35_44" | "45_54" | "55_PLUS"
+  salaryBracket?: string;
 };
 
 export type CvSearchSort = "score" | "recent" | "name";
@@ -130,6 +153,54 @@ export function extractResumeSnippet(text: string | null, keyword: string): stri
   return snippet;
 }
 
+/** Calcula a idade em anos a partir da data de nascimento. */
+export function calculateAge(birthDate: string | Date | null | undefined): number | null {
+  if (!birthDate) return null;
+  const d = new Date(birthDate);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+    age--;
+  }
+  return age >= 14 && age <= 100 ? age : null;
+}
+
+/** Agrupa contagens de bairros para a sidebar de filtro. */
+export function computeNeighborhoodFacets(candidates: CandidateCvCard[]): FacetCount[] {
+  const map = new Map<string, number>();
+  for (const c of candidates) {
+    const raw = c.neighborhood?.trim();
+    if (!raw) continue;
+    const formatted = raw
+      .split(/\s+/)
+      .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()))
+      .join(" ");
+    map.set(formatted, (map.get(formatted) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([key, count]) => ({ key, label: key, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/** Agrupa contagens de funções pretendidas para a sidebar. */
+export function computeDesiredRoleFacets(candidates: CandidateCvCard[]): FacetCount[] {
+  const map = new Map<string, number>();
+  for (const c of candidates) {
+    const raw = c.desiredRole?.trim();
+    if (!raw) continue;
+    const formatted = raw
+      .split(/\s+/)
+      .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()))
+      .join(" ");
+    map.set(formatted, (map.get(formatted) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([key, count]) => ({ key, label: key, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 /** Agrupa contagens de áreas profissionais para a sidebar. */
 export function computeAreaFacets(candidates: CandidateCvCard[]): FacetCount[] {
   const map = new Map<string, number>();
@@ -200,12 +271,20 @@ export function filterCandidates(
         item.name,
         item.email,
         item.phone ?? "",
+        item.neighborhood ?? "",
+        item.city ?? "",
+        item.state ?? "",
+        item.desiredRole ?? "",
+        item.salaryExpectation ?? "",
+        item.workPreference ?? "",
+        item.hasCnh ?? "",
+        item.isPcd ? "pcd deficiência acessibilidade" : "",
+        item.pcdDetails ?? "",
         item.aiProfile ?? "",
         item.aiArea ?? "",
         item.aiLevel ?? "",
         item.job.title,
         item.aiReasoning ?? "",
-        item.salaryExpectation ?? "",
         item.education ?? "",
         item.languages ?? "",
         ...(item.skills ?? []),
@@ -219,44 +298,113 @@ export function filterCandidates(
       }
     }
 
-    // 2. Filtro de Área
+    // 2. Filtro de Bairro
+    if (filters.selectedNeighborhood) {
+      const targetN = filters.selectedNeighborhood.trim().toLowerCase();
+      const itemN = item.neighborhood?.trim().toLowerCase();
+      if (!itemN || !itemN.includes(targetN)) return false;
+    }
+
+    // 3. Filtro de Cidade
+    if (filters.selectedCity) {
+      const targetC = filters.selectedCity.trim().toLowerCase();
+      const itemC = item.city?.trim().toLowerCase();
+      if (!itemC || !itemC.includes(targetC)) return false;
+    }
+
+    // 4. Filtro de Função Pretendida
+    if (filters.selectedDesiredRole) {
+      const targetR = filters.selectedDesiredRole.trim().toLowerCase();
+      const itemR = item.desiredRole?.trim().toLowerCase();
+      if (!itemR || !itemR.includes(targetR)) return false;
+    }
+
+    // 5. Filtro de Modalidade
+    if (filters.selectedWorkPreference && filters.selectedWorkPreference !== "ANY") {
+      if (
+        item.workPreference &&
+        item.workPreference !== "ANY" &&
+        item.workPreference !== filters.selectedWorkPreference
+      ) {
+        return false;
+      }
+    }
+
+    // 6. Filtro de CNH
+    if (filters.selectedCnh && filters.selectedCnh !== "NONE") {
+      if (!item.hasCnh || item.hasCnh === "NONE") return false;
+      if (filters.selectedCnh !== "ANY" && item.hasCnh !== filters.selectedCnh) {
+        // Se pediu B e tem AB, é válido
+        if (filters.selectedCnh === "B" && item.hasCnh === "AB") {
+          // OK
+        } else if (filters.selectedCnh === "A" && item.hasCnh === "AB") {
+          // OK
+        } else {
+          return false;
+        }
+      }
+    }
+
+    // 7. Filtro apenas PCD
+    if (filters.onlyPcd && !item.isPcd) {
+      return false;
+    }
+
+    // 8. Faixa Etária
+    if (filters.ageBracket) {
+      const age = item.age ?? calculateAge(item.birthDate);
+      if (age === null) return false;
+      if (filters.ageBracket === "18_24" && (age < 18 || age > 24)) return false;
+      if (filters.ageBracket === "25_34" && (age < 25 || age > 34)) return false;
+      if (filters.ageBracket === "35_44" && (age < 35 || age > 44)) return false;
+      if (filters.ageBracket === "45_54" && (age < 45 || age > 54)) return false;
+      if (filters.ageBracket === "55_PLUS" && age < 55) return false;
+    }
+
+    // 9. Faixa Salarial
+    if (filters.salaryBracket) {
+      const salary = item.salaryExpectation?.toLowerCase() ?? "";
+      if (!salary.includes(filters.salaryBracket.toLowerCase())) return false;
+    }
+
+    // 10. Filtro de Área
     if (filters.selectedAreas.length > 0) {
       const area = item.aiArea?.trim() || "Outras Áreas";
       if (!filters.selectedAreas.includes(area)) return false;
     }
 
-    // 3. Filtro de Nível
+    // 11. Filtro de Nível
     if (filters.selectedLevels.length > 0) {
       const level = item.aiLevel?.trim() || "Não especificado";
       if (!filters.selectedLevels.includes(level)) return false;
     }
 
-    // 4. Filtro de Vaga
+    // 12. Filtro de Vaga
     if (filters.selectedJobId && item.job.id !== filters.selectedJobId) {
       return false;
     }
 
-    // 5. Filtro de Status
+    // 13. Filtro de Status
     if (filters.selectedStatus && item.status !== filters.selectedStatus) {
       return false;
     }
 
-    // 6. Score Mínimo
+    // 14. Score Mínimo
     if (filters.minScore !== null && (item.aiScore === null || item.aiScore < filters.minScore)) {
       return false;
     }
 
-    // 7. Filtro apenas com foto
+    // 15. Filtro apenas com foto
     if (filters.onlyWithPhoto && !item.photoUrl) {
       return false;
     }
 
-    // 8. Filtro apenas com PDF
+    // 16. Filtro apenas com PDF
     if (filters.onlyWithPdf && !item.resumeUrl) {
       return false;
     }
 
-    // 9. Filtro Remoto
+    // 17. Filtro Remoto
     if (filters.onlyRemote && item.job.workMode !== "REMOTE") {
       return false;
     }

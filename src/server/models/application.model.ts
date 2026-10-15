@@ -68,6 +68,17 @@ export const applicationInputSchema = z.object({
   name: z.string().min(2, "Informe seu nome completo."),
   // e-mail vem da conta do candidato (sessão), não do formulário
   phone: z.string().min(8, "Informe um telefone válido."),
+  birthDate: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  neighborhood: z.string().optional().nullable(),
+  desiredRole: z.string().optional().nullable(),
+  salaryExpectation: z.string().optional().nullable(),
+  workPreference: z.string().optional().nullable(),
+  availability: z.string().optional().nullable(),
+  hasCnh: z.string().optional().nullable(),
+  isPcd: z.boolean().optional().default(false),
+  pcdDetails: z.string().optional().nullable(),
   /** Respostas dos FormFields da empresa: fieldId → valor. */
   answers: z.record(z.string(), z.string()),
 });

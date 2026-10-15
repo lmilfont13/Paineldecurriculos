@@ -59,39 +59,216 @@ export function ProfileForm({
         }}
         className="space-y-5 rounded-3xl border border-[#e4e4e7] bg-white p-6"
       >
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-            Nome completo
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
+              Nome completo
+            </span>
+            <input
+              name="name"
+              defaultValue={candidate.name}
+              required
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
+              Data de nascimento
+            </span>
+            <input
+              type="date"
+              name="birthDate"
+              defaultValue={
+                candidate.birthDate
+                  ? new Date(candidate.birthDate).toISOString().split("T")[0]
+                  : ""
+              }
+              className={inputClass}
+            />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
+              E-mail
+            </span>
+            <input
+              value={candidate.email}
+              readOnly
+              disabled
+              className="h-10 w-full rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-3 text-sm text-[#71717a]"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
+              Telefone / WhatsApp
+            </span>
+            <input
+              name="phone"
+              defaultValue={candidate.phone ?? ""}
+              placeholder="(85) 9 0000-0000"
+              className={inputClass}
+            />
+          </label>
+        </div>
+
+        {/* Localização rápida para adequação de vagas e VT */}
+        <div className="rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">
+          <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-[#71717a]">
+            Localização e Transporte
           </span>
-          <input
-            name="name"
-            defaultValue={candidate.name}
-            required
-            className={inputClass}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-            E-mail
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Bairro
+              </span>
+              <input
+                name="neighborhood"
+                defaultValue={candidate.neighborhood ?? ""}
+                placeholder="Ex: Aldeota, Centro, Pinheiros"
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Cidade
+              </span>
+              <input
+                name="city"
+                defaultValue={candidate.city ?? ""}
+                placeholder="Ex: Fortaleza, São Paulo"
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Estado (UF)
+              </span>
+              <input
+                name="state"
+                maxLength={2}
+                defaultValue={candidate.state ?? ""}
+                placeholder="Ex: CE, SP, RJ"
+                className={`${inputClass} uppercase`}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Critérios Essenciais de Triagem */}
+        <div className="rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">
+          <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-[#71717a]">
+            Objetivo e Critérios de Busca
           </span>
-          <input
-            value={candidate.email}
-            readOnly
-            disabled
-            className="h-10 w-full rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-3 text-sm text-[#71717a]"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-            Telefone / WhatsApp
-          </span>
-          <input
-            name="phone"
-            defaultValue={candidate.phone ?? ""}
-            placeholder="(85) 9 0000-0000"
-            className={inputClass}
-          />
-        </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Função pretendida / Cargo de interesse
+              </span>
+              <input
+                name="desiredRole"
+                defaultValue={candidate.desiredRole ?? ""}
+                placeholder="Ex: Assistente Administrativo, Vendedor, Desenvolvedor"
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Pretensão salarial
+              </span>
+              <input
+                list="salary-options"
+                name="salaryExpectation"
+                defaultValue={candidate.salaryExpectation ?? ""}
+                placeholder="Selecione ou digite (Ex: R$ 3.500)"
+                className={inputClass}
+              />
+              <datalist id="salary-options">
+                <option value="A combinar" />
+                <option value="Até R$ 2.000" />
+                <option value="R$ 2.000 a R$ 3.500" />
+                <option value="R$ 3.500 a R$ 5.000" />
+                <option value="R$ 5.000 a R$ 8.000" />
+                <option value="R$ 8.000 a R$ 12.000" />
+                <option value="Acima de R$ 12.000" />
+              </datalist>
+            </label>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Modalidade de trabalho
+              </span>
+              <select
+                name="workPreference"
+                defaultValue={candidate.workPreference ?? "ANY"}
+                className={inputClass}
+              >
+                <option value="ANY">Qualquer modalidade</option>
+                <option value="ONSITE">Presencial</option>
+                <option value="HYBRID">Híbrido</option>
+                <option value="REMOTE">100% Remoto</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Disponibilidade para início
+              </span>
+              <select
+                name="availability"
+                defaultValue={candidate.availability ?? "IMMEDIATE"}
+                className={inputClass}
+              >
+                <option value="IMMEDIATE">Imediata</option>
+                <option value="15_DAYS">Até 15 dias</option>
+                <option value="30_DAYS">Até 30 dias</option>
+                <option value="NEGOTIABLE">A combinar</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Carteira de Habilitação (CNH)
+              </span>
+              <select
+                name="hasCnh"
+                defaultValue={candidate.hasCnh ?? "NONE"}
+                className={inputClass}
+              >
+                <option value="NONE">Não possui</option>
+                <option value="A">Categoria A (Moto)</option>
+                <option value="B">Categoria B (Carro)</option>
+                <option value="AB">Categoria AB (Carro e Moto)</option>
+                <option value="C_D_E">Categoria C, D ou E (Pesados)</option>
+              </select>
+            </label>
+          </div>
+
+          {/* PCD */}
+          <div className="mt-4 border-t border-[#e4e4e7] pt-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isPcd"
+                value="true"
+                defaultChecked={Boolean(candidate.isPcd)}
+                className="size-4 rounded border-gray-300 text-[#0a0a0a] focus:ring-[#0a0a0a]"
+              />
+              <span className="text-xs font-medium text-[#0a0a0a]">
+                Sou Pessoa com Deficiência (PCD)
+              </span>
+            </label>
+            <div className="mt-2">
+              <input
+                name="pcdDetails"
+                defaultValue={candidate.pcdDetails ?? ""}
+                placeholder="Se desejar, descreva o tipo de deficiência ou necessidades de acessibilidade (opcional)"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
 
         <div>
           <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
