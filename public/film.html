@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Currículos · Apresentação Cinematográfica Master</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #050508;
+      --card-bg: rgba(14, 15, 23, 0.88);
+      --border: rgba(255, 255, 255, 0.12);
+      --indigo: #6366f1;
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --gold: #f59e0b;
+      --rose: #f43f5e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Cinematic Stage */
+    #stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      transform-origin: center center;
+    }
+
+    /* Canvas Background for pure function f(T) */
+    #fx-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      z-index: 1;
+    }
+
+    /* Ambient Nebulae */
+    .nebula {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0.35;
+    }
+
+    /* Content Viewport (within 2.39:1 letterbox) */
+    #viewport {
+      position: absolute;
+      top: 118px;
+      left: 0;
+      width: 1920px;
+      height: 844px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Cinema Letterbox Bars (118px) */
+    .cinema-bar {
+      position: absolute;
+      left: 0;
+      width: 1920px;
+      height: 118px;
+      background: #030305;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4rem;
+      border-color: rgba(255, 255, 255, 0.08);
+      font-family: monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+    }
+    .cinema-bar.top {
+      top: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .cinema-bar.bottom {
+      bottom: 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #cbd5e1;
+    }
+    .meta-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 10px var(--emerald);
+    }
+
+    /* Scene Container */
+    .scene {
+      position: absolute;
+      width: 1680px;
+      height: 760px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px) scale(0.98);
+      filter: blur(8px);
+      transition: none; /* Controlled deterministically by seek(T) */
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 1.4rem;
+      border-radius: 9999px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+    }
+    .badge.gold {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fde68a;
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.25);
+    }
+    .badge.cyan {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: rgba(6, 182, 212, 0.4);
+      color: #a5f3fc;
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.25);
+    }
+
+    /* Headings */
+    h1.hero-title {
+      font-size: 4.8rem;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 70%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+    }
+
+    h2.scene-title {
+      font-size: 3.4rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1.2rem;
+    }
+
+    p.scene-sub {
+      font-size: 1.45rem;
+      color: var(--text-muted);
+      max-width: 1050px;
+      line-height: 1.6;
+      margin-bottom: 2.2rem;
+    }
+
+    /* Metric Grid (Scene 1) */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      width: 100%;
+      max-width: 1400px;
+      margin-top: 1rem;
+    }
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--indigo), transparent);
+    }
+    .metric-label {
+      font-size: 1rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .metric-value {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+    }
+    .metric-value.emerald { color: #34d399; text-shadow: 0 0 25px rgba(52, 211, 153, 0.4); }
+    .metric-value.cyan { color: #38bdf8; text-shadow: 0 0 25px rgba(56, 189, 248, 0.4); }
+    .metric-value.gold { color: #fbbf24; text-shadow: 0 0 25px rgba(251, 191, 36, 0.4); }
+    .metric-sub {
+      font-size: 1.05rem;
+      color: #94a3b8;
+    }
+
+    /* Biometric & AI Grid (Scene 2) */
+    .biometric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 2.5rem;
+      width: 100%;
+      max-width: 1350px;
+      text-align: left;
+    }
+    .scanner-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .avatar-wrapper {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 3px solid var(--cyan);
+      box-shadow: 0 0 40px rgba(6, 182, 212, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.8rem;
+      background: #111827;
+      overflow: hidden;
+    }
+    .avatar-scan-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: #38bdf8;
+      box-shadow: 0 0 15px #38bdf8;
+      top: 0;
+      left: 0;
+    }
+    .avatar-img-placeholder {
+      font-size: 4.5rem;
+      opacity: 0.9;
+    }
+
+    /* Search & Filter Showcase (Scene 3) */
+    .filter-pills-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 0.6rem 1.4rem;
+      border-radius: 9999px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .filter-pill.active {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: #818cf8;
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .cv-dossier-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem 3rem;
+      max-width: 1200px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+    }
+
+    /* Essential Form Fields (Scene 4) */
+    .fields-showcase {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1250px;
+      margin-bottom: 1.8rem;
+    }
+    .field-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: left;
+    }
+    .field-name {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+    .field-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    /* Pipeline tracker (Scene 5) */
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1350px;
+      margin-top: 1.5rem;
+    }
+    .pipeline-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.8rem 1.6rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      position: relative;
+    }
+    .pipeline-step.done {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
+    }
+    .pipeline-step.active {
+      border-color: rgba(99, 102, 241, 0.7);
+      background: rgba(99, 102, 241, 0.12);
+      box-shadow: 0 0 35px rgba(99, 102, 241, 0.3);
+    }
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+    .pipeline-step.done .step-num { background: var(--emerald); color: #000; }
+    .pipeline-step.active .step-num { background: var(--indigo); color: #fff; }
+
+    /* Light Leak Overlay */
+    #light-leak {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 0;
+      mix-blend-mode: screen;
+      background: radial-gradient(circle at 80% 20%, rgba(255, 180, 50, 0.6) 0%, rgba(244, 63, 94, 0.3) 40%, transparent 70%);
+    }
+
+    /* Anamorphic Flare Canvas overlay */
+    #flare-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      pointer-events: none;
+      z-index: 45;
+      mix-blend-mode: screen;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+    <canvas id="flare-canvas" width="1920" height="1080"></canvas>
+    <div id="light-leak"></div>
+
+    <!-- Nebula glows -->
+    <div class="nebula" id="neb1" style="width: 700px; height: 700px; top: -100px; left: -100px; background: rgba(99, 102, 241, 0.45);"></div>
+    <div class="nebula" id="neb2" style="width: 650px; height: 650px; bottom: -100px; right: -100px; background: rgba(6, 182, 212, 0.45);"></div>
+
+    <!-- Top Cinema Bar -->
+    <div class="cinema-bar top">
+      <div class="meta-tag">
+        <span class="meta-dot"></span>
+        <span>ANTIGRAVITY AI LABS · APRESENTAÇÃO OFICIAL</span>
+      </div>
+      <div id="tc-display">00:00:00:00 · 30 FPS · 1080P MASTER</div>
+      <div>PAINEL DE CURRÍCULOS SAAS</div>
+    </div>
+
+    <!-- Central 2.39:1 Viewport -->
+    <div id="viewport">
+      <!-- SCENE 0: Cold Open / Hero Reveal (0.0s - 8.2s) -->
+      <div class="scene" id="scene-0">
+        <div class="badge">A Nova Experiência do Candidato</div>
+        <h1 class="hero-title">O Fim dos Formulários<br>Intermináveis</h1>
+        <p class="scene-sub">Uma plataforma desenhada para respeitar seu tempo, sua privacidade e o seu talento. Sem retrabalho, sem atrito, sem o vácuo dos portais tradicionais.</p>
+        <div style="display: flex; gap: 1.5rem; justify-content: center;">
+          <div class="filter-pill active">⚡ Groq Qwen 2.5 72B</div>
+          <div class="filter-pill active">🎯 Extração Facial Biométrica</div>
+          <div class="filter-pill active">🔍 Busca Michelin de Elite</div>
+        </div>
+      </div>
+
+      <!-- SCENE 1: O Choque de Realidade / Métricas (8.2s - 18.0s) -->
+      <div class="scene" id="scene-1">
+        <div class="badge cyan">Impacto Mensurável</div>
+        <h2 class="scene-title">A Realidade Antiga vs. A Nova Era</h2>
+        <p class="scene-sub">Por que continuar preenchendo 40 campos com dados que já constam no seu próprio currículo?</p>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-label">Tempo de Triagem</div>
+            <div class="metric-value emerald" id="val-tempo">3s</div>
+            <div class="metric-sub">Antes: 5 semanas de silêncio</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Campos Redundantes</div>
+            <div class="metric-value cyan" id="val-campos">0</div>
+            <div class="metric-sub">Apenas os essenciais + Upload de PDF</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Visibilidade do Status</div>
+            <div class="metric-value gold" id="val-status">100%</div>
+            <div class="metric-sub">Acompanhamento transparente em tempo real</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 2: Biometria & Motor IA Groq Qwen (18.0s - 28.0s) -->
+      <div class="scene" id="scene-2">
+        <div class="badge">Inteligência Artificial de Elite</div>
+        <h2 class="scene-title">Biometria Facial & Leitura Neural de Perfil</h2>
+        <p class="scene-sub">Seu currículo analisado com máxima fidelidade e respeito às suas competências reais.</p>
+        <div class="biometric-grid">
+          <div class="scanner-box">
+            <div class="avatar-wrapper">
+              <div class="avatar-img-placeholder">👤</div>
+              <div class="avatar-scan-line" id="scan-line"></div>
+            </div>
+            <div style="font-weight: 800; font-size: 1.4rem; color: #fff; margin-bottom: 0.4rem;">Extração Facial com IA</div>
+            <div style="color: #38bdf8; font-family: monospace; font-size: 0.95rem;">Crop Automático · 99.2% Precisão</div>
+          </div>
+          <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">Groq Qwen 2.5 72B Deep Triage</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: #fff; line-height: 1.3; margin-bottom: 1.5rem;">
+                Match Técnico Instantâneo com Radar 360° de Habilidades
+              </div>
+              <p style="color: #94a3b8; font-size: 1.15rem; line-height: 1.6;">
+                Sem pontuações genéricas. A inteligência avalia senioridade, stacks e projetos práticos diretamente do PDF anexado.
+              </p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+              <span class="badge gold" style="margin: 0;">Nota Michelin: 98/100</span>
+              <span class="badge" style="margin: 0;">Fila de Espera Zero</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 3: Busca Michelin & Recrutadores (28.0s - 38.0s) -->
+      <div class="scene" id="scene-3">
+        <div class="badge gold">Para o Recrutador Certo</div>
+        <h2 class="scene-title">Busca Michelin Multidimensional</h2>
+        <p class="scene-sub">Como as melhores empresas encontram você instantaneamente através de filtros cirúrgicos.</p>
+        <div class="filter-pills-row">
+          <div class="filter-pill active">📍 Bairro & Cidade</div>
+          <div class="filter-pill active">💼 Pretensão Salarial</div>
+          <div class="filter-pill active">🏢 Modelo: Remoto / Híbrido</div>
+          <div class="filter-pill active">🚗 CNH & Disponibilidade</div>
+          <div class="filter-pill active">♿ Inclusão PCD</div>
+        </div>
+        <div class="cv-dossier-card">
+          <div style="display: flex; align-items: center; gap: 2rem;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: #1e1b4b; border: 2px solid #818cf8; display: flex; align-items: center; justify-content: center; font-size: 2.5rem;">👨‍💻</div>
+            <div>
+              <div style="font-size: 1.7rem; font-weight: 800; color: #fff;">Luciano Milfont · Desenvolvedor Sênior</div>
+              <div style="color: #94a3b8; font-size: 1.1rem; margin-top: 0.3rem;">Bairro Aldeota · R$ 9.000 / mês · Híbrido · CNH B</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 2.4rem; font-weight: 900; color: #34d399;">98% Match</div>
+            <div style="color: #64748b; font-family: monospace; font-size: 0.9rem;">Dossiê Split-Viewer Ativo</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 4: Cadastro Essencial sem Redundâncias (38.0s - 48.0s) -->
+      <div class="scene" id="scene-4">
+        <div class="badge cyan">Sem Fricção</div>
+        <h2 class="scene-title">Cadastro Inteligente: Apenas o Essencial</h2>
+        <p class="scene-sub">Os dados que importam para o filtro. Todo o histórico profissional é extraído diretamente do PDF.</p>
+        <div class="fields-showcase">
+          <div class="field-item">
+            <div class="field-name">Data de Nascimento</div>
+            <div class="field-val">Adequação de Faixa Etária</div>
+          </div>
+          <div class="field-item">
+            <div class="field-name">Bairro & Cidade</div>
+            <div class="field-val">Proximidade Geográfica</div>
+          </div>
+          <div class="field-item">
+            <div class="field-name">Função Pretendida</div>
+            <div class="field-val">Cargo Alvo Direto</div>
+          </div>
+          <div class="field-item">
+            <div class="field-name">Pretensão Salarial</div>
+            <div class="field-val">Alinhamento Financeiro</div>
+          </div>
+          <div class="field-item">
+            <div class="field-name">Modelo de Trabalho</div>
+            <div class="field-val">Presencial · Híbrido · Remoto</div>
+          </div>
+          <div class="field-item">
+            <div class="field-name">CNH & PCD</div>
+            <div class="field-val">Inclusão e Mobilidade</div>
+          </div>
+        </div>
+        <div style="color: #a5b4fc; font-weight: 700; font-size: 1.25rem;">
+          ✓ Zero perguntas repetidas · Upload de PDF processado em 1.2s
+        </div>
+      </div>
+
+      <!-- SCENE 5: Transparência em Tempo Real (48.0s - 55.0s) -->
+      <div class="scene" id="scene-5">
+        <div class="badge emerald">Respeito ao Candidato</div>
+        <h2 class="scene-title">Acompanhamento 100% Transparente</h2>
+        <p class="scene-sub">Você acompanha cada movimento do seu processo. Acabou o limbo de candidaturas sem retorno.</p>
+        <div class="pipeline-row">
+          <div class="pipeline-step done">
+            <div class="step-num">✓</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #fff;">Inscrição</div>
+            <div style="font-size: 0.85rem; color: #34d399;">Recebido</div>
+          </div>
+          <div class="pipeline-step done">
+            <div class="step-num">✓</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #fff;">Triagem IA</div>
+            <div style="font-size: 0.85rem; color: #34d399;">Score 98/100</div>
+          </div>
+          <div class="pipeline-step active">
+            <div class="step-num">3</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #fff;">Em Avaliação</div>
+            <div style="font-size: 0.85rem; color: #818cf8;">Dossiê Aberto</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">4</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #94a3b8;">Entrevista</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Agendamento</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">5</div>
+            <div style="font-weight: 800; font-size: 1.1rem; color: #94a3b8;">Aprovação</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Feedback Final</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 6: Encerramento Cinematográfico (55.0s - 60.0s) -->
+      <div class="scene" id="scene-6">
+        <div class="badge gold">Produção Oficial Antigravity AI</div>
+        <h1 class="hero-title" style="font-size: 4.2rem;">Painel de Currículos</h1>
+        <p class="scene-sub" style="font-size: 1.5rem; max-width: 900px; color: #e2e8f0;">
+          A inteligência artificial transformando o recrutamento em uma experiência humana, transparente e veloz.
+        </p>
+        <div style="margin-top: 1rem; padding: 1rem 2.5rem; border-radius: 9999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); font-family: monospace; font-size: 1.3rem; color: #38bdf8; letter-spacing: 0.05em;">
+          https://paineldecurriculos-ptsc.vercel.app
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Cinema Bar -->
+    <div class="cinema-bar bottom">
+      <div>AUDIO: 44.1kHz STEREO · MASTER SOUNDTRACK 124 BPM</div>
+      <div id="scene-counter">CENA 01 / 07 · COLD OPEN</div>
+      <div>ENGENHARIA: GOOGLE ANTIGRAVITY AI</div>
+    </div>
+  </div>
+
+  <script>
+    // Particle Starfield definition (deterministic pure function of T)
+    const fxCanvas = document.getElementById('fx-canvas');
+    const fxCtx = fxCanvas.getContext('2d');
+    const flareCanvas = document.getElementById('flare-canvas');
+    const flareCtx = flareCanvas.getContext('2d');
+
+    const STARS_COUNT = 150;
+    const stars = [];
+    for (let i = 0; i < STARS_COUNT; i++) {
+      stars.push({
+        x: (Math.sin(i * 1928.3) * 0.5 + 0.5) * 1920,
+        y: (Math.cos(i * 3821.7) * 0.5 + 0.5) * 1080,
+        radius: (i % 3 === 0) ? 1.8 : 1.0,
+        speed: 15 + (i % 5) * 10,
+        phase: i * 0.4
+      });
+    }
+
+    // Scene timestamps
+    const SCENES = [
+      { id: 'scene-0', start: 0.0, end: 8.2, name: '01 / 07 · COLD OPEN & MANIFESTO' },
+      { id: 'scene-1', start: 8.2, end: 18.0, name: '02 / 07 · IMPACTO & MÉTRICAS' },
+      { id: 'scene-2', start: 18.0, end: 28.0, name: '03 / 07 · BIOMETRIA & IA GROQ' },
+      { id: 'scene-3', start: 28.0, end: 38.0, name: '04 / 07 · BUSCA MICHELIN' },
+      { id: 'scene-4', start: 38.0, end: 48.0, name: '05 / 07 · CADASTRO ESSENCIAL' },
+      { id: 'scene-5', start: 48.0, end: 55.0, name: '06 / 07 · TRANSPARÊNCIA RADICAL' },
+      { id: 'scene-6', start: 55.0, end: 60.5, name: '07 / 07 · GRAND FINALE' }
+    ];
+
+    const stageEl = document.getElementById('stage');
+    const lightLeakEl = document.getElementById('light-leak');
+    const tcDisplay = document.getElementById('tc-display');
+    const sceneCounter = document.getElementById('scene-counter');
+    const scanLine = document.getElementById('scan-line');
+
+    // Deterministic seek function called by frame renderer
+    window.seek = function(T) {
+      T = Math.max(0, Math.min(60.0, T));
+
+      // 1. Timecode display (HH:MM:SS:FF at 30 FPS)
+      const totalFrames = Math.floor(T * 30);
+      const ff = String(totalFrames % 30).padStart(2, '0');
+      const ss = String(Math.floor(T) % 60).padStart(2, '0');
+      const mm = String(Math.floor(T / 60) % 60).padStart(2, '0');
+      tcDisplay.textContent = `00:${mm}:${ss}:${ff} · 30 FPS · 1080P MASTER`;
+
+      // 2. Camera push-in and subtle shake on impacts
+      let shakeX = 0;
+      let shakeY = 0;
+      let impactIntensity = 0;
+      for (const sc of SCENES) {
+        const dist = Math.abs(T - sc.start);
+        if (dist < 0.6) {
+          const factor = Math.exp(-dist * 6.0);
+          impactIntensity = Math.max(impactIntensity, factor);
+        }
+      }
+      if (impactIntensity > 0.05) {
+        shakeX = Math.sin(T * 60.0) * 4.0 * impactIntensity;
+        shakeY = Math.cos(T * 45.0) * 3.0 * impactIntensity;
+      }
+
+      // Camera push-in resets slightly each scene
+      const sceneProgress = (T % 9.0) / 9.0;
+      const zoom = 1.0 + sceneProgress * 0.025;
+      stageEl.style.transform = `scale(${zoom}) translate(${shakeX}px, ${shakeY}px)`;
+
+      // 3. Light leak on scene cuts
+      lightLeakEl.style.opacity = Math.max(0, impactIntensity * 0.7);
+
+      // 4. Render Starfield on Canvas
+      fxCtx.clearRect(0, 0, 1920, 1080);
+      fxCtx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      for (let i = 0; i < stars.length; i++) {
+        const st = stars[i];
+        const curY = (st.y + T * st.speed) % 1080;
+        const curX = st.x + Math.sin(T * 0.4 + st.phase) * 12;
+        const alpha = 0.3 + 0.7 * (Math.sin(T * 2.0 + st.phase) * 0.5 + 0.5);
+        fxCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        fxCtx.beginPath();
+        fxCtx.arc(curX, curY, st.radius, 0, Math.PI * 2);
+        fxCtx.fill();
+      }
+
+      // 5. Anamorphic horizontal flare on transitions
+      flareCtx.clearRect(0, 0, 1920, 1080);
+      if (impactIntensity > 0.1) {
+        const flareY = 540 + Math.sin(T) * 100;
+        const grad = flareCtx.createLinearGradient(0, flareY, 1920, flareY);
+        grad.addColorStop(0, 'rgba(6, 182, 212, 0)');
+        grad.addColorStop(0.3, `rgba(56, 189, 248, ${impactIntensity * 0.4})`);
+        grad.addColorStop(0.5, `rgba(255, 255, 255, ${impactIntensity * 0.9})`);
+        grad.addColorStop(0.7, `rgba(99, 102, 241, ${impactIntensity * 0.4})`);
+        grad.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+        flareCtx.fillStyle = grad;
+        flareCtx.fillRect(0, flareY - 3, 1920, 6);
+
+        // Center glow
+        const radGrad = flareCtx.createRadialGradient(960, flareY, 0, 960, flareY, 400);
+        radGrad.addColorStop(0, `rgba(255, 255, 255, ${impactIntensity * 0.7})`);
+        radGrad.addColorStop(0.5, `rgba(6, 182, 212, ${impactIntensity * 0.3})`);
+        radGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        flareCtx.fillStyle = radGrad;
+        flareCtx.beginPath();
+        flareCtx.arc(960, flareY, 400, 0, Math.PI * 2);
+        flareCtx.fill();
+      }
+
+      // 6. Avatar scan line animation in Scene 2
+      if (scanLine) {
+        const scanY = ((T * 120) % 200);
+        scanLine.style.transform = `translateY(${scanY}px)`;
+      }
+
+      // 7. Scenes Crossfade / Visibility
+      for (let i = 0; i < SCENES.length; i++) {
+        const sc = SCENES[i];
+        const el = document.getElementById(sc.id);
+        if (!el) continue;
+
+        if (T >= sc.start && T < sc.end) {
+          sceneCounter.textContent = `CENA ${sc.name}`;
+          
+          // Fade in (first 0.5s) and fade out (last 0.4s)
+          let opacity = 1.0;
+          let blur = 0;
+          let translateY = 0;
+
+          const fadeInTime = 0.55;
+          const fadeOutTime = 0.45;
+
+          if (T - sc.start < fadeInTime) {
+            const p = (T - sc.start) / fadeInTime;
+            opacity = p;
+            blur = (1 - p) * 10;
+            translateY = (1 - p) * 25;
+          } else if (sc.end - T < fadeOutTime) {
+            const p = (sc.end - T) / fadeOutTime;
+            opacity = p;
+            blur = (1 - p) * 10;
+            translateY = -(1 - p) * 20;
+          }
+
+          el.style.opacity = opacity;
+          el.style.filter = `blur(${blur}px)`;
+          el.style.transform = `translateY(${translateY}px) scale(${0.98 + opacity * 0.02})`;
+        } else {
+          el.style.opacity = 0;
+          el.style.filter = 'blur(10px)';
+          el.style.transform = 'translateY(25px) scale(0.96)';
+        }
+      }
+    };
+
+    // Seek to 0 initially
+    window.seek(0);
+  </script>
+</body>
+</html>
