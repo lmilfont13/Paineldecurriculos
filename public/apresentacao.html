@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apresentação Oficial · Painel de Currículos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #07070a;
+      --card-bg: rgba(18, 18, 24, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent-glow: #6366f1;
+      --gold: #f59e0b;
+      --emerald: #10b981;
+      --cyan: #06b6d4;
+      --purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Background Canvas */
+    #stars-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* Ambient Gradients */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.45;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glow-1 {
+      width: 600px;
+      height: 600px;
+      top: -150px;
+      right: -100px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.6) 0%, rgba(168, 85, 247, 0) 70%);
+    }
+    .glow-2 {
+      width: 550px;
+      height: 550px;
+      bottom: -150px;
+      left: -100px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.5) 0%, rgba(6, 182, 212, 0) 70%);
+    }
+    .glow-3 {
+      width: 400px;
+      height: 400px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0) 70%);
+    }
+
+    /* Header Bar */
+    header {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 3rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      background: rgba(7, 7, 10, 0.5);
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .badge-creator {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .audio-viz-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #audio-viz {
+      width: 140px;
+      height: 28px;
+    }
+
+    .sound-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+    }
+
+    .sound-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+    /* Scene Container */
+    #stage {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scene {
+      position: absolute;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(30px) scale(0.97);
+      pointer-events: none;
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .scene.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    /* Motion Typography */
+    .kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+    }
+
+    .headline {
+      font-size: 3.6rem;
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      max-width: 950px;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(180deg, #ffffff 20%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .headline span.glow-text {
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 30px rgba(167, 139, 250, 0.4));
+    }
+
+    .subline {
+      font-size: 1.25rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      max-width: 780px;
+      line-height: 1.6;
+      margin-bottom: 2.2rem;
+    }
+
+    /* Visual Components & Cards */
+    .interactive-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2rem 2.5rem;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.1);
+      width: 100%;
+      max-width: 960px;
+      text-align: left;
+      transform: perspective(1000px) rotateX(2deg);
+      transition: transform 0.5s ease;
+    }
+
+    /* Grid Mockup */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      width: 100%;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 18px;
+      padding: 1.5rem;
+      text-align: left;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .stat-box:hover {
+      transform: translateY(-4px);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+    .stat-val {
+      font-size: 2.5rem;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Michelin Filters Showcase */
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .chip {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      animation: chipGlow 2s infinite alternate;
+    }
+    @keyframes chipGlow {
+      from { border-color: rgba(255, 255, 255, 0.1); }
+      to { border-color: rgba(99, 102, 241, 0.6); }
+    }
+
+    /* Split Viewer Mockup */
+    .split-mockup {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 16px;
+      padding: 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 1rem;
+    }
+    .mock-col {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+    }
+
+    /* Hotkey Bar */
+    .hotkey-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .kbd-tag {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Footer & Controls */
+    footer {
+      position: relative;
+      z-index: 20;
+      padding: 1.2rem 3rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      background: linear-gradient(180deg, transparent 0%, rgba(7, 7, 10, 0.8) 100%);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1, #a855f7, #10b981);
+      border-radius: 999px;
+      transition: width 0.1s linear;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .scene-indicators {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dot-step {
+      width: 32px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.18);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot-step.active {
+      background: #6366f1;
+      width: 52px;
+      box-shadow: 0 0 12px #6366f1;
+    }
+
+    .playback-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-ctrl {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      padding: 0.5rem 1.1rem;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+    .btn-ctrl:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+    .btn-primary-action {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+    .btn-primary-action:hover {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    }
+
+    /* Start Overlay Modal */
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(7, 7, 10, 0.94);
+      backdrop-filter: blur(28px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      transition: opacity 0.6s ease;
+    }
+    #start-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .play-circle-btn {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 50px rgba(99, 102, 241, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      margin-bottom: 2rem;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .play-circle-btn:hover {
+      transform: scale(1.12);
+      box-shadow: 0 0 70px rgba(168, 85, 247, 0.8);
+    }
+    .play-circle-btn svg {
+      width: 36px;
+      height: 36px;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas Background for Starfield & Audio Waves -->
+  <canvas id="stars-canvas"></canvas>
+
+  <!-- Ambient Light Orbs -->
+  <div class="glow-orb glow-1" id="orb-1"></div>
+  <div class="glow-orb glow-2" id="orb-2"></div>
+  <div class="glow-orb glow-3" id="orb-3"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #6366f1;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Painel de Currículos
+      <span class="badge-creator">Criado por Antigravity AI</span>
+    </div>
+
+    <div class="audio-viz-wrap">
+      <canvas id="audio-viz"></canvas>
+      <div class="sound-badge">
+        <span class="sound-dot"></span>
+        <span id="audio-status-text">AUDIO SYNTH ENGINE ATIVO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stage & Keynote Scenes -->
+  <main id="stage">
+    <!-- CENA 1: INTRODUÇÃO CINEMATOGRÁFICA -->
+    <div class="scene active" id="scene-0">
+      <div class="kicker" style="color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">
+        ✦ KEYNOTE DE LANÇAMENTO OFICIAL
+      </div>
+      <h1 class="headline">
+        O Futuro do Recrutamento.<br>
+        <span class="glow-text">Inteligência Artificial de Elite.</span>
+      </h1>
+      <p class="subline">
+        Projetado e concebido do zero como uma plataforma SaaS de última geração: extração biométrica de fotos, triagem semântica em tempo real e busca de talentos nível Michelin.
+      </p>
+
+      <div class="grid-3" style="max-width: 900px;">
+        <div class="stat-box">
+          <div class="stat-val" style="color: #60a5fa;">100%</div>
+          <div class="stat-label">Isolamento Multi-Tenant Seguro</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color: #a78bfa;">Qwen 3.8</div>
+          <div class="stat-label">Motor de IA via Groq Ultra Rápido</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color: #34d399;">3 Estrelas</div>
+          <div class="stat-label">Experiência de Busca Nível Michelin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 2: O PROBLEMA SUPERADO -->
+    <div class="scene" id="scene-1">
+      <div class="kicker" style="color: #f87171; border-color: rgba(248, 113, 113, 0.3);">
+        ⚠️ O DESAFIO DO RH TRADICIONAL
+      </div>
+      <h1 class="headline">
+        Chega de Triagens Manuais<br>
+        <span style="color: #ef4444;">e Currículos Perdidos na Caixa.</span>
+      </h1>
+      <p class="subline">
+        Empresas perdem 80% do tempo baixando anexos ilegíveis, lidando com formulários repetitivos e sem conseguir cruzar dados essenciais como bairro, pretensão salarial e CNH.
+      </p>
+
+      <div class="interactive-card">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; color: #f87171; font-weight: 700;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Antes do Painel de Currículos:
+        </div>
+        <div class="grid-3">
+          <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem;">PDFs sem Fotos</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Candidatos anônimos sem rosto, exigindo download manual de dezenas de arquivos.</div>
+          </div>
+          <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem;">Filtros Inexistentes</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Impossível filtrar quem mora perto, quem tem CNH B ou se adequa ao salário da vaga.</div>
+          </div>
+          <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem;">Processo Sem Rastreio</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Candidatos esquecidos, falta de comunicação automatizada e risco jurídico LGPD.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 3: VISÃO COMPUTACIONAL & IA -->
+    <div class="scene" id="scene-2">
+      <div class="kicker" style="color: #34d399; border-color: rgba(52, 211, 153, 0.3);">
+        ⚡ ENGENHARIA DE PONTA
+      </div>
+      <h1 class="headline">
+        Extração Biométrica de Fotos<br>
+        <span class="glow-text">com Visão Computacional.</span>
+      </h1>
+      <p class="subline">
+        Desenvolvemos um pipeline proprietário que inspeciona objetos internos do PDF com <code>unpdf</code>, identifica faces com <code>sharp</code> e salva no Supabase Storage com self-healing de permissões.
+      </p>
+
+      <div class="interactive-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #34d399; font-weight: 700;">
+            PIPELINE DE EXTRAÇÃO AUTOMÁTICA EM TEMPO REAL:
+          </span>
+          <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.2rem 0.6rem; border-radius: 6px;">
+            Ativo em Produção
+          </span>
+        </div>
+        <div class="grid-3">
+          <div class="stat-box">
+            <div style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem;">1. Análise do PDF</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Varredura de streams XObject, descartando ícones e logos vetoriais.</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size: 1.5rem; font-weight: 800; color: #34d399; margin-bottom: 0.3rem;">2. Recorte Facial</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Foco no terço superior, aplicando crop inteligente 1:1 e otimização JPEG.</div>
+          </div>
+          <div class="stat-box">
+            <div style="font-size: 1.5rem; font-weight: 800; color: #60a5fa; margin-bottom: 0.3rem;">3. Score & Resumo</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">IA Groq Qwen 3.8 lê e gera resumo executivo com nota de 0 a 100%.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 4: BUSCA MICHELIN COM NOVOS CAMPOS ESSENCIAIS -->
+    <div class="scene" id="scene-3">
+      <div class="kicker" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.3);">
+        ✦ NOVIDADE: BUSCA MICHELIN 3-STAR (/BUSCAR-CVS)
+      </div>
+      <h1 class="headline">
+        Filtros Facetados Precisos.<br>
+        <span class="glow-text">Sem Redundância com o Currículo.</span>
+      </h1>
+      <p class="subline">
+        Adicionamos os critérios de decisão rápida: Bairro, Função Pretendida, Pretensão Salarial, Faixa Etária, Modalidade, CNH e Inclusão PCD.
+      </p>
+
+      <div class="interactive-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-family: 'JetBrains Mono', monospace;">
+            <span style="color: #fbbf24;">🔍 BUSCA BOOLEANA:</span>
+            <code style="background: rgba(255, 255, 255, 0.08); padding: 0.2rem 0.5rem; border-radius: 4px; color: #fff;">
+              "Assistente" AND "Aldeota" NOT "Estágio"
+            </code>
+          </div>
+          <span style="color: #34d399; font-size: 0.75rem; font-weight: 700;">84 TALENTOS COMBINADOS</span>
+        </div>
+
+        <div class="tag-chips">
+          <span class="chip" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.4);">
+            🎯 Função: Vendedor / Assistente
+          </span>
+          <span class="chip" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.4);">
+            📍 Bairro: Aldeota, Centro, Meireles
+          </span>
+          <span class="chip" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4);">
+            💰 Pretensão: R$ 2.000 a R$ 3.500
+          </span>
+          <span class="chip" style="background: rgba(6, 182, 212, 0.15); color: #22d3ee; border-color: rgba(6, 182, 212, 0.4);">
+            🎂 Idade: 25 a 34 anos
+          </span>
+          <span class="chip" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.4);">
+            🚗 CNH: Categoria B
+          </span>
+          <span class="chip" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.4);">
+            ♿ Inclusão PCD Disponível
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 5: SPLIT VIEWER REAL & POWER HOTKEYS -->
+    <div class="scene" id="scene-4">
+      <div class="kicker" style="color: #ec4899; border-color: rgba(236, 72, 153, 0.3);">
+        ⌨️ NAVEGAÇÃO ULTRARRÁPIDA (POWER RECRUITER)
+      </div>
+      <h1 class="headline">
+        Split Viewer com PDF Real<br>
+        <span class="glow-text">e Teclas de Alta Produtividade.</span>
+      </h1>
+      <p class="subline">
+        Recrutadores navegam centenas de candidatos sem tirar as mãos do teclado: analisam o PDF original lado a lado com os dados estruturados da IA.
+      </p>
+
+      <div class="interactive-card">
+        <div class="split-mockup">
+          <div class="mock-col">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #a78bfa; margin-bottom: 0.5rem;">📄 VISUALIZADOR DE PDF REAL</div>
+            <div style="height: 110px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-muted);">
+              Renderização nativa no navegador sem download manual
+            </div>
+          </div>
+          <div class="mock-col">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #34d399; margin-bottom: 0.5rem;">✨ DOSSIÊ EXECUTIVO DA IA</div>
+            <div style="font-size: 0.8rem; line-height: 1.5; color: #e2e8f0;">
+              • Nota de Compatibilidade: <strong>94%</strong><br>
+              • Bairro: <strong>Aldeota, Fortaleza - CE</strong><br>
+              • Pretensão: <strong>R$ 3.500</strong> | Início Imediato<br>
+              • Competências: React, TypeScript, SQL
+            </div>
+          </div>
+        </div>
+
+        <div class="hotkey-bar">
+          <span><span class="kbd-tag">J</span> / <span class="kbd-tag">K</span> Próximo / Anterior</span>
+          <span><span class="kbd-tag">Enter</span> Abrir Dossiê</span>
+          <span><span class="kbd-tag">W</span> WhatsApp Direto</span>
+          <span><span class="kbd-tag">C</span> Copiar Contato</span>
+          <span><span class="kbd-tag">/</span> Focar Busca</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 6: IMPACTO, ARQUITETURA & RESULTADOS -->
+    <div class="scene" id="scene-5">
+      <div class="kicker" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.3);">
+        🚀 PERFORMANCE & IMPACTO COMPROVADO
+      </div>
+      <h1 class="headline">
+        90% Menos Tempo na Triagem.<br>
+        <span class="glow-text">100% Automação Confiável.</span>
+      </h1>
+      <p class="subline">
+        Arquitetura MVC sólida, isolamento estrito por tenant, testes unitários automatizados (117 testes) e deploy de alta disponibilidade na Vercel com Supabase.
+      </p>
+
+      <div class="grid-3" style="max-width: 900px;">
+        <div class="stat-box">
+          <div class="stat-val" style="color: #34d399;">&lt; 1s</div>
+          <div class="stat-label">Tempo de Resposta dos Filtros</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color: #60a5fa;">117/117</div>
+          <div class="stat-label">Testes Automatizados Aprovados</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color: #c084fc;">LGPD</div>
+          <div class="stat-label">Governança Total e Anonimização</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENA 7: ENCERRAMENTO ÉPICO & CALL TO ACTION -->
+    <div class="scene" id="scene-6">
+      <div class="kicker" style="color: #34d399; border-color: rgba(52, 211, 153, 0.4);">
+        ✨ DISPONÍVEL AGORA EM PRODUÇÃO
+      </div>
+      <h1 class="headline">
+        Painel de Currículos.<br>
+        <span class="glow-text">Pronto para Transformar seu Negócio.</span>
+      </h1>
+      <p class="subline">
+        Acesse a plataforma agora mesmo, experimente a busca facetada e veja o poder da inteligência artificial aplicada ao recrutamento.
+      </p>
+
+      <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <a href="https://paineldecurriculos-ptsc.vercel.app/buscar-cvs" target="_blank" class="btn-ctrl btn-primary-action" style="padding: 0.9rem 2.2rem; font-size: 1rem; text-decoration: none; border-radius: 14px;">
+          Explorar Buscar CVs ao Vivo ↗
+        </a>
+        <button type="button" onclick="goToScene(0)" class="btn-ctrl" style="padding: 0.9rem 1.8rem; font-size: 1rem; border-radius: 14px;">
+          ↺ Rever Apresentação
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer Navigation & Audio Controls -->
+  <footer>
+    <div class="progress-bar-wrap" id="progress-container">
+      <div id="progress-fill"></div>
+    </div>
+
+    <div class="controls-row">
+      <div class="scene-indicators" id="dots-container">
+        <!-- Gerados via JavaScript -->
+      </div>
+
+      <div class="playback-buttons">
+        <button type="button" class="btn-ctrl" id="btn-prev" title="Cena Anterior">
+          ◀ Anterior
+        </button>
+        <button type="button" class="btn-ctrl btn-primary-action" id="btn-play-pause">
+          <span id="play-icon">⏸</span> Pausar
+        </button>
+        <button type="button" class="btn-ctrl" id="btn-next" title="Próxima Cena">
+          Próxima ▶
+        </button>
+        <button type="button" class="btn-ctrl" id="btn-sound" title="Alternar Som">
+          🔊 Música: Ligada
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Start Overlay for Browser Audio Permission -->
+  <div id="start-overlay">
+    <div class="kicker" style="color: #a855f7; border-color: rgba(168, 85, 247, 0.4); margin-bottom: 1.5rem;">
+      APRESENTAÇÃO MOTION GRAPHICS OFICIAL
+    </div>
+    <div class="play-circle-btn" id="start-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+    </div>
+    <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em;">
+      Clique para Iniciar a Experiência
+    </h2>
+    <p style="color: var(--text-muted); max-width: 500px; font-size: 0.95rem; line-height: 1.5;">
+      Apresentação cinematográfica com trilha sonora sintetizada em tempo real (Web Audio API) e animações visuais fluidas.
+    </p>
+  </div>
+
+  <script>
+    /* =========================================================
+       1. WEB AUDIO API SYNTHESIZER SOUNDTRACK & SFX ENGINE
+       ========================================================= */
+    class SoundtrackEngine {
+      constructor() {
+        this.ctx = null;
+        this.isPlaying = false;
+        this.bpm = 124;
+        this.step = 0;
+        this.nextNoteTime = 0;
+        this.timerID = null;
+        this.masterGain = null;
+        this.isMuted = false;
+        this.analyser = null;
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+
+        this.analyser = this.ctx.createAnalyser();
+        this.analyser.fftSize = 64;
+
+        this.masterGain.connect(this.analyser);
+        this.analyser.connect(this.ctx.destination);
+      }
+
+      start() {
+        this.init();
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        if (this.isPlaying) return;
+        this.isPlaying = true;
+        this.nextNoteTime = this.ctx.currentTime + 0.1;
+        this.scheduler();
+      }
+
+      stop() {
+        this.isPlaying = false;
+        clearTimeout(this.timerID);
+      }
+
+      toggleMute() {
+        if (!this.masterGain) return false;
+        this.isMuted = !this.isMuted;
+        this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.35, this.ctx.currentTime, 0.05);
+        return !this.isMuted;
+      }
+
+      scheduler() {
+        while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+          this.playStep(this.step, this.nextNoteTime);
+          const secondsPerBeat = 60.0 / this.bpm;
+          this.nextNoteTime += 0.25 * secondsPerBeat; // 16th notes
+          this.step = (this.step + 1) % 16;
+        }
+        if (this.isPlaying) {
+          this.timerID = setTimeout(() => this.scheduler(), 25);
+        }
+      }
+
+      playStep(step, time) {
+        // Kick drum nos tempos 0, 4, 8, 12 (Four-on-the-floor beat de tech moderno)
+        if (step % 4 === 0) {
+          this.playKick(time);
+        }
+
+        // Hi-Hat nos tempos fracos
+        if (step % 2 === 1) {
+          this.playHiHat(time, step % 4 === 2 ? 0.3 : 0.15);
+        }
+
+        // Bassline Synth Arpeggiada (Root F -> G# -> A# -> C)
+        const bassNotes = [43.65, 43.65, 51.91, 58.27, 43.65, 65.41, 58.27, 51.91];
+        const note = bassNotes[(step + Math.floor(step / 4)) % bassNotes.length];
+        this.playBassNote(note, time, 0.18);
+
+        // Synth Lead Melódico
+        if (step % 4 === 0 || step === 6 || step === 14) {
+          const melodyNotes = [261.63, 311.13, 349.23, 392.00, 466.16, 523.25];
+          const lead = melodyNotes[(step * 2) % melodyNotes.length];
+          this.playLeadNote(lead, time, 0.2);
+        }
+      }
+
+      playKick(time) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.frequency.setValueAtTime(140, time);
+        osc.frequency.exponentialRampToValueAtTime(38, time + 0.12);
+
+        gain.gain.setValueAtTime(0.8, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+
+        osc.start(time);
+        osc.stop(time + 0.25);
+      }
+
+      playHiHat(time, vol = 0.2) {
+        // High frequency noise / metallic click
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(7500, time);
+
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(6000, time);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        gain.gain.setValueAtTime(vol * 0.4, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+        osc.start(time);
+        osc.stop(time + 0.05);
+      }
+
+      playBassNote(freq, time, dur) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, time);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(320, time);
+        filter.frequency.exponentialRampToValueAtTime(120, time + dur);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        gain.gain.setValueAtTime(0.5, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+        osc.start(time);
+        osc.stop(time + dur);
+      }
+
+      playLeadNote(freq, time, dur) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        gain.gain.setValueAtTime(0.18, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + dur * 1.5);
+
+        osc.start(time);
+        osc.stop(time + dur * 1.5);
+      }
+
+      // Transição cinematográfica SFX (Riser & Whoosh)
+      playWhoosh() {
+        if (!this.ctx || this.isMuted) return;
+        const time = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, time);
+        osc.frequency.exponentialRampToValueAtTime(800, time + 0.4);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(400, time);
+        filter.frequency.exponentialRampToValueAtTime(1600, time + 0.4);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        gain.gain.setValueAtTime(0.01, time);
+        gain.gain.linearRampToValueAtTime(0.4, time + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+        osc.start(time);
+        osc.stop(time + 0.5);
+      }
+    }
+
+    const audio = new SoundtrackEngine();
+
+    /* =========================================================
+       2. SCENE MANAGER & MOTION GRAPHICS CONTROLLER
+       ========================================================= */
+    const TOTAL_SCENES = 7;
+    const SCENE_DURATION_MS = 6500; // 6.5s por cena
+    let currentScene = 0;
+    let sceneTimer = null;
+    let sceneStartTime = Date.now();
+    let isPaused = false;
+
+    const scenes = Array.from(document.querySelectorAll('.scene'));
+    const progressFill = document.getElementById('progress-fill');
+    const dotsContainer = document.getElementById('dots-container');
+
+    // Cria os indicadores de bolinhas
+    for (let i = 0; i < TOTAL_SCENES; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot-step' + (i === 0 ? ' active' : '');
+      dot.onclick = () => goToScene(i);
+      dotsContainer.appendChild(dot);
+    }
+
+    function goToScene(index) {
+      if (index < 0) index = 0;
+      if (index >= TOTAL_SCENES) index = TOTAL_SCENES - 1;
+
+      scenes.forEach((s, idx) => {
+        s.classList.toggle('active', idx === index);
+      });
+
+      const dots = Array.from(dotsContainer.children);
+      dots.forEach((d, idx) => {
+        d.classList.toggle('active', idx === index);
+      });
+
+      currentScene = index;
+      sceneStartTime = Date.now();
+      audio.playWhoosh();
+
+      // Ajusta as órbitas luminosas para criar dinamismo visual
+      const orb1 = document.getElementById('orb-1');
+      const orb2 = document.getElementById('orb-2');
+      if (orb1 && orb2) {
+        const hueShift = index * 45;
+        orb1.style.transform = `scale(${1 + (index % 3) * 0.2}) translate(${(index % 2) * 50}px, ${(index % 3) * 30}px)`;
+        orb2.style.transform = `scale(${1.2 - (index % 2) * 0.2}) translate(-${(index % 3) * 40}px, -${(index % 2) * 30}px)`;
+      }
+    }
+
+    function nextScene() {
+      if (currentScene < TOTAL_SCENES - 1) {
+        goToScene(currentScene + 1);
+      } else {
+        goToScene(0); // Loop
+      }
+    }
+
+    function prevScene() {
+      if (currentScene > 0) {
+        goToScene(currentScene - 1);
+      }
+    }
+
+    function togglePlayPause() {
+      isPaused = !isPaused;
+      const playIcon = document.getElementById('play-icon');
+      const playBtn = document.getElementById('btn-play-pause');
+      if (isPaused) {
+        playIcon.textContent = '▶';
+        playBtn.childNodes[2].textContent = ' Continuar';
+      } else {
+        playIcon.textContent = '⏸';
+        playBtn.childNodes[2].textContent = ' Pausar';
+        sceneStartTime = Date.now() - (lastProgressRatio * SCENE_DURATION_MS);
+      }
+    }
+
+    // Loop de Progresso
+    let lastProgressRatio = 0;
+    function updateProgressLoop() {
+      if (!isPaused) {
+        const elapsed = Date.now() - sceneStartTime;
+        lastProgressRatio = Math.min(1, elapsed / SCENE_DURATION_MS);
+
+        const totalProgress = ((currentScene + lastProgressRatio) / TOTAL_SCENES) * 100;
+        progressFill.style.width = totalProgress + '%';
+
+        if (elapsed >= SCENE_DURATION_MS) {
+          nextScene();
+        }
+      }
+      requestAnimationFrame(updateProgressLoop);
+    }
+
+    /* =========================================================
+       3. AUDIO VISUALIZER CANVAS
+       ========================================================= */
+    const vizCanvas = document.getElementById('audio-viz');
+    const vizCtx = vizCanvas.getContext('2d');
+    vizCanvas.width = 140;
+    vizCanvas.height = 28;
+
+    function renderAudioVisualizer() {
+      vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+
+      if (audio.analyser && audio.isPlaying && !audio.isMuted) {
+        const bufferLength = audio.analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        audio.analyser.getByteFrequencyData(dataArray);
+
+        const barWidth = 4;
+        const barGap = 3;
+        const totalBars = 16;
+
+        for (let i = 0; i < totalBars; i++) {
+          const val = dataArray[i * 2] || 0;
+          const barHeight = Math.max(3, (val / 255) * vizCanvas.height);
+          const x = i * (barWidth + barGap);
+          const y = vizCanvas.height - barHeight;
+
+          vizCtx.fillStyle = `rgba(16, 185, 129, ${0.4 + (val / 255) * 0.6})`;
+          vizCtx.fillRect(x, y, barWidth, barHeight);
+        }
+      } else {
+        // Render fake ambient wave
+        const totalBars = 16;
+        const t = Date.now() * 0.005;
+        for (let i = 0; i < totalBars; i++) {
+          const barHeight = 4 + Math.sin(t + i * 0.4) * 3;
+          vizCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          vizCtx.fillRect(i * 7, vizCanvas.height - barHeight, 4, barHeight);
+        }
+      }
+
+      requestAnimationFrame(renderAudioVisualizer);
+    }
+
+    /* =========================================================
+       4. STARFIELD & PARTICLE CANVAS
+       ========================================================= */
+    const starCanvas = document.getElementById('stars-canvas');
+    const starCtx = starCanvas.getContext('2d');
+    let stars = [];
+
+    function resizeStarCanvas() {
+      starCanvas.width = window.innerWidth;
+      starCanvas.height = window.innerHeight;
+      stars = [];
+      for (let i = 0; i < 90; i++) {
+        stars.push({
+          x: Math.random() * starCanvas.width,
+          y: Math.random() * starCanvas.height,
+          radius: Math.random() * 1.5 + 0.5,
+          alpha: Math.random() * 0.6 + 0.2,
+          speed: Math.random() * 0.4 + 0.1
+        });
+      }
+    }
+    window.addEventListener('resize', resizeStarCanvas);
+    resizeStarCanvas();
+
+    function renderStarfield() {
+      starCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+      for (const s of stars) {
+        s.y -= s.speed;
+        if (s.y < 0) s.y = starCanvas.height;
+        starCtx.beginPath();
+        starCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        starCtx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        starCtx.fill();
+      }
+      requestAnimationFrame(renderStarfield);
+    }
+
+    /* =========================================================
+       5. USER CONTROLS & INIT BINDINGS
+       ========================================================= */
+    document.getElementById('start-btn').onclick = () => {
+      document.getElementById('start-overlay').classList.add('hidden');
+      audio.start();
+      goToScene(0);
+      updateProgressLoop();
+    };
+
+    document.getElementById('btn-play-pause').onclick = togglePlayPause;
+    document.getElementById('btn-next').onclick = nextScene;
+    document.getElementById('btn-prev').onclick = prevScene;
+
+    document.getElementById('btn-sound').onclick = () => {
+      const isSoundOn = audio.toggleMute();
+      document.getElementById('btn-sound').textContent = isSoundOn ? '🔊 Música: Ligada' : '🔇 Música: Mudo';
+      document.getElementById('audio-status-text').textContent = isSoundOn ? 'AUDIO SYNTH ENGINE ATIVO' : 'AUDIO EM MUDO';
+    };
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'k') {
+        togglePlayPause();
+      } else if (e.key === 'ArrowRight' || e.key === 'j') {
+        nextScene();
+      } else if (e.key === 'ArrowLeft') {
+        prevScene();
+      } else if (e.key === 'm') {
+        document.getElementById('btn-sound').click();
+      }
+    });
+
+    renderStarfield();
+    renderAudioVisualizer();
+  </script>
+</body>
+</html>
