@@ -63,6 +63,8 @@ export type CvSearchFilters = {
   onlyPcd?: boolean;
   ageBracket?: string; // "18_24" | "25_34" | "35_44" | "45_54" | "55_PLUS"
   salaryBracket?: string;
+  /** Empresas (separadas por vírgula) onde o candidato já trabalhou; busca no texto do currículo. */
+  previousCompany?: string;
 };
 
 export type CvSearchSort = "score" | "recent" | "name";
@@ -380,6 +382,18 @@ export function filterCandidates(
       // Sem bairro no cadastro: procura o bairro no endereço do currículo.
       const inResume = !itemN && normalizeText(item.resumeText ?? "").includes(targetN);
       if (!inField && !inResume) return false;
+    }
+
+    // 2b. Filtro de empresa onde já trabalhou (qualquer uma das informadas)
+    if (filters.previousCompany?.trim()) {
+      const companies = filters.previousCompany
+        .split(/[,;\n]/)
+        .map((c) => normalizeText(c))
+        .filter((c) => c.length >= 2);
+      if (companies.length > 0) {
+        const resume = normalizeText(item.resumeText ?? "");
+        if (!companies.some((c) => resume.includes(c))) return false;
+      }
     }
 
     // 3. Filtro de Cidade

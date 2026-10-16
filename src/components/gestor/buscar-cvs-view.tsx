@@ -11,6 +11,7 @@ import {
   Check,
   ChevronRight,
   Command,
+  Building2,
   Compass,
   Copy,
   DollarSign,
@@ -157,7 +158,8 @@ export function BuscarCvsView({
     Boolean(filters.selectedCnh) ||
     Boolean(filters.onlyPcd) ||
     Boolean(filters.ageBracket) ||
-    Boolean(filters.salaryBracket);
+    Boolean(filters.salaryBracket) ||
+    Boolean(filters.previousCompany?.trim());
 
   // Power Recruiter Keyboard Navigation (J/K, Enter, W, C, /, Esc)
   useEffect(() => {
@@ -267,6 +269,7 @@ export function BuscarCvsView({
       onlyPcd: false,
       ageBracket: "",
       salaryBracket: "",
+      previousCompany: "",
     });
     setAreaSearch("");
     setNeighborhoodSearch("");
@@ -662,6 +665,34 @@ export function BuscarCvsView({
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 6b. Empresa onde já trabalhou */}
+            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
+                  <Building2 className="size-3 text-indigo-600" /> Já trabalhou em
+                </span>
+                {filters.previousCompany && (
+                  <button
+                    type="button"
+                    onClick={() => setFilters((p) => ({ ...p, previousCompany: "" }))}
+                    className="text-[10px] text-red-600 hover:underline"
+                  >
+                    limpar
+                  </button>
+                )}
+              </div>
+              <input
+                type="text"
+                value={filters.previousCompany ?? ""}
+                onChange={(e) => setFilters((p) => ({ ...p, previousCompany: e.target.value }))}
+                placeholder="Ex: Assaí, Pague Menos…"
+                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
+              />
+              <p className="text-[10px] text-[#a1a1aa]">
+                Procura no histórico do currículo. Separe várias empresas por vírgula.
+              </p>
             </div>
 
             {/* 7. Faixa Etária */}

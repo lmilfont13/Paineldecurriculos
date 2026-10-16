@@ -1,4 +1,5 @@
 ﻿import { describe, it, expect } from "vitest";
+import { filterCandidates, type CandidateCvCard } from "./cv-search.model";
 import { extractBirthDateFromText, extractAgeFromText, extractNeighborhoodFromText, normalizeText } from "./cv-search.model";
 
 describe("extração de nascimento do currículo", () => {
@@ -37,6 +38,18 @@ describe("bairro", () => {
   });
   it("compara sem acento", () => {
     expect(normalizeText("José  Walter")).toBe(normalizeText("jose walter"));
+  });
+});
+
+
+describe("empresa anterior", () => {
+  const base = { minScore: null, onlyWithPhoto: false, onlyWithPdf: false, keyword: "", selectedAreas: [], selectedLevels: [], selectedJobId: "", selectedStatus: "" } as never;
+  it("filtra por empresa no historico, sem acento", () => {
+    const list = [{ id: "1", name: "A", resumeText: "Atuei no Assaí Atacadista 2019-2022" }, { id: "2", name: "B", resumeText: "Trabalhei na Pague Menos" }] as unknown as CandidateCvCard[];
+    const r = filterCandidates(list, { ...(base as object), previousCompany: "assai" } as never);
+    expect(r.map((x) => x.id)).toEqual(["1"]);
+    const r2 = filterCandidates(list, { ...(base as object), previousCompany: "assai, pague menos" } as never);
+    expect(r2).toHaveLength(2);
   });
 });
 
