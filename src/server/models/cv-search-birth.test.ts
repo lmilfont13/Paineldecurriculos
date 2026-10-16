@@ -13,7 +13,14 @@ describe("extração de nascimento do currículo", () => {
   it("ignora datas sem rótulo de nascimento", () => {
     expect(extractBirthDateFromText("Trabalhei de 01/02/2015 a 03/04/2018")).toBeNull();
   });
+  it("lê DNS após estado civil", () => {
+    const d = extractBirthDateFromText("Casada, DNS. 25/03/1986");
+    expect(d?.getUTCFullYear()).toBe(1986);
+    expect(d?.getUTCDate()).toBe(25);
+    expect(extractBirthDateFromText("Solteiro, 10/05/1995")?.getUTCFullYear()).toBe(1995);
+  });
   it("lê idade escrita", () => {
     expect(extractAgeFromText("Idade: 34 anos")).toBe(34);
   });
 });
+

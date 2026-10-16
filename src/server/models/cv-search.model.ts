@@ -191,7 +191,7 @@ export function extractBirthDateFromText(text: string | null | undefined): Date 
   const clean = text.replace(/\s+/g, " ");
 
   const numeric = clean.match(
-    /(?:data\s*(?:de)?\s*nasc(?:imento|\.)?|nascimento|nasc\.?|nascid[oa](?:\s*em)?|d\.?\s*n\.?)\s*[:\-–]?\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})/i
+    /(?:data\s*(?:de)?\s*nasc(?:imento|\.)?|nascimento|nasc\.?|nascid[oa](?:\s*em)?|\bd\.?\s*n\.?\s*s?\b\.?|\b(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|uni[aã]o\s*est[aá]vel)\b[\s,.;\-–]*(?:d\.?\s*n\.?\s*s?\b\.?)?)\s*[:\-–]?\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})/i
   );
   if (numeric) {
     const d = buildValidDate(Number(numeric[1]), Number(numeric[2]), Number(numeric[3]));
