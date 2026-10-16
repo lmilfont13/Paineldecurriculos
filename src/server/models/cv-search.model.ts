@@ -167,6 +167,60 @@ export function calculateAge(birthDate: string | Date | null | undefined): numbe
   return age >= 14 && age <= 100 ? age : null;
 }
 
+const MONTHS_PT: Record<string, number> = {
+  janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6,
+  julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+};
+
+function buildValidDate(day: number, month: number, year: number): Date | null {
+  if (year < 100) year += year > new Date().getFullYear() % 100 ? 1900 : 2000;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const d = new Date(Date.UTC(year, month - 1, day, 12));
+  if (d.getUTCMonth() !== month - 1) return null;
+  return calculateAge(d) === null ? null : d;
+}
+
+/**
+ * Extrai a data de nascimento do texto do currículo ("Data de nascimento:
+ * 12/03/1990", "Nasc.: 12-03-90", "Nascido em 12 de março de 1990").
+ * Só considera datas perto de um rótulo de nascimento, para não confundir
+ * com datas de emprego.
+ */
+export function extractBirthDateFromText(text: string | null | undefined): Date | null {
+  if (!text) return null;
+  const clean = text.replace(/\s+/g, " ");
+
+  const numeric = clean.match(
+    /(?:data\s*(?:de)?\s*nasc(?:imento|\.)?|nascimento|nasc\.?|nascid[oa](?:\s*em)?|d\.?\s*n\.?)\s*[:\-–]?\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})/i
+  );
+  if (numeric) {
+    const d = buildValidDate(Number(numeric[1]), Number(numeric[2]), Number(numeric[3]));
+    if (d) return d;
+  }
+
+  const written = clean
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/(?:nasc(?:imento|\.)?|nascid[oa](?:\s*em)?)\s*[:\-–]?\s*(\d{1,2})\s*de\s*([a-z]+)\s*de\s*(\d{4})/i);
+  if (written) {
+    const month = MONTHS_PT[written[2].toLowerCase()];
+    if (month) {
+      const d = buildValidDate(Number(written[1]), month, Number(written[3]));
+      if (d) return d;
+    }
+  }
+  return null;
+}
+
+/** Idade escrita no currículo ("Idade: 34 anos"), quando não há data. */
+export function extractAgeFromText(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const m = text.replace(/\s+/g, " ").match(/idade\s*[:\-–]?\s*(\d{2})\s*anos?/i);
+  if (!m) return null;
+  const age = Number(m[1]);
+  return age >= 14 && age <= 100 ? age : null;
+}
+
 /** Agrupa contagens de bairros para a sidebar de filtro. */
 export function computeNeighborhoodFacets(candidates: CandidateCvCard[]): FacetCount[] {
   const map = new Map<string, number>();

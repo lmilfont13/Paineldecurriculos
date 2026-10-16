@@ -16,6 +16,8 @@ import {
 } from "@/server/services/application.service";
 import {
   calculateAge,
+  extractBirthDateFromText,
+  extractAgeFromText,
   extractCandidateSkills,
   type CandidateCvCard,
 } from "@/server/models/cv-search.model";
@@ -97,7 +99,8 @@ export async function getBuscarCvsData() {
     }
 
     const effectiveSalary = app.salaryExpectation || salaryExpectation;
-    const age = calculateAge(app.birthDate);
+    const effectiveBirthDate = app.birthDate ?? extractBirthDateFromText(app.resumeText);
+    const age = calculateAge(effectiveBirthDate) ?? extractAgeFromText(app.resumeText);
 
     return {
       id: app.id,
@@ -127,7 +130,7 @@ export async function getBuscarCvsData() {
       education,
       languages,
       skills: extractCandidateSkills(app.resumeText, app.aiProfile),
-      birthDate: app.birthDate ? app.birthDate.toISOString() : null,
+      birthDate: effectiveBirthDate ? effectiveBirthDate.toISOString() : null,
       age,
       city: app.city,
       state: app.state,
