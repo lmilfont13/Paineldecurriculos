@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect } from "vitest";
-import { filterCandidates, type CandidateCvCard } from "./cv-search.model";
+import { filterCandidates, extractCompaniesFromText, computeCompanyFacets, type CandidateCvCard } from "./cv-search.model";
 import { extractBirthDateFromText, extractAgeFromText, extractNeighborhoodFromText, normalizeText } from "./cv-search.model";
 
 describe("extração de nascimento do currículo", () => {
@@ -53,3 +53,26 @@ describe("empresa anterior", () => {
   });
 });
 
+
+describe("empresas do curriculo", () => {
+  const cv = `Maria Souza
+Casada, DNS. 25/03/1986
+Experiência Profissional
+Assaí Atacadista - Repositora
+03/2019 a 05/2022
+Empresa: Pague Menos Farmácias
+Supermercados Mix Ltda 2015 - 2018
+Formação
+Ensino Médio Completo`;
+  it("extrai empresas do historico", () => {
+    const r = extractCompaniesFromText(cv).map((x) => x.toLowerCase());
+    expect(r).toContain("assaí atacadista");
+    expect(r.some((x) => x.includes("pague menos"))).toBe(true);
+    expect(r.some((x) => x.includes("mix"))).toBe(true);
+    expect(r.some((x) => x.includes("ensino"))).toBe(false);
+  });
+  it("conta candidatos por empresa", () => {
+    const f = computeCompanyFacets([{ resumeText: cv }, { resumeText: cv }] as unknown as CandidateCvCard[]);
+    expect(f[0].count).toBe(2);
+  });
+});

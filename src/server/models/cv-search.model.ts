@@ -243,6 +243,89 @@ export function extractNeighborhoodFromText(text: string | null | undefined): st
   return value && value.length >= 3 ? value : null;
 }
 
+const JOB_TITLE_WORDS =
+  /\b(auxiliar|assistente|analista|vendedor|vendedora|operador|operadora|promotor|promotora|repositor|repositora|gerente|supervisor|supervisora|coordenador|coordenadora|atendente|caixa|estoquista|motorista|t[eé]cnico|t[eé]cnica|estagi[aá]ri[oa]|aprendiz|encarregad[oa]|l[ií]der|diretor|diretora|recepcionista|cargo|fun[cç][aã]o|atividades?|responsabilidades?|per[ií]odo|experi[eê]ncias?|profissional|atual|presente|conferente|a[cç]ougueiro|padeiro|balconista|fiscal|consultor|consultora|jovem|funcion[aá]rio|funcion[aá]ria|admiss[aã]o|demiss[aã]o|sal[aá]rio)\b/i;
+const COMPANY_HINT =
+  /\b(ltda|s\/a|s\.a\.?|eireli|supermercados?|atacad(?:ista|[aã]o)|atacarejo|com[eé]rcio|ind[uú]stria|grupo|rede|farm[aá]cias?|drogaria|distribuidora|cl[ií]nica|hospital|restaurante|hotel|banco|construtora|transportes?|servi[cç]os|ag[eê]ncia|escola|col[eé]gio|shopping|companhia|center|market|mercadinho|mercantil|mercadinhos|padaria|lojas|loja|empresa)\b/i;
+const NOT_COMPANY =
+  /^(fortaleza|eus[eé]bio|caucaia|maracana[uú]|brasil|cear[aá]|pessoais?|dados|contato|telefone|e-?mail|endere[cç]o|casad[oa]|solteir[oa]|bairro|cidade|cnh|forma[cç][aã]o|escolaridade|ensino|idiomas?|cursos?|objetivo|resumo|refer[eê]ncias?|habilidades|compet[eê]ncias|qualifica[cç][oõ]es|curr[ií]culo|curriculum|vitae|nome|nascimento|idade|estado|civil|nacionalidade|brasileir[oa])\b/i;
+const DATE_RANGE =
+  /\(?\b(?:\d{1,2}\s*[\/.]\s*)?(?:19|20)\d{2}\b.*$|\b(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\.?\s*(?:de\s*)?(?:19|20)\d{2}.*$/i;
+
+/**
+ * Extrai nomes de empresas do histórico profissional do currículo.
+ * Heurística: rótulo "Empresa:", trechos com sufixos típicos (Ltda, Supermercados…)
+ * e nomes próprios em linhas que trazem período (ex.: "Assaí Atacadista 2019 - 2022").
+ */
+export function extractCompaniesFromText(text: string | null | undefined): string[] {
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n|•|·|\|/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const startIdx = lines.findIndex((l) =>
+    /^(experi[eê]ncias?(\s+profissionais?)?|hist[oó]rico\s+profissional|trajet[oó]ria\s+profissional|atua[cç][aã]o\s+profissional)\b/i.test(l)
+  );
+  let section = lines;
+  if (startIdx >= 0) {
+    const rest = lines.slice(startIdx + 1);
+    const endRel = rest.findIndex((l) =>
+      /^(forma[cç][aã]o|escolaridade|educa[cç][aã]o|cursos?|idiomas?|qualifica|habilidades|compet[eê]ncias|objetivo|dados\s+pessoais|refer[eê]ncias)/i.test(l)
+    );
+    section = endRel >= 0 ? rest.slice(0, endRel) : rest;
+  }
+
+  const found = new Map<string, string>();
+  const add = (raw: string) => {
+    const name = raw.replace(/^[\s\-–—:;,.]+|[\s\-–—:;,.]+$/g, "").trim();
+    if (name.length < 3 || name.length > 45) return;
+    const key = normalizeText(name);
+    if (!found.has(key)) found.set(key, name);
+  };
+
+  for (const line of section) {
+    if (line.length > 90) continue;
+    const label = line.match(/^(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+)$/i);
+    if (label) {
+      add(label[1].replace(DATE_RANGE, "").split(/\s[-–—]\s|,/)[0]);
+      continue;
+    }
+    const hasDates = DATE_RANGE.test(line);
+    const withoutDates = line.replace(DATE_RANGE, "").trim();
+    for (const seg of withoutDates.split(/\s[-–—]\s|,|\(|\)|:|;/)) {
+      const s = seg.trim();
+      if (s.length < 3 || s.length > 40) continue;
+      const words = s.split(/\s+/);
+      if (words.length > 5) continue;
+      if (JOB_TITLE_WORDS.test(s) || NOT_COMPANY.test(s) || /\d/.test(s)) continue;
+      if (!/^[A-ZÀ-Ý0-9]/.test(s)) continue;
+      const properCase = words
+        .filter((w) => w.length > 3)
+        .every((w) => /^[A-ZÀ-Ý]/.test(w));
+      if (COMPANY_HINT.test(s) || (hasDates && properCase)) add(s);
+    }
+  }
+  return Array.from(found.values()).slice(0, 12);
+}
+
+/** Agrupa empresas encontradas nos currículos (para escolher no filtro). */
+export function computeCompanyFacets(candidates: CandidateCvCard[]): FacetCount[] {
+  const map = new Map<string, { label: string; count: number }>();
+  for (const c of candidates) {
+    for (const name of extractCompaniesFromText(c.resumeText)) {
+      const key = normalizeText(name);
+      const cur = map.get(key);
+      if (cur) cur.count += 1;
+      else map.set(key, { label: name, count: 1 });
+    }
+  }
+  return Array.from(map.values())
+    .map((v) => ({ key: v.label, label: v.label, count: v.count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 300);
+}
+
 /** Agrupa contagens de bairros para a sidebar de filtro. */
 export function computeNeighborhoodFacets(candidates: CandidateCvCard[]): FacetCount[] {
   const map = new Map<string, number>();

@@ -48,6 +48,8 @@ import {
   computeDesiredRoleFacets,
   computeLevelFacets,
   computeNeighborhoodFacets,
+  computeCompanyFacets,
+  normalizeText,
   extractResumeSnippet,
   filterCandidates,
   sortCandidates,
@@ -125,6 +127,31 @@ export function BuscarCvsView({
     const q = neighborhoodSearch.toLowerCase();
     return allNeighborhoods.filter((n) => n.label.toLowerCase().includes(q));
   }, [allNeighborhoods, neighborhoodSearch]);
+
+  // Empresas encontradas nos históricos dos currículos (escolha por clique)
+  const allCompanies = useMemo(() => computeCompanyFacets(candidates), [candidates]);
+  const selectedCompanies = useMemo(
+    () =>
+      (filters.previousCompany ?? "")
+        .split(/[,;]/)
+        .map((c) => c.trim())
+        .filter(Boolean),
+    [filters.previousCompany]
+  );
+  const visibleCompanies = useMemo(() => {
+    const typing = (filters.previousCompany ?? "").split(/[,;]/).pop() ?? "";
+    const q = normalizeText(typing);
+    return q ? allCompanies.filter((c) => normalizeText(c.label).includes(q)) : allCompanies;
+  }, [allCompanies, filters.previousCompany]);
+
+  function toggleCompany(label: string) {
+    const key = normalizeText(label);
+    const exists = selectedCompanies.some((c) => normalizeText(c) === key);
+    const next = exists
+      ? selectedCompanies.filter((c) => normalizeText(c) !== key)
+      : [...selectedCompanies, label];
+    setFilters((p) => ({ ...p, previousCompany: next.length ? next.join(", ") + ", " : "" }));
+  }
 
   const visibleRoles = useMemo(() => {
     if (!roleSearch.trim()) return allRoles;
@@ -691,8 +718,36 @@ export function BuscarCvsView({
                 className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
               />
               <p className="text-[10px] text-[#a1a1aa]">
-                Procura no histórico do currículo. Separe várias empresas por vírgula.
+                {allCompanies.length > 0
+                  ? `${allCompanies.length} empresas encontradas nos currículos. Clique para escolher (pode marcar várias).`
+                  : "Digite o nome da empresa. Separe várias por vírgula."}
               </p>
+              {visibleCompanies.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1 max-h-40 overflow-y-auto pr-1">
+                  {visibleCompanies.slice(0, 40).map((co) => {
+                    const active = selectedCompanies.some(
+                      (c) => normalizeText(c) === normalizeText(co.label)
+                    );
+                    return (
+                      <button
+                        key={co.key}
+                        type="button"
+                        onClick={() => toggleCompany(co.label)}
+                        className={`rounded-md border px-2 py-0.5 text-[10px] transition ${
+                          active
+                            ? "border-indigo-600 bg-indigo-600 text-white"
+                            : "border-[#e4e4e7] bg-[#fafaf9] text-[#3f3f46] hover:bg-stone-100"
+                        }`}
+                      >
+                        {co.label}{" "}
+                        <span className={active ? "font-mono text-indigo-200" : "font-mono text-[#a1a1aa]"}>
+                          ({co.count})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* 7. Faixa Etária */}
