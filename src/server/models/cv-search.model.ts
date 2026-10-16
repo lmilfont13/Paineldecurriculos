@@ -284,6 +284,16 @@ export function extractCompaniesFromText(text: string | null | undefined): strin
     if (!found.has(key)) found.set(key, name);
   };
 
+  // 1) Campos rotulados ("Empresa: X Função: Y Período: Z"), em qualquer lugar do
+  //    texto e mesmo com tudo numa linha só (comum na extração de PDF).
+  const flat = text.replace(/\s+/g, " ");
+  const labeled = flat.matchAll(
+    /\b(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+?)(?=\s*\b(?:fun[cç][aã]o|cargo|per[ií]odo|atividades?|sal[aá]rio|admiss[aã]o|demiss[aã]o|motivo|empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]|$)/gi
+  );
+  for (const m of labeled) {
+    add(m[1].replace(DATE_RANGE, "").split(/\s[-–—]\s/)[0]);
+  }
+
   for (const line of section) {
     if (line.length > 90) continue;
     const label = line.match(/^(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+)$/i);

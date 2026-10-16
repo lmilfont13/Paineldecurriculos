@@ -76,3 +76,28 @@ Ensino Médio Completo`;
     expect(f[0].count).toBe(2);
   });
 });
+
+describe("empresas rotuladas (formato real)", () => {
+  const multi = `Empresa: Tijuca Alimentos
+Função: Promotora de vendas
+Período: 24/042023 a 28/05/2025
+Empresa: Dag Cosmético
+Função: Promotora de vendas
+Período: 05/05/2010 a 05/06/2011
+Empresa: Construfort
+Função: Logística
+Período:26/01/2023 a 23/02/2023
+Empresa: Mercantil Variedades
+Função: Repositora
+Período: 02/05/2017 a 10/06/201`;
+  const expected = ["tijuca alimentos", "dag cosmético", "construfort", "mercantil variedades"];
+  it("lê uma empresa por linha", () => {
+    const r = extractCompaniesFromText(multi).map((x) => x.toLowerCase());
+    for (const e of expected) expect(r).toContain(e);
+  });
+  it("lê tudo numa linha só (PDF)", () => {
+    const r = extractCompaniesFromText(multi.replace(/\n/g, " ")).map((x) => x.toLowerCase());
+    for (const e of expected) expect(r).toContain(e);
+    expect(r.some((x) => x.includes("promotora"))).toBe(false);
+  });
+});
