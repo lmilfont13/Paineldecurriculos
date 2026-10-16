@@ -244,7 +244,7 @@ export function extractNeighborhoodFromText(text: string | null | undefined): st
 }
 
 const JOB_TITLE_WORDS =
-  /\b(auxiliar|assistente|analista|vendedor|vendedora|operador|operadora|promotor|promotora|repositor|repositora|gerente|supervisor|supervisora|coordenador|coordenadora|atendente|caixa|estoquista|motorista|t[eé]cnico|t[eé]cnica|estagi[aá]ri[oa]|aprendiz|encarregad[oa]|l[ií]der|diretor|diretora|recepcionista|cargo|fun[cç][aã]o|atividades?|responsabilidades?|per[ií]odo|experi[eê]ncias?|profissional|atual|presente|conferente|a[cç]ougueiro|padeiro|balconista|fiscal|consultor|consultora|jovem|funcion[aá]rio|funcion[aá]ria|admiss[aã]o|demiss[aã]o|sal[aá]rio)\b/i;
+  /\b(auxiliar|assistente|analista|vendedor|vendedora|operador|operadora|promotor|promotora|repositor|repositora|gerente|supervisor|supervisora|coordenador|coordenadora|atendente|caixa|estoquista|motorista|t[eé]cnico|t[eé]cnica|estagi[aá]ri[oa]|aprendiz|encarregad[oa]|l[ií]der|diretor|diretora|recepcionista|cargo|fun[cç][aã]o|atividades?|responsabilidades?|per[ií]odo|experi[eê]ncias?|profissional|atual|presente|conferente|entregador|entregadora|ajudante|cozinheiro|cozinheira|gar[cç]om|a[cç]ougueiro|padeiro|balconista|fiscal|consultor|consultora|jovem|funcion[aá]rio|funcion[aá]ria|admiss[aã]o|demiss[aã]o|sal[aá]rio)\b/i;
 const COMPANY_HINT =
   /\b(ltda|s\/a|s\.a\.?|eireli|supermercados?|atacad(?:ista|[aã]o)|atacarejo|com[eé]rcio|ind[uú]stria|grupo|rede|farm[aá]cias?|drogaria|distribuidora|cl[ií]nica|hospital|restaurante|hotel|banco|construtora|transportes?|servi[cç]os|ag[eê]ncia|escola|col[eé]gio|shopping|companhia|center|market|mercadinho|mercantil|mercadinhos|padaria|lojas|loja|empresa)\b/i;
 const NOT_COMPANY =
@@ -291,18 +291,37 @@ export function extractCompaniesFromText(text: string | null | undefined): strin
     /\b(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+?)(?=\s*\b(?:fun[cç][aã]o|cargo|per[ií]odo|atividades?|sal[aá]rio|admiss[aã]o|demiss[aã]o|motivo|empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]|$)/gi
   );
   for (const m of labeled) {
-    add(m[1].replace(DATE_RANGE, "").split(/\s[-–—]\s/)[0]);
+    add(m[1].replace(DATE_RANGE, "").split(/\s*\(|\s[-–—]\s/)[0]);
   }
 
   for (const line of section) {
     if (line.length > 90) continue;
     const label = line.match(/^(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+)$/i);
     if (label) {
-      add(label[1].replace(DATE_RANGE, "").split(/\s[-–—]\s|,/)[0]);
+      add(label[1].replace(DATE_RANGE, "").split(/\s*\(|\s[-–—]\s|,/)[0]);
       continue;
     }
     const hasDates = DATE_RANGE.test(line);
     const withoutDates = line.replace(DATE_RANGE, "").trim();
+
+    // "Nome da Empresa — Cargo": se o trecho depois do traço é um cargo, o antes é a empresa.
+    const dashParts = withoutDates.split(/\s[-–—]\s/);
+    if (dashParts.length === 2 && JOB_TITLE_WORDS.test(dashParts[1])) {
+      const name = dashParts[0].trim();
+      const nameWords = name.split(/\s+/);
+      if (
+        name.length >= 3 &&
+        name.length <= 40 &&
+        nameWords.length <= 5 &&
+        /^[A-ZÀ-Ý0-9]/.test(name) &&
+        !JOB_TITLE_WORDS.test(name) &&
+        !NOT_COMPANY.test(name) &&
+        !/\d/.test(name)
+      ) {
+        add(name);
+        continue;
+      }
+    }
     for (const seg of withoutDates.split(/\s[-–—]\s|,|\(|\)|:|;/)) {
       const s = seg.trim();
       if (s.length < 3 || s.length > 40) continue;

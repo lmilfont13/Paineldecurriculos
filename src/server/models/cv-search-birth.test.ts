@@ -101,3 +101,43 @@ Período: 02/05/2017 a 10/06/201`;
     expect(r.some((x) => x.includes("promotora"))).toBe(false);
   });
 });
+
+describe("empresas: formatos com parenteses e travessao", () => {
+  const a = `Empresa: MBRF (Função:Promotor Repositor)
+ Período: Janeiro de 2025 até Julho de 2026.
+ Empresa: Grupo Laredo (Função:Vendendor Interno )
+Período: Novembro de 2023 a Junho de 2025
+Empresa: Distribuidora GD7 (Função: Vendedor)
+Período: Janeiro de 2020 a Setembro de 2023
+Empresa: RB Distribuidora (Função: Vendedor)
+P: eríodo: Fevereiro de 2018 a Dezembro de 2019
+Empresa: Pardal Distribuidora (Função: Vendedor)
+Período: Janeiro de 2015 a Janeiro de 2018
+Empresa: Distribuidora JSB (Função:Vendedor)
+Período: Abril de 2010 a Novembro de 201`;
+  const b = `EXPERIÊNCIA PROFISSIONAL
+Mercadinho Catarina — Repositor e Caixa
+Período: 10 meses
+• Atendimento ao cliente e operação de caixa.
+• Reposição e organização de produtos.
+John Queijos — Entregador e Atendente
+Período: 1 ano e 8 meses
+• Atendimento ao cliente e realização de entregas.
+Débora Perfumaria — Entregador
+Período: 1 ano e 4 meses
+• Realização de entregas e atendimento aos clientes`;
+  const lower = (s: string) => extractCompaniesFromText(s).map((x) => x.toLowerCase());
+  it("formato Empresa: X (Função: Y)", () => {
+    for (const s of [a, a.replace(/\n/g, " ")]) {
+      expect(lower(s)).toEqual(
+        expect.arrayContaining(["mbrf", "grupo laredo", "distribuidora gd7", "rb distribuidora", "pardal distribuidora", "distribuidora jsb"])
+      );
+      expect(lower(s).some((x) => x.includes("função") || x.includes("("))).toBe(false);
+    }
+  });
+  it("formato Empresa — Cargo", () => {
+    const r = lower(b);
+    expect(r).toEqual(expect.arrayContaining(["mercadinho catarina", "john queijos", "débora perfumaria"]));
+    expect(r.some((x) => x.includes("atendimento") || x.includes("repositor"))).toBe(false);
+  });
+});
