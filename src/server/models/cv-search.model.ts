@@ -191,7 +191,7 @@ export function extractBirthDateFromText(text: string | null | undefined): Date 
   const clean = text.replace(/\s+/g, " ");
 
   const numeric = clean.match(
-    /(?:data\s*(?:de)?\s*nasc(?:imento|\.)?|nascimento|nasc\.?|nascid[oa](?:\s*em)?|\bd\.?\s*n\.?\s*s?\b\.?|\b(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|uni[aã]o\s*est[aá]vel)\b[\s,.;\-–]*(?:d\.?\s*n\.?\s*s?\b\.?)?)\s*[:\-–]?\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})/i
+    /(?:data\s*(?:de)?\s*nasc(?:imento|\.)?|nascimento|nasc\.?|nascid[oa](?:\s*em)?|\b\d{2}\s*anos\s*[\(\[\-–,]|\bd\.?\s*n\.?\s*s?\b\.?|\b(?:casad[oa]|solteir[oa]|divorciad[oa]|vi[uú]v[oa]|uni[aã]o\s*est[aá]vel)\b[\s,.;\-–]*(?:d\.?\s*n\.?\s*s?\b\.?)?)\s*[:\-–]?\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})/i
   );
   if (numeric) {
     const d = buildValidDate(Number(numeric[1]), Number(numeric[2]), Number(numeric[3]));
@@ -219,6 +219,26 @@ export function extractAgeFromText(text: string | null | undefined): number | nu
   if (!m) return null;
   const age = Number(m[1]);
   return age >= 14 && age <= 100 ? age : null;
+}
+
+/** Minúsculas, sem acentos e espaços extras: comparação tolerante. */
+export function normalizeText(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Extrai o bairro do endereço do currículo ("Bairro: Aldeota", "Bairro Messejana"). */
+export function extractNeighborhoodFromText(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const m = text
+    .replace(/[ \t]+/g, " ")
+    .match(/\bbairro\s*[:\-–]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{2,40}?)(?=\s*(?:[,;\-–|\n\r(]|\bcep\b|\bcidade\b|\bfortaleza\b|\d|$))/i);
+  const value = m?.[1]?.trim();
+  return value && value.length >= 3 ? value : null;
 }
 
 /** Agrupa contagens de bairros para a sidebar de filtro. */
@@ -354,9 +374,12 @@ export function filterCandidates(
 
     // 2. Filtro de Bairro
     if (filters.selectedNeighborhood) {
-      const targetN = filters.selectedNeighborhood.trim().toLowerCase();
-      const itemN = item.neighborhood?.trim().toLowerCase();
-      if (!itemN || !itemN.includes(targetN)) return false;
+      const targetN = normalizeText(filters.selectedNeighborhood);
+      const itemN = item.neighborhood ? normalizeText(item.neighborhood) : "";
+      const inField = itemN.includes(targetN);
+      // Sem bairro no cadastro: procura o bairro no endereço do currículo.
+      const inResume = !itemN && normalizeText(item.resumeText ?? "").includes(targetN);
+      if (!inField && !inResume) return false;
     }
 
     // 3. Filtro de Cidade

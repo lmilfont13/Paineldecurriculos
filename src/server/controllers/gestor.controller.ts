@@ -18,6 +18,7 @@ import {
   calculateAge,
   extractBirthDateFromText,
   extractAgeFromText,
+  extractNeighborhoodFromText,
   extractCandidateSkills,
   type CandidateCvCard,
 } from "@/server/models/cv-search.model";
@@ -134,7 +135,7 @@ export async function getBuscarCvsData() {
       age,
       city: app.city,
       state: app.state,
-      neighborhood: app.neighborhood,
+      neighborhood: app.neighborhood || extractNeighborhoodFromText(app.resumeText),
       desiredRole: app.desiredRole,
       workPreference: app.workPreference,
       availability: app.availability,
