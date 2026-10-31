@@ -51,6 +51,7 @@ NEXT_PUBLIC_APP_URL=""
 /(gestor)/configuracoes/formulario → construtor de formulário
 /[slug]/minhas-candidaturas      → área do candidato (novidades, andamento)
 /[slug]/notificacoes             → histórico de novidades do candidato
+/[slug]/minhas-candidaturas/[id]/pre-entrevista → formulário que o gestor pede (estado civil, filhos, resumo, RG, CPF)
 ```
 
 ## Schema Prisma
@@ -102,6 +103,12 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }
 
 - Apenas PDF, máx 5 MB, salvar no Supabase Storage
 - Extrair texto com `unpdf` (serverless-safe) antes de mandar para a IA
+
+### 5b. Dados da pré-entrevista (RG, CPF, estado civil, filhos)
+
+- O gestor escolhe o que pedir (`requestInfoAction`); o candidato responde em `/[slug]/minhas-candidaturas/[id]/pre-entrevista`.
+- RG/CPF nunca aparecem em notificação, e-mail, lista ou `metadata` de auditoria; na ficha vão mascarados e só abrem por clique (`revealSensitiveInfoAction`, que registra `DADOS_SENSIVEIS_VISTOS`).
+- A IA de triagem não recebe esses dados e o pedido não muda `AppStatus` (regras 2 e 3).
 
 ### 6. Arquitetura em camadas (MVC)
 
