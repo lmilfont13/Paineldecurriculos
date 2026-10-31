@@ -9,6 +9,7 @@ import { StandbySection } from "@/components/gestor/standby-section";
 import { JobQuestions } from "@/components/gestor/job-questions";
 import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
+import { ShortlistPanel } from "@/components/gestor/shortlist-panel";
 import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
 import { VagaPipeline } from "@/components/gestor/vaga-pipeline";
 import { getVagaDetailData } from "@/server/controllers/gestor.controller";
@@ -191,6 +192,11 @@ export default async function VagaHubPage({
           </p>
         </Link>
       </div>
+
+      <ShortlistPanel
+        jobId={job.id}
+        candidateCount={applications.filter((a) => a.status !== "REJECTED").length}
+      />
 
       {/* Funil interativo: o gestor move pessoas visualmente entre etapas. */}
       <h2 className="mt-10 text-[15px] font-semibold text-[#0a0a0a]">

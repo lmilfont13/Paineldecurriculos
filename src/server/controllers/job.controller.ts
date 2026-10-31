@@ -17,6 +17,7 @@ import {
   trackWhatsappShare,
   updateCompanyJob,
 } from "@/server/services/job.service";
+import { analyzeJobShortlist, type ShortlistResult } from "@/server/services/shortlist.service";
 import { queueStandbyForJob } from "@/server/services/talent.service";
 
 export type JobFormState = { error: string; duplicate?: boolean } | null;
@@ -268,4 +269,13 @@ export async function deleteJobAction(
   revalidatePath("/painel");
   revalidatePath("/agentes");
   return { ok: true, deletedApplications: result.deletedApplications };
+}
+
+/** Compara os candidatos da vaga e indica os melhores (só sugere; não muda nota nem etapa). */
+export async function analyzeShortlistAction(
+  jobId: string,
+  topN: number
+): Promise<ShortlistResult> {
+  const user = await requireManager();
+  return analyzeJobShortlist(user.companyId, jobId, topN);
 }

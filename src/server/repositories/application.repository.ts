@@ -708,3 +708,22 @@ export function findOtherApplicationsByEmail(companyId: string, email: string, e
     },
   });
 }
+
+/** Candidaturas de uma vaga com o material que a análise comparativa lê. */
+export function findApplicationsForShortlist(companyId: string, jobId: string) {
+  return prisma.application.findMany({
+    where: { companyId, jobId, isDemo: false },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiScore: true,
+      aiReasoning: true,
+      aiProfile: true,
+      aiArea: true,
+      aiLevel: true,
+      aiChecklist: true,
+      resumeText: true,
+    },
+  });
+}
