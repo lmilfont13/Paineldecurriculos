@@ -69,14 +69,14 @@ export async function getFormularioPageData() {
 }
 
 export async function getCandidaturasPageData(jobId?: string) {
-  const { user } = await getGestorShell();
+  const { user, company } = await getGestorShell();
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
   const jobs = await listCompanyJobs(user.companyId);
-  return { applications, jobs };
+  return { applications, jobs, companyName: company.name };
 }
 
 /** Busca avançada de CVs (nível Michelin): base aberta de currículos com busca facetada. */

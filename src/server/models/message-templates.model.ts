@@ -1,15 +1,17 @@
-/** Negativa pronta para o recado ao candidato: texto fixo, sem IA, sem motivo e sem promessa. */
+/** Negativa pronta, com marcadores {nome}, {vaga} e {empresa}: texto fixo, sem IA, sem motivo e sem promessa. */
+export const REJECTION_TEMPLATE =
+  "{nome}, agradecemos o seu interesse na vaga de {vaga} na {empresa} e o tempo dedicado ao processo.\n" +
+  "Depois de analisar os perfis, neste momento não vamos seguir com a sua candidatura.\n" +
+  "Seu cadastro continua ativo para você se candidatar a outras vagas da {empresa}. Desejamos sucesso na sua trajetória.";
+
+/** Negativa para um candidato específico. */
 export function rejectionMessage(
   candidateName: string,
   companyName: string,
   jobTitle: string
 ): string {
   const first = candidateName.trim().split(/\s+/)[0] ?? "";
-  return (
-    `${first}, agradecemos o seu interesse na vaga de ${jobTitle} na ${companyName} e o tempo dedicado ao processo.\n` +
-    `Depois de analisar os perfis, neste momento não vamos seguir com a sua candidatura.\n` +
-    `Seu cadastro continua ativo para você se candidatar a outras vagas da ${companyName}. Desejamos sucesso na sua trajetória.`
-  );
+  return fillTemplate(REJECTION_TEMPLATE, { firstName: first, companyName, jobTitle });
 }
 
 export type TemplateContext = {

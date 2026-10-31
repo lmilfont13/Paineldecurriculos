@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
+import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { Toast } from "@/components/gestor/toast";
 import {
@@ -28,9 +29,11 @@ import {
   jobLabel,
   meetsMinimum,
   nextToTriage,
+  selectByCutoff,
   selectStage,
   sortRows,
   type CandidaturaRow,
+  type CutoffSelection,
   type SortKey,
   type StageKey,
 } from "@/server/models/candidate-list.model";
@@ -91,12 +94,17 @@ export function CandidaturasTable({
   initialJobId,
   initialStatus,
   initialOnlyMeets = false,
+  messageTemplates = [],
+  companyName = "",
 }: {
   rows: CandidaturaRow[];
   jobs: { id: string; title: string; code?: string | null }[];
   initialJobId?: string;
   initialStatus?: AppStatusKey;
   initialOnlyMeets?: boolean;
+  /** Recados salvos da empresa, para o envio em massa. */
+  messageTemplates?: { id: string; subject: string; body: string }[];
+  companyName?: string;
 }) {
   const pendingTotal = rows.filter((r) => r.status === "PENDING").length;
 
@@ -114,6 +122,7 @@ export function CandidaturasTable({
   const [contentMatches, setContentMatches] = useState<Set<string> | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [messageOpen, setMessageOpen] = useState(false);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [report, setReport] = useState<CandidateSummary[] | null>(null);
@@ -468,6 +477,24 @@ export function CandidaturasTable({
           ))}
         </select>
 
+        <select
+          value=""
+          onChange={(e) => {
+            const mode = e.target.value;
+            if (mode === "NONE") setSelected(new Set());
+            else if (mode) setSelected(new Set(selectByCutoff(filtered, mode as CutoffSelection).map((r) => r.id)));
+          }}
+          aria-label="Selecionar candidatos em massa"
+          className="h-10 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+        >
+          <option value="">Selecionar…</option>
+          <option value="ALL">Todos ({selectByCutoff(filtered, "ALL").length})</option>
+          <option value="ABOVE">Acima do corte ({selectByCutoff(filtered, "ABOVE").length})</option>
+          <option value="BELOW">Abaixo do corte ({selectByCutoff(filtered, "BELOW").length})</option>
+          <option value="UNANALYZED">Sem análise ({selectByCutoff(filtered, "UNANALYZED").length})</option>
+          <option value="NONE">Limpar seleção</option>
+        </select>
+
         <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
           <input
             type="checkbox"
@@ -807,6 +834,14 @@ export function CandidaturasTable({
           >
             {photoBusy ? "Extraindo…" : "Extrair fotos"}
           </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setMessageOpen(true)}
+            className="h-[34px] shrink-0 rounded-[10px] bg-white px-4 text-xs font-semibold text-[#1c1917] hover:bg-white/90 disabled:opacity-50"
+          >
+            Enviar mensagem
+          </button>
           {selected.size >= 2 && selected.size <= 3 && (
             <Link
               href={`/candidaturas/comparar?ids=${[...selected].join(",")}`}
@@ -918,6 +953,22 @@ export function CandidaturasTable({
           </div>
         </div>
       )}
+
+      {messageOpen && selected.size > 0 && (() => {
+        const chosen = rows.filter((r) => selected.has(r.id));
+        const first = chosen[0];
+        return (
+          <BulkMessageDialog
+            ids={[...selected]}
+            names={chosen.slice(0, 3).map((r) => r.name)}
+            sample={first ? { firstName: first.name.split(" ")[0] ?? "", jobTitle: first.jobTitle } : null}
+            companyName={companyName}
+            templates={messageTemplates}
+            onClose={() => setMessageOpen(false)}
+            onDone={() => setSelected(new Set())}
+          />
+        );
+      })()}
 
       {/* Modal do relatório gerencial */}
       {report && (

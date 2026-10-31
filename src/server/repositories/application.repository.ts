@@ -764,3 +764,18 @@ export function findApplicationsForReport(companyId: string, jobId: string) {
     },
   });
 }
+
+/** Candidaturas da empresa (só as dela) com o necessário para um recado em massa. */
+export function findApplicationsForBulkMessage(companyId: string, ids: string[]) {
+  return prisma.application.findMany({
+    where: { companyId, id: { in: ids } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      candidateId: true,
+      isDemo: true,
+      job: { select: { title: true, code: true } },
+    },
+  });
+}

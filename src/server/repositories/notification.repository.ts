@@ -48,3 +48,16 @@ export function markNotificationsRead(candidateId: string, ids?: string[]) {
     data: { readAt: new Date() },
   });
 }
+
+/** Várias novidades de uma vez (recado em massa): uma só consulta ao banco. */
+export function createNotifications(
+  rows: {
+    candidateId: string;
+    applicationId: string | null;
+    type: NotificationType;
+    title: string;
+    body: string | null;
+  }[]
+) {
+  return prisma.notification.createMany({ data: rows });
+}

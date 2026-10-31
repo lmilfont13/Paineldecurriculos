@@ -1,3 +1,4 @@
+import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
 import { readChecklist } from "@/server/models/ai.model";
 import { criteriaCoverage, decisionIndex } from "@/server/models/report.model";
 import { infoRequestState } from "@/server/models/candidate-list.model";
@@ -25,7 +26,8 @@ export default async function CandidaturasPage({
   const { vaga, status, atende } = await searchParams;
   const initialStatus =
     status && status in appStatusLabels ? (status as AppStatusKey) : undefined;
-  const { applications, jobs } = await getCandidaturasPageData();
+  const { applications, jobs, companyName } = await getCandidaturasPageData();
+  const messageTemplates = await listMessageTemplatesAction();
 
   const rows: CandidaturaRow[] = applications.map((app) => ({
     id: app.id,
@@ -57,6 +59,8 @@ export default async function CandidaturasPage({
         jobs={jobs.map((j) => ({ id: j.id, title: j.title, code: j.code }))}
         initialJobId={vaga}
         initialStatus={initialStatus}
+        messageTemplates={messageTemplates}
+        companyName={companyName}
         initialOnlyMeets={atende === "1"}
       />
     </>

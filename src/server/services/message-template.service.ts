@@ -43,3 +43,15 @@ export async function savedMessageForSubject(
   const saved = await findTemplate(companyId, key);
   return saved ? fillTemplate(saved.body, ctx) : null;
 }
+
+/** Guarda um modelo escrito pelo gestor, que já traz os marcadores {nome}, {vaga} e {empresa}. */
+export async function saveMessageTemplate(
+  companyId: string,
+  subject: string,
+  body: string
+): Promise<void> {
+  const cleanSubject = subject.trim().slice(0, MAX_SUBJECT_LENGTH).trim();
+  const text = body.trim().slice(0, MAX_BODY_LENGTH);
+  if (!cleanSubject || !text) return;
+  await saveTemplate(companyId, cleanSubject, subjectKey(cleanSubject), text);
+}

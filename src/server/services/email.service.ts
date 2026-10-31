@@ -1,3 +1,4 @@
+import { chunk } from "@/lib/chunk";
 import "server-only";
 
 import { resend } from "@/lib/resend";
@@ -244,7 +245,7 @@ export async function sendInterviewScheduledEmail(params: {
 }
 
 /** Recado do gestor ao candidato: o texto dele, sem edição. */
-export async function sendManagerMessageEmail(params: {
+export type ManagerMessageEmailParams = {
   brand: EmailBrand;
   to: string;
   candidateName: string;
@@ -253,9 +254,12 @@ export async function sendManagerMessageEmail(params: {
   subject?: string;
   managerEmail: string | null;
   applicationId: string;
-}): Promise<void> {
+};
+
+/** O e-mail do recado do gestor, pronto para envio (individual ou em lote). */
+function managerMessagePayload(params: ManagerMessageEmailParams): Parameters<typeof send>[1] {
   const { brand } = params;
-  await send("recado", {
+  return {
     from: from(brand),
     to: params.to,
     ...(params.managerEmail ? { replyTo: params.managerEmail } : {}),
@@ -275,7 +279,35 @@ export async function sendManagerMessageEmail(params: {
       },
       footer: candidateFooter(brand),
     }),
-  });
+  };
+}
+
+export async function sendManagerMessageEmail(params: ManagerMessageEmailParams): Promise<void> {
+  await send("recado", managerMessagePayload(params));
+}
+
+/**
+ * Recado para várias pessoas de uma vez, pela API em lote do Resend (até 100 por
+ * chamada): evita o limite de velocidade de enviar um e-mail por vez.
+ */
+export async function sendManagerMessageEmails(
+  items: ManagerMessageEmailParams[]
+): Promise<EmailOutcome> {
+  if (items.length === 0) return "none";
+  if (!resend) return "off";
+  try {
+    for (const group of chunk(items.map(managerMessagePayload), 100)) {
+      const { error } = await resend.batch.send(group);
+      if (error) {
+        console.error("[email] Resend recusou o lote de recados:", error);
+        return "failed";
+      }
+    }
+    return SANDBOX_SENDER ? "sandbox" : "sent";
+  } catch (error) {
+    console.error("[email] Falha ao enviar o lote de recados:", error);
+    return "failed";
+  }
 }
 
 /** Pedido de pré-entrevista: avisa que há um formulário, sem citar os dados pedidos. */

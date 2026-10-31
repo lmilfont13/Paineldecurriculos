@@ -59,3 +59,22 @@ describe("savedMessageForSubject", () => {
     expect(await savedMessageForSubject("co1", "Novo", ctx)).toBeNull();
   });
 });
+
+import { saveMessageTemplate } from "@/server/services/message-template.service";
+
+describe("saveMessageTemplate", () => {
+  it("guarda o texto como foi escrito (já com marcadores), pela chave do assunto", async () => {
+    await saveMessageTemplate("co1", "  Retorno Final ", "{nome}, obrigado pelo interesse na {vaga}.");
+    expect(saveTemplate).toHaveBeenCalledWith(
+      "co1",
+      "Retorno Final",
+      "retorno final",
+      "{nome}, obrigado pelo interesse na {vaga}."
+    );
+  });
+  it("sem assunto ou sem texto não salva", async () => {
+    await saveMessageTemplate("co1", "  ", "texto");
+    await saveMessageTemplate("co1", "Assunto", "  ");
+    expect(saveTemplate).not.toHaveBeenCalled();
+  });
+});

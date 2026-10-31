@@ -12,10 +12,12 @@ import {
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
+import { sendBulkMessage, type BulkMessageResult } from "@/server/services/bulk-message.service";
 import {
   MAX_SUBJECT_LENGTH,
   listMessageTemplates,
   rememberMessageTemplate,
+  saveMessageTemplate,
   savedMessageForSubject,
 } from "@/server/services/message-template.service";
 import { createAuditLog } from "@/server/repositories/audit.repository";
@@ -576,4 +578,43 @@ export async function suggestCustomMessageAction(
   } catch {
     return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
   }
+}
+
+/**
+ * Recado para vários candidatos de uma vez (aviso no site + e-mail), com o texto
+ * personalizado por pessoa. Registra um evento de auditoria por lote.
+ */
+export async function sendBulkMessageAction(
+  applicationIds: string[],
+  subject: string,
+  template: string
+): Promise<BulkMessageResult> {
+  const user = await requireManager();
+  const result = await sendBulkMessage(user.companyId, applicationIds, subject, template);
+  if (!result.ok) return result;
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "RECADO_EM_MASSA",
+      entityType: "CANDIDATURA",
+      metadata: {
+        total: result.total,
+        notified: result.notified,
+        emailed: result.emailed,
+        subject: subject.trim().slice(0, 80),
+        preview: template.trim().slice(0, 80),
+      },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  // Com assunto, o texto fica salvo (com os marcadores) para os próximos envios.
+  if (subject.trim()) {
+    try {
+      await saveMessageTemplate(user.companyId, subject, template);
+    } catch { /* salvar o modelo nunca bloqueia o envio */ }
+  }
+  revalidatePath("/candidaturas");
+  return result;
 }

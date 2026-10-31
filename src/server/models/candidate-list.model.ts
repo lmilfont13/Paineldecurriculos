@@ -160,3 +160,22 @@ export function aiRankInGroups(rows: CandidaturaRow[]): Map<string, number> {
   }
   return ranks;
 }
+
+export type CutoffSelection = "ALL" | "ABOVE" | "BELOW" | "UNANALYZED";
+
+/**
+ * Atalhos de seleção em massa. O corte é o da vaga de cada candidato; nota igual
+ * ao corte atende. Quem não tem nota não entra em "acima" nem em "abaixo".
+ */
+export function selectByCutoff(rows: CandidaturaRow[], mode: CutoffSelection): CandidaturaRow[] {
+  switch (mode) {
+    case "ALL":
+      return rows;
+    case "ABOVE":
+      return rows.filter((r) => meetsMinimum(r));
+    case "BELOW":
+      return rows.filter((r) => r.aiScore !== null && !meetsMinimum(r));
+    case "UNANALYZED":
+      return rows.filter((r) => r.aiScore === null);
+  }
+}

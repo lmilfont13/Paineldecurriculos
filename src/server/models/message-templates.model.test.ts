@@ -41,3 +41,16 @@ describe("modelos de recado salvos", () => {
     expect(subjectKey("Teste")).not.toBe(subjectKey("Teste técnico"));
   });
 });
+
+import { REJECTION_TEMPLATE } from "@/server/models/message-templates.model";
+
+describe("REJECTION_TEMPLATE", () => {
+  it("usa marcadores e preenchido dá o mesmo texto da negativa pronta", () => {
+    expect(REJECTION_TEMPLATE).toContain("{nome}");
+    expect(REJECTION_TEMPLATE).toContain("{vaga}");
+    expect(REJECTION_TEMPLATE).toContain("{empresa}");
+    expect(fillTemplate(REJECTION_TEMPLATE, { firstName: "Maria", companyName: "Loja X", jobTitle: "Consultor" })).toBe(
+      rejectionMessage("Maria Souza", "Loja X", "Consultor")
+    );
+  });
+});
