@@ -67,6 +67,7 @@ export async function sendBulkMessage(
     slug: company.slug,
     primaryColor: company.primaryColor,
     logoUrl: company.logoUrl,
+    senderEmail: company.senderEmail,
   };
 
   const notifications: Parameters<typeof createNotifications>[0] = [];

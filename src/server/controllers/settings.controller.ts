@@ -3,10 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { requireManager } from "@/server/controllers/guards";
-import { careersPageSchema } from "@/server/models/company.model";
+import { careersPageSchema, emailSettingsSchema } from "@/server/models/company.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
+import { emailSenderStatus } from "@/server/services/email.service";
 import {
+  getCompanyById,
   updateCareersPage,
+  updateEmailSettings,
   uploadCompanyLogo,
 } from "@/server/services/company.service";
 
@@ -64,5 +67,48 @@ export async function updateCareersPageAction(
   } catch { /* auditoria nunca bloqueia a ação principal */ }
   // A marca aparece em todas as telas (públicas e do painel).
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Dados da tela "E-mails do sistema": respostas, remetente e se o envio está em modo de teste. */
+export async function getEmailSettingsAction() {
+  const user = await requireManager();
+  const company = await getCompanyById(user.companyId);
+  if (!company) return null;
+  const status = emailSenderStatus(company.senderEmail);
+  return {
+    email: company.email,
+    senderEmail: company.senderEmail ?? "",
+    effectiveSender: status.address,
+    sandbox: status.sandbox,
+  };
+}
+
+/** Configurações · E-mails do sistema (respostas dos candidatos e remetente). */
+export async function updateEmailSettingsAction(
+  _prev: SettingsState,
+  formData: FormData
+): Promise<SettingsState> {
+  const user = await requireManager();
+  const parsed = emailSettingsSchema.safeParse({
+    email: formData.get("email") ?? "",
+    senderEmail: formData.get("senderEmail") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  await updateEmailSettings(user.companyId, parsed.data);
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "CONFIGURACOES_ATUALIZADAS",
+      entityType: "EMPRESA",
+      metadata: { campos: ["email", "senderEmail"] },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  revalidatePath("/configuracoes/usuarios");
   return { ok: true };
 }

@@ -76,6 +76,7 @@ export function updateCompany(
     name: string;
     slug: string;
     email: string;
+    senderEmail: string | null;
     cnpj: string | null;
     sector: string | null;
     website: string | null;

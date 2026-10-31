@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
+import { EmailSettingsForm } from "@/components/gestor/email-settings-form";
 import { InviteForm, ProfileForm, RemoveManagerButton } from "@/components/gestor/invite-form";
 import { SettingsTabs } from "@/components/gestor/settings-tabs";
 import { requireManager } from "@/server/controllers/guards";
+import { getEmailSettingsAction } from "@/server/controllers/settings.controller";
 import { listCompanyUsers } from "@/server/services/user.service";
 
 export const metadata: Metadata = { title: "Usuários · Triagem" };
@@ -27,6 +29,7 @@ function initials(name: string | null, email: string) {
 export default async function UsuariosPage() {
   const manager = await requireManager();
   const users = await listCompanyUsers(manager.companyId);
+  const emailSettings = await getEmailSettingsAction();
 
   return (
     <>
@@ -43,6 +46,17 @@ export default async function UsuariosPage() {
           </p>
           <ProfileForm currentName={manager.name} currentEmail={manager.email} />
         </section>
+
+        {/* E-mails do sistema */}
+        {emailSettings && (
+          <section>
+            <h2 className="text-sm font-semibold text-[#0a0a0a]">E-mails do sistema</h2>
+            <p className="mt-1 text-[12px] text-[#71717a]">
+              Para onde vão as respostas dos candidatos e de qual endereço os e-mails saem.
+            </p>
+            <EmailSettingsForm initial={emailSettings} />
+          </section>
+        )}
 
         {/* Lista de usuários */}
         <section>

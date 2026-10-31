@@ -36,14 +36,18 @@ export async function inviteManager(
   // Insere na tabela User para que o sistema reconheça como gestor desta empresa.
   await prismaCreateManagerUser({ email, name: data.name.trim(), companyId });
 
-  // Envia e-mail de recuperação de senha para o usuário definir a própria senha.
-  await admin.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: {
-      redirectTo: `${appUrl()}/redefinir-senha`,
-    },
+  // Envia o e-mail para a pessoa definir a própria senha (generateLink só gerava
+  // o link, sem enviar nada).
+  const { error: mailError } = await admin.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl()}/redefinir-senha`,
   });
+  if (mailError) {
+    return {
+      ok: false,
+      error:
+        "O acesso foi criado, mas o e-mail não pôde ser enviado. Peça para a pessoa usar \"Esqueci minha senha\" na tela de login.",
+    };
+  }
 
   return { ok: true };
 }

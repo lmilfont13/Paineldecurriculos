@@ -179,3 +179,31 @@ export function replyToEmail(
   const manager = managerEmail?.trim() ?? "";
   return looksLikeEmail(manager) ? manager : null;
 }
+
+/** Remetente dos e-mails: o da empresa (domínio verificado no Resend) ou, se faltar, o padrão do sistema. */
+export function senderAddressOf(companySender: string | null | undefined, fallback: string): string {
+  const own = companySender?.trim() ?? "";
+  return looksLikeEmail(own) ? own : fallback;
+}
+
+/** O remetente de teste do Resend só entrega para o dono da conta, não para candidatos. */
+export function isSandboxSender(from: string): boolean {
+  return /@resend\.dev>?$/i.test(from.trim());
+}
+
+/** E-mails do sistema configurados pelo gestor: respostas (obrigatório) e remetente (opcional). */
+export const emailSettingsSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(looksLikeEmail, "Informe um e-mail válido para as respostas dos candidatos."),
+  senderEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .default("")
+    .refine((v) => v === "" || looksLikeEmail(v), "O remetente precisa ser um e-mail válido (ou deixe vazio)."),
+});
+
+export type EmailSettingsInput = z.infer<typeof emailSettingsSchema>;

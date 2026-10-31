@@ -46,6 +46,17 @@ export async function getDefaultCompanySlug(): Promise<string | null> {
  * O dono edita a própria vitrine (Configurações). O companyId vem sempre da
  * sessão (regra 1); slug, e-mail e status da conta ficam fora do alcance.
  */
+/** E-mails do sistema: respostas dos candidatos e remetente opcional. */
+export function updateEmailSettings(
+  companyId: string,
+  input: { email: string; senderEmail: string }
+) {
+  return updateCompany(companyId, {
+    email: input.email,
+    senderEmail: input.senderEmail || null,
+  });
+}
+
 export async function updateCareersPage(
   companyId: string,
   input: CareersPageInput & { logoUrl?: string; logoFullUrl?: string }

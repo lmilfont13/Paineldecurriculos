@@ -118,11 +118,13 @@ function emailBrand(company: {
   slug: string;
   primaryColor: string;
   logoUrl: string | null;
+  senderEmail?: string | null;
 }): EmailBrand {
   return {
     name: company.name,
     slug: company.slug,
     primaryColor: company.primaryColor,
+    senderEmail: company.senderEmail,
     logoUrl: company.logoUrl,
   };
 }

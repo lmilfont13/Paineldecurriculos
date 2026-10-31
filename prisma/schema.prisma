@@ -12,7 +12,10 @@ model Company {
   id             String   @id @default(cuid())
   name           String
   slug           String   @unique
+  /// E-mail da empresa: para onde vão as respostas dos candidatos aos e-mails do sistema.
   email          String
+  /// Remetente dos e-mails (opcional): precisa ser de um domínio verificado no Resend.
+  senderEmail    String?
   cnpj           String?
   sector         String?
   website        String?

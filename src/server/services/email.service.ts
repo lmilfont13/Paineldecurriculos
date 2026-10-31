@@ -2,7 +2,7 @@ import { chunk } from "@/lib/chunk";
 import "server-only";
 
 import { resend } from "@/lib/resend";
-import { brandForeground } from "@/server/models/company.model";
+import { brandForeground, isSandboxSender, senderAddressOf } from "@/server/models/company.model";
 import { appUrl, readEnv } from "@/lib/env";
 import type { EmailOutcome } from "@/server/models/communication.model";
 
@@ -15,6 +15,8 @@ export type EmailBrand = {
   slug: string;
   primaryColor: string;
   logoUrl: string | null;
+  /** Remetente da empresa (domínio verificado no Resend); sem ele vale o padrão do sistema. */
+  senderEmail?: string | null;
 };
 
 const APP_URL = appUrl();
@@ -22,7 +24,14 @@ const APP_URL = appUrl();
 const FROM_ADDRESS = readEnv("EMAIL_FROM_ADDRESS") || "onboarding@resend.dev";
 
 function from(brand: EmailBrand) {
-  return `${brand.name.replace(/[<>"]/g, "")} <${FROM_ADDRESS}>`;
+  const address = senderAddressOf(brand.senderEmail, FROM_ADDRESS);
+  return `${brand.name.replace(/[<>"]/g, "")} <${address}>`;
+}
+
+/** Remetente que vale para a empresa e se ele é o de teste do Resend (não entrega a candidatos). */
+export function emailSenderStatus(senderEmail: string | null | undefined): { address: string; sandbox: boolean } {
+  const address = senderAddressOf(senderEmail, FROM_ADDRESS);
+  return { address, sandbox: isSandboxSender(address) };
 }
 
 function esc(value: string): string {
@@ -79,9 +88,6 @@ function candidateFooter(brand: EmailBrand) {
   return `Você recebeu este e-mail porque se candidatou a uma vaga da ${esc(brand.name)}.`;
 }
 
-/** Remetente de teste do Resend: só entrega para o dono da conta. */
-const SANDBOX_SENDER = FROM_ADDRESS.toLowerCase().endsWith("@resend.dev");
-
 async function send(
   label: string,
   message: Parameters<NonNullable<typeof resend>["emails"]["send"]>[0]
@@ -93,7 +99,7 @@ async function send(
       console.error(`[email] Resend recusou ${label}:`, error);
       return "failed";
     }
-    return SANDBOX_SENDER ? "sandbox" : "sent";
+    return isSandboxSender(String(message.from)) ? "sandbox" : "sent";
   } catch (error) {
     console.error(`[email] Falha ao enviar ${label}:`, error);
     return "failed";
@@ -303,7 +309,7 @@ export async function sendManagerMessageEmails(
         return "failed";
       }
     }
-    return SANDBOX_SENDER ? "sandbox" : "sent";
+    return isSandboxSender(String(items[0] ? managerMessagePayload(items[0]).from : "")) ? "sandbox" : "sent";
   } catch (error) {
     console.error("[email] Falha ao enviar o lote de recados:", error);
     return "failed";
