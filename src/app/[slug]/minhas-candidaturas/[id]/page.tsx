@@ -70,6 +70,29 @@ export default async function MinhaCandidaturaPage({
           {formatAppliedAt(application.createdAt)}
         </p>
 
+        {/* Pré-entrevista pedida pelo gestor e ainda sem resposta */}
+        {application.infoRequestedAt && !application.infoAnsweredAt && (
+          <section className="mt-8 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-6">
+            <p className="text-sm font-semibold text-[#0a0a0a]">
+              Falta responder algumas informações
+            </p>
+            <p className="mt-1 text-[13px] text-[#71717a]">
+              A {application.company.name} pediu alguns dados para seguir com a
+              sua candidatura.
+            </p>
+            <Link
+              href={`/${slug}/minhas-candidaturas/${id}/pre-entrevista`}
+              className="mt-4 inline-flex h-10 items-center rounded-xl px-4 text-[13px] font-semibold hover:opacity-90"
+              style={{
+                backgroundColor: "var(--brand-primary)",
+                color: "var(--brand-foreground)",
+              }}
+            >
+              Preencher agora
+            </Link>
+          </section>
+        )}
+
         {/* A conversa combinada — a informação mais acionável da tela */}
         {application.interviewAt && application.status === "INTERVIEW" && (
           <section className="mt-8 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-6">
