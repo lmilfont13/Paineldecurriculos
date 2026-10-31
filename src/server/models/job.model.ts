@@ -100,3 +100,34 @@ export function requirementsToBullets(requirements: string | null): string[] {
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
     .filter((line) => line.length > 0);
 }
+
+const normalizeJobText = (s: string | null | undefined) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Vaga que já existe e se confunde com a nova: mesmo código, ou mesmo cargo na
+ * mesma cidade. Encerradas não contam; `ignoreId` é a própria vaga em edição.
+ */
+export function findDuplicateJob<
+  T extends Pick<Job, "id" | "title" | "code" | "location" | "status">,
+>(
+  jobs: T[],
+  input: { title: string; location?: string | null; code?: string | null },
+  ignoreId?: string
+): T | null {
+  const code = normalizeJobText(input.code);
+  const title = normalizeJobText(input.title);
+  const location = normalizeJobText(input.location);
+  return (
+    jobs.find((j) => {
+      if (j.id === ignoreId || j.status === "CLOSED") return false;
+      if (code && normalizeJobText(j.code) === code) return true;
+      return normalizeJobText(j.title) === title && normalizeJobText(j.location) === location;
+    }) ?? null
+  );
+}

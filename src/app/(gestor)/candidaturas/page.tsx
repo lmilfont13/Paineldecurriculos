@@ -1,3 +1,5 @@
+import { infoRequestState } from "@/server/models/candidate-list.model";
+import { titleCasePt } from "@/server/models/text.model";
 import type { Metadata } from "next";
 
 import {
@@ -25,7 +27,7 @@ export default async function CandidaturasPage({
 
   const rows: CandidaturaRow[] = applications.map((app) => ({
     id: app.id,
-    name: app.name,
+    name: titleCasePt(app.name),
     email: app.email,
     createdAt: app.createdAt.toISOString(),
     status: app.status,
@@ -35,6 +37,7 @@ export default async function CandidaturasPage({
     jobId: app.job.id,
     jobTitle: app.job.title,
     jobCode: app.job.code,
+    infoState: infoRequestState(app.infoRequestedAt, app.infoAnsweredAt),
     aiMinScore: app.job.aiMinScore,
     isDemo: app.isDemo,
     preRegistered: app.preRegistered,

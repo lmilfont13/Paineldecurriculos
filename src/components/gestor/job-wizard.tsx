@@ -45,6 +45,7 @@ export function JobWizard({
   const [rewriting, setRewriting] = useState<"description" | "requirements" | null>(null);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [criterionInput, setCriterionInput] = useState("");
+  const [confirmDup, setConfirmDup] = useState(false);
   const [rawText, setRawText] = useState("");
   const [organizing, setOrganizing] = useState(false);
   const [organizeMsg, setOrganizeMsg] = useState<
@@ -221,6 +222,7 @@ export function JobWizard({
           />
           <input type="hidden" name="aiMinScore" value={draft.aiMinScore} />
           <input type="hidden" name="publish" value={String(publish)} />
+          <input type="hidden" name="confirmDuplicate" value={String(confirmDup)} />
 
           <div className="flex-1">
             {step === 0 && (
@@ -558,6 +560,17 @@ export function JobWizard({
             <p role="alert" className="mb-4 text-sm text-red-600">
               {error ?? state?.error}
             </p>
+          )}
+          {!error && state?.duplicate && (
+            <label className="mb-4 flex items-center gap-2.5 text-sm text-[#0a0a0a]">
+              <input
+                type="checkbox"
+                checked={confirmDup}
+                onChange={(e) => setConfirmDup(e.target.checked)}
+                className="size-4 accent-[#0a0a0a]"
+              />
+              Criar mesmo assim
+            </label>
           )}
 
           <div className="flex items-center justify-between">

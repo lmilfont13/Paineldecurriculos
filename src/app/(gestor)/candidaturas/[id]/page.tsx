@@ -165,6 +165,28 @@ export default async function CandidaturaDetailPage({
         </div>
       </header>
 
+      {app.otherApplications.length > 0 && (
+        <section className="mt-4 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-4 text-[13px] text-[#57534e] sm:px-6">
+          <p className="font-semibold text-[#0a0a0a]">
+            {app.name.split(" ")[0]} também se candidatou a{" "}
+            {app.otherApplications.length === 1 ? "outra vaga" : "outras vagas"}:
+          </p>
+          <ul className="mt-2 space-y-1">
+            {app.otherApplications.map((other) => (
+              <li key={other.id}>
+                <Link
+                  href={`/candidaturas/${other.id}`}
+                  className="font-medium text-[#0a0a0a] underline-offset-2 hover:underline"
+                >
+                  {jobLabel(other.job.title, other.job.code)}
+                </Link>
+                <span className="text-[#a1a1aa]"> · {appStatusLabels[other.status as AppStatusKey]}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
         <main className="min-w-0 space-y-5">
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">

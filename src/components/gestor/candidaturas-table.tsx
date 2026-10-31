@@ -545,6 +545,13 @@ export function CandidaturasTable({
                     {row.aiLevel && (
                       <span className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + levelClass}>{row.aiLevel}</span>
                     )}
+                    {row.infoState && (
+                      <span
+                        className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + (row.infoState === "ANSWERED" ? "bg-[#e4f6ec] text-[#1f7a4d]" : "bg-[#fff7e6] text-[#a16207]")}
+                      >
+                        {row.infoState === "ANSWERED" ? "Respondeu a pré-entrevista" : "Aguardando informações"}
+                      </span>
+                    )}
                     {!row.aiArea && !row.aiProfile && !row.aiLevel && (
                       <p className="mt-2 text-[11px] text-[#a1a1aa]">{row.aiState === "DONE" ? "Sem perfil identificado" : row.aiState === "FAILED" ? "Análise falhou" : "Analisando…"}</p>
                     )}
@@ -644,6 +651,13 @@ export function CandidaturasTable({
                     {row.preRegistered && (
                       <span className="ml-1.5 rounded-full bg-[#fff7e6] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#a16207]">
                         Cadastro incompleto
+                      </span>
+                    )}
+                    {row.infoState && (
+                      <span
+                        className={"ml-1.5 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium " + (row.infoState === "ANSWERED" ? "bg-[#e4f6ec] text-[#1f7a4d]" : "bg-[#fff7e6] text-[#a16207]")}
+                      >
+                        {row.infoState === "ANSWERED" ? "Respondeu" : "Aguardando informações"}
                       </span>
                     )}
                     {row.isDemo && (

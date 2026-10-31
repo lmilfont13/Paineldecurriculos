@@ -688,3 +688,23 @@ export function updateInfoAnswers(
 ) {
   return prisma.application.update({ where: { id }, data });
 }
+
+/** Outras candidaturas da mesma pessoa (pelo e-mail) na empresa, para o aviso da ficha. */
+export function findOtherApplicationsByEmail(companyId: string, email: string, excludeId: string) {
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      id: { not: excludeId },
+      isDemo: false,
+      email: { equals: email.trim(), mode: "insensitive" },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      job: { select: { title: true, code: true } },
+    },
+  });
+}

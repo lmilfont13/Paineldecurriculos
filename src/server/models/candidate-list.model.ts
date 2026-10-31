@@ -16,6 +16,8 @@ export type CandidaturaRow = {
   jobTitle: string;
   /** Código da vaga, para distinguir vagas com o mesmo cargo. */
   jobCode?: string | null;
+  /** Pré-entrevista: aguardando resposta do candidato ou já respondida. */
+  infoState?: "WAITING" | "ANSWERED" | null;
   aiMinScore: number;
   /** Candidatura da sala de simulação (mostra o selo "Demonstração"). */
   isDemo?: boolean;
@@ -119,4 +121,13 @@ export function groupRowsByJob(rows: CandidaturaRow[]): CandidaturaRow[] {
     else groups.set(row.jobId, [row]);
   }
   return [...groups.values()].flat();
+}
+
+/** Pré-entrevista na fila: pedida e sem resposta, ou já respondida (null se nunca pedida). */
+export function infoRequestState(
+  requestedAt: Date | null,
+  answeredAt: Date | null
+): "WAITING" | "ANSWERED" | null {
+  if (!requestedAt) return null;
+  return answeredAt ? "ANSWERED" : "WAITING";
 }

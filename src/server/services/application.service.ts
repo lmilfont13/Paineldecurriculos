@@ -38,6 +38,7 @@ import {
   updateApplicationStatus,
   updateInterview,
   updateInfoRequest,
+  findOtherApplicationsByEmail,
   updateInfoAnswers,
   updateManagerNotes,
   searchApplicationIds,
@@ -45,6 +46,7 @@ import {
   findApplicationsForCvSearch,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
+import { titleCasePt } from "@/server/models/text.model";
 import {
   buildInfoAnswerSchema,
   knownInfoOf,
@@ -702,7 +704,7 @@ export async function submitApplication(
   // (mantém histórico e notas); senão, cria uma nova.
   const application = existing
     ? await completePreRegisteredApplication(existing.id, {
-        name: input.name,
+        name: titleCasePt(input.name),
         phone: input.phone || null,
         resumeUrl,
         birthDate,
@@ -722,7 +724,7 @@ export async function submitApplication(
         jobId: job.id,
         companyId,
         candidateId: candidate.id,
-        name: input.name,
+        name: titleCasePt(input.name),
         email: candidate.email,
         phone: input.phone || null,
         resumeUrl,
@@ -745,7 +747,7 @@ export async function submitApplication(
 
   // CA2: o que o candidato preencheu vira perfil para as próximas vagas
   await updateCandidateProfile(candidate.id, {
-    name: input.name,
+    name: titleCasePt(input.name),
     phone: input.phone || null,
     resumeUrl,
     birthDate,
@@ -1151,4 +1153,10 @@ export async function saveInfoAnswers(
     infoAnsweredAt: new Date(),
   });
   return { ok: true };
+}
+
+/** Outras candidaturas da mesma pessoa na empresa (vazio se o e-mail não for válido). */
+export async function getOtherApplicationsOfPerson(companyId: string, email: string, excludeId: string) {
+  if (!email.includes("@")) return [];
+  return findOtherApplicationsByEmail(companyId, email, excludeId);
 }

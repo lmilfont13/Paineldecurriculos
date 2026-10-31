@@ -1,6 +1,7 @@
 import "server-only";
 
 import { jobLabel } from "@/server/models/candidate-list.model";
+import { titleCasePt } from "@/server/models/text.model";
 
 import type {
   DashboardStats,
@@ -53,7 +54,7 @@ export async function getDashboard(companyId: string): Promise<{
   const priority: PriorityApplication[] = waitingList
     .map((a) => ({
       id: a.id,
-      name: a.name,
+      name: titleCasePt(a.name),
       jobTitle: jobLabel(a.job.title, a.job.code),
       aiScore: a.aiScore,
       aiState: a.aiState,

@@ -6,17 +6,20 @@ import { z } from "zod";
 
 import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
-import { jobFormSchema } from "@/server/models/job.model";
+import { jobLabel } from "@/server/models/candidate-list.model";
+import { findDuplicateJob, jobFormSchema } from "@/server/models/job.model";
+import { titleCasePt } from "@/server/models/text.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   createCompanyJob,
   deleteCompanyJob,
+  listCompanyJobs,
   trackWhatsappShare,
   updateCompanyJob,
 } from "@/server/services/job.service";
 import { queueStandbyForJob } from "@/server/services/talent.service";
 
-export type JobFormState = { error: string } | null;
+export type JobFormState = { error: string; duplicate?: boolean } | null;
 
 function parseJobForm(formData: FormData) {
   return jobFormSchema.safeParse({
@@ -41,6 +44,16 @@ export async function createJobAction(
   const parsed = parseJobForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  // Vaga igual a uma que já existe (mesmo código, ou mesmo cargo e cidade): pede confirmação.
+  if (formData.get("confirmDuplicate") !== "true") {
+    const dup = findDuplicateJob(await listCompanyJobs(user.companyId), parsed.data);
+    if (dup) {
+      return {
+        duplicate: true,
+        error: `Já existe a vaga "${jobLabel(dup.title, dup.code)}"${dup.location ? ` em ${dup.location}` : ""}. Se esta é outra vaga, marque "Criar mesmo assim" e envie de novo.`,
+      };
+    }
   }
   const isPublish = formData.get("publish") === "true";
   const job = await createCompanyJob(user.companyId, parsed.data, isPublish);
@@ -166,7 +179,7 @@ export async function parseJobTextAction(
 
   const system = `Você é um especialista em RH. Receberá o texto bruto de uma vaga, geralmente copiado de e-mail ou WhatsApp. Organize-o em JSON com exatamente estas chaves:
 - "code": código/número da vaga se houver no texto (ex.: "1123" em "INFORMAÇÕES DA VAGA 1123"), apenas o código; senão "".
-- "title": nome do cargo em Title Case (ex.: "Consultor de Vendas"), sem códigos.
+- "title": nome do cargo com a inicial de cada palavra em maiúscula, exceto ligações como "de", "da", "e" (ex.: "Consultor de Vendas"), sem códigos.
 - "location": cidade e UF (ex.: "Caucaia, CE").
 - "contract": "CLT", "PJ", "FREELANCE" ou "INTERNSHIP".
 - "workMode": "REMOTE", "HYBRID" ou "ONSITE" (loja/ponto de venda/presencial = ONSITE).
@@ -191,7 +204,7 @@ Não invente nada que não esteja no texto. Remova emojis, números de controle 
       job: {
         ...job,
         code: job.code.trim(),
-        title: job.title.trim(),
+        title: titleCasePt(job.title, { keepAcronyms: true }),
         aiCriteria: job.aiCriteria.map((c) => c.trim()).filter(Boolean).slice(0, 10),
       },
     };

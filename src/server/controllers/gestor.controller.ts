@@ -1,3 +1,4 @@
+import { titleCasePt } from "@/server/models/text.model";
 import "server-only";
 
 import { cache } from "react";
@@ -11,6 +12,7 @@ import type {
 import {
   countPendingApplications,
   getCompanyApplication,
+  getOtherApplicationsOfPerson,
   listCompanyApplications,
   listApplicationsForCvSearch,
 } from "@/server/services/application.service";
@@ -105,7 +107,7 @@ export async function getBuscarCvsData() {
 
     return {
       id: app.id,
-      name: app.name,
+      name: titleCasePt(app.name),
       email: app.email,
       phone: app.phone,
       photoUrl: app.photoUrl,
@@ -174,7 +176,12 @@ export async function getCandidaturaDetail(id: string) {
   const application = await getCompanyApplication(user.companyId, id);
   if (!application) return null;
   const [withPhoto] = await withPhotoUrls([application]);
-  return withPhoto;
+  const otherApplications = await getOtherApplicationsOfPerson(
+    user.companyId,
+    application.email,
+    id
+  );
+  return { ...withPhoto, name: titleCasePt(withPhoto.name), otherApplications };
 }
 
 /** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
