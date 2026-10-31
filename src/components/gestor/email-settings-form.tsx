@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 
 import {
+  sendTestEmailAction,
   updateEmailSettingsAction,
   type SettingsState,
+  type TestEmailResult,
 } from "@/server/controllers/settings.controller";
 
 type Initial = {
@@ -23,6 +25,9 @@ export function EmailSettingsForm({ initial }: { initial: Initial }) {
     updateEmailSettingsAction,
     null
   );
+
+  const [test, setTest] = useState<TestEmailResult | null>(null);
+  const [testing, startTest] = useTransition();
 
   return (
     <form action={action} className="mt-3 space-y-4">
@@ -84,14 +89,47 @@ export function EmailSettingsForm({ initial }: { initial: Initial }) {
         <p className="text-[12px] text-[#1f7a4d]">Configurações de e-mail salvas.</p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-9 rounded-xl px-5 text-[13px] font-semibold disabled:opacity-60"
-        style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
-      >
-        {pending ? "Salvando…" : "Salvar"}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="h-9 rounded-xl px-5 text-[13px] font-semibold disabled:opacity-60"
+          style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
+        >
+          {pending ? "Salvando…" : "Salvar"}
+        </button>
+        <button
+          type="button"
+          disabled={testing}
+          onClick={() => {
+            setTest(null);
+            startTest(async () => setTest(await sendTestEmailAction()));
+          }}
+          className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:border-[#0a0a0a] disabled:opacity-60"
+        >
+          {testing ? "Enviando teste…" : "Enviar e-mail de teste"}
+        </button>
+      </div>
+      <p className="text-[11px] text-[#a1a1aa]">
+        O teste usa o que está salvo acima e é enviado para o e-mail da empresa.
+      </p>
+      {test && "error" in test && (
+        <p role="alert" className="text-[12px] text-[#c23b3b]">{test.error}</p>
+      )}
+      {test && "ok" in test && (
+        <p
+          className={"text-[12px] " + (test.outcome === "sent" ? "text-[#1f7a4d]" : "text-[#a16207]")}
+        >
+          {test.outcome === "sent" &&
+            `Teste enviado para ${test.to}. Confira a caixa de entrada (e o spam).`}
+          {test.outcome === "sandbox" &&
+            "O envio ainda está em modo de teste: o e-mail só chega ao dono da conta do Resend, não a candidatos."}
+          {test.outcome === "failed" &&
+            "O Resend recusou o envio. Confira se o domínio do remetente está verificado no Resend."}
+          {(test.outcome === "off" || test.outcome === "none") &&
+            "O envio de e-mails não está configurado (falta a chave do Resend)."}
+        </p>
+      )}
     </form>
   );
 }

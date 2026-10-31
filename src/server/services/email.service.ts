@@ -345,3 +345,21 @@ export async function sendInfoRequestEmail(params: {
     }),
   });
 }
+
+/** E-mail de teste da configuração: confirma de ponta a ponta que o remetente funciona. */
+export async function sendTestEmail(brand: EmailBrand, to: string): Promise<EmailOutcome> {
+  const { address } = emailSenderStatus(brand.senderEmail);
+  return send("teste de configuração", {
+    from: from(brand),
+    to,
+    subject: `Teste de e-mail: ${brand.name}`,
+    html: shell(brand, {
+      title: "O envio de e-mails está funcionando",
+      paragraphs: [
+        "Se você recebeu esta mensagem, o painel de recrutamento consegue enviar e-mails em nome da sua empresa.",
+        `Remetente usado: <strong style="color:#1c1917">${esc(address)}</strong>.`,
+      ],
+      footer: "Mensagem de teste enviada pelo painel de recrutamento.",
+    }),
+  });
+}

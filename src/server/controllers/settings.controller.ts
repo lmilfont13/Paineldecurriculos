@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireManager } from "@/server/controllers/guards";
 import { careersPageSchema, emailSettingsSchema } from "@/server/models/company.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
-import { emailSenderStatus } from "@/server/services/email.service";
+import type { EmailOutcome } from "@/server/models/communication.model";
+import { emailSenderStatus, sendTestEmail } from "@/server/services/email.service";
 import {
   getCompanyById,
   updateCareersPage,
@@ -111,4 +112,26 @@ export async function updateEmailSettingsAction(
   } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/configuracoes/usuarios");
   return { ok: true };
+}
+
+export type TestEmailResult =
+  | { ok: true; outcome: EmailOutcome; to: string }
+  | { error: string };
+
+/** Envia um e-mail de teste ao e-mail da empresa, com o remetente configurado. */
+export async function sendTestEmailAction(): Promise<TestEmailResult> {
+  const user = await requireManager();
+  const company = await getCompanyById(user.companyId);
+  if (!company) return { error: "Empresa não encontrada." };
+  const outcome = await sendTestEmail(
+    {
+      name: company.name,
+      slug: company.slug,
+      primaryColor: company.primaryColor,
+      logoUrl: company.logoUrl,
+      senderEmail: company.senderEmail,
+    },
+    company.email
+  );
+  return { ok: true, outcome, to: company.email };
 }
