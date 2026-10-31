@@ -136,6 +136,15 @@ export function buildInfoAnswerSchema(fields: InfoField[]) {
   return z.object(shape);
 }
 
+/**
+ * Número no formato do wa.me. Telefone nacional (10 ou 11 dígitos) ganha o DDI 55;
+ * "55" no começo só é DDI quando o número tem 12 ou 13 dígitos (DDD 55 é o do RS).
+ */
+export function toWhatsappNumber(phone: string): string {
+  const digits = digitsOf(phone);
+  return digits.length <= 11 ? `55${digits}` : digits;
+}
+
 /** Atalho de WhatsApp: abre a conversa com o texto e o link do formulário prontos. */
 export function whatsappInfoLink(params: {
   phone: string;
@@ -144,8 +153,7 @@ export function whatsappInfoLink(params: {
   jobTitle: string;
   url: string;
 }): string {
-  const digits = digitsOf(params.phone);
-  const number = digits.startsWith("55") ? digits : `55${digits}`;
+  const number = toWhatsappNumber(params.phone);
   const first = params.candidateName.trim().split(/\s+/)[0] ?? "";
   const text =
     `Oi, ${first}! Aqui é da ${params.companyName}. ` +

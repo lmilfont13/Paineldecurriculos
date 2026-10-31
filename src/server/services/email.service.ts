@@ -293,8 +293,8 @@ export async function sendInfoRequestEmail(params: {
     html: shell(brand, {
       title: "Falta pouco para a conversa",
       paragraphs: [
-        `Oi, ${firstName(params.candidateName)}. Seu perfil para a vaga de <strong style="color:#1c1917">${esc(params.jobTitle)}</strong> seguiu na seleção.`,
-        "Para marcarmos a conversa, preencha um formulário rápido na sua área. Leva poucos minutos.",
+        `Oi, ${firstName(params.candidateName)}. A ${esc(brand.name)} precisa de algumas informações para dar andamento à sua candidatura à vaga de <strong style="color:#1c1917">${esc(params.jobTitle)}</strong>.`,
+        "Preencha um formulário rápido na sua área. Leva poucos minutos.",
       ],
       cta: {
         label: "Preencher agora",

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
+import { toWhatsappNumber } from "@/server/models/pre-interview.model";
 import {
   sendMessageAction,
   suggestMessageAction,
@@ -18,11 +19,7 @@ const TOPICS = [
   { key: "negativa", label: "Negativa (não seguiremos)" },
 ] as const;
 
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  // Se não começa com 55 (Brasil), adiciona
-  return digits.startsWith("55") ? digits : `55${digits}`;
-}
+const formatPhone = toWhatsappNumber;
 
 export function MessageBox({
   applicationId,

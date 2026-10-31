@@ -401,6 +401,16 @@ export function anonymizeApplicationsByCandidate(candidateId: string) {
       phone: null,
       resumeUrl: null,
       photoPath: null,
+      // pré-entrevista: dados pessoais e sensíveis também saem (LGPD)
+      maritalStatus: null,
+      hasChildren: null,
+      childrenCount: null,
+      professionalSummary: null,
+      rg: null,
+      cpf: null,
+      infoRequestedFields: [],
+      infoRequestedAt: null,
+      infoAnsweredAt: null,
     },
   });
 }

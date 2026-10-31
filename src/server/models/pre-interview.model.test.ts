@@ -7,6 +7,7 @@ import {
   maskRg,
   missingInfoFields,
   pendingRequestedFields,
+  toWhatsappNumber,
   whatsappInfoLink,
   type KnownInfo,
 } from "@/server/models/pre-interview.model";
@@ -120,5 +121,19 @@ describe("pendingRequestedFields", () => {
     expect(
       pendingRequestedFields(["cpf"], { ...nothingKnown, cpf: "52998224725" })
     ).toEqual([]);
+  });
+});
+
+describe("toWhatsappNumber", () => {
+  it("acrescenta o 55 a telefone brasileiro com DDD", () => {
+    expect(toWhatsappNumber("(85) 99999-1234")).toBe("5585999991234");
+    expect(toWhatsappNumber("85 3222-1234")).toBe("558532221234");
+  });
+  it("DDD 55 (RS) não é confundido com o DDI", () => {
+    expect(toWhatsappNumber("(55) 99999-1234")).toBe("5555999991234");
+  });
+  it("mantém número que já vem com o DDI", () => {
+    expect(toWhatsappNumber("+55 85 99999-1234")).toBe("5585999991234");
+    expect(toWhatsappNumber("5585999991234")).toBe("5585999991234");
   });
 });

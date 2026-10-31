@@ -497,6 +497,7 @@ export async function revealSensitiveInfoAction(
   const user = await requireManager();
   const app = await getCompanyApplication(user.companyId, applicationId);
   if (!app) return null;
+  // Falha fechada: sem registro na auditoria, o dado sensível não é entregue.
   try {
     await createAuditLog({
       companyId: user.companyId,
@@ -508,6 +509,8 @@ export async function revealSensitiveInfoAction(
       entityId: applicationId,
       entityLabel: app.name,
     });
-  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  } catch {
+    return null;
+  }
   return { rg: app.rg, cpf: app.cpf };
 }

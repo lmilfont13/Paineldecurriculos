@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 
 import {
   submitInfoAnswersAction,
@@ -9,6 +9,7 @@ import {
 } from "@/server/controllers/application.controller";
 import {
   MARITAL_STATUSES,
+  isValidCpf,
   type InfoField,
 } from "@/server/models/pre-interview.model";
 
@@ -41,6 +42,20 @@ export function PreInterviewForm({
   );
   const [cpf, setCpf] = useState("");
   const [hasChildren, setHasChildren] = useState<"sim" | "nao" | "">("");
+  const [clientError, setClientError] = useState<string | null>(null);
+
+  // Sem `action` no <form>: o React limparia os campos mesmo quando o servidor
+  // devolve erro, e o candidato perderia o que digitou.
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (fields.includes("cpf") && !isValidCpf(cpf)) {
+      setClientError("CPF inválido. Confira os números.");
+      return;
+    }
+    setClientError(null);
+    const data = new FormData(e.currentTarget);
+    startTransition(() => formAction(data));
+  }
 
   if (state && "ok" in state) {
     return (
@@ -65,7 +80,7 @@ export function PreInterviewForm({
   const label = "mb-1.5 block text-sm font-medium text-[#0a0a0a]";
 
   return (
-    <form action={formAction} className="mt-8 space-y-5">
+    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
       {fields.includes("maritalStatus") && (
         <label className="block">
           <span className={label}>Estado civil</span>
@@ -138,7 +153,7 @@ export function PreInterviewForm({
       {fields.includes("rg") && (
         <label className="block">
           <span className={label}>RG</span>
-          <input name="rg" required maxLength={20} className={inputClass} />
+          <input name="rg" required minLength={5} maxLength={20} className={inputClass} />
         </label>
       )}
 
@@ -162,9 +177,9 @@ export function PreInterviewForm({
         vaga. Elas ficam visíveis apenas para a equipe de seleção.
       </p>
 
-      {state && "error" in state && (
+      {(clientError || (state && "error" in state)) && (
         <p role="alert" className="text-sm text-red-600">
-          {state.error}
+          {clientError ?? (state && "error" in state ? state.error : null)}
         </p>
       )}
 
