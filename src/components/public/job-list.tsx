@@ -100,6 +100,11 @@ function JobPreviewPanel({
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-[22px] font-bold leading-snug tracking-[-0.3px] text-[#1c1917]">
           {job.title}
+          {job.code && (
+            <span className="ml-2 align-middle text-[13px] font-medium text-[#a8a29e]">
+              #{job.code}
+            </span>
+          )}
         </h2>
         {isNew(job.createdAt) && (
           <span
@@ -267,6 +272,7 @@ export function JobList({
       if (!q) return true;
       return (
         j.title.toLowerCase().includes(q) ||
+        (j.code ?? "").toLowerCase().includes(q) ||
         j.description.toLowerCase().includes(q) ||
         (j.location ?? "").toLowerCase().includes(q)
       );
@@ -324,7 +330,7 @@ export function JobList({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por cargo ou cidade…"
+            placeholder="Buscar por cargo, código ou cidade…"
             aria-label="Buscar vagas"
             className="h-9 w-full rounded-full border border-[#e4e0dc] bg-white px-4 text-[13px] placeholder:text-[#c4bfba] focus:border-[#1c1917] focus:outline-none sm:w-[260px]"
           />
@@ -399,6 +405,11 @@ export function JobList({
                             >
                               {job.title}
                             </span>
+                            {job.code && (
+                              <span className="rounded-md bg-[#f5f1ed] px-1.5 py-0.5 text-[11px] font-medium text-[#57534e]">
+                                #{job.code}
+                              </span>
+                            )}
                             {isNew(job.createdAt) && (
                               <span
                                 className="rounded-full px-2 py-0.5 text-[10px] font-semibold"

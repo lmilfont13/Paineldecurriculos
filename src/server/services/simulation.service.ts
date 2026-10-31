@@ -42,6 +42,7 @@ async function getSimulationJob(companyId: string) {
 
   return createJob({
     companyId,
+    code: null,
     title: "Assistente Administrativo · Demonstração",
     description:
       "Vaga fictícia criada exclusivamente para demonstrar o funcionamento do Agente de Triagem.",

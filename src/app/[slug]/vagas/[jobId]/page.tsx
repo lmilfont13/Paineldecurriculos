@@ -27,7 +27,9 @@ export async function generateMetadata({
   const { slug, jobId } = await params;
   const data = await getJobDetailPageData(slug, jobId);
   return {
-    title: data ? `${data.job.title} · ${data.company.name}` : "Vaga",
+    title: data
+      ? `${data.job.title}${data.job.code ? ` #${data.job.code}` : ""} · ${data.company.name}`
+      : "Vaga",
   };
 }
 
@@ -69,6 +71,11 @@ export default async function PublicJobDetailPage({
             <h1 className="text-[30px] font-bold leading-[1.15] tracking-[-0.4px] text-[#1c1917] md:text-[40px]">
               {job.title}
             </h1>
+            {job.code && (
+              <p className="mt-2 text-sm font-medium text-[#78716c]">
+                Código da vaga: <span className="text-[#1c1917]">{job.code}</span>
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <span

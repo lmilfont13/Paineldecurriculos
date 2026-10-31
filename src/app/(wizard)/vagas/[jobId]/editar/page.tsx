@@ -20,6 +20,7 @@ export default async function EditarVagaPage({
     <JobWizard
       jobId={job.id}
       initial={{
+        code: job.code ?? "",
         title: job.title,
         location: job.location ?? "",
         contract: job.contract,

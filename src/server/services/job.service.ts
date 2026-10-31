@@ -77,6 +77,7 @@ export function createCompanyJob(
 ) {
   return createJob({
     companyId,
+    code: input.code || null,
     title: input.title,
     description: input.description,
     requirements: input.requirements || null,
@@ -115,6 +116,7 @@ export async function updateCompanyJob(
     requirements:
       input.requirements !== undefined ? input.requirements || null : undefined,
     location: input.location !== undefined ? input.location || null : undefined,
+    code: input.code !== undefined ? input.code || null : undefined,
   });
 }
 
