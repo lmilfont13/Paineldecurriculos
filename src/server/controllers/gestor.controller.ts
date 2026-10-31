@@ -1,4 +1,5 @@
 import { loadJobReportData } from "@/server/services/report.service";
+import { loadPortfolioReportData } from "@/server/services/portfolio.service";
 import { titleCasePt } from "@/server/models/text.model";
 import "server-only";
 
@@ -229,4 +230,10 @@ export async function getPainelData(): Promise<{
 export async function getJobReportForGestor(jobId: string, withAiComparison: boolean) {
   const { user } = await getGestorShell();
   return loadJobReportData(user.companyId, jobId, withAiComparison);
+}
+
+/** Dados do relatório geral em PDF (todas as vagas da empresa do gestor logado). */
+export async function getPortfolioReportForGestor() {
+  const { user } = await getGestorShell();
+  return loadPortfolioReportData(user.companyId);
 }

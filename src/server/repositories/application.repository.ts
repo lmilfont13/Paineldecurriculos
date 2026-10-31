@@ -779,3 +779,31 @@ export function findApplicationsForBulkMessage(companyId: string, ids: string[])
     },
   });
 }
+
+/** Candidaturas reais da empresa (todas as vagas) para o relatório geral em PDF. */
+export function findApplicationsForPortfolio(companyId: string) {
+  return prisma.application.findMany({
+    where: { companyId, isDemo: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      jobId: true,
+      name: true,
+      email: true,
+      status: true,
+      aiScore: true,
+      aiReasoning: true,
+      aiProfile: true,
+      aiArea: true,
+      aiLevel: true,
+      aiChecklist: true,
+      salaryExpectation: true,
+      availability: true,
+      city: true,
+      neighborhood: true,
+      hasCnh: true,
+      workPreference: true,
+      createdAt: true,
+    },
+  });
+}

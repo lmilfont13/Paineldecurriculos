@@ -41,6 +41,15 @@ export default async function VagasPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <CopyLink url={publicUrl} />
+          <a
+            href="/relatorio-geral"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Relatório em PDF com todas as vagas e o perfil dos candidatos"
+            className="flex h-10 items-center rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+          >
+            Relatório geral (PDF)
+          </a>
           <Link
             href="/vagas/nova"
             className="flex h-10 items-center rounded-2xl px-5 text-[13px] font-medium transition-opacity hover:opacity-90"
