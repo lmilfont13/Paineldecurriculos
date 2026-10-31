@@ -31,3 +31,19 @@ describe("titleCasePt — títulos de vaga", () => {
     expect(titleCasePt("Gerente iFood", opt)).toBe("Gerente iFood");
   });
 });
+
+import { toPdfSafeText } from "@/server/models/text.model";
+
+describe("toPdfSafeText", () => {
+  it("troca símbolos que a fonte do PDF não tem (marcadores de lista de currículo) por espaço", () => {
+    expect(toPdfSafeText("HASKELL  Promotora")).toBe("HASKELL Promotora");
+    expect(toPdfSafeText("Cargo → Vendedor ✓")).toBe("Cargo Vendedor");
+  });
+  it("mantém acentos, travessão, aspas e bullet", () => {
+    const ok = "Promoção – “vendas” • atendimento — São Paulo ç";
+    expect(toPdfSafeText(ok)).toBe(ok);
+  });
+  it("não deixa espaços repetidos", () => {
+    expect(toPdfSafeText("a    b")).toBe("a b");
+  });
+});

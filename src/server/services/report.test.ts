@@ -102,3 +102,17 @@ describe("loadJobReportData: a IA nunca trava o relatório", () => {
     }
   });
 });
+
+describe("loadJobReportData: texto seguro para o PDF", () => {
+  it("limpa símbolos da fonte de currículo na leitura da IA e nas evidências", async () => {
+    findApplicationsForReport.mockResolvedValue([
+      row({
+        aiReasoning: "Experiência  sólida.",
+        aiChecklist: [{ criterion: "Vendas", met: "sim", evidence: "HASKELL  Promotora" }],
+      }),
+    ]);
+    const r = await loadJobReportData("co1", "j1", false);
+    expect(r!.data.ranking[0].aiReasoning).toBe("Experiência sólida.");
+    expect(r!.data.ranking[0].criteria[0].evidence).toBe("HASKELL Promotora");
+  });
+});

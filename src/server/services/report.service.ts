@@ -7,11 +7,13 @@ import {
   type ReportCandidate,
   type ReportData,
 } from "@/server/models/report.model";
-import { titleCasePt } from "@/server/models/text.model";
+import { titleCasePt, toPdfSafeText } from "@/server/models/text.model";
 import { findApplicationsForReport } from "@/server/repositories/application.repository";
 import { getCompanyById } from "@/server/services/company.service";
 import { getCompanyJob } from "@/server/services/job.service";
 import { analyzeJobShortlist } from "@/server/services/shortlist.service";
+
+const safe = (v: string | null): string | null => (v === null ? null : toPdfSafeText(v));
 
 /** Tempo máximo esperando o comparativo da IA: o PDF sai sempre, com ou sem ele. */
 export const REPORT_AI_TIMEOUT_MS = 25_000;
@@ -43,22 +45,22 @@ export async function loadJobReportData(
   const rows = await findApplicationsForReport(companyId, jobId);
   const candidates: ReportCandidate[] = rows.map((r) => ({
     id: r.id,
-    name: titleCasePt(r.name),
+    name: toPdfSafeText(titleCasePt(r.name)),
     status: r.status,
     aiScore: r.aiScore,
-    aiReasoning: r.aiReasoning,
+    aiReasoning: safe(r.aiReasoning),
     criteria: readChecklist(r.aiChecklist).map((k) => ({
-      criterion: k.criterion,
+      criterion: toPdfSafeText(k.criterion),
       met: k.met,
-      evidence: k.evidence,
+      evidence: toPdfSafeText(k.evidence),
     })),
-    aiProfile: r.aiProfile,
-    aiArea: r.aiArea,
-    aiLevel: r.aiLevel,
-    salaryExpectation: r.salaryExpectation,
+    aiProfile: safe(r.aiProfile),
+    aiArea: safe(r.aiArea),
+    aiLevel: safe(r.aiLevel),
+    salaryExpectation: safe(r.salaryExpectation),
     availability: r.availability ? profileChoiceLabel("availability", r.availability) || r.availability : null,
-    city: r.city,
-    neighborhood: r.neighborhood,
+    city: safe(r.city),
+    neighborhood: safe(r.neighborhood),
     createdAt: r.createdAt,
   }));
 
@@ -79,7 +81,11 @@ export async function loadJobReportData(
         notes = Object.fromEntries(
           result.picks.map((p) => [
             p.applicationId,
-            { reason: p.reason, strengths: p.strengths, concerns: p.concerns },
+            {
+              reason: toPdfSafeText(p.reason),
+              strengths: p.strengths.map(toPdfSafeText),
+              concerns: p.concerns.map(toPdfSafeText),
+            },
           ])
         );
       }

@@ -23,3 +23,14 @@ export function titleCasePt(text: string, opts: { keepAcronyms?: boolean } = {})
     })
     .join(" ");
 }
+
+/**
+ * Texto seguro para a fonte padrão do PDF: o que não existe nela (símbolos de lista
+ * copiados de currículos, setas, ✓) sai como espaço em vez de virar um caractere errado.
+ */
+export function toPdfSafeText(text: string): string {
+  return text
+    .replace(/[^ -~ -ÿ–—‘’“”•…€\n]/g, " ")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
