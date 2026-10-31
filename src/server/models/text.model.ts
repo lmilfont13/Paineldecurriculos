@@ -34,3 +34,20 @@ export function toPdfSafeText(text: string): string {
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
+
+/**
+ * Remove o caractere nulo (U+0000) de textos, inclusive dentro de listas e objetos.
+ * Alguns PDFs o trazem na extração, e o Postgres recusa gravá-lo (erro 22021),
+ * o que fazia a análise inteira falhar na hora de salvar.
+ */
+export function removeNulChars<T>(value: T): T {
+  if (typeof value === "string") return value.replace(/\u0000/g, "") as T;
+  if (Array.isArray(value)) return value.map((v) => removeNulChars(v)) as T;
+  // só objetos simples: datas, instâncias de classe e valores especiais do Prisma ficam como estão
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, removeNulChars(v)])
+    ) as T;
+  }
+  return value;
+}

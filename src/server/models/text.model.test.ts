@@ -47,3 +47,28 @@ describe("toPdfSafeText", () => {
     expect(toPdfSafeText("a    b")).toBe("a b");
   });
 });
+
+import { removeNulChars } from "@/server/models/text.model";
+
+describe("removeNulChars", () => {
+  it("tira o caractere nulo, que o Postgres não aceita em texto", () => {
+    expect(removeNulChars("Maria\u0000 Souza\u0000")).toBe("Maria Souza");
+  });
+  it("limpa dentro de listas e objetos (checklist guardado como JSON)", () => {
+    const input = [{ criterion: "Vendas", met: "sim", evidence: "5 anos\u0000 em loja" }];
+    expect(removeNulChars(input)).toEqual([{ criterion: "Vendas", met: "sim", evidence: "5 anos em loja" }]);
+  });
+  it("não mexe em números, booleanos, null nem em texto normal", () => {
+    expect(removeNulChars({ a: 1, b: true, c: null, d: "ok" })).toEqual({ a: 1, b: true, c: null, d: "ok" });
+  });
+});
+
+describe("removeNulChars preserva tipos especiais", () => {
+  it("datas e instâncias de classe passam intactas", () => {
+    const d = new Date("2026-10-31T12:00:00Z");
+    class Marker {}
+    const m = new Marker();
+    expect(removeNulChars(d)).toBe(d);
+    expect(removeNulChars(m)).toBe(m);
+  });
+});

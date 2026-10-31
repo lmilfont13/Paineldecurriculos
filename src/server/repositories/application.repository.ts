@@ -1,3 +1,4 @@
+import { removeNulChars } from "@/server/models/text.model";
 import "server-only";
 
 import { Prisma, type AIState } from "@prisma/client";
@@ -338,7 +339,7 @@ export async function searchApplicationIds(companyId: string, term: string) {
 }
 
 export function updateApplicationResumeText(id: string, resumeText: string) {
-  return prisma.application.update({ where: { id }, data: { resumeText } });
+  return prisma.application.update({ where: { id }, data: { resumeText: removeNulChars(resumeText) } });
 }
 
 /** IDs de vagas em que o candidato já tem candidatura (para indicador na lista). */
@@ -521,7 +522,19 @@ export function updateApplicationAi(
     aiState: "WAITING" | "PROCESSING" | "DONE" | "FAILED" | "NO_RESUME";
   }
 ) {
-  return prisma.application.update({ where: { id }, data });
+  // Texto de PDF pode trazer U+0000, que o Postgres recusa: sem isto a análise
+  // inteira falhava na hora de salvar o resultado.
+  const clean = {
+    ...data,
+    aiReasoning: removeNulChars(data.aiReasoning),
+    aiProfile: removeNulChars(data.aiProfile),
+    aiArea: removeNulChars(data.aiArea),
+    aiLevel: removeNulChars(data.aiLevel),
+    resumeText: removeNulChars(data.resumeText),
+    aiChecklist:
+      data.aiChecklist === Prisma.DbNull ? data.aiChecklist : removeNulChars(data.aiChecklist),
+  };
+  return prisma.application.update({ where: { id }, data: clean });
 }
 
 export function updateApplicationStatus(
@@ -615,7 +628,7 @@ export async function countRealApplicationsByJob(companyId: string) {
 
 /** Análise de perfil sob demanda (não mexe em etapa nem na nota da vaga). */
 export function updateApplicationCareer(id: string, aiCareer: Prisma.InputJsonValue) {
-  return prisma.application.update({ where: { id }, data: { aiCareer } });
+  return prisma.application.update({ where: { id }, data: { aiCareer: removeNulChars(aiCareer) } });
 }
 
 /**
