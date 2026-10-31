@@ -129,6 +129,16 @@ export default async function VagaHubPage({
           >
             Editar vaga
           </Link>
+          {/* PDF para a diretoria: abre em outra aba; leva alguns segundos (comparativo da IA). */}
+          <a
+            href={`/vagas/${job.id}/relatorio`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Gera o relatório comparativo em PDF para a diretoria (leva alguns segundos)"
+            className="flex h-10 items-center rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+          >
+            Relatório PDF
+          </a>
           <JobStatusActions jobId={job.id} status={job.status} />
           <DeleteJobButton
             jobId={job.id}

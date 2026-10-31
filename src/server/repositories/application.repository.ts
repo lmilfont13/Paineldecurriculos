@@ -727,3 +727,27 @@ export function findApplicationsForShortlist(companyId: string, jobId: string) {
     },
   });
 }
+
+/** Candidaturas de uma vaga com a avaliação já gravada, para o relatório da diretoria. */
+export function findApplicationsForReport(companyId: string, jobId: string) {
+  return prisma.application.findMany({
+    where: { companyId, jobId, isDemo: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiScore: true,
+      aiReasoning: true,
+      aiProfile: true,
+      aiArea: true,
+      aiLevel: true,
+      aiChecklist: true,
+      salaryExpectation: true,
+      availability: true,
+      city: true,
+      neighborhood: true,
+      createdAt: true,
+    },
+  });
+}
