@@ -124,3 +124,33 @@ export function formatAppliedAt(date: Date, withTime = false): string {
   });
   return `${day}, ${time}`;
 }
+
+const profileChoices = {
+  workPreference: {
+    ANY: "Qualquer modalidade",
+    ONSITE: "Presencial",
+    HYBRID: "Híbrido",
+    REMOTE: "100% Remoto",
+  },
+  availability: {
+    IMMEDIATE: "Imediata",
+    "15_DAYS": "Até 15 dias",
+    "30_DAYS": "Até 30 dias",
+    NEGOTIABLE: "A combinar",
+  },
+  hasCnh: {
+    NONE: "Não possui",
+    A: "Cat. A (Moto)",
+    B: "Cat. B (Carro)",
+    AB: "Cat. AB (Carro e Moto)",
+    C_D_E: "Cat. C/D/E (Pesados)",
+  },
+} as const;
+
+/** Rótulo que o candidato viu no formulário para a escolha do perfil ("" se desconhecida). */
+export function profileChoiceLabel(
+  kind: keyof typeof profileChoices,
+  value: string
+): string {
+  return (profileChoices[kind] as Record<string, string>)[value] ?? "";
+}

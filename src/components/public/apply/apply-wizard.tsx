@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 
+import { profileChoiceLabel } from "@/server/models/application.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
@@ -561,6 +562,28 @@ export function ApplyWizard({
                 {data.salaryExpectation && (
                   <ReviewRow label="Pretensão salarial" value={data.salaryExpectation} />
                 )}
+                <ReviewRow
+                  label="Modalidade preferida"
+                  value={profileChoiceLabel("workPreference", data.workPreference)}
+                />
+                <ReviewRow
+                  label="Disponibilidade"
+                  value={profileChoiceLabel("availability", data.availability)}
+                />
+                <ReviewRow
+                  label="CNH"
+                  value={profileChoiceLabel("hasCnh", data.hasCnh)}
+                />
+                <ReviewRow
+                  label="Pessoa com deficiência"
+                  value={
+                    data.isPcd
+                      ? data.pcdDetails.trim()
+                        ? `Sim — ${data.pcdDetails.trim()}`
+                        : "Sim"
+                      : "Não"
+                  }
+                />
                 {[...coreFields, ...customFields]
                   .filter((f) => (data.answers[f.id] ?? "").trim())
                   .map((f) => (
