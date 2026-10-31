@@ -81,6 +81,9 @@ export default async function VagasPage() {
                   <span className="truncate text-[14px] font-semibold text-[#0a0a0a]">
                     {job.title}
                   </span>
+                  {job.code && (
+                    <span className="shrink-0 text-xs text-[#a1a1aa]">#{job.code}</span>
+                  )}
                   <span
                     className={`flex h-5 shrink-0 items-center rounded-full px-2 text-[10px] font-medium ${style.bg} ${style.text}`}
                   >

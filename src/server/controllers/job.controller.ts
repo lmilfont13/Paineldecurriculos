@@ -20,6 +20,7 @@ export type JobFormState = { error: string } | null;
 
 function parseJobForm(formData: FormData) {
   return jobFormSchema.safeParse({
+    code: formData.get("code") ?? "",
     title: formData.get("title"),
     description: formData.get("description"),
     requirements: formData.get("requirements") ?? "",
@@ -135,6 +136,7 @@ export async function rewriteJobTextAction(
 }
 
 export type ParsedJobText = {
+  code: string;
   title: string;
   location: string;
   contract: "CLT" | "PJ" | "FREELANCE" | "INTERNSHIP";
@@ -145,6 +147,7 @@ export type ParsedJobText = {
 };
 
 const parsedJobSchema = z.object({
+  code: z.string().default(""),
   title: z.string().default(""),
   location: z.string().default(""),
   contract: z.enum(["CLT", "PJ", "FREELANCE", "INTERNSHIP"]).catch("CLT"),
@@ -162,6 +165,7 @@ export async function parseJobTextAction(
   if (raw.trim().length < 20) return { ok: false, error: "Cole o texto da vaga." };
 
   const system = `Você é um especialista em RH. Receberá o texto bruto de uma vaga, geralmente copiado de e-mail ou WhatsApp. Organize-o em JSON com exatamente estas chaves:
+- "code": código/número da vaga se houver no texto (ex.: "1123" em "INFORMAÇÕES DA VAGA 1123"), apenas o código; senão "".
 - "title": nome do cargo em Title Case (ex.: "Consultor de Vendas"), sem códigos.
 - "location": cidade e UF (ex.: "Caucaia, CE").
 - "contract": "CLT", "PJ", "FREELANCE" ou "INTERNSHIP".
@@ -186,6 +190,7 @@ Não invente nada que não esteja no texto. Remova emojis, números de controle 
       ok: true,
       job: {
         ...job,
+        code: job.code.trim(),
         title: job.title.trim(),
         aiCriteria: job.aiCriteria.map((c) => c.trim()).filter(Boolean).slice(0, 10),
       },

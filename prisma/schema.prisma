@@ -58,6 +58,8 @@ enum Role {
 model Job {
   id             String    @id @default(cuid())
   companyId      String
+  /// Código da vaga (ex.: "1123"), exibido ao candidato para diferenciar vagas do mesmo cargo.
+  code           String?
   title          String
   description    String
   requirements   String?

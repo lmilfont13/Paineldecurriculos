@@ -78,6 +78,7 @@ describe("brandCssVars", () => {
 describe("formatJobMeta", () => {
   const base = {
     id: "1",
+    code: null,
     title: "Dev",
     description: "x",
     requirements: null,

@@ -2,6 +2,7 @@ import type { Contract, Job, JobStatus, WorkMode } from "@prisma/client";
 import { z } from "zod";
 
 export const jobFormSchema = z.object({
+  code: z.string().trim().max(30, "Código muito longo.").optional().default(""),
   title: z.string().min(3, "Informe o título da vaga."),
   description: z.string().min(10, "Descreva a vaga."),
   requirements: z.string().optional().default(""),
@@ -18,6 +19,7 @@ export type JobFormInput = z.infer<typeof jobFormSchema>;
 export type PublicJob = Pick<
   Job,
   | "id"
+  | "code"
   | "title"
   | "description"
   | "requirements"
@@ -30,6 +32,7 @@ export type PublicJob = Pick<
 export function toPublicJob(job: Job): PublicJob {
   return {
     id: job.id,
+    code: job.code,
     title: job.title,
     description: job.description,
     requirements: job.requirements,

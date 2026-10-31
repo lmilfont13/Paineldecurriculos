@@ -20,6 +20,7 @@ import {
 const STEPS = ["Básico", "Descrição", "Critérios", "Revisão"] as const;
 
 type Draft = {
+  code: string;
   title: string;
   location: string;
   contract: JobFormInput["contract"];
@@ -50,6 +51,7 @@ export function JobWizard({
     { ok: boolean; text: string } | null
   >(null);
   const [draft, setDraft] = useState<Draft>({
+    code: initial?.code ?? "",
     title: initial?.title ?? "",
     location: initial?.location ?? "",
     contract: initial?.contract ?? "CLT",
@@ -116,6 +118,7 @@ export function JobWizard({
     const { job } = result;
     setDraft((d) => ({
       ...d,
+      code: job.code || d.code,
       title: job.title || d.title,
       location: job.location || d.location,
       contract: job.contract,
@@ -204,6 +207,7 @@ export function JobWizard({
           className="mt-10 mb-4 flex min-h-[600px] flex-col rounded-3xl border border-[#e4e4e7] bg-white p-6 shadow-[0px_4px_6px_rgba(0,0,0,0.07)]"
         >
           {/* Campos do form enviados ao controller */}
+          <input type="hidden" name="code" value={draft.code} />
           <input type="hidden" name="title" value={draft.title} />
           <input type="hidden" name="location" value={draft.location} />
           <input type="hidden" name="contract" value={draft.contract} />
@@ -276,6 +280,18 @@ export function JobWizard({
                       value={draft.title}
                       onChange={(e) => set("title", e.target.value)}
                       placeholder="Ex.: Desenvolvedor(a) Full Stack Pleno"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
+                      Código da vaga (opcional)
+                    </span>
+                    <input
+                      className={inputClass}
+                      value={draft.code}
+                      onChange={(e) => set("code", e.target.value)}
+                      placeholder="Ex.: 1123 — aparece para o candidato"
+                      maxLength={30}
                     />
                   </label>
                   <label className="block">
@@ -499,6 +515,7 @@ export function JobWizard({
                 </p>
                 <dl className="mt-6">
                   {[
+                    ["Código", draft.code || "—"],
                     ["Título", draft.title],
                     ["Local", draft.location || "—"],
                     ["Contrato", contractLabels[draft.contract]],

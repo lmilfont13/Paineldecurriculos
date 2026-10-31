@@ -29,6 +29,7 @@ export function countJobsByCompanyId(companyId: string, onlyOpen = false) {
 
 export function createJob(data: {
   companyId: string;
+  code: string | null;
   title: string;
   description: string;
   requirements: string | null;
@@ -54,6 +55,7 @@ export function incrementWhatsappShares(id: string) {
 export function updateJob(
   id: string,
   data: Partial<{
+    code: string | null;
     title: string;
     description: string;
     requirements: string | null;
