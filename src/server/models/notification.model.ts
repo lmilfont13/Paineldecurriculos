@@ -108,3 +108,15 @@ export function whatHappensNow(
       return "Este processo foi encerrado. Suas outras candidaturas continuam ativas.";
   }
 }
+
+/** Pedido de pré-entrevista: nunca cita os dados pedidos, só que há um formulário. */
+export function infoRequestedNotification(
+  companyName: string,
+  jobTitle: string
+): { type: NotificationType; title: string; body: string } {
+  return {
+    type: "INFO_REQUESTED",
+    title: `${companyName} pediu algumas informações`,
+    body: `Para seguir com a vaga de ${jobTitle}, preencha um formulário rápido na sua área.`,
+  };
+}

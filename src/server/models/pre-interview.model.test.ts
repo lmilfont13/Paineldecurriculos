@@ -6,6 +6,7 @@ import {
   maskCpf,
   maskRg,
   missingInfoFields,
+  pendingRequestedFields,
   whatsappInfoLink,
   type KnownInfo,
 } from "@/server/models/pre-interview.model";
@@ -106,5 +107,18 @@ describe("whatsappInfoLink", () => {
     expect(whatsappInfoLink({ ...base, phone: "5585999991234" })).toMatch(
       /^https:\/\/wa\.me\/5585999991234\?text=/
     );
+  });
+});
+
+describe("pendingRequestedFields", () => {
+  it("devolve só os pedidos que ainda faltam", () => {
+    expect(
+      pendingRequestedFields(["cpf", "rg"], { ...nothingKnown, cpf: "52998224725" })
+    ).toEqual(["rg"]);
+  });
+  it("vazio quando tudo o que foi pedido já é conhecido", () => {
+    expect(
+      pendingRequestedFields(["cpf"], { ...nothingKnown, cpf: "52998224725" })
+    ).toEqual([]);
   });
 });

@@ -650,3 +650,30 @@ export function completePreRegisteredApplication(
 export function updateApplicationResume(id: string, resumeUrl: string) {
   return prisma.application.update({ where: { id }, data: { resumeUrl, aiState: "WAITING" } });
 }
+
+/** Registra o pedido de pré-entrevista (quais perguntas e quando); reabre a resposta. */
+export function updateInfoRequest(
+  id: string,
+  data: { infoRequestedFields: string[]; infoRequestedAt: Date }
+) {
+  return prisma.application.update({
+    where: { id },
+    data: { ...data, infoAnsweredAt: null },
+  });
+}
+
+/** Grava o que o candidato respondeu (só as chaves pedidas chegam aqui). */
+export function updateInfoAnswers(
+  id: string,
+  data: {
+    maritalStatus?: string;
+    hasChildren?: boolean;
+    childrenCount?: number | null;
+    professionalSummary?: string;
+    rg?: string;
+    cpf?: string;
+    infoAnsweredAt: Date;
+  }
+) {
+  return prisma.application.update({ where: { id }, data });
+}

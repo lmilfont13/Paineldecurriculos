@@ -77,6 +77,15 @@ export function missingInfoFields(known: KnownInfo): InfoField[] {
   return missing;
 }
 
+/** Dos campos que o gestor marcou, os que de fato faltam (os já sabidos não se pedem de novo). */
+export function pendingRequestedFields(
+  requested: InfoField[],
+  known: KnownInfo
+): InfoField[] {
+  const missing = missingInfoFields(known);
+  return requested.filter((f) => missing.includes(f));
+}
+
 /** Valida só as perguntas pedidas; o resto do que vier é descartado. */
 export function buildInfoAnswerSchema(fields: InfoField[]) {
   const shape: Record<string, z.ZodType> = {};

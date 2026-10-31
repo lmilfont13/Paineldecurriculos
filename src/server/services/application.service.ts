@@ -37,12 +37,20 @@ import {
   updateApplicationAi,
   updateApplicationStatus,
   updateInterview,
+  updateInfoRequest,
+  updateInfoAnswers,
   updateManagerNotes,
   searchApplicationIds,
   updateApplicationResumeText,
   findApplicationsForCvSearch,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
+import {
+  buildInfoAnswerSchema,
+  pendingRequestedFields,
+  type InfoField,
+  type KnownInfo,
+} from "@/server/models/pre-interview.model";
 import {
   describeDelivery,
   reachedCandidate,
@@ -52,6 +60,7 @@ import {
 } from "@/server/models/communication.model";
 import {
   notifyApplicationReceived,
+  notifyInfoRequested,
   notifyInterviewScheduled,
   notifyManagerMessage,
   notifyStageChange,
@@ -61,6 +70,7 @@ import { createCandidate, findCandidateByEmail } from "@/server/repositories/can
 import { updateCandidateProfile } from "@/server/services/candidate.service";
 import {
   sendApplicationConfirmation,
+  sendInfoRequestEmail,
   sendInterviewScheduledEmail,
   sendManagerMessageEmail,
   sendNewApplicationNotification,
@@ -1050,4 +1060,106 @@ export async function getApplicationSummaries(
     results.push(await generateCandidateSummary(id));
   }
   return results;
+}
+
+/** O que já se sabe da candidatura, na forma que as regras da pré-entrevista leem. */
+export function knownInfoOf(application: {
+  maritalStatus: string | null;
+  hasChildren: boolean | null;
+  professionalSummary: string | null;
+  rg: string | null;
+  cpf: string | null;
+  resumeText: string | null;
+}): KnownInfo {
+  return {
+    maritalStatus: application.maritalStatus,
+    hasChildren: application.hasChildren,
+    professionalSummary: application.professionalSummary,
+    rg: application.rg,
+    cpf: application.cpf,
+    hasResumeText: Boolean(application.resumeText?.trim()),
+  };
+}
+
+/**
+ * Pré-entrevista: o gestor escolhe o que pedir e o candidato é avisado (site +
+ * e-mail). Só se pede o que falta; não muda status nem a nota (regras 2 e 3).
+ */
+export async function requestApplicationInfo(
+  companyId: string,
+  id: string,
+  fields: InfoField[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const application = await getCompanyApplication(companyId, id);
+  if (!application) return { ok: false, error: "Candidatura não encontrada." };
+  const pending = pendingRequestedFields(fields, knownInfoOf(application));
+  if (pending.length === 0)
+    return {
+      ok: false,
+      error: "Nada a pedir: escolha ao menos uma informação que ainda falta.",
+    };
+  const company = await getCompanyById(companyId);
+  if (!company) return { ok: false, error: "Empresa não encontrada." };
+
+  await updateInfoRequest(id, {
+    infoRequestedFields: pending,
+    infoRequestedAt: new Date(),
+  });
+
+  runInBackground("pedir informações da pré-entrevista", async () => {
+    await notifyInfoRequested({
+      candidateId: application.candidateId,
+      applicationId: id,
+      companyName: company.name,
+      jobTitle: application.job.title,
+    }).catch((e) => console.error("[notificação] pedido de informações:", e));
+
+    if (application.email.includes("@")) {
+      const manager = await findManagerByCompanyId(companyId);
+      await sendInfoRequestEmail({
+        brand: emailBrand(company),
+        to: application.email,
+        candidateName: application.name,
+        jobTitle: application.job.title,
+        managerEmail: manager?.email ?? null,
+        applicationId: id,
+      });
+    }
+  });
+  return { ok: true };
+}
+
+/** Resposta do candidato: só a candidatura dele, só as perguntas pedidas. */
+export async function saveInfoAnswers(
+  candidateId: string,
+  applicationId: string,
+  input: unknown
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const application = await findApplicationForCandidate(candidateId, applicationId);
+  if (!application) return { ok: false, error: "Candidatura não encontrada." };
+  const requested = application.infoRequestedFields as InfoField[];
+  if (requested.length === 0 || application.infoAnsweredAt)
+    return { ok: false, error: "Não há nada pendente nesta candidatura." };
+
+  const parsed = buildInfoAnswerSchema(requested).safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const a = parsed.data as Record<string, unknown>;
+
+  await updateInfoAnswers(applicationId, {
+    ...(a.maritalStatus !== undefined ? { maritalStatus: a.maritalStatus as string } : {}),
+    ...(a.hasChildren !== undefined
+      ? {
+          hasChildren: a.hasChildren as boolean,
+          childrenCount: a.hasChildren ? ((a.childrenCount as number | undefined) ?? null) : null,
+        }
+      : {}),
+    ...(a.professionalSummary !== undefined
+      ? { professionalSummary: a.professionalSummary as string }
+      : {}),
+    ...(a.rg !== undefined ? { rg: a.rg as string } : {}),
+    ...(a.cpf !== undefined ? { cpf: a.cpf as string } : {}),
+    infoAnsweredAt: new Date(),
+  });
+  return { ok: true };
 }

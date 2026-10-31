@@ -274,3 +274,33 @@ export async function sendManagerMessageEmail(params: {
     }),
   });
 }
+
+/** Pedido de pré-entrevista: avisa que há um formulário, sem citar os dados pedidos. */
+export async function sendInfoRequestEmail(params: {
+  brand: EmailBrand;
+  to: string;
+  candidateName: string;
+  jobTitle: string;
+  managerEmail: string | null;
+  applicationId: string;
+}): Promise<void> {
+  const { brand } = params;
+  await send("pedido de informações", {
+    from: from(brand),
+    to: params.to,
+    ...(params.managerEmail ? { replyTo: params.managerEmail } : {}),
+    subject: `${brand.name} pediu algumas informações: ${params.jobTitle}`,
+    html: shell(brand, {
+      title: "Falta pouco para a conversa",
+      paragraphs: [
+        `Oi, ${firstName(params.candidateName)}. Seu perfil para a vaga de <strong style="color:#1c1917">${esc(params.jobTitle)}</strong> seguiu na seleção.`,
+        "Para marcarmos a conversa, preencha um formulário rápido na sua área. Leva poucos minutos.",
+      ],
+      cta: {
+        label: "Preencher agora",
+        href: `${candidateLink(brand, params.applicationId)}/pre-entrevista`,
+      },
+      footer: candidateFooter(brand),
+    }),
+  });
+}

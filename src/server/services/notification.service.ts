@@ -3,6 +3,7 @@ import "server-only";
 import type { AppStatus } from "@prisma/client";
 
 import {
+  infoRequestedNotification,
   interviewNotification,
   managerMessageNotification,
   receivedNotification,
@@ -124,4 +125,21 @@ export async function markRead(
 ): Promise<number> {
   const { count } = await markNotificationsRead(candidateId, ids);
   return count;
+}
+
+export async function notifyInfoRequested(params: {
+  candidateId: string | null;
+  applicationId: string;
+  companyName: string;
+  jobTitle: string;
+}): Promise<void> {
+  if (!params.candidateId) return;
+  const content = infoRequestedNotification(params.companyName, params.jobTitle);
+  await createNotification({
+    candidateId: params.candidateId,
+    applicationId: params.applicationId,
+    type: content.type,
+    title: content.title,
+    body: content.body,
+  });
 }
