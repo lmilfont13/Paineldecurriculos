@@ -1,3 +1,4 @@
+import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -41,7 +42,7 @@ export default async function MinhasCandidaturasPage({
   if (!data) notFound();
   if (!data.candidate) {
     redirect(
-      `/${slug}/entrar?next=${encodeURIComponent(`/${slug}/minhas-candidaturas`)}`
+      signInPath(slug, `/${slug}/minhas-candidaturas`)
     );
   }
 

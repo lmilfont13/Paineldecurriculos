@@ -1,3 +1,4 @@
+import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -23,7 +24,7 @@ export default async function PreEntrevistaPage({
   if (!data) notFound();
   if (!data.candidate) {
     redirect(
-      `/${slug}/entrar?next=${encodeURIComponent(`/${slug}/minhas-candidaturas/${id}/pre-entrevista`)}`
+      signInPath(slug, `/${slug}/minhas-candidaturas/${id}/pre-entrevista`)
     );
   }
   const { company, candidate, application } = data;

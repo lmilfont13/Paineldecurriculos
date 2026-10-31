@@ -1,3 +1,4 @@
+import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -33,7 +34,7 @@ export default async function NotificacoesPage({
   if (!data) notFound();
   if (!data.candidate) {
     redirect(
-      `/${slug}/entrar?next=${encodeURIComponent(`/${slug}/notificacoes`)}`
+      signInPath(slug, `/${slug}/notificacoes`)
     );
   }
   const { company, candidate, notifications } = data;

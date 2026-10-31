@@ -69,3 +69,12 @@ export const candidateLoginSchema = z.object({
 export type CandidateAuthResult =
   | { ok: true }
   | { ok: false; error: string };
+
+/**
+ * Tela de login de quem já tem conta (aba "Entrar"), voltando depois para `next`.
+ * Sem `modo=entrar` a tela abre em "Criar conta", e quem veio pelo link de um
+ * e-mail (já candidatado) não conseguia acompanhar a candidatura.
+ */
+export function signInPath(slug: string, next: string): string {
+  return `/${slug}/entrar?next=${encodeURIComponent(next)}&modo=entrar`;
+}

@@ -1,3 +1,4 @@
+import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
@@ -26,7 +27,7 @@ export default async function PerfilPage({
   const candidate = await getPublicSession();
   if (!company) notFound();
   if (!candidate) {
-    redirect(`/${slug}/entrar?next=${encodeURIComponent(`/${slug}/perfil`)}`);
+    redirect(signInPath(slug, `/${slug}/perfil`));
   }
 
   return (
