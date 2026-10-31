@@ -11,6 +11,7 @@ import {
 } from "@/server/models/application.model";
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
+import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
@@ -20,7 +21,9 @@ import {
   getApplicationSummaries,
   getCompanyApplication,
   requestApplicationResumeUpload,
+  requestApplicationInfo,
   requestReanalysis,
+  saveInfoAnswers,
   saveManagerNotes,
   scheduleInterview,
   sendManagerMessage,
@@ -425,4 +428,86 @@ export async function deleteApplicationsAction(
   revalidatePath("/vagas");
   revalidatePath("/agentes");
   return { deleted: deleted.length };
+}
+
+/** Pré-entrevista: o gestor escolhe o que pedir; o candidato é avisado (site + e-mail). */
+export async function requestInfoAction(
+  applicationId: string,
+  fields: string[]
+): Promise<{ ok: true } | { error: string }> {
+  const user = await requireManager();
+  const valid = fields.filter((f): f is InfoField =>
+    (INFO_FIELDS as readonly string[]).includes(f)
+  );
+  const result = await requestApplicationInfo(user.companyId, applicationId, valid);
+  if (!result.ok) return { error: result.error };
+  try {
+    const app = await getCompanyApplication(user.companyId, applicationId);
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "INFO_SOLICITADA",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app?.name,
+      // só as chaves pedidas, nunca valores
+      metadata: { jobTitle: app?.job.title, fields: valid },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return { ok: true };
+}
+
+/** Resposta do candidato ao formulário de pré-entrevista (só a candidatura dele). */
+export async function submitInfoAnswersAction(
+  slug: string,
+  applicationId: string,
+  _prev: InterviewState,
+  formData: FormData
+): Promise<InterviewState> {
+  const candidate = await getSessionCandidate();
+  if (!candidate) return { error: "Sua sessão expirou. Entre novamente." };
+
+  const text = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : undefined;
+  };
+  const children = text("hasChildren");
+  const count = text("childrenCount");
+  const result = await saveInfoAnswers(candidate.id, applicationId, {
+    maritalStatus: text("maritalStatus"),
+    hasChildren: children === "sim" ? true : children === "nao" ? false : undefined,
+    childrenCount: count ? Number(count) : undefined,
+    professionalSummary: text("professionalSummary"),
+    rg: text("rg"),
+    cpf: text("cpf"),
+  });
+  if (!result.ok) return { error: result.error };
+  revalidatePath(`/${slug}/minhas-candidaturas/${applicationId}`);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  return { ok: true };
+}
+
+/** Gestor pede para ver RG/CPF sem máscara; cada abertura fica na auditoria. */
+export async function revealSensitiveInfoAction(
+  applicationId: string
+): Promise<{ rg: string | null; cpf: string | null } | null> {
+  const user = await requireManager();
+  const app = await getCompanyApplication(user.companyId, applicationId);
+  if (!app) return null;
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "DADOS_SENSIVEIS_VISTOS",
+      entityType: "CANDIDATURA",
+      entityId: applicationId,
+      entityLabel: app.name,
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  return { rg: app.rg, cpf: app.cpf };
 }
