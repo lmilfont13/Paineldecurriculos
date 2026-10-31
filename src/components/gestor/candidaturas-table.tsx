@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
@@ -23,6 +23,8 @@ import {
 import {
   applyFilters,
   countByStage,
+  groupRowsByJob,
+  jobLabel,
   meetsMinimum,
   selectStage,
   sortRows,
@@ -88,7 +90,7 @@ export function CandidaturasTable({
   initialOnlyMeets = false,
 }: {
   rows: CandidaturaRow[];
-  jobs: { id: string; title: string }[];
+  jobs: { id: string; title: string; code?: string | null }[];
   initialJobId?: string;
   initialStatus?: AppStatusKey;
   initialOnlyMeets?: boolean;
@@ -165,7 +167,36 @@ export function CandidaturasTable({
     [scoped, tab, sort]
   );
 
-  const visible = filtered.slice(0, limit);
+  // Com várias vagas e sem filtro de vaga, os candidatos ficam agrupados por vaga.
+  const showGroups = !jobId && jobs.length > 1;
+  const ordered = useMemo(
+    () => (showGroups ? groupRowsByJob(filtered) : filtered),
+    [filtered, showGroups]
+  );
+  const visible = ordered.slice(0, limit);
+  const jobCounts = useMemo(
+    () =>
+      filtered.reduce<Record<string, number>>((acc, r) => {
+        acc[r.jobId] = (acc[r.jobId] ?? 0) + 1;
+        return acc;
+      }, {}),
+    [filtered]
+  );
+
+  /** Cabeçalho da vaga, antes do primeiro candidato de cada grupo. */
+  function groupHeader(row: CandidaturaRow, index: number, className: string) {
+    if (!showGroups || (index > 0 && visible[index - 1].jobId === row.jobId)) return null;
+    return (
+      <div className={className}>
+        <span className="text-[13px] font-semibold text-[#0a0a0a]">
+          {jobLabel(row.jobTitle, row.jobCode)}
+        </span>
+        <span className="ml-2 text-[12px] text-[#71717a]">
+          {jobCounts[row.jobId]} {jobCounts[row.jobId] === 1 ? "candidato" : "candidatos"}
+        </span>
+      </div>
+    );
+  }
   const visibleSelected = filtered.filter((r) => selected.has(r.id));
   const allVisibleSelected =
     visible.length > 0 && visible.every((r) => selected.has(r.id));
@@ -411,7 +442,7 @@ export function CandidaturasTable({
             <option value="">Todas as vagas</option>
             {jobs.map((job) => (
               <option key={job.id} value={job.id}>
-                {job.title}
+                {jobLabel(job.title, job.code)}
               </option>
             ))}
           </select>
@@ -473,7 +504,7 @@ export function CandidaturasTable({
             <p className="py-8 text-center text-sm text-[#71717a]">Nenhum candidato nesta etapa.</p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {visible.map((row) => {
+            {visible.map((row, index) => {
               const isSelected = selected.has(row.id);
               const levelColors: Record<string, string> = {
                 Operacional: "bg-[#f1f0ed] text-[#57534e]",
@@ -484,8 +515,9 @@ export function CandidaturasTable({
               };
               const levelClass = row.aiLevel ? (levelColors[row.aiLevel] ?? "bg-[#f1f0ed] text-[#57534e]") : "";
               return (
+                <Fragment key={row.id}>
+                {groupHeader(row, index, "col-span-full mt-2 border-b border-[#e4e4e7] pb-2 first:mt-0")}
                 <div
-                  key={row.id}
                   className={"relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
                 >
                   <button
@@ -519,12 +551,13 @@ export function CandidaturasTable({
                   </Link>
 
                   <div className="border-t border-[#f1f0ed] px-4 py-2.5 flex items-center justify-between">
-                    <span className="text-[11px] text-[#71717a] truncate">{row.jobTitle}</span>
+                    <span className="text-[11px] text-[#71717a] truncate">{jobLabel(row.jobTitle, row.jobCode)}</span>
                     {row.aiScore !== null && (
                       <span className={"ml-2 shrink-0 text-[11px] font-semibold " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
                     )}
                   </div>
                 </div>
+                </Fragment>
               );
             })}
           </div>
@@ -577,12 +610,13 @@ export function CandidaturasTable({
           </p>
         )}
 
-        {visible.map((row) => {
+        {visible.map((row, index) => {
           const isSelected = selected.has(row.id);
           const waiting = row.status === "PENDING";
           return (
+            <Fragment key={row.id}>
+            {groupHeader(row, index, "border-b border-[#e4e4e7] bg-[#fafaf9] px-5 py-2.5")}
             <div
-              key={row.id}
               className={
                 `grid ${cols} items-center gap-3 border-b border-[#e4e4e7] px-4 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:gap-4 md:px-5 ` +
                 (isSelected ? "bg-[#fafaf9]" : "")
@@ -619,7 +653,7 @@ export function CandidaturasTable({
                     )}
                   </span>
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
-                    {row.jobTitle}
+                    {jobLabel(row.jobTitle, row.jobCode)}
                     {waiting && (
                       <span className="font-medium text-[#b07818] md:hidden">
                         {" · "}
@@ -669,6 +703,7 @@ export function CandidaturasTable({
                 Abrir ›
               </Link>
             </div>
+            </Fragment>
           );
         })}
 

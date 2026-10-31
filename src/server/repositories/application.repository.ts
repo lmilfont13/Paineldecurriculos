@@ -282,7 +282,7 @@ export function findApplicationsByCompany(
       ...(options.includeDemo === false ? { isDemo: false } : {}),
     },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
-    include: { job: { select: { id: true, title: true, aiMinScore: true } } },
+    include: { job: { select: { id: true, title: true, code: true, aiMinScore: true } } },
     omit: { resumeText: true },
   });
 }

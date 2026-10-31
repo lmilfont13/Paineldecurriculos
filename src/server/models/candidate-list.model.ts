@@ -14,6 +14,8 @@ export type CandidaturaRow = {
   resumeUrl: string | null;
   jobId: string;
   jobTitle: string;
+  /** Código da vaga, para distinguir vagas com o mesmo cargo. */
+  jobCode?: string | null;
   aiMinScore: number;
   /** Candidatura da sala de simulação (mostra o selo "Demonstração"). */
   isDemo?: boolean;
@@ -100,4 +102,21 @@ export function selectStage(
   stage: StageKey
 ): CandidaturaRow[] {
   return stage === "ALL" ? rows : rows.filter((row) => row.status === stage);
+}
+
+/** "Promotor de Vendas #1123": o código separa vagas com o mesmo cargo. */
+export function jobLabel(title: string, code: string | null | undefined): string {
+  const c = code?.trim();
+  return c ? `${title} #${c}` : title;
+}
+
+/** Junta as candidaturas de cada vaga (ordem das vagas pela 1ª aparição; ordem interna preservada). */
+export function groupRowsByJob(rows: CandidaturaRow[]): CandidaturaRow[] {
+  const groups = new Map<string, CandidaturaRow[]>();
+  for (const row of rows) {
+    const list = groups.get(row.jobId);
+    if (list) list.push(row);
+    else groups.set(row.jobId, [row]);
+  }
+  return [...groups.values()].flat();
 }

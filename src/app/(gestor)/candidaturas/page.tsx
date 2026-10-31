@@ -34,6 +34,7 @@ export default async function CandidaturasPage({
     resumeUrl: app.resumeUrl,
     jobId: app.job.id,
     jobTitle: app.job.title,
+    jobCode: app.job.code,
     aiMinScore: app.job.aiMinScore,
     isDemo: app.isDemo,
     preRegistered: app.preRegistered,
@@ -47,7 +48,7 @@ export default async function CandidaturasPage({
     <>
       <CandidaturasTable
         rows={rows}
-        jobs={jobs.map((j) => ({ id: j.id, title: j.title }))}
+        jobs={jobs.map((j) => ({ id: j.id, title: j.title, code: j.code }))}
         initialJobId={vaga}
         initialStatus={initialStatus}
         initialOnlyMeets={atende === "1"}
