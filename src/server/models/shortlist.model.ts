@@ -72,6 +72,11 @@ export function redactName(text: string, name: string): string {
   }, text);
 }
 
+/** Tira nome e contatos de qualquer texto antes de ele ir para a IA (contatos primeiro, para não quebrar e-mails). */
+export function scrubText(text: string, name: string): string {
+  return redactName(redactContacts(text), name);
+}
+
 const SYSTEM = `Você é um especialista em RH que compara candidatos para UMA vaga e indica os melhores.
 Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência, comparando os candidatos entre si.
 Use apenas o material fornecido; não invente. Cada candidato é identificado por um rótulo (C1, C2...).
@@ -93,14 +98,14 @@ export function buildShortlistPrompt(
     if (c.aiScore !== null) lines.push(`Nota da triagem: ${c.aiScore}/100`);
     const profile = [c.aiProfile, c.aiArea, c.aiLevel].filter(Boolean).join(" · ");
     if (profile) lines.push(`Perfil: ${profile}`);
-    if (c.aiReasoning) lines.push(`Leitura da triagem: ${c.aiReasoning}`);
+    if (c.aiReasoning) lines.push(`Leitura da triagem: ${scrubText(c.aiReasoning, c.name ?? "")}`);
     const checklist = readChecklist(c.aiChecklist);
     if (checklist.length > 0) {
       lines.push(
         "Critérios: " + checklist.map((k) => `${k.criterion} = ${k.met}`).join("; ")
       );
     }
-    const excerpt = redactName(redactContacts(c.resumeText ?? ""), c.name ?? "").replace(/\s+/g, " ").trim().slice(0, RESUME_EXCERPT);
+    const excerpt = scrubText(c.resumeText ?? "", c.name ?? "").replace(/\s+/g, " ").trim().slice(0, RESUME_EXCERPT);
     if (excerpt) lines.push(`Currículo (trecho): ${excerpt}`);
     return lines.join("\n");
   });

@@ -13,6 +13,7 @@ import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
 import { sendBulkMessage, type BulkMessageResult } from "@/server/services/bulk-message.service";
+import { suggestComparison, type ComparisonOutcome } from "@/server/services/compare.service";
 import {
   MAX_SUBJECT_LENGTH,
   listMessageTemplates,
@@ -617,4 +618,12 @@ export async function sendBulkMessageAction(
   }
   revalidatePath("/candidaturas");
   return result;
+}
+
+/** Sugestão da IA de qual candidato escolher entre os que estão na tela de comparação. */
+export async function suggestComparisonAction(
+  applicationIds: string[]
+): Promise<ComparisonOutcome> {
+  const user = await requireManager();
+  return suggestComparison(user.companyId, applicationIds);
 }

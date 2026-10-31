@@ -3,10 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CompareActions } from "@/components/gestor/compare-actions";
+import { CompareSuggestion } from "@/components/gestor/compare-suggestion";
 import { getCompareData } from "@/server/controllers/gestor.controller";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 
 export const metadata: Metadata = { title: "Comparar candidatos · Triagem" };
+
+// A sugestão da IA lê os currículos dos candidatos comparados.
+export const maxDuration = 60;
 
 /** E10 · Comparar candidatos lado a lado (frame 104:175 do Figma). */
 export default async function CompararPage({
@@ -33,6 +37,8 @@ export default async function CompararPage({
       <p className="mt-2 text-sm text-[#71717a]">
         {jobTitles.join(" · ")} · {applications.length} candidaturas
       </p>
+
+      <CompareSuggestion ids={applications.map((a) => a.id)} />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {applications.map((app) => {

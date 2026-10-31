@@ -132,3 +132,29 @@ describe("redactName", () => {
     expect(redactName("texto", "")).toBe("texto");
   });
 });
+
+import { scrubText } from "@/server/models/shortlist.model";
+
+describe("scrubText", () => {
+  it("apaga o nome e os contatos de qualquer texto que vai para a IA", () => {
+    const out = scrubText("Maria Souza (maria@x.com) tem 5 anos de vendas.", "Maria Souza");
+    expect(out).not.toMatch(/maria|souza|@/i);
+    expect(out).toContain("5 anos de vendas");
+  });
+  it("texto vazio e nome vazio não quebram", () => {
+    expect(scrubText("", "Maria")).toBe("");
+    expect(scrubText("texto", "")).toBe("texto");
+  });
+});
+
+describe("buildShortlistPrompt: a leitura da triagem também não leva o nome", () => {
+  it("apaga o nome que a própria IA escreveu antes na leitura", () => {
+    const built = buildShortlistPrompt(
+      { jobTitle: "Vaga", requirements: null, criteria: [] },
+      [cand({ id: "r1", name: "Ana Paula Ramos", aiReasoning: "Ana Paula possui experiência sólida em vendas." })],
+      3
+    );
+    expect(built.prompt).not.toMatch(/Ana Paula|Ramos/);
+    expect(built.prompt).toContain("experiência sólida em vendas");
+  });
+});
