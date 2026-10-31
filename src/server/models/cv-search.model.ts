@@ -634,3 +634,26 @@ export function sortCandidates(
     return 0;
   });
 }
+
+/** Fica com a candidatura de maior nota (sem nota perde); empate: a mais recente. */
+function betterApplication(a: CandidateCvCard, b: CandidateCvCard): CandidateCvCard {
+  const sa = a.aiScore ?? -1;
+  const sb = b.aiScore ?? -1;
+  if (sa !== sb) return sa > sb ? a : b;
+  return a.createdAt >= b.createdAt ? a : b;
+}
+
+/**
+ * Uma entrada por pessoa: quem se candidatou a várias vagas aparece uma vez só
+ * (identificada pelo e-mail). Conta excluída (e-mail sem "@") nunca é juntada.
+ */
+export function dedupeCandidatesByPerson(candidates: CandidateCvCard[]): CandidateCvCard[] {
+  const byPerson = new Map<string, CandidateCvCard>();
+  for (const c of candidates) {
+    const email = c.email.trim().toLowerCase();
+    const key = email.includes("@") ? email : `id:${c.id}`;
+    const current = byPerson.get(key);
+    byPerson.set(key, current ? betterApplication(current, c) : c);
+  }
+  return [...byPerson.values()];
+}

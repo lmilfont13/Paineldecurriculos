@@ -51,6 +51,7 @@ import {
   computeCompanyFacets,
   normalizeText,
   extractResumeSnippet,
+  dedupeCandidatesByPerson,
   filterCandidates,
   sortCandidates,
   type CandidateCvCard,
@@ -110,10 +111,13 @@ export function BuscarCvsView({
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Facetas calculadas da base inteira
-  const allAreas = useMemo(() => computeAreaFacets(candidates), [candidates]);
-  const allLevels = useMemo(() => computeLevelFacets(candidates), [candidates]);
-  const allNeighborhoods = useMemo(() => computeNeighborhoodFacets(candidates), [candidates]);
-  const allRoles = useMemo(() => computeDesiredRoleFacets(candidates), [candidates]);
+  // Uma entrada por pessoa: quem se candidatou a várias vagas não aparece repetido.
+  const people = useMemo(() => dedupeCandidatesByPerson(candidates), [candidates]);
+
+  const allAreas = useMemo(() => computeAreaFacets(people), [people]);
+  const allLevels = useMemo(() => computeLevelFacets(people), [people]);
+  const allNeighborhoods = useMemo(() => computeNeighborhoodFacets(people), [people]);
+  const allRoles = useMemo(() => computeDesiredRoleFacets(people), [people]);
 
   // Filtros de busca rápida dentro das listas da sidebar
   const visibleAreas = useMemo(() => {
@@ -129,7 +133,7 @@ export function BuscarCvsView({
   }, [allNeighborhoods, neighborhoodSearch]);
 
   // Empresas encontradas nos históricos dos currículos (escolha por clique)
-  const allCompanies = useMemo(() => computeCompanyFacets(candidates), [candidates]);
+  const allCompanies = useMemo(() => computeCompanyFacets(people), [people]);
   const selectedCompanies = useMemo(
     () =>
       (filters.previousCompany ?? "")
@@ -160,13 +164,17 @@ export function BuscarCvsView({
   }, [allRoles, roleSearch]);
 
   // Candidatos filtrados e ordenados
-  const filtered = useMemo(() => filterCandidates(candidates, filters), [candidates, filters]);
+  // Filtra as candidaturas (para o filtro de vaga valer) e só então junta por pessoa.
+  const filtered = useMemo(
+    () => dedupeCandidatesByPerson(filterCandidates(candidates, filters)),
+    [candidates, filters]
+  );
   const sorted = useMemo(() => sortCandidates(filtered, sort), [filtered, sort]);
 
   // Estatísticas rápidas
-  const totalWithPhoto = useMemo(() => candidates.filter((c) => Boolean(c.photoUrl)).length, [candidates]);
-  const totalWithPdf = useMemo(() => candidates.filter((c) => Boolean(c.resumeUrl)).length, [candidates]);
-  const topMatches = useMemo(() => candidates.filter((c) => (c.aiScore ?? 0) >= 80).length, [candidates]);
+  const totalWithPhoto = useMemo(() => people.filter((c) => Boolean(c.photoUrl)).length, [people]);
+  const totalWithPdf = useMemo(() => people.filter((c) => Boolean(c.resumeUrl)).length, [people]);
+  const topMatches = useMemo(() => people.filter((c) => (c.aiScore ?? 0) >= 80).length, [people]);
 
   const hasActiveFilters =
     Boolean(filters.keyword.trim()) ||
@@ -451,7 +459,7 @@ export function BuscarCvsView({
                 <Filter className="size-3.5 text-stone-500" /> Filtros Facetados
               </span>
               <span className="text-[11px] text-[#71717a] font-medium">
-                {sorted.length} de {candidates.length}
+                {sorted.length} de {people.length}
               </span>
             </div>
 
