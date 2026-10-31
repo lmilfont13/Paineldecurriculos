@@ -1,3 +1,4 @@
+import { replyToEmail } from "@/server/models/company.model";
 import "server-only";
 
 import { runInBackground } from "@/lib/background";
@@ -448,7 +449,7 @@ export async function scheduleInterview(
         when,
         mode: input.mode,
         location: input.location,
-        managerEmail: manager?.email ?? null,
+        managerEmail: replyToEmail(company.email, manager?.email),
         applicationId: id,
       });
     }
@@ -489,7 +490,7 @@ export async function sendManagerMessage(
         jobTitle: application.job.title,
         message: text,
         subject,
-        managerEmail: manager?.email ?? null,
+        managerEmail: replyToEmail(company.email, manager?.email),
         applicationId: id,
       });
     }
@@ -1112,7 +1113,7 @@ export async function requestApplicationInfo(
         to: application.email,
         candidateName: application.name,
         jobTitle: application.job.title,
-        managerEmail: manager?.email ?? null,
+        managerEmail: replyToEmail(company.email, manager?.email),
         applicationId: id,
       });
     }

@@ -1,3 +1,4 @@
+import { replyToEmail } from "@/server/models/company.model";
 import "server-only";
 
 import { runInBackground } from "@/lib/background";
@@ -98,7 +99,7 @@ export async function sendBulkMessage(
         jobTitle: app.job.title,
         message: text,
         subject: cleanSubject || undefined,
-        managerEmail: manager?.email ?? null,
+        managerEmail: replyToEmail(company.email, manager?.email),
         applicationId: app.id,
       });
       reached = true;

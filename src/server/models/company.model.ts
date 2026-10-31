@@ -163,3 +163,19 @@ export function toPublicCompany(company: Company): PublicCompany {
     aboutText: company.aboutText,
   };
 }
+
+const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+/**
+ * Para onde vão as respostas dos candidatos aos e-mails do sistema: o e-mail da
+ * empresa; se estiver vazio ou inválido, o do usuário gestor; senão, nenhum.
+ */
+export function replyToEmail(
+  companyEmail: string | null | undefined,
+  managerEmail: string | null | undefined
+): string | null {
+  const company = companyEmail?.trim() ?? "";
+  if (looksLikeEmail(company)) return company;
+  const manager = managerEmail?.trim() ?? "";
+  return looksLikeEmail(manager) ? manager : null;
+}
