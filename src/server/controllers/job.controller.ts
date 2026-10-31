@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
@@ -130,6 +131,67 @@ export async function rewriteJobTextAction(
     return { ok: true, text: result.trim() };
   } catch {
     return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
+  }
+}
+
+export type ParsedJobText = {
+  title: string;
+  location: string;
+  contract: "CLT" | "PJ" | "FREELANCE" | "INTERNSHIP";
+  workMode: "REMOTE" | "HYBRID" | "ONSITE";
+  description: string;
+  requirements: string;
+  aiCriteria: string[];
+};
+
+const parsedJobSchema = z.object({
+  title: z.string().default(""),
+  location: z.string().default(""),
+  contract: z.enum(["CLT", "PJ", "FREELANCE", "INTERNSHIP"]).catch("CLT"),
+  workMode: z.enum(["REMOTE", "HYBRID", "ONSITE"]).catch("ONSITE"),
+  description: z.string().default(""),
+  requirements: z.string().default(""),
+  aiCriteria: z.array(z.string()).default([]),
+});
+
+/** Organiza o texto bruto de uma vaga (colado como chega) nos campos do wizard. */
+export async function parseJobTextAction(
+  raw: string
+): Promise<{ ok: true; job: ParsedJobText } | { ok: false; error: string }> {
+  await requireManager();
+  if (raw.trim().length < 20) return { ok: false, error: "Cole o texto da vaga." };
+
+  const system = `Você é um especialista em RH. Receberá o texto bruto de uma vaga, geralmente copiado de e-mail ou WhatsApp. Organize-o em JSON com exatamente estas chaves:
+- "title": nome do cargo em Title Case (ex.: "Consultor de Vendas"), sem códigos.
+- "location": cidade e UF (ex.: "Caucaia, CE").
+- "contract": "CLT", "PJ", "FREELANCE" ou "INTERNSHIP".
+- "workMode": "REMOTE", "HYBRID" ou "ONSITE" (loja/ponto de venda/presencial = ONSITE).
+- "description": texto para o candidato, em parágrafos curtos e blocos com título em linha própria (ex.: "Sobre a vaga", "Escala e horário", "Remuneração e benefícios"), listas com "• ". Inclua perfil, início, escala, roteiro/endereço, salário, variável e benefícios.
+- "requirements": requisitos obrigatórios e diferenciais, um por linha, cada linha começando com "• " (diferenciais terminam com " (diferencial)").
+- "aiCriteria": de 3 a 6 critérios curtos (até 8 palavras) para avaliar currículos, baseados nos requisitos.
+Não invente nada que não esteja no texto. Remova emojis, números de controle da vaga e formatação quebrada. Responda apenas com o JSON.`;
+
+  try {
+    const out = await geminiGenerate({
+      system,
+      prompt: raw.slice(0, 8000),
+      maxTokens: 1800,
+      json: true,
+    });
+    const jsonText = out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1);
+    const parsed = parsedJobSchema.safeParse(JSON.parse(jsonText));
+    if (!parsed.success) throw new Error("JSON inválido");
+    const job = parsed.data;
+    return {
+      ok: true,
+      job: {
+        ...job,
+        title: job.title.trim(),
+        aiCriteria: job.aiCriteria.map((c) => c.trim()).filter(Boolean).slice(0, 10),
+      },
+    };
+  } catch {
+    return { ok: false, error: "Não consegui organizar o texto. Tente novamente." };
   }
 }
 
