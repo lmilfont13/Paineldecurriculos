@@ -47,9 +47,9 @@ import {
 import { formatInterviewAt } from "@/server/models/interview.model";
 import {
   buildInfoAnswerSchema,
+  knownInfoOf,
   pendingRequestedFields,
   type InfoField,
-  type KnownInfo,
 } from "@/server/models/pre-interview.model";
 import {
   describeDelivery,
@@ -1060,25 +1060,6 @@ export async function getApplicationSummaries(
     results.push(await generateCandidateSummary(id));
   }
   return results;
-}
-
-/** O que já se sabe da candidatura, na forma que as regras da pré-entrevista leem. */
-export function knownInfoOf(application: {
-  maritalStatus: string | null;
-  hasChildren: boolean | null;
-  professionalSummary: string | null;
-  rg: string | null;
-  cpf: string | null;
-  resumeText: string | null;
-}): KnownInfo {
-  return {
-    maritalStatus: application.maritalStatus,
-    hasChildren: application.hasChildren,
-    professionalSummary: application.professionalSummary,
-    rg: application.rg,
-    cpf: application.cpf,
-    hasResumeText: Boolean(application.resumeText?.trim()),
-  };
 }
 
 /**

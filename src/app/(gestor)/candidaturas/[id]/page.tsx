@@ -5,7 +5,17 @@ import { notFound } from "next/navigation";
 import { DecisionBlock } from "@/components/gestor/decision-block";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
+import { InfoRequestBox } from "@/components/gestor/info-request-box";
 import { MessageBox } from "@/components/gestor/message-box";
+import { appUrl } from "@/lib/env";
+import {
+  INFO_FIELDS,
+  knownInfoOf,
+  maskCpf,
+  maskRg,
+  missingInfoFields,
+  type InfoField,
+} from "@/server/models/pre-interview.model";
 import { NotesForm } from "@/components/gestor/notes-form";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import { ReextractPhotoButton } from "@/components/gestor/reextract-photo-button";
@@ -326,6 +336,41 @@ export default async function CandidaturaDetailPage({
               applicationId={app.id}
               candidateName={app.name}
               candidatePhone={app.phone ?? undefined}
+            />
+          </section>
+
+          <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-sm font-semibold text-[#0a0a0a]">
+              Pré-entrevista
+            </h2>
+            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+              Peça as informações que faltam antes de marcar a conversa. RG e CPF
+              só aparecem mascarados até você pedir para ver.
+            </p>
+            <InfoRequestBox
+              applicationId={app.id}
+              candidateName={app.name}
+              candidatePhone={app.phone ?? undefined}
+              companyName={app.company.name}
+              jobTitle={app.job.title}
+              formUrl={`${appUrl()}/${app.company.slug}/minhas-candidaturas/${app.id}/pre-entrevista`}
+              known={Object.fromEntries(
+                INFO_FIELDS.map((f) => [
+                  f,
+                  !missingInfoFields(knownInfoOf(app)).includes(f),
+                ])
+              ) as Record<InfoField, boolean>}
+              requestedFields={app.infoRequestedFields as InfoField[]}
+              requestedAt={app.infoRequestedAt?.toISOString() ?? null}
+              answeredAt={app.infoAnsweredAt?.toISOString() ?? null}
+              answers={{
+                maritalStatus: app.maritalStatus,
+                hasChildren: app.hasChildren,
+                childrenCount: app.childrenCount,
+                professionalSummary: app.professionalSummary,
+                rgMasked: app.rg ? maskRg(app.rg) : null,
+                cpfMasked: app.cpf ? maskCpf(app.cpf) : null,
+              }}
             />
           </section>
 

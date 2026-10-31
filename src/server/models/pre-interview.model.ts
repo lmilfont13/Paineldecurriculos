@@ -65,6 +65,25 @@ export type KnownInfo = {
   hasResumeText: boolean;
 };
 
+/** O que já se sabe da candidatura, na forma que as regras da pré-entrevista leem. */
+export function knownInfoOf(application: {
+  maritalStatus: string | null;
+  hasChildren: boolean | null;
+  professionalSummary: string | null;
+  rg: string | null;
+  cpf: string | null;
+  resumeText: string | null;
+}): KnownInfo {
+  return {
+    maritalStatus: application.maritalStatus,
+    hasChildren: application.hasChildren,
+    professionalSummary: application.professionalSummary,
+    rg: application.rg,
+    cpf: application.cpf,
+    hasResumeText: Boolean(application.resumeText?.trim()),
+  };
+}
+
 /** O que ainda vale pedir: o que a candidatura não tem. */
 export function missingInfoFields(known: KnownInfo): InfoField[] {
   const missing: InfoField[] = [];
