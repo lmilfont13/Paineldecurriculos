@@ -26,6 +26,7 @@ import {
   groupRowsByJob,
   jobLabel,
   meetsMinimum,
+  nextToTriage,
   selectStage,
   sortRows,
   type CandidaturaRow,
@@ -162,6 +163,8 @@ export function CandidaturasTable({
     [rows, search, jobId, onlyMeets, onlyPhoto, contentMatches]
   );
   const counts = useMemo(() => countByStage(scoped), [scoped]);
+  // "Triar agora" abre quem espera há mais tempo (respeitando vaga e busca ativas).
+  const nextCandidate = useMemo(() => nextToTriage(scoped), [scoped]);
   const filtered = useMemo(
     () => sortRows(selectStage(scoped, tab), sort),
     [scoped, tab, sort]
@@ -368,8 +371,8 @@ export function CandidaturasTable({
           >
             {photoBusy ? "Extraindo fotos…" : "Extrair fotos dos currículos"}
           </button>
-          {pendingTotal > 0 && (
-            <Link href="/candidaturas?status=PENDING" className="hidden h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex" style={{ backgroundColor: "var(--brand-primary)" }}>
+          {nextCandidate && (
+            <Link href={`/candidaturas/${nextCandidate.id}`} className="flex h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--brand-primary)" }}>
               Triar agora →
             </Link>
           )}

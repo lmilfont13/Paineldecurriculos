@@ -131,3 +131,8 @@ export function infoRequestState(
   if (!requestedAt) return null;
   return answeredAt ? "ANSWERED" : "WAITING";
 }
+
+/** Próximo da fila de triagem: quem espera resposta há mais tempo (null se a fila está limpa). */
+export function nextToTriage(rows: CandidaturaRow[]): CandidaturaRow | null {
+  return sortRows(selectStage(rows, "PENDING"), "WAITING")[0] ?? null;
+}

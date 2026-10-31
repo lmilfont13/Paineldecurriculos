@@ -220,7 +220,7 @@ export default async function PainelPage() {
         </div>
         {!clear && (
           <Link
-            href="/candidaturas?status=PENDING"
+            href={priority[0] ? `/candidaturas/${priority[0].id}` : "/candidaturas?status=PENDING"}
             className="flex h-11 items-center rounded-2xl px-6 text-sm font-medium transition-opacity hover:opacity-90"
             style={{
               backgroundColor: "var(--brand-primary)",
