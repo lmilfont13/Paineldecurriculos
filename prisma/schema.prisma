@@ -217,6 +217,19 @@ model Application {
   interviewMode     String? // "Videochamada" | "Presencial" | "Telefone"
   interviewLocation String? // link da chamada, endereço ou telefone
 
+  /// Pré-entrevista: dados pedidos pelo gestor a quem foi aprovado e respondidos
+  /// pelo candidato. Só gestores da empresa veem; RG/CPF vão mascarados na ficha.
+  maritalStatus       String?
+  hasChildren         Boolean?
+  childrenCount       Int?
+  professionalSummary String?
+  rg                  String?
+  cpf                 String?
+  /// Quais perguntas foram pedidas (chaves de InfoField) e quando.
+  infoRequestedFields String[]  @default([])
+  infoRequestedAt     DateTime?
+  infoAnsweredAt      DateTime?
+
   job           Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   company       Company            @relation(fields: [companyId], references: [id])
   candidate     Candidate?         @relation(fields: [candidateId], references: [id])
@@ -262,6 +275,7 @@ enum NotificationType {
   MANAGER_MESSAGE
   RESULT
   NEW_JOB
+  INFO_REQUESTED
 }
 
 /// Trilha de mudanças de status — histórico p/ gestor, timeline p/ candidato.
