@@ -11,6 +11,7 @@ import {
 } from "@/server/models/job.model";
 import {
   createJobAction,
+  parseJobTextAction,
   rewriteJobTextAction,
   updateJobAction,
   type JobFormState,
@@ -43,6 +44,11 @@ export function JobWizard({
   const [rewriting, setRewriting] = useState<"description" | "requirements" | null>(null);
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [criterionInput, setCriterionInput] = useState("");
+  const [rawText, setRawText] = useState("");
+  const [organizing, setOrganizing] = useState(false);
+  const [organizeMsg, setOrganizeMsg] = useState<
+    { ok: boolean; text: string } | null
+  >(null);
   const [draft, setDraft] = useState<Draft>({
     title: initial?.title ?? "",
     location: initial?.location ?? "",
@@ -98,6 +104,31 @@ export function JobWizard({
     } else {
       setRewriteError(result.error);
     }
+  }
+
+  async function organize() {
+    if (!rawText.trim()) return;
+    setOrganizeMsg(null);
+    setOrganizing(true);
+    const result = await parseJobTextAction(rawText);
+    setOrganizing(false);
+    if (!result.ok) return setOrganizeMsg({ ok: false, text: result.error });
+    const { job } = result;
+    setDraft((d) => ({
+      ...d,
+      title: job.title || d.title,
+      location: job.location || d.location,
+      contract: job.contract,
+      workMode: job.workMode,
+      description: job.description || d.description,
+      requirements: job.requirements || d.requirements,
+      aiCriteria: job.aiCriteria.length > 0 ? job.aiCriteria : d.aiCriteria,
+    }));
+    setRawText("");
+    setOrganizeMsg({
+      ok: true,
+      text: "Vaga organizada. Confira os campos abaixo e nos próximos passos.",
+    });
   }
 
   function addCriterion() {
@@ -196,7 +227,46 @@ export function JobWizard({
                 <p className="mt-2 text-sm text-[#71717a]">
                   Título, local e tipo de contratação.
                 </p>
-                <div className="mt-6 space-y-5">
+                <div className="mt-6 rounded-xl border border-dashed border-[#d4d4d8] bg-[#fafafa] p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[#0a0a0a]">
+                      Colar vaga e organizar
+                    </span>
+                    <button
+                      type="button"
+                      disabled={organizing || rawText.trim().length < 20}
+                      onClick={organize}
+                      className="flex items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:border-[#0a0a0a] hover:text-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {organizing ? (
+                        <>
+                          <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
+                          Organizando…
+                        </>
+                      ) : (
+                        <>✦ Organizar com IA</>
+                      )}
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder="Cole aqui a vaga do jeito que você recebeu. A IA preenche título, local, contrato, descrição, requisitos e critérios."
+                  />
+                  {organizeMsg && (
+                    <p
+                      className={
+                        "mt-2 text-[13px] " +
+                        (organizeMsg.ok ? "text-[#71717a]" : "text-red-600")
+                      }
+                    >
+                      {organizeMsg.text}
+                    </p>
+                  )}
+                </div>
+                <div className="mt-5 space-y-5">
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
                       Título da vaga
