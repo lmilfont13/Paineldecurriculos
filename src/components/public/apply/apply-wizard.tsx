@@ -100,6 +100,8 @@ export function ApplyWizard({
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
     }
+    if (step === 1 && !resume && !candidate.resumeUrl)
+      return "Anexe seu currículo em PDF para continuar.";
     const fields = step === 1 ? filteredCoreFields : step === 2 ? filteredCustomFields : [];
     for (const field of fields) {
       if (
@@ -111,7 +113,7 @@ export function ApplyWizard({
       }
     }
     return null;
-  }, [step, data, filteredCoreFields, filteredCustomFields]);
+  }, [step, data, resume, candidate.resumeUrl, filteredCoreFields, filteredCustomFields]);
 
   function next() {
     if (stepError) {
@@ -464,7 +466,7 @@ export function ApplyWizard({
                   onChange={(v) => setAnswer(field.id, v)}
                 />
               ))}
-              <Field label="Currículo em PDF (opcional)">
+              <Field label="Currículo em PDF (obrigatório)">
                 <div className="flex items-center gap-4 rounded-md border border-[#e4e4e7] bg-[#fafaf9] p-4">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white text-[#78716c]">
                     <FileText aria-hidden className="size-[18px]" strokeWidth={1.75} />
@@ -496,12 +498,6 @@ export function ApplyWizard({
                     onChange={(e) => void pickResume(e.target.files?.[0] ?? null)}
                   />
                 </div>
-                {!resume && !candidate.resumeUrl && (
-                  <p className="mt-2 text-xs leading-5 text-[#78716c]">
-                    Não tem currículo em PDF? Pode seguir sem. A{" "}
-                    {company.name} lê as suas respostas.
-                  </p>
-                )}
               </Field>
             </StepShell>
           )}

@@ -101,6 +101,7 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }
 
 ### 5. Upload de currículo
 
+- Obrigatório para se candidatar (arquivo novo ou o currículo do perfil); validado no formulário e em `submitApplication`
 - Apenas PDF, máx 5 MB, salvar no Supabase Storage
 - Extrair texto com `unpdf` (serverless-safe) antes de mandar para a IA
 

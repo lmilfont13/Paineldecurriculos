@@ -675,6 +675,11 @@ export async function submitApplication(
     resumeUrl = uploadedResumePath;
   }
 
+  // Currículo é obrigatório: novo, do perfil ou o que o gestor já anexou.
+  if (!resumeUrl) {
+    return { ok: false, error: "Anexe seu currículo em PDF para se candidatar." };
+  }
+
   const rawBirthDate = input.birthDate;
   const birthDate = rawBirthDate
     ? new Date(rawBirthDate)

@@ -139,8 +139,7 @@ export default async function PublicJobDetailPage({
                 Quer essa vaga?
               </h2>
               <p className="mt-1.5 text-[13px] leading-5 text-[#78716c]">
-                Leva uns 3 minutos. Currículo em PDF ajuda, mas não é
-                obrigatório.
+                Leva uns 3 minutos. Tenha seu currículo em PDF em mãos.
               </p>
               <Link
                 href={applyHref}
