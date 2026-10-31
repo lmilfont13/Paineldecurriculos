@@ -1,5 +1,7 @@
 import "server-only";
 
+import { jobLabel } from "@/server/models/candidate-list.model";
+
 import type {
   DashboardStats,
   JobProgress,
@@ -52,7 +54,7 @@ export async function getDashboard(companyId: string): Promise<{
     .map((a) => ({
       id: a.id,
       name: a.name,
-      jobTitle: a.job.title,
+      jobTitle: jobLabel(a.job.title, a.job.code),
       aiScore: a.aiScore,
       aiState: a.aiState,
       status: a.status,
@@ -76,7 +78,7 @@ export async function getDashboard(companyId: string): Promise<{
         ofJob.filter((a) => a.status === status).length;
       return {
         id: job.id,
-        title: job.title,
+        title: jobLabel(job.title, job.code),
         status: job.status,
         total: ofJob.length,
         pending: count("PENDING"),

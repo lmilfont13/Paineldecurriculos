@@ -107,6 +107,11 @@ export default async function VagaHubPage({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-[#0a0a0a]">{job.title}</h1>
+            {job.code && (
+              <span className="rounded-md bg-[#f1f0ed] px-2 py-1 text-xs font-medium text-[#57534e]">
+                #{job.code}
+              </span>
+            )}
             <span
               className={`flex h-6 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium ${statusStyles[job.status]}`}
             >

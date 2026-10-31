@@ -435,6 +435,7 @@ export function findApplicationById(id: string) {
         select: {
           id: true,
           title: true,
+          code: true,
           aiMinScore: true,
           aiCriteria: true,
           requirements: true,

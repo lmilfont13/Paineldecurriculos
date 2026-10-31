@@ -6,6 +6,7 @@ import { DecisionBlock } from "@/components/gestor/decision-block";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { InfoRequestBox } from "@/components/gestor/info-request-box";
+import { jobLabel } from "@/server/models/candidate-list.model";
 import { MessageBox } from "@/components/gestor/message-box";
 import { appUrl } from "@/lib/env";
 import {
@@ -118,7 +119,7 @@ export default async function CandidaturaDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.7px] text-[#a1a1aa]">
-              Candidatura · {app.job.title}
+              Candidatura · {jobLabel(app.job.title, app.job.code)}
             </p>
             <div className="mt-5 flex items-center gap-4">
               <CandidateAvatar
