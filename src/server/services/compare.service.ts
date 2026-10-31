@@ -5,6 +5,7 @@ import { readChecklist } from "@/server/models/ai.model";
 import {
   buildComparisonPrompt,
   computedRecommendation,
+  labelsToNames,
   parseComparison,
   type ComparisonCandidate,
 } from "@/server/models/comparison.model";
@@ -72,22 +73,27 @@ export async function suggestComparison(
     const raw = await geminiGenerate({ system, prompt, maxTokens: 1400, json: true });
     const parsed = parseComparison(raw, labelToId);
     if (parsed) {
+      // A IA escreve "C2"; o gestor lê o nome.
+      const labelToName = Object.fromEntries(
+        Object.entries(labelToId).map(([label, id]) => [label, names.get(id) ?? label])
+      );
+      const t = (v: string) => labelsToNames(v, labelToName);
       return {
         ok: true,
         source: "ia",
         recommendedId: parsed.recommendedId,
         confidence: parsed.confidence,
-        summary: parsed.summary,
-        reasons: parsed.reasons,
-        checkNext: parsed.checkNext,
+        summary: t(parsed.summary),
+        reasons: parsed.reasons.map(t),
+        checkNext: t(parsed.checkNext),
         candidates: candidates.map((c) => {
           const p = parsed.perCandidate.find((x) => x.id === c.id);
           return {
             id: c.id,
             name: c.name,
-            strengths: p?.strengths ?? [],
-            concerns: p?.concerns ?? [],
-            whyNot: p?.whyNot ?? "",
+            strengths: (p?.strengths ?? []).map(t),
+            concerns: (p?.concerns ?? []).map(t),
+            whyNot: t(p?.whyNot ?? ""),
           };
         }),
       };

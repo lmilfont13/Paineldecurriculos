@@ -90,3 +90,27 @@ describe("suggestComparison", () => {
     expect(getCompanyApplication.mock.calls.length).toBeLessThanOrEqual(3);
   });
 });
+
+describe("suggestComparison: o texto mostra nomes, não rótulos", () => {
+  it("troca C1/C2 pelos nomes reais em resumo, motivos e pontos de cada candidato", async () => {
+    geminiGenerate.mockResolvedValue(
+      JSON.stringify({
+        recomendado: "C2",
+        confianca: "media",
+        resumo: "O C2 supera a C1 em aderência.",
+        motivos: ["C2 atende o corte; C1 não."],
+        por_candidato: [{ candidato: "C1", pontos_fortes: [], pontos_atencao: ["Abaixo do que o C2 oferece"], por_que_nao: "C2 é melhor." }],
+        confirmar_na_entrevista: "Perguntar a C1 sobre horários.",
+      })
+    );
+    const r = await suggestComparison("co1", ["a1", "a2"]);
+    if (!r.ok) throw new Error("esperava ok");
+    expect(r.summary).toBe("Bruno supera a Ana em aderência.");
+    expect(r.reasons).toEqual(["Bruno atende o corte; Ana não."]);
+    expect(r.candidates.find((c) => c.id === "a1")).toMatchObject({
+      concerns: ["Abaixo do que o Bruno oferece"],
+      whyNot: "Bruno é melhor.",
+    });
+    expect(r.checkNext).toBe("Perguntar a Ana sobre horários.");
+  });
+});

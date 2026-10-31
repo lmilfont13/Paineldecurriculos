@@ -27,6 +27,7 @@ const RESUME_EXCERPT = 1200;
 const SYSTEM = `Você é um especialista em RH que ajuda um gestor a escolher entre 2 ou 3 candidatos.
 Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência, comparando os candidatos entre si e com a vaga de cada um.
 Use apenas o material fornecido; não invente. Os candidatos são identificados por rótulos (C1, C2, C3).
+No texto livre, cite os candidatos só pelo rótulo, sem artigo antes e sem inventar nomes (escreva "C2 supera C1", não "o C2").
 Escolha UM candidato. Se a diferença for pequena demais para decidir, diga "empate". Seja direto e concreto.
 Retorne apenas JSON neste formato:
 { "recomendado": "C2" ou "empate", "confianca": "alta" | "media" | "baixa", "resumo": "1-2 frases com a conclusão",
@@ -143,4 +144,17 @@ export function computedRecommendation(candidates: ComparisonCandidate[]): {
     recommendedId: ranked[0].id,
     margin: ranked[1] ? Math.round((ranked[0].index - ranked[1].index) * 100) / 100 : null,
   };
+}
+
+/**
+ * Troca os rótulos internos (C1, C2...) pelos nomes reais no texto que a IA escreveu,
+ * para o gestor ler "Ana Paula" e não "C3". O artigo que abre a frase ("O C3 é...")
+ * cai junto; no meio da frase ele fica, porque pode ser preposição ("perguntar a C1").
+ */
+export function labelsToNames(text: string, labelToName: Record<string, string>): string {
+  return text
+    .replace(/(^|[.!?]\s+)[OA]s?\s+(C\d+)\b/g, (match, lead: string, label: string) =>
+      labelToName[label] ? `${lead}${labelToName[label]}` : match
+    )
+    .replace(/\b(C\d+)\b/g, (match, label: string) => labelToName[label] ?? match);
 }

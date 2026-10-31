@@ -111,3 +111,23 @@ describe("computedRecommendation (sem IA)", () => {
     expect(computedRecommendation([cand({ id: "a", aiScore: null }), cand({ id: "b", aiScore: null })]).recommendedId).toBeNull();
   });
 });
+
+import { labelsToNames } from "@/server/models/comparison.model";
+
+describe("labelsToNames", () => {
+  const names = { C1: "Clara Falcão", C2: "Vanessa Carvalho", C3: "Ana Paula Silva" };
+
+  it("troca o rótulo pelo nome e descarta o artigo que vinha na frente", () => {
+    expect(labelsToNames("O C3 é o candidato mais forte.", names)).toBe("Ana Paula Silva é o candidato mais forte.");
+    expect(labelsToNames("Perguntar a C1 sobre horários.", names)).toBe("Perguntar a Clara Falcão sobre horários.");
+    expect(labelsToNames("C2 superou C1 em experiência.", names)).toBe("Vanessa Carvalho superou Clara Falcão em experiência.");
+  });
+  it("troca rótulos soltos e repetidos", () => {
+    expect(labelsToNames("C2 tem menos experiência que C3; C2 ficou em segundo.", names)).toBe(
+      "Vanessa Carvalho tem menos experiência que Ana Paula Silva; Vanessa Carvalho ficou em segundo."
+    );
+  });
+  it("não mexe em siglas parecidas nem em rótulo desconhecido", () => {
+    expect(labelsToNames("Cursa ADS e usa o CRM. C9 não existe.", names)).toBe("Cursa ADS e usa o CRM. C9 não existe.");
+  });
+});
