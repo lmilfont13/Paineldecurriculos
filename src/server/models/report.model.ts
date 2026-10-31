@@ -229,3 +229,31 @@ export function executiveSummary(data: ReportData): { headline: string; bullets:
     bullets,
   };
 }
+
+export type CriterionSummary = {
+  criterion: string;
+  sim: number;
+  parcial: number;
+  nao: number;
+  /** Candidatos ranqueados com este critério avaliado. */
+  total: number;
+  /** % que atende totalmente. */
+  pctSim: number;
+  /** Menos de 1/3 do grupo atende: exigência escassa no mercado desta vaga. */
+  scarce: boolean;
+};
+
+/** Para cada critério da vaga, como o grupo ranqueado se distribui (atende / em parte / não). */
+export function criteriaSummary(data: ReportData): CriterionSummary[] {
+  return data.job.criteria.map((criterion) => {
+    const mets = data.ranking
+      .map((c) => c.criteria.find((k) => k.criterion === criterion)?.met)
+      .filter((m): m is CriterionMet => m !== undefined);
+    const sim = mets.filter((m) => m === "sim").length;
+    const parcial = mets.filter((m) => m === "parcial").length;
+    const nao = mets.filter((m) => m === "não").length;
+    const total = mets.length;
+    const pctSim = total ? (sim / total) * 100 : 0;
+    return { criterion, sim, parcial, nao, total, pctSim, scarce: total > 0 && pctSim < 100 / 3 };
+  });
+}

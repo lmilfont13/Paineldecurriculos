@@ -1,3 +1,5 @@
+import { readChecklist } from "@/server/models/ai.model";
+import { criteriaCoverage, decisionIndex } from "@/server/models/report.model";
 import { infoRequestState } from "@/server/models/candidate-list.model";
 import { titleCasePt } from "@/server/models/text.model";
 import type { Metadata } from "next";
@@ -37,6 +39,7 @@ export default async function CandidaturasPage({
     jobId: app.job.id,
     jobTitle: app.job.title,
     jobCode: app.job.code,
+    aiIndex: decisionIndex(app.aiScore, criteriaCoverage(readChecklist(app.aiChecklist))),
     infoState: infoRequestState(app.infoRequestedAt, app.infoAnsweredAt),
     aiMinScore: app.job.aiMinScore,
     isDemo: app.isDemo,

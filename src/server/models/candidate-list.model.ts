@@ -16,6 +16,8 @@ export type CandidaturaRow = {
   jobTitle: string;
   /** Código da vaga, para distinguir vagas com o mesmo cargo. */
   jobCode?: string | null;
+  /** Índice de decisão da IA (nota + cobertura dos critérios), o mesmo do relatório da diretoria. */
+  aiIndex?: number | null;
   /** Pré-entrevista: aguardando resposta do candidato ou já respondida. */
   infoState?: "WAITING" | "ANSWERED" | null;
   aiMinScore: number;
@@ -31,7 +33,7 @@ export type CandidaturaRow = {
 
 export type StageKey = AppStatusKey | "ALL";
 
-export type SortKey = "WAITING" | "RECENT" | "SCORE";
+export type SortKey = "WAITING" | "RECENT" | "SCORE" | "AI";
 
 export type ListFilters = {
   search: string;
@@ -93,6 +95,15 @@ export function sortRows(
 ): CandidaturaRow[] {
   const time = (row: CandidaturaRow) => new Date(row.createdAt).getTime();
   return [...rows].sort((a, b) => {
+    if (sort === "AI") {
+      // Indicação da IA: quem atende o corte da vaga vem antes; depois o índice; sem nota por último.
+      const rank = (r: CandidaturaRow) => (r.aiScore === null ? 0 : meetsMinimum(r) ? 2 : 1);
+      return (
+        rank(b) - rank(a) ||
+        (b.aiIndex ?? b.aiScore ?? -1) - (a.aiIndex ?? a.aiScore ?? -1) ||
+        (b.aiScore ?? -1) - (a.aiScore ?? -1)
+      );
+    }
     if (sort === "WAITING") return time(a) - time(b);
     if (sort === "RECENT") return time(b) - time(a);
     return (b.aiScore ?? -1) - (a.aiScore ?? -1);
@@ -135,4 +146,17 @@ export function infoRequestState(
 /** Próximo da fila de triagem: quem espera resposta há mais tempo (null se a fila está limpa). */
 export function nextToTriage(rows: CandidaturaRow[]): CandidaturaRow | null {
   return sortRows(selectStage(rows, "PENDING"), "WAITING")[0] ?? null;
+}
+
+/** Posição (1º, 2º...) de cada candidato com nota dentro da própria vaga, na ordem em que as linhas chegam. */
+export function aiRankInGroups(rows: CandidaturaRow[]): Map<string, number> {
+  const perJob = new Map<string, number>();
+  const ranks = new Map<string, number>();
+  for (const r of rows) {
+    if (r.aiScore === null) continue;
+    const next = (perJob.get(r.jobId) ?? 0) + 1;
+    perJob.set(r.jobId, next);
+    ranks.set(r.id, next);
+  }
+  return ranks;
 }

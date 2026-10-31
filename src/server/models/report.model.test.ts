@@ -215,3 +215,38 @@ describe("fichas de cada candidato", () => {
     expect(data.ranking.map((c) => c.id)).toEqual(["ana"]);
   });
 });
+
+import { criteriaSummary } from "@/server/models/report.model";
+
+describe("criteriaSummary", () => {
+  const job = { title: "Vaga", code: null, aiMinScore: 70, criteria: ["Vendas", "Capilares"] };
+  const data = buildReportData(
+    job,
+    [
+      cand({ id: "a", aiScore: 90, criteria: [{ criterion: "Vendas", met: "sim" }, { criterion: "Capilares", met: "sim" }] }),
+      cand({ id: "b", aiScore: 80, criteria: [{ criterion: "Vendas", met: "sim" }, { criterion: "Capilares", met: "não" }] }),
+      cand({ id: "c", aiScore: 75, criteria: [{ criterion: "Vendas", met: "parcial" }, { criterion: "Capilares", met: "não" }] }),
+      cand({ id: "d", aiScore: 60, criteria: [{ criterion: "Vendas", met: "não" }, { criterion: "Capilares", met: "não" }] }),
+    ],
+    new Date("2026-11-01T12:00:00Z")
+  );
+
+  it("conta, por critério da vaga, quantos atendem, atendem em parte e não atendem", () => {
+    const [vendas, capilares] = criteriaSummary(data);
+    expect(vendas).toMatchObject({ criterion: "Vendas", sim: 2, parcial: 1, nao: 1, total: 4 });
+    expect(capilares).toMatchObject({ criterion: "Capilares", sim: 1, parcial: 0, nao: 3, total: 4 });
+  });
+  it("percentual de quem atende e marca o critério escasso (menos de 1/3 atende)", () => {
+    const [vendas, capilares] = criteriaSummary(data);
+    expect(vendas.pctSim).toBe(50);
+    expect(vendas.scarce).toBe(false);
+    expect(capilares.pctSim).toBe(25);
+    expect(capilares.scarce).toBe(true);
+  });
+  it("candidato sem esse critério avaliado não entra na conta dele", () => {
+    const d = buildReportData(job, [cand({ id: "x", aiScore: 80, criteria: [{ criterion: "Vendas", met: "sim" }] })], new Date());
+    const capilares = criteriaSummary(d).find((c) => c.criterion === "Capilares")!;
+    expect(capilares.total).toBe(0);
+    expect(capilares.pctSim).toBe(0);
+  });
+});

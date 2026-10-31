@@ -14,7 +14,9 @@ import {
 
 import {
   INDEX_WEIGHTS,
+  criteriaSummary,
   executiveSummary,
+  type CriterionSummary,
   type RankedCandidate,
   type ReportCandidate,
   type ReportData,
@@ -266,6 +268,61 @@ function ScoreBars({ rows, data, brand }: { rows: RankedCandidate[]; data: Repor
   );
 }
 
+/** Quantos candidatos atendem cada critério da vaga (verde = atende, âmbar = em parte, rosa = não). */
+function CriteriaBars({ rows }: { rows: CriterionSummary[] }) {
+  const W = 499;
+  const labelW = 180;
+  const rightW = 112;
+  const barW = W - labelW - rightW;
+  const rowH = 24;
+  const H = rows.length * rowH + 4;
+  return (
+    <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+      {rows.map((r, i) => {
+        const y = 2 + i * rowH;
+        const seg = (n: number) => (r.total ? (n / r.total) * barW : 0);
+        const wSim = seg(r.sim);
+        const wPar = seg(r.parcial);
+        const wNao = seg(r.nao);
+        return (
+          <G key={r.criterion}>
+            <SvgText x={0} y={y + 13} fontSize={8.5} fill={C.ink}>
+              {cut(r.criterion, 38)}
+            </SvgText>
+            <Rect x={labelW} y={y + 3} width={Math.max(wSim, 0.01)} height={12} fill={C.good} />
+            <Rect x={labelW + wSim} y={y + 3} width={Math.max(wPar, 0.01)} height={12} fill="#e0a526" />
+            <Rect x={labelW + wSim + wPar} y={y + 3} width={Math.max(wNao, 0.01)} height={12} fill="#e7c7c7" />
+            <SvgText x={labelW + barW + 8} y={y + 13} fontSize={8.5} fill={r.scarce ? C.bad : C.ink}>
+              {r.total ? `${num(r.pctSim, 0)}%${r.scarce ? " · escasso" : ""}` : "sem dados"}
+            </SvgText>
+          </G>
+        );
+      })}
+    </Svg>
+  );
+}
+
+/** Nota do candidato numa régua 0–100: corte da vaga, média do grupo e índice de decisão. */
+function Gauge({ score, index, cutoff, mean, brand }: { score: number; index: number; cutoff: number; mean: number; brand: string }) {
+  const W = 473;
+  const x = (v: number) => (v / 100) * W;
+  return (
+    <Svg width={W} height={30} viewBox={`0 0 ${W} 30`}>
+      <Rect x={0} y={11} width={W} height={7} rx={3.5} fill="#f1f0ee" />
+      <Rect x={0} y={11} width={Math.max(x(score), 1)} height={7} rx={3.5} fill={score >= cutoff ? brand : "#a8a29e"} />
+      <Line x1={x(cutoff)} y1={7} x2={x(cutoff)} y2={22} stroke={C.bad} strokeWidth={1} strokeDasharray="2 2" />
+      <SvgText x={x(cutoff)} y={6} fontSize={6.5} fill={C.bad} textAnchor="middle">
+        {`corte ${cutoff}`}
+      </SvgText>
+      <Circle cx={x(mean)} cy={14.5} r={2.6} fill={C.warn} />
+      <SvgText x={x(mean)} y={28} fontSize={6.5} fill={C.warn} textAnchor="middle">
+        {`média ${num(mean)}`}
+      </SvgText>
+      <Path d={`M ${x(index)} 8 L ${x(index) + 4.5} 14.5 L ${x(index)} 21 L ${x(index) - 4.5} 14.5 Z`} fill={C.ink} />
+    </Svg>
+  );
+}
+
 const MET_COLOR = { sim: C.good, parcial: "#e0a526", não: "#e7c7c7" } as const;
 
 function Heatmap({ rows, criteria, brand }: { rows: RankedCandidate[]; criteria: string[]; brand: string }) {
@@ -332,10 +389,14 @@ function CandidateSheet({
   c,
   brand,
   note,
+  cutoff,
+  mean,
 }: {
   c: ReportCandidate | RankedCandidate;
   brand: string;
   note?: FinalistNote;
+  cutoff: number;
+  mean: number | null;
 }) {
   const ranked = "position" in c;
   const where = [c.neighborhood, c.city].filter(Boolean).join(", ");
@@ -364,7 +425,13 @@ function CandidateSheet({
         )}
       </View>
 
-      <Text style={[s.th, { marginTop: 9, marginBottom: 3 }]}>Leitura da IA</Text>
+      {ranked && mean !== null && c.aiScore !== null && (
+        <View style={{ marginTop: 6 }}>
+          <Gauge score={c.aiScore} index={(c as RankedCandidate).index} cutoff={cutoff} mean={mean} brand={brand} />
+        </View>
+      )}
+
+      <Text style={[s.th, { marginTop: 7, marginBottom: 3 }]}>Leitura da IA</Text>
       <Text style={{ fontSize: 9, lineHeight: 1.5, color: C.text }}>
         {c.aiReasoning?.trim() || "Ainda não há leitura da IA registrada para este candidato."}
       </Text>
@@ -659,6 +726,20 @@ export function DecisionReport({
               <Text style={s.small}>+ {data.job.criteria.length - criteria.length} critério(s) não exibido(s).</Text>
             )}
           </View>
+
+          <View style={{ marginTop: 20 }}>
+            <Text style={s.h2}>O grupo atende cada critério?</Text>
+            <Text style={[s.small, { marginBottom: 8 }]}>
+              Porcentagem do grupo que atende cada exigência da vaga (verde = atende, âmbar = em parte, rosa = não). Critério escasso (menos de 1/3 atende) pode pedir
+              flexibilização ou treinamento, e ajuda a decidir se vale ampliar a busca.
+            </Text>
+            <CriteriaBars rows={criteriaSummary(data).slice(0, 8)} />
+            {criteriaSummary(data).some((r) => r.scarce) && (
+              <Text style={[s.small, { marginTop: 8, color: C.bad }]}>
+                Atenção: {criteriaSummary(data).filter((r) => r.scarce).map((r) => cut(r.criterion, 40)).join("; ")}.
+              </Text>
+            )}
+          </View>
         </PageFrame>
       )}
 
@@ -671,10 +752,10 @@ export function DecisionReport({
             encontrado no currículo. Os candidatos seguem a ordem do ranking; quem ainda não foi analisado vem ao final.
           </Text>
           {data.ranking.map((c) => (
-            <CandidateSheet key={c.id} c={c} brand={brand} note={notes?.[c.id]} />
+            <CandidateSheet key={c.id} c={c} brand={brand} note={notes?.[c.id]} cutoff={data.job.aiMinScore} mean={data.stats?.mean ?? null} />
           ))}
           {data.unranked.map((c) => (
-            <CandidateSheet key={c.id} c={c} brand={brand} />
+            <CandidateSheet key={c.id} c={c} brand={brand} cutoff={data.job.aiMinScore} mean={data.stats?.mean ?? null} />
           ))}
         </PageFrame>
       )}

@@ -23,6 +23,7 @@ import {
 import {
   applyFilters,
   countByStage,
+  aiRankInGroups,
   groupRowsByJob,
   jobLabel,
   meetsMinimum,
@@ -50,6 +51,7 @@ const SORT_LABELS: Record<SortKey, string> = {
   WAITING: "Quem espera há mais tempo",
   RECENT: "Mais recentes",
   SCORE: "Maior aderência",
+  AI: "Indicação da IA (melhores primeiro)",
 };
 
 const statusPill: Record<AppStatusKey, string> = {
@@ -177,6 +179,8 @@ export function CandidaturasTable({
     [filtered, showGroups]
   );
   const visible = ordered.slice(0, limit);
+  // Na ordenação pela IA, cada candidato mostra a posição que ocupa dentro da própria vaga.
+  const aiRanks = useMemo(() => (sort === "AI" ? aiRankInGroups(ordered) : null), [sort, ordered]);
   const jobCounts = useMemo(
     () =>
       filtered.reduce<Record<string, number>>((acc, r) => {
@@ -523,6 +527,15 @@ export function CandidaturasTable({
                 <div
                   className={"relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
                 >
+                  {aiRanks?.get(row.id) !== undefined && (
+                    <span
+                      className={"absolute left-2.5 top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold " + ((aiRanks.get(row.id) as number) <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#71717a]")}
+                      style={(aiRanks.get(row.id) as number) <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
+                      title="Posição pela indicação da IA nesta vaga"
+                    >
+                      {aiRanks.get(row.id)}º
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => toggle(row.id)}
@@ -650,6 +663,15 @@ export function CandidaturasTable({
                 />
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
+                    {aiRanks?.get(row.id) !== undefined && (
+                      <span
+                        className={"mr-1.5 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold " + ((aiRanks.get(row.id) as number) <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#71717a]")}
+                        style={(aiRanks.get(row.id) as number) <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
+                        title="Posição pela indicação da IA nesta vaga"
+                      >
+                        {aiRanks.get(row.id)}º
+                      </span>
+                    )}
                     {row.name}
                     {row.preRegistered && (
                       <span className="ml-1.5 rounded-full bg-[#fff7e6] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#a16207]">
