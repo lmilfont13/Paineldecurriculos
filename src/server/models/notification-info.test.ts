@@ -15,3 +15,16 @@ describe("infoRequestedNotification", () => {
     expect(text).not.toMatch(/\bCPF\b|\bRG\b/i);
   });
 });
+
+import { managerMessageNotification } from "@/server/models/notification.model";
+
+describe("managerMessageNotification com assunto", () => {
+  it("usa o assunto do gestor como título", () => {
+    const n = managerMessageNotification("Loja X", "Consultor", "Texto", "Documentos pendentes");
+    expect(n.title).toBe("Documentos pendentes");
+    expect(n.body).toContain("Texto");
+  });
+  it("sem assunto mantém o título de sempre", () => {
+    expect(managerMessageNotification("Loja X", "Consultor", "Texto").title).toBe("Recado da Loja X");
+  });
+});

@@ -78,12 +78,14 @@ export async function notifyManagerMessage(params: {
   companyName: string;
   jobTitle: string;
   message: string;
+  subject?: string;
 }): Promise<void> {
   if (!params.candidateId) return;
   const content = managerMessageNotification(
     params.companyName,
     params.jobTitle,
-    params.message
+    params.message,
+    params.subject
   );
   await createNotification({
     candidateId: params.candidateId,

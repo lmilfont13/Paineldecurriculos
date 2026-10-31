@@ -250,6 +250,7 @@ export async function sendManagerMessageEmail(params: {
   candidateName: string;
   jobTitle: string;
   message: string;
+  subject?: string;
   managerEmail: string | null;
   applicationId: string;
 }): Promise<void> {
@@ -258,7 +259,9 @@ export async function sendManagerMessageEmail(params: {
     from: from(brand),
     to: params.to,
     ...(params.managerEmail ? { replyTo: params.managerEmail } : {}),
-    subject: `Recado da ${brand.name}: ${params.jobTitle}`,
+    subject: params.subject?.trim()
+      ? `${brand.name}: ${params.subject.trim()}`
+      : `Recado da ${brand.name}: ${params.jobTitle}`,
     html: shell(brand, {
       title: `Recado da ${esc(brand.name)}`,
       paragraphs: [

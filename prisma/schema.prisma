@@ -36,6 +36,7 @@ model Company {
   auditLogs     AuditLog[]
   agentRuns     AgentRun[]
   talentFolders TalentFolder[]
+  messageTemplates MessageTemplate[]
 }
 
 model User {
@@ -422,4 +423,22 @@ model TalentMatch {
 
   @@unique([applicationId, jobId])
   @@index([companyId, jobId])
+}
+
+/// Recado do gestor salvo para reuso: assunto + texto com marcadores
+/// ({nome}, {empresa}, {vaga}). Um por assunto e por empresa.
+model MessageTemplate {
+  id         String   @id @default(cuid())
+  companyId  String
+  subject    String
+  /// Assunto normalizado (sem caixa/acento) — identifica o mesmo modelo.
+  subjectKey String
+  body       String
+  useCount   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, subjectKey])
 }

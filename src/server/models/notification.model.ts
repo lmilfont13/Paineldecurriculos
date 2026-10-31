@@ -55,11 +55,12 @@ export function interviewNotification(
 export function managerMessageNotification(
   companyName: string,
   jobTitle: string,
-  message: string
+  message: string,
+  subject?: string
 ): { type: NotificationType; title: string; body: string } {
   return {
     type: "MANAGER_MESSAGE",
-    title: `Recado da ${companyName}`,
+    title: subject?.trim() || `Recado da ${companyName}`,
     body: `Sobre a vaga de ${jobTitle}: ${message}`,
   };
 }

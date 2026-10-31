@@ -12,6 +12,12 @@ import {
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
+import {
+  MAX_SUBJECT_LENGTH,
+  listMessageTemplates,
+  rememberMessageTemplate,
+  savedMessageForSubject,
+} from "@/server/services/message-template.service";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
@@ -123,12 +129,27 @@ export async function sendMessageAction(
   const user = await requireManager();
   const message = String(formData.get("message") ?? "").trim();
   if (message.length < 2) return { error: "Escreva o recado antes de enviar." };
+  const subject = String(formData.get("subject") ?? "").trim().slice(0, MAX_SUBJECT_LENGTH);
   const result = await sendManagerMessage(
     user.companyId,
     applicationId,
-    message
+    message,
+    subject || undefined
   );
   if (!result.ok) return { error: "Não foi possível enviar o recado." };
+  // Com assunto, o texto enviado fica salvo para os próximos recados.
+  if (subject) {
+    try {
+      const sent = await getCompanyApplication(user.companyId, applicationId);
+      if (sent) {
+        await rememberMessageTemplate(user.companyId, subject, message, {
+          firstName: sent.name.trim().split(/\s+/)[0] ?? "",
+          companyName: sent.company.name,
+          jobTitle: sent.job.title,
+        });
+      }
+    } catch { /* salvar o modelo nunca bloqueia o envio */ }
+  }
   try {
     const app = await getCompanyApplication(user.companyId, applicationId);
     await createAuditLog({
@@ -513,4 +534,46 @@ export async function revealSensitiveInfoAction(
     return null;
   }
   return { rg: app.rg, cpf: app.cpf };
+}
+
+/** Recados salvos da empresa (assunto + texto com marcadores) para a caixa de recado. */
+export async function listMessageTemplatesAction(): Promise<
+  { id: string; subject: string; body: string }[]
+> {
+  const user = await requireManager();
+  return listMessageTemplates(user.companyId);
+}
+
+/**
+ * Assunto digitado pelo gestor: usa o modelo salvo, se houver; senão a IA escreve.
+ * `fromSaved` diz de onde veio o texto.
+ */
+export async function suggestCustomMessageAction(
+  applicationId: string,
+  subject: string
+): Promise<
+  { ok: true; text: string; fromSaved: boolean } | { ok: false; error: string }
+> {
+  const user = await requireManager();
+  const clean = subject.trim().slice(0, MAX_SUBJECT_LENGTH);
+  if (clean.length < 3) return { ok: false, error: "Digite o assunto do recado." };
+  const app = await getCompanyApplication(user.companyId, applicationId);
+  if (!app) return { ok: false, error: "Candidatura não encontrada." };
+
+  const firstName = app.name.trim().split(/\s+/)[0] ?? "";
+  const ctx = { firstName, companyName: app.company.name, jobTitle: app.job.title };
+
+  const saved = await savedMessageForSubject(user.companyId, clean, ctx);
+  if (saved) return { ok: true, text: saved, fromSaved: true };
+
+  try {
+    const text = await geminiGenerate({
+      system: `Você é um especialista em RH redigindo mensagens para candidatos. Escreva sempre em português brasileiro. Tom: profissional, acolhedor e direto. Sem saudações genéricas (não use "Prezado(a)"). Comece pelo nome do candidato. Não use emojis. Máximo 4 linhas. Não invente datas, valores nem promessas.`,
+      prompt: `Escreva uma mensagem para ${firstName} que se candidatou à vaga de ${app.job.title} na empresa ${app.company.name}. Assunto do recado: ${clean}.`,
+      maxTokens: 300,
+    });
+    return { ok: true, text: text.trim(), fromSaved: false };
+  } catch {
+    return { ok: false, error: "Falha ao conectar com a IA. Tente novamente." };
+  }
 }

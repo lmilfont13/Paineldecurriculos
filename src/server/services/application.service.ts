@@ -458,7 +458,8 @@ export async function scheduleInterview(
 export async function sendManagerMessage(
   companyId: string,
   id: string,
-  message: string
+  message: string,
+  subject?: string
 ): Promise<{ ok: boolean }> {
   const text = message.trim();
   const application = await getCompanyApplication(companyId, id);
@@ -474,6 +475,7 @@ export async function sendManagerMessage(
       companyName: company.name,
       jobTitle: application.job.title,
       message: text,
+      subject,
     }).catch((e) => console.error("[notificação] recado:", e));
 
     if (application.email.includes("@")) {
@@ -484,6 +486,7 @@ export async function sendManagerMessage(
         candidateName: application.name,
         jobTitle: application.job.title,
         message: text,
+        subject,
         managerEmail: manager?.email ?? null,
         applicationId: id,
       });

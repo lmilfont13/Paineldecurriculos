@@ -28,6 +28,7 @@ import { loadApplicationTalentInfo } from "@/server/controllers/talent.controlle
 import { suggestTalentPool } from "@/server/models/talent.model";
 import { readChecklist } from "@/server/models/ai.model";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
+import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
 import {
   appStatusLabels,
   formatAppliedAt,
@@ -68,6 +69,7 @@ export default async function CandidaturaDetailPage({
   const { id } = await params;
   const app = await getCandidaturaDetail(id);
   const talent = app ? await loadApplicationTalentInfo(app.id) : null;
+  const messageTemplates = app ? await listMessageTemplatesAction() : [];
   const intake =
     app && (app.preRegistered || !app.resumeUrl)
       ? await getIntakeInvite(app.id, app.job.id, app.job.title, app.name, app.email, app.phone)
@@ -336,6 +338,9 @@ export default async function CandidaturaDetailPage({
               applicationId={app.id}
               candidateName={app.name}
               candidatePhone={app.phone ?? undefined}
+              companyName={app.company.name}
+              jobTitle={app.job.title}
+              templates={messageTemplates}
             />
           </section>
 

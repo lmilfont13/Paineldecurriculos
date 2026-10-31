@@ -2,9 +2,11 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
+import { fillTemplate } from "@/server/models/message-templates.model";
 import { toWhatsappNumber } from "@/server/models/pre-interview.model";
 import {
   sendMessageAction,
+  suggestCustomMessageAction,
   suggestMessageAction,
   type InterviewState,
 } from "@/server/controllers/application.controller";
@@ -25,10 +27,17 @@ export function MessageBox({
   applicationId,
   candidateName,
   candidatePhone,
+  companyName,
+  jobTitle,
+  templates,
 }: {
   applicationId: string;
   candidateName: string;
   candidatePhone?: string;
+  companyName: string;
+  jobTitle: string;
+  /** Recados salvos da empresa (texto com marcadores {nome}, {empresa}, {vaga}). */
+  templates: { id: string; subject: string; body: string }[];
 }) {
   const firstName = candidateName.split(" ")[0];
 
@@ -41,6 +50,8 @@ export function MessageBox({
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [suggesting, startSuggest] = useTransition();
   const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [subject, setSubject] = useState("");
+  const [note, setNote] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const sent = state !== null && "ok" in state;
 
@@ -49,9 +60,38 @@ export function MessageBox({
       formRef.current?.reset();
       setMessage("");
       setSelectedTopic(null);
+      setSubject("");
+      setNote(null);
       setOpen(false);
     }
   }, [sent]);
+
+  function handleSubject() {
+    setSelectedTopic(null);
+    setSuggestError(null);
+    setNote(null);
+    startSuggest(async () => {
+      const result = await suggestCustomMessageAction(applicationId, subject);
+      if (result.ok) {
+        setMessage(result.text);
+        setNote(
+          result.fromSaved
+            ? "Texto salvo de um recado anterior com este assunto."
+            : "Texto sugerido pela IA. Ao enviar, ele fica salvo para os próximos."
+        );
+      } else {
+        setSuggestError(result.error);
+      }
+    });
+  }
+
+  function loadSaved(t: { subject: string; body: string }) {
+    setSelectedTopic(null);
+    setSuggestError(null);
+    setSubject(t.subject);
+    setMessage(fillTemplate(t.body, { firstName, companyName, jobTitle }));
+    setNote("Texto salvo de um recado anterior com este assunto.");
+  }
 
   function handleSuggest(topicKey: string) {
     setSelectedTopic(topicKey);
@@ -93,8 +133,48 @@ export function MessageBox({
   return (
     <div className="mt-3 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-4">
       {/* Assuntos para a IA */}
+      <div className="mb-4">
+        <label className="mb-1.5 block text-[11px] font-medium text-[#71717a]">
+          Assunto do recado
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            maxLength={80}
+            placeholder="Ex.: Documentos para o registro"
+            className="h-9 min-w-0 flex-1 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          />
+          <button
+            type="button"
+            disabled={suggesting || subject.trim().length < 3}
+            onClick={handleSubject}
+            className="h-9 shrink-0 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[12px] font-medium text-[#0a0a0a] hover:border-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {suggesting && selectedTopic === null ? "Gerando…" : "✦ Gerar com IA"}
+          </button>
+        </div>
+        {templates.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-[#a1a1aa]">Salvos:</span>
+            {templates.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={suggesting}
+                onClick={() => loadSaved(t)}
+                className="rounded-full border border-[#e4e4e7] bg-[#fafafa] px-3 py-1 text-[11px] font-medium text-[#0a0a0a] hover:border-[#0a0a0a]"
+              >
+                {t.subject}
+              </button>
+            ))}
+          </div>
+        )}
+        {note && <p className="mt-2 text-[11px] text-[#71717a]">{note}</p>}
+      </div>
+
       <p className="mb-2 text-[11px] font-medium text-[#71717a]">
-        Escolha o assunto — a IA escreve o texto:
+        Ou escolha um assunto pronto — a IA escreve o texto:
       </p>
       <div className="flex flex-wrap gap-1.5">
         {TOPICS.map((t) => (
@@ -121,6 +201,7 @@ export function MessageBox({
 
       {/* Textarea */}
       <form ref={formRef} action={formAction} className="mt-3">
+        <input type="hidden" name="subject" value={subject} />
         <textarea
           name="message"
           rows={4}
@@ -175,7 +256,7 @@ export function MessageBox({
           <button
             type="button"
             disabled={pending}
-            onClick={() => { setOpen(false); setMessage(""); setSelectedTopic(null); }}
+            onClick={() => { setOpen(false); setMessage(""); setSelectedTopic(null); setSubject(""); setNote(null); }}
             className="ml-auto text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
           >
             Cancelar
