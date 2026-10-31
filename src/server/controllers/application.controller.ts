@@ -10,6 +10,7 @@ import {
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
 import { interviewSchema } from "@/server/models/interview.model";
+import { rejectionMessage } from "@/server/models/message-templates.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
   deleteCompanyApplications,
@@ -164,6 +165,14 @@ export async function suggestMessageAction(
   const user = await requireManager();
   const app = await getCompanyApplication(user.companyId, applicationId);
   if (!app) return { ok: false, error: "Candidatura não encontrada." };
+
+  // Negativa: texto fixo (sem IA), para o gestor revisar e enviar.
+  if (topicKey === "negativa") {
+    return {
+      ok: true,
+      text: rejectionMessage(app.name, app.company.name, app.job.title),
+    };
+  }
 
   const topicDescription = TOPICS[topicKey];
   if (!topicDescription) return { ok: false, error: "Assunto inválido." };

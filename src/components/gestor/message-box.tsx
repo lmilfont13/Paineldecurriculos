@@ -15,6 +15,7 @@ const TOPICS = [
   { key: "informacoes", label: "Pedir informações" },
   { key: "feedback", label: "Feedback positivo" },
   { key: "proposta", label: "Proposta aprovada" },
+  { key: "negativa", label: "Negativa (não seguiremos)" },
 ] as const;
 
 function formatPhone(raw: string): string {
