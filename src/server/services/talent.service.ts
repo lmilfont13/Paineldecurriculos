@@ -172,7 +172,7 @@ export async function scoreStandby(
   const base = { companyId, applicationId, jobId: job.id };
   await upsertTalentMatch({ ...base, state: "PROCESSING" });
   try {
-    const result = await scoreApplicationAgainstJob(applicationId, job);
+    const result = await scoreApplicationAgainstJob(applicationId, job, companyId);
     if (!result) {
       await upsertTalentMatch({ ...base, state: "NO_RESUME", score: null, reasoning: null });
       return;

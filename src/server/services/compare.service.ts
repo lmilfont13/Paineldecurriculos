@@ -70,7 +70,7 @@ export async function suggestComparison(
   const { system, prompt, labelToId } = buildComparisonPrompt(candidates);
 
   try {
-    const raw = await geminiGenerate({ system, prompt, maxTokens: 1400, json: true });
+    const raw = await geminiGenerate({ system, prompt, maxTokens: 1400, json: true, companyId });
     const parsed = parseComparison(raw, labelToId);
     if (parsed) {
       // A IA escreve "C2"; o gestor lê o nome.

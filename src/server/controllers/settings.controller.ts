@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { AI_MODEL_OPTIONS, parseAiModelChoice } from "@/server/models/ai-model.model";
 import { requireManager } from "@/server/controllers/guards";
 import { careersPageSchema, emailSettingsSchema } from "@/server/models/company.model";
 import { createAuditLog } from "@/server/repositories/audit.repository";
@@ -10,6 +11,7 @@ import { emailSenderStatus, sendTestEmail } from "@/server/services/email.servic
 import {
   getCompanyById,
   updateCareersPage,
+  updateAiModel,
   updateEmailSettings,
   uploadCompanyLogo,
 } from "@/server/services/company.service";
@@ -134,4 +136,44 @@ export async function sendTestEmailAction(): Promise<TestEmailResult> {
     company.email
   );
   return { ok: true, outcome, to: company.email };
+}
+
+/** Configurações · IA: o modelo escolhido e quais estão disponíveis neste servidor. */
+export async function getAiSettingsAction() {
+  const user = await requireManager();
+  const company = await getCompanyById(user.companyId);
+  if (!company) return null;
+  const claudeReady = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+  return {
+    current: parseAiModelChoice(company.aiModel) ?? "",
+    options: AI_MODEL_OPTIONS.map((o) => ({
+      ...o,
+      available: o.provider === "groq" ? Boolean(process.env.GROQ_API_KEY?.trim()) : claudeReady,
+    })),
+  };
+}
+
+/** Configurações · IA: salva o modelo que analisa os candidatos da empresa. */
+export async function updateAiModelAction(
+  _prev: SettingsState,
+  formData: FormData
+): Promise<SettingsState> {
+  const user = await requireManager();
+  const raw = String(formData.get("aiModel") ?? "");
+  const choice = parseAiModelChoice(raw);
+  if (raw && !choice) return { error: "Modelo inválido." };
+  await updateAiModel(user.companyId, choice);
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "CONFIGURACOES_ATUALIZADAS",
+      entityType: "EMPRESA",
+      metadata: { campos: ["aiModel"], aiModel: choice },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  revalidatePath("/configuracoes/ia");
+  return { ok: true };
 }

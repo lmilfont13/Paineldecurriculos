@@ -28,6 +28,8 @@ model Company {
   heroTitle      String   @default("Trabalhe com a gente")
   heroSubtitle   String   @default("Crie sua conta uma vez e candidate-se em um clique.")
   aboutText      String?
+  /// Modelo de IA escolhido para analisar candidatos (null = padrão do sistema).
+  aiModel        String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

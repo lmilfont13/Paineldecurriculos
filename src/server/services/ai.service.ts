@@ -85,7 +85,8 @@ Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": 
  */
 async function buildChecklist(
   criteria: string[],
-  material: string
+  material: string,
+  companyId?: string
 ): Promise<{ checklist: ChecklistItem[] | null; segment: ProfileSegment }> {
   try {
     const raw = await geminiGenerate({
@@ -95,6 +96,7 @@ async function buildChecklist(
       }\n\nMaterial do candidato:\n${material}`,
       maxTokens: 700,
       json: true,
+      companyId,
     });
     return {
       checklist: criteria.length > 0 ? parseChecklist(raw, criteria) : null,
@@ -121,7 +123,8 @@ function composeMaterial(resumeText: string, answersText: string): string {
 /** Nota de aderência a uma vaga, sempre com o AI_PROMPT imutável (regra 3). */
 async function scoreMaterial(
   job: ScorableJob,
-  material: string
+  material: string,
+  companyId?: string
 ): Promise<{ score: number; reasoning: string }> {
   const criteria =
     job.aiCriteria.length > 0
@@ -132,6 +135,7 @@ async function scoreMaterial(
     prompt: `Vaga: ${job.title}\n\nCritérios de aderência:\n${criteria}\n\n${material}`,
     maxTokens: 300,
     json: true,
+    companyId,
   });
   const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
     score?: unknown;
@@ -234,6 +238,7 @@ export async function generateCandidateSummary(
       prompt: `Vaga: ${application.job.title}\n\n${material}`,
       maxTokens: 500,
       json: true,
+      companyId: application.company.id,
     });
     const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
       resumo?: unknown;
@@ -270,11 +275,12 @@ export async function generateCandidateSummary(
  */
 export async function scoreApplicationAgainstJob(
   applicationId: string,
-  job: ScorableJob
+  job: ScorableJob,
+  companyId?: string
 ): Promise<{ score: number; reasoning: string } | null> {
   const material = await loadApplicationMaterial(applicationId);
   if (!material) return null;
-  return scoreMaterial(job, material);
+  return scoreMaterial(job, material, companyId);
 }
 
 /**
@@ -288,7 +294,7 @@ Sugira até 4 funções (cargos) e escreva um resumo de até 3 frases dizendo em
 Retorne JSON: { "areas": [ { "area": "...", "score": 0-100, "why": "..." } ], "roles": ["..."], "summary": "..." }`;
 
 /** Análise de perfil sob demanda. Sem material, devolve null. */
-export async function analyzeCareerProfile(applicationId: string): Promise<CareerProfile | null> {
+export async function analyzeCareerProfile(applicationId: string, companyId?: string): Promise<CareerProfile | null> {
   const material = await loadApplicationMaterial(applicationId);
   if (!material) return null;
   const raw = await geminiGenerate({
@@ -296,6 +302,7 @@ export async function analyzeCareerProfile(applicationId: string): Promise<Caree
     prompt: material,
     maxTokens: 700,
     json: true,
+    companyId,
   });
   const career = parseCareer(raw);
   if (!career) throw new Error("A IA não devolveu uma análise de perfil válida.");
@@ -357,17 +364,17 @@ export async function analyzeApplication(
     await onStep(
       `Comparando ${material.length.toLocaleString("pt-BR")} caracteres com os critérios da vaga`
     );
-    const { score, reasoning } = await scoreMaterial(application.job, material);
+    const { score, reasoning } = await scoreMaterial(application.job, material, application.company.id);
 
     await onStep(
       criteriaList.length > 0 ? "Conferindo critério por critério" : "Resumindo o perfil"
     );
-    const { checklist, segment } = await buildChecklist(criteriaList, material);
+    const { checklist, segment } = await buildChecklist(criteriaList, material, application.company.id);
 
     await updateApplicationAi(applicationId, {
       aiScore: score,
       aiReasoning: reasoning,
-      aiModel: aiModelId(),
+      aiModel: await aiModelId(application.company.id),
       aiChecklist: checklist ?? Prisma.DbNull,
       aiProfile: segment.role,
       aiArea: segment.area,

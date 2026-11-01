@@ -214,6 +214,7 @@ export async function suggestMessageAction(
       system: `Você é um especialista em RH redijindo mensagens para candidatos. Escreva sempre em português brasileiro. Tom: profissional, acolhedor e direto. Sem saudações genéricas (não use "Prezado(a)"). Comece pelo nome do candidato. Não use emojis. Máximo 4 linhas.`,
       prompt: `Escreva uma mensagem para ${firstName} que se candidatou à vaga de ${jobTitle} na empresa ${companyName}. Objetivo: ${topicDescription}.`,
       maxTokens: 300,
+      companyId: user.companyId,
     });
     return { ok: true, text: text.trim() };
   } catch {
@@ -576,6 +577,7 @@ export async function suggestCustomMessageAction(
       system: `Você é um especialista em RH redigindo mensagens para candidatos. Escreva sempre em português brasileiro. Tom: profissional, acolhedor e direto. Sem saudações genéricas (não use "Prezado(a)"). Comece pelo nome do candidato. Não use emojis. Máximo 4 linhas. Não invente datas, valores nem promessas.`,
       prompt: `Escreva uma mensagem para ${firstName} que se candidatou à vaga de ${app.job.title} na empresa ${app.company.name}. Assunto do recado: ${clean}.`,
       maxTokens: 300,
+      companyId: user.companyId,
     });
     return { ok: true, text: text.trim(), fromSaved: false };
   } catch {

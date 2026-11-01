@@ -56,7 +56,7 @@ export async function analyzeJobShortlist(
 
   let raw: string;
   try {
-    raw = await geminiGenerate({ system, prompt, maxTokens: 1500, json: true });
+    raw = await geminiGenerate({ system, prompt, maxTokens: 1500, json: true, companyId });
   } catch (error) {
     console.error("[ia] Falha na comparação de candidatos:", error);
     return { ok: false, error: "Não consegui falar com a IA agora. Tente de novo em instantes." };

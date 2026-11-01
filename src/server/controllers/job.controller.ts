@@ -129,7 +129,7 @@ export async function rewriteJobTextAction(
   text: string,
   jobTitle: string
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
-  await requireManager();
+  const user = await requireManager();
   if (!text.trim()) return { ok: false, error: "Texto vazio." };
 
   const systemPrompts = {
@@ -142,6 +142,7 @@ export async function rewriteJobTextAction(
       system: systemPrompts[field],
       prompt: `Vaga: ${jobTitle}\n\n${text}`,
       maxTokens: 800,
+      companyId: user.companyId,
     });
     return { ok: true, text: result.trim() };
   } catch {
@@ -175,7 +176,7 @@ const parsedJobSchema = z.object({
 export async function parseJobTextAction(
   raw: string
 ): Promise<{ ok: true; job: ParsedJobText } | { ok: false; error: string }> {
-  await requireManager();
+  const user = await requireManager();
   if (raw.trim().length < 20) return { ok: false, error: "Cole o texto da vaga." };
 
   const system = `Você é um especialista em RH. Receberá o texto bruto de uma vaga, geralmente copiado de e-mail ou WhatsApp. Organize-o em JSON com exatamente estas chaves:
@@ -195,6 +196,7 @@ Não invente nada que não esteja no texto. Remova emojis, números de controle 
       prompt: raw.slice(0, 8000),
       maxTokens: 1800,
       json: true,
+      companyId: user.companyId,
     });
     const jsonText = out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1);
     const parsed = parsedJobSchema.safeParse(JSON.parse(jsonText));

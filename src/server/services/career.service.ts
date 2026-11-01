@@ -43,7 +43,7 @@ export async function runCareerAnalysis(
   });
 
   try {
-    const career = await analyzeCareerProfile(applicationId);
+    const career = await analyzeCareerProfile(applicationId, companyId);
     if (!career) {
       await updateAgentRun(run.id, {
         status: "SUCCEEDED",

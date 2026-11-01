@@ -57,6 +57,11 @@ export function updateEmailSettings(
   });
 }
 
+/** Modelo de IA da empresa (null = padrão do sistema). */
+export function updateAiModel(companyId: string, aiModel: string | null) {
+  return updateCompany(companyId, { aiModel });
+}
+
 export async function updateCareersPage(
   companyId: string,
   input: CareersPageInput & { logoUrl?: string; logoFullUrl?: string }

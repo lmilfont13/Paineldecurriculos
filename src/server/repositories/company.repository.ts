@@ -87,6 +87,7 @@ export function updateCompany(
     heroTitle: string;
     heroSubtitle: string;
     aboutText: string | null;
+    aiModel: string | null;
     isActive: boolean;
   }>
 ) {

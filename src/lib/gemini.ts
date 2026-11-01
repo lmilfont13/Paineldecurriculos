@@ -1,6 +1,7 @@
 import "server-only";
 
 import { readEnv } from "@/lib/env";
+import { findCompanyById } from "@/server/repositories/company.repository";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "qwen/qwen3.8-27b";
@@ -8,23 +9,36 @@ const GROQ_MODEL = "qwen/qwen3.8-27b";
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const CLAUDE_DEFAULT_MODEL = "claude-haiku-5-5";
 
-type GenerateParams = { system: string; prompt: string; maxTokens?: number; json?: boolean };
+type GenerateParams = {
+  system: string;
+  prompt: string;
+  maxTokens?: number;
+  json?: boolean;
+  /** Empresa dona da análise: define o modelo escolhido nas Configurações. */
+  companyId?: string;
+};
 
-function claudeModel(): string {
-  return readEnv("ANTHROPIC_MODEL") ?? CLAUDE_DEFAULT_MODEL;
-}
+type Choice = { provider: "anthropic" | "groq"; model: string };
 
-/** Claude é o principal quando ANTHROPIC_API_KEY existe; senão (ou sem ela) usa a Groq. */
-function useClaude(): boolean {
-  return Boolean(readEnv("ANTHROPIC_API_KEY")) && readEnv("AI_PROVIDER") !== "groq";
+/** Modelo escolhido pela empresa; sem escolha, o padrão do sistema (Claude se houver chave, senão Groq). */
+async function resolveChoice(companyId?: string): Promise<Choice> {
+  const hasClaudeKey = Boolean(readEnv("ANTHROPIC_API_KEY"));
+  const picked = companyId ? ((await findCompanyById(companyId))?.aiModel ?? null) : null;
+  if (picked?.startsWith("claude-") && hasClaudeKey) return { provider: "anthropic", model: picked };
+  if (picked?.startsWith("groq:")) return { provider: "groq", model: picked.slice(5) };
+  if (hasClaudeKey && readEnv("AI_PROVIDER") !== "groq") {
+    return { provider: "anthropic", model: readEnv("ANTHROPIC_MODEL") ?? CLAUDE_DEFAULT_MODEL };
+  }
+  return { provider: "groq", model: GROQ_MODEL };
 }
 
 /** Identificação do modelo gravada em cada nota (Application.aiModel). */
-export function aiModelId(): string {
-  return useClaude() ? `anthropic:${claudeModel()}` : `groq:${GROQ_MODEL}`;
+export async function aiModelId(companyId?: string): Promise<string> {
+  const c = await resolveChoice(companyId);
+  return `${c.provider === "anthropic" ? "anthropic" : "groq"}:${c.model}`;
 }
 
-async function callGroq(key: string, params: GenerateParams): Promise<Response> {
+async function callGroq(key: string, model: string, params: GenerateParams): Promise<Response> {
   return fetch(GROQ_ENDPOINT, {
     method: "POST",
     headers: {
@@ -32,7 +46,7 @@ async function callGroq(key: string, params: GenerateParams): Promise<Response> 
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model,
       messages: [
         { role: "system", content: params.system },
         { role: "user", content: params.prompt },
@@ -44,19 +58,19 @@ async function callGroq(key: string, params: GenerateParams): Promise<Response> 
   });
 }
 
-async function generateWithGroq(params: GenerateParams): Promise<string> {
+async function generateWithGroq(model: string, params: GenerateParams): Promise<string> {
   const key = readEnv("GROQ_API_KEY");
   if (!key) throw new Error("GROQ_API_KEY não configurada");
 
   // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
   // Somam menos que o maxDuration (60s) das páginas que chamam a IA.
   const delays = [12_000, 25_000];
-  let res = await callGroq(key, params);
+  let res = await callGroq(key, model, params);
 
   for (const delay of delays) {
     if (res.status !== 429) break;
     await new Promise((r) => setTimeout(r, delay));
-    res = await callGroq(key, params);
+    res = await callGroq(key, model, params);
   }
 
   if (!res.ok) {
@@ -70,7 +84,7 @@ async function generateWithGroq(params: GenerateParams): Promise<string> {
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-async function generateWithClaude(params: GenerateParams): Promise<string> {
+async function generateWithClaude(model: string, params: GenerateParams): Promise<string> {
   const key = readEnv("ANTHROPIC_API_KEY");
   if (!key) throw new Error("ANTHROPIC_API_KEY não configurada");
 
@@ -87,7 +101,7 @@ async function generateWithClaude(params: GenerateParams): Promise<string> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: claudeModel(),
+      model,
       max_tokens: params.maxTokens ?? 300,
       temperature: 0.2,
       system,
@@ -105,17 +119,18 @@ async function generateWithClaude(params: GenerateParams): Promise<string> {
 }
 
 /**
- * Gera texto com a IA configurada: Claude (Anthropic) quando há
- * ANTHROPIC_API_KEY, com a Groq como reserva se o Claude falhar.
+ * Gera texto com a IA escolhida pela empresa (padrão: Claude quando há
+ * ANTHROPIC_API_KEY, senão Groq). Se o Claude falhar, a Groq é a reserva.
  * (O nome "geminiGenerate" é histórico — o provedor mudou mais de uma vez.)
  */
 export async function geminiGenerate(params: GenerateParams): Promise<string> {
-  if (!useClaude()) return generateWithGroq(params);
+  const choice = await resolveChoice(params.companyId);
+  if (choice.provider === "groq") return generateWithGroq(choice.model, params);
   try {
-    return await generateWithClaude(params);
+    return await generateWithClaude(choice.model, params);
   } catch (error) {
     if (!readEnv("GROQ_API_KEY")) throw error;
     console.error("[ia] Claude falhou, usando a Groq como reserva:", error);
-    return generateWithGroq(params);
+    return generateWithGroq(GROQ_MODEL, params);
   }
 }

@@ -40,6 +40,7 @@ export async function runCompanyIntelligence(companyId: string, runId: string) {
       prompt: JSON.stringify(snapshot),
       maxTokens: 700,
       json: true,
+      companyId,
     });
 
     const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
