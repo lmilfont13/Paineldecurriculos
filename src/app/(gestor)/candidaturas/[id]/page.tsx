@@ -18,6 +18,8 @@ import {
   type InfoField,
 } from "@/server/models/pre-interview.model";
 import { NotesForm } from "@/components/gestor/notes-form";
+import { AnswersEditor } from "@/components/gestor/answers-editor";
+import { AskAiBox } from "@/components/gestor/ask-ai-box";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import { ReextractPhotoButton } from "@/components/gestor/reextract-photo-button";
 import { CareerCard } from "@/components/gestor/career-card";
@@ -263,6 +265,8 @@ export default async function CandidaturaDetailPage({
               </div>
             )}
 
+            {app.aiState === "DONE" && <AskAiBox applicationId={app.id} />}
+
             {checklist.length > 0 ? (
               <div className="mt-6 border-t border-[#e4e4e7] pt-5">
                 <h3 className="text-[13px] font-semibold text-[#0a0a0a]">
@@ -413,19 +417,27 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-semibold text-[#0a0a0a]">
-              Respostas do formulário
-            </h2>
-            <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
-              {infoPairs.map(([label, value]) => (
+            <dl className="mb-6 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+              {infoPairs.slice(0, 2).map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-[11px] font-medium text-[#71717a]">{label}</dt>
-                  <dd className="mt-1 break-words text-[13px] leading-5 text-[#0a0a0a]">
-                    {value}
-                  </dd>
+                  <dd className="mt-1 break-words text-[13px] leading-5 text-[#0a0a0a]">{value}</dd>
                 </div>
               ))}
             </dl>
+            <AnswersEditor
+              applicationId={app.id}
+              canReanalyze={app.aiState === "DONE" || app.aiState === "FAILED" || app.aiState === "NO_RESUME"}
+              answers={[...coreAnswers, ...customAnswers]
+                .filter((a) => a.field.type !== "FILE_UPLOAD")
+                .map((a) => ({
+                  id: a.id,
+                  label: a.field.label,
+                  value: a.value,
+                  type: a.field.type,
+                  options: a.field.options,
+                }))}
+            />
           </section>
         </main>
 

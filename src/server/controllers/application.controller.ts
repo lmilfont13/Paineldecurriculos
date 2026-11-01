@@ -13,6 +13,7 @@ import {
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
+import { askAboutApplication } from "@/server/services/ai.service";
 import { sendBulkMessage, type BulkMessageResult } from "@/server/services/bulk-message.service";
 import { suggestComparison, type ComparisonOutcome } from "@/server/services/compare.service";
 import {
@@ -32,6 +33,7 @@ import {
   getCompanyApplication,
   requestApplicationResumeUpload,
   requestApplicationInfo,
+  correctApplicationAnswers,
   requestReanalysis,
   saveInfoAnswers,
   saveManagerNotes,
@@ -630,4 +632,39 @@ export async function suggestComparisonAction(
 ): Promise<ComparisonOutcome> {
   const user = await requireManager();
   return suggestComparison(user.companyId, applicationIds);
+}
+
+/** Pergunta livre à IA sobre um candidato (só esclarece: não muda nota nem etapa). */
+export async function askAboutCandidateAction(
+  applicationId: string,
+  question: string
+): Promise<{ ok: true; answer: string } | { ok: false; error: string }> {
+  const user = await requireManager();
+  return askAboutApplication(user.companyId, applicationId, question);
+}
+
+/** Corrige respostas do formulário que o candidato errou (a nota só muda se a análise for refeita). */
+export async function correctAnswersAction(
+  applicationId: string,
+  values: Record<string, string>
+): Promise<{ ok: true; changed: number } | { ok: false; error: string }> {
+  const user = await requireManager();
+  const result = await correctApplicationAnswers(user.companyId, applicationId, values);
+  if (!result.ok) return result;
+  if (result.changed.length > 0) {
+    try {
+      await createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        action: "RESPOSTAS_CORRIGIDAS",
+        entityType: "CANDIDATURA",
+        entityId: applicationId,
+        metadata: { campos: result.changed },
+      });
+    } catch { /* auditoria nunca bloqueia a ação principal */ }
+    revalidatePath(`/candidaturas/${applicationId}`);
+  }
+  return { ok: true, changed: result.changed.length };
 }

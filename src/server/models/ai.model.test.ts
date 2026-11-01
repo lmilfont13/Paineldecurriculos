@@ -10,13 +10,30 @@ import {
 describe("buildAnswersText", () => {
   it("monta 'pergunta: resposta' e pula anexos e datas", () => {
     const text = buildAnswersText([
-      { value: "5 anos em loja", field: { label: "Experiência", type: "TEXTAREA" } },
+      { value: "Manhã e tarde", field: { label: "Disponibilidade de horário", type: "TEXTAREA" } },
       { value: "1990-01-01", field: { label: "Nascimento", type: "DATE" } },
       { value: "x.pdf", field: { label: "Currículo", type: "FILE_UPLOAD" } },
       { value: "  ", field: { label: "Vazia", type: "TEXT" } },
       { value: "Sim", field: { label: "Tem 18 anos ou mais?", type: "YES_NO" } },
     ]);
-    expect(text).toBe("Experiência: 5 anos em loja");
+    expect(text).toBe("Disponibilidade de horário: Manhã e tarde");
+  });
+
+  it("não leva a experiência que o candidato declarou: só o currículo mede experiência", () => {
+    const text = buildAnswersText([
+      { value: "Sênior", field: { label: "Qual o seu nível profissional?", type: "DROPDOWN" } },
+      { value: "10 anos", field: { label: "Quanto tempo de experiência em vendas?", type: "SHORT_TEXT" } },
+      { value: "Pleno", field: { label: "Senioridade", type: "SHORT_TEXT" } },
+      { value: "Eu tenho muita experiência", field: { label: "Conte sobre você", type: "LONG_TEXT" } },
+      { value: "Manhã", field: { label: "Turno preferido", type: "SHORT_TEXT" } },
+    ]);
+    expect(text).toBe("Conte sobre você: Eu tenho muita experiência\nTurno preferido: Manhã");
+  });
+  it("não leva respostas que são só um nível (júnior, pleno, sênior)", () => {
+    const text = buildAnswersText([
+      { value: "Júnior", field: { label: "Como você se classifica?", type: "DROPDOWN" } },
+    ]);
+    expect(text).toBe("");
   });
 });
 

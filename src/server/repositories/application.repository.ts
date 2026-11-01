@@ -504,6 +504,15 @@ export function findApplicationForCandidate(
   });
 }
 
+/** Corrige o texto de respostas da candidatura (só as que pertencem a ela). */
+export function updateAnswerValues(applicationId: string, updates: { id: string; value: string }[]) {
+  return prisma.$transaction(
+    updates.map((u) =>
+      prisma.answer.updateMany({ where: { id: u.id, applicationId }, data: { value: removeNulChars(u.value) ?? "" } })
+    )
+  );
+}
+
 export function deleteApplication(id: string) {
   return prisma.application.delete({ where: { id } });
 }

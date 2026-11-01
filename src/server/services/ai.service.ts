@@ -482,3 +482,65 @@ export async function runTriageWithTracking(
   });
   if (options.rethrow) throw lastError;
 }
+
+/**
+ * Prompt das perguntas do gestor sobre um candidato. Separado do AI_PROMPT
+ * (regra 3): não gera nota, só esclarece o que o material mostra.
+ */
+const ASK_PROMPT = `Você ajuda um recrutador a entender melhor um candidato a partir do currículo e das respostas dele.
+Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
+Responda em português, de forma direta e curta (até 6 linhas), usando só o que está no material.
+Se o material não permitir responder, diga isso com clareza; nunca invente.
+Experiência e nível que o próprio candidato declarou no formulário não foram incluídos: se o recrutador perguntar sobre isso, use só o que o currículo mostra.
+Você não decide nada: a decisão é do recrutador.`;
+
+/** Pergunta livre do gestor sobre uma candidatura. Não grava nada nem mexe em nota ou etapa. */
+export async function askAboutApplication(
+  companyId: string,
+  applicationId: string,
+  question: string
+): Promise<{ ok: true; answer: string } | { ok: false; error: string }> {
+  const application = await findApplicationById(applicationId);
+  if (!application || application.company.id !== companyId) {
+    return { ok: false, error: "Candidatura não encontrada." };
+  }
+  const q = question.trim().slice(0, 500);
+  if (q.length < 3) return { ok: false, error: "Escreva a sua pergunta." };
+
+  const answersText = buildAnswersText(application.answers);
+  let resumeText = application.resumeText ?? "";
+  if (!resumeText.trim() && application.resumeUrl) {
+    try {
+      resumeText = await readResumeText(application.resumeUrl);
+    } catch {
+      resumeText = "";
+    }
+  }
+  if (!hasMaterial(resumeText, answersText)) {
+    return { ok: false, error: "Não há currículo legível nem respostas para a IA consultar." };
+  }
+
+  const criteria =
+    application.job.aiCriteria.length > 0
+      ? application.job.aiCriteria.map((c) => `- ${c}`).join("\n")
+      : "(sem critérios definidos)";
+  try {
+    const answer = await geminiGenerate({
+      system: ASK_PROMPT,
+      prompt: `Vaga: ${application.job.title}
+Critérios da vaga:
+${criteria}
+
+${composeMaterial(resumeText, answersText)}
+
+Pergunta do recrutador: ${q}`,
+      maxTokens: 500,
+      companyId,
+    });
+    const text = answer.trim();
+    return text ? { ok: true, answer: text } : { ok: false, error: "A IA não devolveu resposta. Tente de novo." };
+  } catch (error) {
+    console.error("[ia] Falha ao responder pergunta do gestor:", error);
+    return { ok: false, error: "Não consegui falar com a IA agora. Tente de novo em instantes." };
+  }
+}

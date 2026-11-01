@@ -83,6 +83,7 @@ import {
 } from "@/server/services/email.service";
 import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
+import { updateAnswerValues } from "@/server/repositories/application.repository";
 import {
   extractResumeContact,
   generateCandidateSummary,
@@ -386,6 +387,31 @@ export async function searchCompanyApplicationIds(companyId: string, term: strin
  * Reenfileira a análise de IA (gestor, para FAILED/NO_RESUME). Continua
  * respeitando a regra 2: só aiState muda aqui; o job em background faz o resto.
  */
+/** O gestor corrige respostas que o candidato errou. Só mexe em respostas desta candidatura. */
+export async function correctApplicationAnswers(
+  companyId: string,
+  id: string,
+  values: Record<string, string>
+): Promise<{ ok: true; changed: string[] } | { ok: false; error: string }> {
+  const application = await getCompanyApplication(companyId, id);
+  if (!application) return { ok: false, error: "Candidatura não encontrada." };
+
+  const current = new Map(application.answers.map((a) => [a.id, a]));
+  const updates: { id: string; value: string }[] = [];
+  const changed: string[] = [];
+  for (const [answerId, raw] of Object.entries(values)) {
+    const answer = current.get(answerId);
+    if (!answer) continue;
+    const value = raw.trim().slice(0, 2000);
+    if (!value) return { ok: false, error: `A resposta de "${answer.field.label}" não pode ficar vazia.` };
+    if (value === answer.value) continue;
+    updates.push({ id: answerId, value });
+    changed.push(answer.field.label);
+  }
+  if (updates.length > 0) await updateAnswerValues(id, updates);
+  return { ok: true, changed };
+}
+
 export async function requestReanalysis(
   companyId: string,
   id: string

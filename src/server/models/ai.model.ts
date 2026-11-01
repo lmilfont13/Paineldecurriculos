@@ -29,12 +29,27 @@ export function isSensitiveQuestion(label: string): boolean {
   return SENSITIVE_LABEL.test(label);
 }
 
+/**
+ * Experiência e nível declarados pelo próprio candidato ("Sênior", "10 anos de
+ * vendas") não entram na nota: muita gente não sabe distinguir júnior, pleno e
+ * sênior. A experiência é medida pelo currículo; o gestor vê a resposta e pode
+ * conferir ou corrigir.
+ */
+const SELF_DECLARED_LABEL =
+  /(n[ií]vel|senioridade|tempo de (experi[eê]ncia|servi[cç]o|trabalho|atua)|anos de (experi[eê]ncia|trabalho|atua)|quanto tempo|quantos anos|h[aá] quanto tempo)/i;
+const LEVEL_ONLY_VALUE = /^\s*(estagi[aá]rio|aprendiz|j[uú]nior|pleno|s[eê]nior|especialista)\s*$/i;
+
+export function isSelfDeclaredExperience(label: string, value: string): boolean {
+  return SELF_DECLARED_LABEL.test(label) || LEVEL_ONLY_VALUE.test(value);
+}
+
 export function buildAnswersText(
   answers: { value: string; field: { label: string; type: string } }[]
 ): string {
   return answers
     .filter((a) => !SKIPPED_FIELD_TYPES.has(a.field.type))
     .filter((a) => !isSensitiveQuestion(a.field.label))
+    .filter((a) => !isSelfDeclaredExperience(a.field.label, a.value))
     .map((a) => ({ label: a.field.label.trim(), value: a.value.trim() }))
     .filter((a) => a.label && a.value)
     .map((a) => `${a.label}: ${a.value}`)

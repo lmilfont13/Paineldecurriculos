@@ -20,6 +20,7 @@ export type AuditAction =
   | "DADOS_SENSIVEIS_VISTOS"
   | "NOTA_SALVA"
   | "CONFIGURACOES_ATUALIZADAS"
+  | "RESPOSTAS_CORRIGIDAS"
   | "VAGA_COMPARTILHADA_WHATSAPP";
 
 export interface CreateAuditLogInput {
