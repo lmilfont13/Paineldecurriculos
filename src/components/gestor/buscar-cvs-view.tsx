@@ -358,7 +358,7 @@ export function BuscarCvsView({
                 <Sparkles className="size-3.5" />
               </span>
               <span className="text-[11px] font-bold tracking-widest uppercase text-amber-800">
-                Talent Intelligence · Base Aberta Michelin
+                Talent Intelligence · Base Aberta
               </span>
             </div>
             <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-[#0a0a0a] sm:text-3xl lg:text-4xl">
