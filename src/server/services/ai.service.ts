@@ -7,7 +7,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { Prisma } from "@prisma/client";
 
-import { AI_MODEL_ID, geminiGenerate } from "@/lib/gemini";
+import { aiModelId, geminiGenerate } from "@/lib/gemini";
 import { parseCareer, type CareerProfile } from "@/server/models/career.model";
 import { parseContactJson } from "@/server/models/intake.model";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -367,7 +367,7 @@ export async function analyzeApplication(
     await updateApplicationAi(applicationId, {
       aiScore: score,
       aiReasoning: reasoning,
-      aiModel: AI_MODEL_ID,
+      aiModel: aiModelId(),
       aiChecklist: checklist ?? Prisma.DbNull,
       aiProfile: segment.role,
       aiArea: segment.area,

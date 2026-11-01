@@ -27,7 +27,7 @@ vi.mock("@/server/repositories/application.repository", () => ({
 
 const generate = vi.fn();
 vi.mock("@/lib/gemini", () => ({
-  AI_MODEL_ID: "groq:teste",
+  aiModelId: () => "groq:teste",
   geminiGenerate: (...a: unknown[]) => generate(...a),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
