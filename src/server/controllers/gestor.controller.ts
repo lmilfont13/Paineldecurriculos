@@ -17,6 +17,7 @@ import {
   getOtherApplicationsOfPerson,
   listCompanyApplications,
   listApplicationsForCvSearch,
+  listCompanyApplicantAges,
   listJobApplicantAges,
 } from "@/server/services/application.service";
 import {
@@ -79,7 +80,8 @@ export async function getCandidaturasPageData(jobId?: string) {
     await listCompanyApplications(user.companyId, jobId)
   );
   const jobs = await listCompanyJobs(user.companyId);
-  return { applications, jobs, companyName: company.name };
+  const ages = await listCompanyApplicantAges(user.companyId);
+  return { applications, jobs, companyName: company.name, ages };
 }
 
 /** Busca avançada de CVs (nível Michelin): base aberta de currículos com busca facetada. */

@@ -297,6 +297,22 @@ export function findAgeSourcesForJob(companyId: string, jobId: string) {
   });
 }
 
+/** Data de nascimento de todas as candidaturas da empresa e, só para quem não tem, o texto do currículo. */
+export async function findAgeSourcesForCompany(companyId: string) {
+  const withBirth = await prisma.application.findMany({
+    where: { companyId, birthDate: { not: null } },
+    select: { id: true, birthDate: true },
+  });
+  const withoutBirth = await prisma.application.findMany({
+    where: { companyId, birthDate: null },
+    select: { id: true, resumeText: true },
+  });
+  return [
+    ...withBirth.map((r) => ({ id: r.id, birthDate: r.birthDate, resumeText: null as string | null })),
+    ...withoutBirth.map((r) => ({ id: r.id, birthDate: null as Date | null, resumeText: r.resumeText })),
+  ];
+}
+
 /** Busca avançada de CVs (nível Michelin): dados enriquecidos para busca facetada e snippets. */
 export function findApplicationsForCvSearch(companyId: string) {
   return prisma.application.findMany({

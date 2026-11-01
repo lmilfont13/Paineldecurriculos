@@ -26,7 +26,7 @@ export default async function CandidaturasPage({
   const { vaga, status, atende } = await searchParams;
   const initialStatus =
     status && status in appStatusLabels ? (status as AppStatusKey) : undefined;
-  const { applications, jobs, companyName } = await getCandidaturasPageData();
+  const { applications, jobs, companyName, ages } = await getCandidaturasPageData();
   const messageTemplates = await listMessageTemplatesAction();
 
   const rows: CandidaturaRow[] = applications.map((app) => ({
@@ -50,6 +50,7 @@ export default async function CandidaturasPage({
     aiArea: app.aiArea,
     aiProfile: app.aiProfile,
     aiLevel: app.aiLevel,
+    age: ages[app.id] ?? null,
   }));
 
   return (

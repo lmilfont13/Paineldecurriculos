@@ -83,7 +83,7 @@ import {
 } from "@/server/services/email.service";
 import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
-import { findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
+import { findAgeSourcesForCompany, findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
 import { effectiveAge } from "@/server/models/age.model";
 import {
   extractResumeContact,
@@ -151,6 +151,12 @@ export async function listCompanyApplications(
 /** Idade (só para exibir e filtrar) de cada candidato de uma vaga, por id da candidatura. */
 export async function listJobApplicantAges(companyId: string, jobId: string) {
   const rows = await findAgeSourcesForJob(companyId, jobId);
+  return Object.fromEntries(rows.map((r) => [r.id, effectiveAge(r.birthDate, r.resumeText)])) as Record<string, number | null>;
+}
+
+/** Idade (só para exibir) de cada candidatura da empresa, por id. */
+export async function listCompanyApplicantAges(companyId: string) {
+  const rows = await findAgeSourcesForCompany(companyId);
   return Object.fromEntries(rows.map((r) => [r.id, effectiveAge(r.birthDate, r.resumeText)])) as Record<string, number | null>;
 }
 

@@ -29,6 +29,8 @@ export type CandidaturaRow = {
   aiArea?: string | null;
   aiProfile?: string | null;
   aiLevel?: string | null;
+  /** Idade, só para o gestor conferir (nunca entra na nota nem vai para a IA). */
+  age?: number | null;
 };
 
 export type StageKey = AppStatusKey | "ALL";

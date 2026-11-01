@@ -119,6 +119,7 @@ export function CandidaturasTable({
   const [jobId, setJobId] = useState(initialJobId ?? "");
   const [onlyMeets, setOnlyMeets] = useState(initialOnlyMeets);
   const [sort, setSort] = useState<SortKey>("WAITING");
+  const [sortInfoOpen, setSortInfoOpen] = useState(false);
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "cards">("cards");
@@ -493,6 +494,38 @@ export function CandidaturasTable({
             </option>
           ))}
         </select>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setSortInfoOpen((o) => !o)}
+            aria-label="Entenda a diferença entre maior aderência e indicação da IA"
+            aria-expanded={sortInfoOpen}
+            className="flex size-7 items-center justify-center rounded-full border border-[#d4d4d8] bg-white text-[12px] font-semibold italic text-[#71717a] hover:border-[#0a0a0a] hover:text-[#0a0a0a]"
+          >
+            i
+          </button>
+          {sortInfoOpen && (
+            <div
+              role="dialog"
+              className="absolute right-0 top-9 z-30 w-[320px] rounded-xl border border-[#e4e4e7] bg-white p-4 text-[12px] leading-5 text-[#44403c] shadow-lg"
+            >
+              <p className="font-semibold text-[#0a0a0a]">Maior aderência × Indicação da IA</p>
+              <p className="mt-2">
+                <strong className="text-[#0a0a0a]">Maior aderência</strong> ordena só pela nota da triagem (0 a 100): quanto o
+                currículo atende os critérios da vaga.
+              </p>
+              <p className="mt-2">
+                <strong className="text-[#0a0a0a]">Indicação da IA</strong> coloca primeiro quem atinge a nota mínima da vaga e,
+                dentro disso, ordena pelo índice de decisão: 60% a nota + 40% dos critérios atendidos, um a um. Por isso duas
+                pessoas com a mesma nota podem ficar em ordem diferente.
+              </p>
+              <p className="mt-2 text-[#71717a]">O &quot;1º&quot;, &quot;2º&quot; no cartão é a posição dentro da própria vaga.</p>
+              <button type="button" onClick={() => setSortInfoOpen(false)} className="mt-3 text-[11px] font-medium underline underline-offset-2">
+                Fechar
+              </button>
+            </div>
+          )}
+        </div>
 
         <select
           value=""
@@ -582,7 +615,7 @@ export function CandidaturasTable({
                 <Fragment key={row.id}>
                 {groupHeader(row, index, "col-span-full mt-2 border-b border-[#e4e4e7] pb-2 first:mt-0")}
                 <div
-                  className={"relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
+                  className={"group relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
                 >
                   {aiRanks?.get(row.id) !== undefined && (
                     <span
@@ -609,6 +642,14 @@ export function CandidaturasTable({
                       className="size-16 shrink-0 rounded-full bg-[#1c1917] text-lg font-bold text-white flex items-center justify-center object-cover"
                     />
                     <p className="mt-3 line-clamp-2 text-center text-[13px] font-semibold text-[#0a0a0a] leading-snug">{row.name}</p>
+                    {row.age != null && (
+                      <p
+                        className="mt-0.5 text-center text-[10px] text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100"
+                        title="Só para sua conferência: não entra na nota nem vai para a IA"
+                      >
+                        {row.age} anos
+                      </p>
+                    )}
                     {row.aiArea && (
                       <p className="mt-0.5 text-center text-[11px] text-[#71717a] line-clamp-1">{row.aiArea}</p>
                     )}
@@ -750,6 +791,7 @@ export function CandidaturasTable({
                   </span>
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {jobLabel(row.jobTitle, row.jobCode)}
+                    {row.age != null && <span title="Só para sua conferência: não entra na nota nem vai para a IA">{" · "}{row.age} anos</span>}
                     {waiting && (
                       <span className="font-medium text-[#b07818] md:hidden">
                         {" · "}
