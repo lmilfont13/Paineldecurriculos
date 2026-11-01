@@ -271,8 +271,6 @@ export default async function CandidaturaDetailPage({
               </div>
             )}
 
-            {app.aiState === "DONE" && <AskAiBox applicationId={app.id} />}
-
             {checklist.length > 0 ? (
               <div className="mt-6 border-t border-[#e4e4e7] pt-5">
                 <h3 className="text-[13px] font-semibold text-[#0a0a0a]">
@@ -445,6 +443,12 @@ export default async function CandidaturaDetailPage({
                 }))}
             />
           </section>
+
+          {app.aiState === "DONE" && (
+            <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
+              <AskAiBox applicationId={app.id} />
+            </section>
+          )}
         </main>
 
         <aside className="min-w-0 space-y-5 lg:sticky lg:top-5">

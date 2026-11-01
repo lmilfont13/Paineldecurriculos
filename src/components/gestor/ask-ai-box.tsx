@@ -26,8 +26,8 @@ export function AskAiBox({ applicationId }: { applicationId: string }) {
   }
 
   return (
-    <div className="mt-6 border-t border-[#e4e4e7] pt-5">
-      <h3 className="text-[13px] font-semibold text-[#0a0a0a]">Pergunte à IA sobre este candidato</h3>
+    <div>
+      <h2 className="text-sm font-semibold text-[#0a0a0a]">Pergunte à IA sobre este candidato</h2>
       <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
         Ela responde com base no currículo e nas respostas. Não muda a nota nem a etapa.
       </p>
