@@ -79,11 +79,20 @@ export default async function PreEntrevistaPage({
             companyName={company.name}
           />
         ) : (
-          <p className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-6 text-sm text-[#71717a]">
-            {application.infoAnsweredAt
-              ? "Recebemos suas informações. Obrigado!"
-              : "Não há nada pendente por aqui."}
-          </p>
+          <div className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-6 text-sm leading-6 text-[#57534e]">
+            {application.infoAnsweredAt ? (
+              <>
+                <p className="font-semibold text-[#0a0a0a]">Recebemos suas informações. Obrigado!</p>
+                <p className="mt-2">
+                  A sua avaliação está em andamento e estamos próximos da entrevista. Assim que
+                  tivermos novidades, a {company.name} entra em contato com você. Acompanhe pela
+                  página da sua candidatura.
+                </p>
+              </>
+            ) : (
+              "Não há nada pendente por aqui."
+            )}
+          </div>
         )}
       </main>
       <CompanyFooter company={company} />
