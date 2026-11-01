@@ -1,5 +1,6 @@
 "use server";
 
+import type { AppStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { runInBackground } from "@/lib/background";
@@ -260,7 +261,7 @@ export async function reanalyzeAction(applicationId: string): Promise<void> {
 /** G11 · Mudança de status em massa (E9) — cada id é validado pelo tenant. */
 export async function bulkSetApplicationStatusAction(
   applicationIds: string[],
-  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+  status: AppStatus
 ): Promise<{ updated: number }> {
   const user = await requireManager();
   let updated = 0;
@@ -276,12 +277,13 @@ export async function bulkSetApplicationStatusAction(
 /** Mudança de status pelo gestor (E4) — decisão sempre manual (regra 2). */
 export async function setApplicationStatusAction(
   applicationId: string,
-  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+  status: AppStatus
 ): Promise<void> {
   const user = await requireManager();
   const updated = await setApplicationStatus(user.companyId, applicationId, status);
   const statusLabels = {
     PENDING: "Triagem",
+    SHORTLISTED: "Passou da triagem",
     INTERVIEW: "Entrevista",
     APPROVED: "Aprovado",
     REJECTED: "Reprovado",

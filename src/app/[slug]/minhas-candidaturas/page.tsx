@@ -25,6 +25,7 @@ const candidateStatus: Record<
   { label: string; className: string }
 > = {
   PENDING: { label: "Em análise", className: "bg-[#f1f0ed] text-[#71717a]" },
+  SHORTLISTED: { label: "Passou da triagem", className: "bg-[#eaf1fb] text-[#2f5fa8]" },
   INTERVIEW: { label: "Entrevista", className: "bg-[#f7f0e1] text-[#b07818]" },
   APPROVED: { label: "Aprovado", className: "bg-[#e4f6ec] text-[#1f7a4d]" },
   REJECTED: { label: "Finalizado", className: "bg-[#f1f0ed] text-[#a1a1aa]" },

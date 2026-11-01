@@ -47,7 +47,7 @@ export function PortfolioReport({
   const insights = portfolioInsights(data);
   const footerText = `Confidencial · ${company} · Relatório geral de recrutamento`;
   const date = data.generatedAt.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
-  const stageColors: Record<string, string> = { PENDING: "#e0a526", INTERVIEW: brand, APPROVED: C.good, REJECTED: "#d6d3d1" };
+  const stageColors: Record<string, string> = { PENDING: "#e0a526", SHORTLISTED: "#5b8bd0", INTERVIEW: brand, APPROVED: C.good, REJECTED: "#d6d3d1" };
   const jobs = data.perJob;
   const fichas = jobs.filter((j) => j.total > 0).slice(0, MAX_FICHAS);
   const p = data.profile;

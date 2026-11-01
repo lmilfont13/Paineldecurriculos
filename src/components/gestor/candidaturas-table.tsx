@@ -44,6 +44,7 @@ export type { CandidaturaRow };
 /** Etapas do funil como abas — a organização segue o processo, não a tabela. */
 const TABS: { key: StageKey; label: string }[] = [
   { key: "PENDING", label: "Triagem" },
+  { key: "SHORTLISTED", label: "Passou da triagem" },
   { key: "INTERVIEW", label: "Entrevista" },
   { key: "APPROVED", label: "Aprovados" },
   { key: "REJECTED", label: "Reprovados" },
@@ -59,6 +60,7 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 const statusPill: Record<AppStatusKey, string> = {
   PENDING: "bg-[#f1f0ed] text-[#71717a]",
+  SHORTLISTED: "bg-[#eaf1fb] text-[#2f5fa8]",
   INTERVIEW: "bg-[#f7f0e1] text-[#b07818]",
   APPROVED: "bg-[#e4f6ec] text-[#1f7a4d]",
   REJECTED: "bg-[#fbeae8] text-[#c23b3b]",
@@ -66,15 +68,17 @@ const statusPill: Record<AppStatusKey, string> = {
 
 /** Ações em massa por etapa — só o que faz sentido de onde o gestor está. */
 const BULK_BY_TAB: Record<StageKey, AppStatusKey[]> = {
-  PENDING: ["INTERVIEW", "REJECTED"],
+  PENDING: ["SHORTLISTED", "INTERVIEW", "REJECTED"],
+  SHORTLISTED: ["INTERVIEW", "REJECTED", "PENDING"],
   INTERVIEW: ["APPROVED", "REJECTED"],
   APPROVED: ["INTERVIEW"],
   REJECTED: ["PENDING"],
-  ALL: ["INTERVIEW", "APPROVED", "REJECTED"],
+  ALL: ["SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"],
 };
 
 const BULK_LABELS: Record<AppStatusKey, string> = {
   PENDING: "Voltar p/ triagem",
+  SHORTLISTED: "Passou da triagem",
   INTERVIEW: "Chamar p/ entrevista",
   APPROVED: "Aprovar",
   REJECTED: "Reprovar",

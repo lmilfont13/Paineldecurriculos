@@ -340,7 +340,7 @@ export function DecisionReport({
   const jobLabel = `${data.job.title}${data.job.code ? ` #${data.job.code}` : ""}`;
   const st = data.stats;
 
-  const stageColors: Record<string, string> = { PENDING: "#e0a526", INTERVIEW: brand, APPROVED: C.good, REJECTED: "#d6d3d1" };
+  const stageColors: Record<string, string> = { PENDING: "#e0a526", SHORTLISTED: "#5b8bd0", INTERVIEW: brand, APPROVED: C.good, REJECTED: "#d6d3d1" };
 
   return (
     <Document title={`Relatório de decisão — ${jobLabel}`} author={company} subject="Comparativo de candidatos">

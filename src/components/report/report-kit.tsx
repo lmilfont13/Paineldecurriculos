@@ -20,6 +20,7 @@ export const cut = (s: string, max: number) => (s.length > max ? `${s.slice(0, m
 
 export const STAGE_LABEL: Record<string, string> = {
   PENDING: "Em triagem",
+  SHORTLISTED: "Passou da triagem",
   INTERVIEW: "Entrevista",
   APPROVED: "Aprovados",
   REJECTED: "Reprovados",

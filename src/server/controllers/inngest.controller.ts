@@ -1,3 +1,4 @@
+import type { AppStatus } from "@prisma/client";
 import "server-only";
 
 import { inngest } from "@/lib/inngest";
@@ -51,7 +52,7 @@ export const applicationStatusChangedJob = inngest.createFunction(
   async ({ event }) => {
     const { applicationId, status } = event.data as {
       applicationId: string;
-      status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
+      status: AppStatus;
     };
     await communicateStatusChange(applicationId, status, { rethrow: true });
   }

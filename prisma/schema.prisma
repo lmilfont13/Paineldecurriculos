@@ -298,6 +298,7 @@ model StatusEvent {
 
 enum AppStatus {
   PENDING
+  SHORTLISTED
   INTERVIEW
   APPROVED
   REJECTED

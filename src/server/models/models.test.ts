@@ -483,3 +483,17 @@ describe("tons da marca Tarhget", () => {
     expect(careersPageSchema.safeParse({ ...base, name: " " }).success).toBe(false);
   });
 });
+
+describe("etapa 'Passou da triagem'", () => {
+  it("avisa o candidato no portal, sem citar nota nem análise", async () => {
+    const { stageNotification } = await import("@/server/models/notification.model");
+    const n = stageNotification("SHORTLISTED", "Empresa", "Vendedor");
+    expect(n?.title).toBe("Você passou da primeira fase");
+    expect(n?.body).not.toMatch(/bnotab|bIAb|análise/i);
+  });
+
+  it("tem rótulo para o gestor", async () => {
+    const { appStatusLabels } = await import("@/server/models/application.model");
+    expect(appStatusLabels.SHORTLISTED).toBe("Passou da triagem");
+  });
+});

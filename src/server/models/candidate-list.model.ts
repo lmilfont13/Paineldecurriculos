@@ -79,6 +79,7 @@ export function applyFilters(
 export function countByStage(rows: CandidaturaRow[]): Record<StageKey, number> {
   const counts: Record<StageKey, number> = {
     PENDING: 0,
+    SHORTLISTED: 0,
     INTERVIEW: 0,
     APPROVED: 0,
     REJECTED: 0,

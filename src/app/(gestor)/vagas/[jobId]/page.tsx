@@ -33,6 +33,7 @@ export const maxDuration = 60;
 
 const STAGES: { key: AppStatusKey; label: string; accent: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818" },
+  { key: "SHORTLISTED", label: "Passou da triagem", accent: "#2f5fa8" },
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d" },
   { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa" },

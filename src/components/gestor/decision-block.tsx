@@ -12,12 +12,14 @@ import {
 
 /** Próximo passo do funil — o processo é direcional, não uma escolha livre. */
 const NEXT: Partial<Record<AppStatusKey, { to: AppStatusKey; label: string }>> = {
-  PENDING: { to: "INTERVIEW", label: "Chamar para entrevista" },
+  PENDING: { to: "SHORTLISTED", label: "Passou da triagem" },
+  SHORTLISTED: { to: "INTERVIEW", label: "Chamar para entrevista" },
   INTERVIEW: { to: "APPROVED", label: "Aprovar" },
 };
 
 const STAGE_COPY: Record<AppStatusKey, string> = {
   PENDING: "Ainda não decidido. O candidato está esperando um retorno seu.",
+  SHORTLISTED: "Passou da primeira fase. Falta chamar para a entrevista.",
   INTERVIEW: "Em entrevista. O candidato já foi avisado por e-mail.",
   APPROVED: "Aprovado. O candidato já foi avisado por e-mail.",
   REJECTED: "Processo encerrado. O candidato já foi avisado por e-mail.",
@@ -219,6 +221,16 @@ export function DecisionBlock({
           </button>
         )}
         {status === "PENDING" && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setScheduling(true)}
+            className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a] disabled:opacity-50"
+          >
+            Chamar direto para entrevista
+          </button>
+        )}
+        {status === "SHORTLISTED" && (
           <button
             type="button"
             disabled={pending}

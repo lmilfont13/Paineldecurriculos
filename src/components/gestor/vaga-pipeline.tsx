@@ -11,6 +11,7 @@ import { Toast } from "@/components/gestor/toast";
 
 const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818", hint: "Novas candidaturas" },
+  { key: "SHORTLISTED", label: "Passou da triagem", accent: "#2f5fa8", hint: "Prontos para chamar" },
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818", hint: "Em conversa" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d", hint: "Prontos para avançar" },
   { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa", hint: "Fora do processo" },
@@ -41,7 +42,7 @@ export function VagaPipeline({ applications, aiMinScore }: { applications: Pipel
   return <>
     <div className="mt-4 rounded-2xl border border-[#e4e4e7] bg-[#f7f6f4] p-2">
       <div className="mb-2 flex items-center justify-between px-2 py-1.5"><p className="text-[11px] text-[#8a8781]">Arraste um candidato para a próxima etapa.</p><span className="hidden text-[10px] font-medium text-[#aaa39c] sm:block">{pending?"Salvando movimento…":"Drag & drop ativo"}</span></div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
         {STAGES.map(stage=>{const rows=people.filter(p=>p.status===stage.key);const active=overStage===stage.key&&draggingId!==null;return <section key={stage.key} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setOverStage(stage.key)}} onDragEnter={()=>setOverStage(stage.key)} onDrop={e=>onDrop(e,stage.key)} className={`min-h-[238px] rounded-xl border bg-white transition-all ${active?"border-[#811201] bg-[#fffaf8] shadow-[0_0_0_3px_rgba(129,18,1,0.08)]":"border-[#e4e4e7]"}`}>
           <header className="flex items-center justify-between border-b border-[#e4e4e7] px-3.5 py-3"><div><div className="flex items-center gap-2"><span className="text-[13px] font-semibold text-[#0a0a0a]">{stage.label}</span><span className="rounded-full bg-[#f1f0ed] px-2 text-[10px] font-semibold" style={{color:stage.accent}}>{rows.length}</span></div><p className="mt-0.5 text-[9px] text-[#aaa39c]">{stage.hint}</p></div>{active&&<span className="rounded-full bg-[#811201]/[0.08] px-2 py-1 text-[9px] font-semibold text-[#811201]">Soltar aqui</span>}</header>
           <div className="space-y-2 p-2">

@@ -1,3 +1,4 @@
+import type { AppStatus } from "@prisma/client";
 import { replyToEmail } from "@/server/models/company.model";
 import "server-only";
 
@@ -166,7 +167,7 @@ export async function getCompanyApplication(companyId: string, id: string) {
 export async function setApplicationStatus(
   companyId: string,
   id: string,
-  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+  status: AppStatus
 ) {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return null;
@@ -198,7 +199,7 @@ export async function setApplicationStatus(
   return updated;
 }
 
-type StageStatus = "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
+type StageStatus = AppStatus;
 
 /**
  * Comunicação pós-mudança de status: novidade no portal e e-mail. Devolve o
@@ -222,7 +223,8 @@ export async function notifyApplicationStatusChange(
       companyName: application.company.name,
       jobTitle: application.job.title,
     }),
-    status !== "PENDING" && application.email.includes("@")
+    // Etapas internas (triagem, "passou da triagem") só viram novidade no portal; e-mail é para entrevista e resultado.
+    status !== "PENDING" && status !== "SHORTLISTED" && application.email.includes("@")
       ? sendStatusUpdateEmail({
           brand: emailBrand(application.company),
           to: application.email,

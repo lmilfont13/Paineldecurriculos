@@ -207,7 +207,7 @@ export function buildPortfolio(
         return age >= 7 * DAY && age < 14 * DAY;
       }).length,
     },
-    stage: (["PENDING", "INTERVIEW", "APPROVED", "REJECTED"] as AppStatus[]).map((status) => ({
+    stage: (["PENDING", "SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"] as AppStatus[]).map((status) => ({
       status,
       count: inLive.filter((a) => a.status === status).length,
     })),

@@ -1,3 +1,4 @@
+import type { AppStatus } from "@prisma/client";
 import { removeNulChars } from "@/server/models/text.model";
 import "server-only";
 
@@ -247,7 +248,7 @@ export function countApplicationsByJobId(jobId: string) {
 
 export function countApplicationsByCompany(
   companyId: string,
-  filters?: { since?: Date; status?: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED" }
+  filters?: { since?: Date; status?: AppStatus }
 ) {
   return prisma.application.count({
     where: {
@@ -452,8 +453,8 @@ export function findApplicationById(id: string) {
 /** Trilha de status (histórico do gestor + timeline do candidato). */
 export function createStatusEvent(data: {
   applicationId: string;
-  from: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED" | null;
-  to: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED";
+  from: AppStatus | null;
+  to: AppStatus;
   actor: "candidato" | "gestor" | "sistema";
 }) {
   return prisma.statusEvent.create({ data });
@@ -539,7 +540,7 @@ export function updateApplicationAi(
 
 export function updateApplicationStatus(
   id: string,
-  status: "PENDING" | "INTERVIEW" | "APPROVED" | "REJECTED"
+  status: AppStatus
 ) {
   return prisma.application.update({ where: { id }, data: { status } });
 }

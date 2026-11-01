@@ -136,7 +136,7 @@ export type ReportData = {
   avgWaitDays: number | null;
 };
 
-const STAGES: AppStatus[] = ["PENDING", "INTERVIEW", "APPROVED", "REJECTED"];
+const STAGES: AppStatus[] = ["PENDING", "SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"];
 const DAY = 86_400_000;
 
 export function buildReportData(
