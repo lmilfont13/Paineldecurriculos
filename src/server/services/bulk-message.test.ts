@@ -64,6 +64,28 @@ describe("sendBulkMessage", () => {
     expect(emails[0]).toMatchObject({ to: "a1@mail.com", subject: "Retorno", managerEmail: "gestora@loja.com", applicationId: "a1" });
   });
 
+  it("só pelo WhatsApp: não manda e-mail nem aviso no sistema e devolve o link de cada pessoa", async () => {
+    findApplicationsForBulkMessage.mockResolvedValue([
+      app("a1", "maria souza", { phone: "(85) 99999-1234" }),
+      app("a2", "João Lima", { phone: null }),
+    ]);
+    const r = await sendBulkMessage("co1", ["a1", "a2"], "", "{nome}, tudo bem?", ["whatsapp"]);
+    expect(createNotifications).not.toHaveBeenCalled();
+    expect(sendManagerMessageEmails).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ ok: true, total: 2, notified: 0, emailed: 0, noPhone: 1, noChannel: 1 });
+    expect(r.ok && r.whatsapp).toEqual([
+      { id: "a1", name: "Maria Souza", url: "https://wa.me/5585999991234?text=Maria%2C%20tudo%20bem%3F" },
+    ]);
+  });
+
+  it("só e-mail: não cria aviso no sistema", async () => {
+    findApplicationsForBulkMessage.mockResolvedValue([app("a1", "Maria")]);
+    const r = await sendBulkMessage("co1", ["a1"], "", "Olá, {nome}.", ["email"]);
+    expect(createNotifications).not.toHaveBeenCalled();
+    expect(sendManagerMessageEmails).toHaveBeenCalledTimes(1);
+    expect(r).toMatchObject({ ok: true, notified: 0, emailed: 1 });
+  });
+
   it("só envia a candidaturas da empresa: ids de outra empresa não voltam da consulta e contam como pulados", async () => {
     findApplicationsForBulkMessage.mockResolvedValue([app("a1", "Maria")]);
     const r = await sendBulkMessage("co1", ["a1", "de-outra-empresa"], "", "Olá, {nome}.");

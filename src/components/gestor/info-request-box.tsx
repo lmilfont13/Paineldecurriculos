@@ -2,6 +2,12 @@
 
 import { useState, useTransition } from "react";
 
+import { ChannelPicker } from "@/components/gestor/channel-picker";
+import {
+  CHANNEL_LABELS,
+  DEFAULT_CHANNELS,
+  type ContactChannel,
+} from "@/server/models/contact-channels.model";
 import {
   requestInfoAction,
   revealSensitiveInfoAction,
@@ -37,6 +43,8 @@ export function InfoRequestBox({
   requestedAt,
   answeredAt,
   answers,
+  hasEmail = true,
+  hasAccount = true,
 }: {
   applicationId: string;
   candidateName: string;
@@ -50,12 +58,15 @@ export function InfoRequestBox({
   requestedAt: string | null;
   answeredAt: string | null;
   answers: InfoAnswers;
+  hasEmail?: boolean;
+  hasAccount?: boolean;
 }) {
   const firstName = candidateName.split(" ")[0];
   const [selected, setSelected] = useState<InfoField[]>(
     INFO_FIELDS.filter((f) => !known[f])
   );
   const [sent, setSent] = useState(requestedAt !== null);
+  const [channels, setChannels] = useState<ContactChannel[]>([...DEFAULT_CHANNELS]);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [revealed, setRevealed] = useState<{ rg: string | null; cpf: string | null } | null>(
@@ -70,7 +81,7 @@ export function InfoRequestBox({
   function submit() {
     setError(null);
     start(async () => {
-      const result = await requestInfoAction(applicationId, selected);
+      const result = await requestInfoAction(applicationId, selected, channels);
       if ("error" in result) setError(result.error);
       else setSent(true);
     });
@@ -138,16 +149,24 @@ export function InfoRequestBox({
         </p>
       )}
 
+      <ChannelPicker
+        value={channels}
+        onChange={setChannels}
+        hasPhone={Boolean(candidatePhone)}
+        hasEmail={hasEmail}
+        hasAccount={hasAccount}
+      />
+
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={submit}
-          disabled={pending || selected.length === 0}
+          disabled={pending || selected.length === 0 || channels.length === 0}
           className="h-9 rounded-xl bg-[#0a0a0a] px-4 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-40"
         >
           {pending ? "Enviando…" : sent ? "Pedir de novo" : "Enviar pedido"}
         </button>
-        {sent && waHref && (
+        {sent && waHref && channels.includes("whatsapp") && (
           <a
             href={waHref}
             target="_blank"
@@ -163,7 +182,10 @@ export function InfoRequestBox({
         <p className="text-[11px] text-[#71717a]">
           {answeredAt
             ? "Respondido pelo candidato."
-            : `Aviso enviado ao candidato (site + e-mail)${
+            : `Aviso enviado ao candidato (${channels
+                .filter((c) => c !== "whatsapp")
+                .map((c) => CHANNEL_LABELS[c].toLowerCase())
+                .join(" + ") || "pedido registrado"})${
                 requestedFields.length > 0
                   ? `: ${requestedFields.map((f) => infoFieldLabels[f]).join(", ")}`
                   : ""

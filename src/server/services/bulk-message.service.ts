@@ -2,6 +2,7 @@ import { replyToEmail } from "@/server/models/company.model";
 import "server-only";
 
 import { runInBackground } from "@/lib/background";
+import { DEFAULT_CHANNELS, serverChannels, whatsappUrl, type ContactChannel } from "@/server/models/contact-channels.model";
 import { fillTemplate } from "@/server/models/message-templates.model";
 import { managerMessageNotification } from "@/server/models/notification.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -29,6 +30,10 @@ export type BulkMessageResult =
       noChannel: number;
       /** Não entraram: não são da empresa ou são de demonstração. */
       skipped: number;
+      /** WhatsApp não sai sozinho: link pronto, com o texto de cada pessoa, para o gestor abrir. */
+      whatsapp: { id: string; name: string; url: string }[];
+      /** Escolheu WhatsApp mas a pessoa não tem telefone válido. */
+      noPhone: number;
     }
   | { ok: false; error: string };
 
@@ -41,7 +46,8 @@ export async function sendBulkMessage(
   companyId: string,
   applicationIds: string[],
   subject: string,
-  template: string
+  template: string,
+  channels: ContactChannel[] = DEFAULT_CHANNELS
 ): Promise<BulkMessageResult> {
   const ids = [...new Set(applicationIds)];
   const body = template.trim();
@@ -72,7 +78,10 @@ export async function sendBulkMessage(
 
   const notifications: Parameters<typeof createNotifications>[0] = [];
   const emails: ManagerMessageEmailParams[] = [];
+  const whatsapp: { id: string; name: string; url: string }[] = [];
+  const send = serverChannels(channels);
   let noChannel = 0;
+  let noPhone = 0;
 
   for (const app of apps) {
     const text = fillTemplate(body, {
@@ -81,7 +90,7 @@ export async function sendBulkMessage(
       jobTitle: app.job.title,
     });
     let reached = false;
-    if (app.candidateId) {
+    if (send.system && app.candidateId) {
       const n = managerMessageNotification(company.name, app.job.title, text, cleanSubject || undefined);
       notifications.push({
         candidateId: app.candidateId,
@@ -92,7 +101,7 @@ export async function sendBulkMessage(
       });
       reached = true;
     }
-    if (app.email.includes("@")) {
+    if (send.email && app.email.includes("@")) {
       emails.push({
         brand,
         to: app.email,
@@ -104,6 +113,15 @@ export async function sendBulkMessage(
         applicationId: app.id,
       });
       reached = true;
+    }
+    if (channels.includes("whatsapp")) {
+      const url = whatsappUrl(app.phone, text);
+      if (url) {
+        whatsapp.push({ id: app.id, name: titleCasePt(app.name), url });
+        reached = true;
+      } else {
+        noPhone += 1;
+      }
     }
     if (!reached) noChannel += 1;
   }
@@ -126,5 +144,7 @@ export async function sendBulkMessage(
     emailed: emails.length,
     noChannel,
     skipped,
+    whatsapp,
+    noPhone,
   };
 }

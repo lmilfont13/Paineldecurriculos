@@ -86,6 +86,7 @@ import { findJobById } from "@/server/repositories/job.repository";
 import { findAgeSourcesForCompany, findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
 import { effectiveAge } from "@/server/models/age.model";
 import { cepDigits } from "@/server/models/address.model";
+import { DEFAULT_CHANNELS, serverChannels, type ContactChannel } from "@/server/models/contact-channels.model";
 import { parseAdmissionInput } from "@/server/models/admission.model";
 import {
   extractResumeContact,
@@ -447,7 +448,8 @@ export async function requestReanalysis(
 export async function scheduleInterview(
   companyId: string,
   id: string,
-  input: { at: Date; mode: string; location: string | null }
+  input: { at: Date; mode: string; location: string | null },
+  channels: ContactChannel[] = DEFAULT_CHANNELS
 ): Promise<{ ok: boolean }> {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return { ok: false };
@@ -472,19 +474,23 @@ export async function scheduleInterview(
   const company = await getCompanyById(companyId);
   if (!company) return { ok: true };
   const when = formatInterviewAt(input.at);
+  const send = serverChannels(channels);
+  if (!send.system && !send.email) return { ok: true };
 
   runInBackground("avisar entrevista marcada", async () => {
-    await notifyInterviewScheduled({
-      candidateId: application.candidateId,
-      applicationId: id,
-      companyName: company.name,
-      jobTitle: application.job.title,
-      when,
-      mode: input.mode,
-      location: input.location,
-    }).catch((e) => console.error("[notificação] entrevista:", e));
+    if (send.system) {
+      await notifyInterviewScheduled({
+        candidateId: application.candidateId,
+        applicationId: id,
+        companyName: company.name,
+        jobTitle: application.job.title,
+        when,
+        mode: input.mode,
+        location: input.location,
+      }).catch((e) => console.error("[notificação] entrevista:", e));
+    }
 
-    if (application.email.includes("@")) {
+    if (send.email && application.email.includes("@")) {
       const manager = await findManagerByCompanyId(companyId);
       await sendInterviewScheduledEmail({
         brand: emailBrand(company),
@@ -507,7 +513,8 @@ export async function sendManagerMessage(
   companyId: string,
   id: string,
   message: string,
-  subject?: string
+  subject?: string,
+  channels: ContactChannel[] = DEFAULT_CHANNELS
 ): Promise<{ ok: boolean }> {
   const text = message.trim();
   const application = await getCompanyApplication(companyId, id);
@@ -516,17 +523,22 @@ export async function sendManagerMessage(
   const company = await getCompanyById(companyId);
   if (!company) return { ok: false };
 
-  runInBackground("enviar recado do gestor", async () => {
-    await notifyManagerMessage({
-      candidateId: application.candidateId,
-      applicationId: id,
-      companyName: company.name,
-      jobTitle: application.job.title,
-      message: text,
-      subject,
-    }).catch((e) => console.error("[notificação] recado:", e));
+  const send = serverChannels(channels);
+  if (!send.system && !send.email) return { ok: true };
 
-    if (application.email.includes("@")) {
+  runInBackground("enviar recado do gestor", async () => {
+    if (send.system) {
+      await notifyManagerMessage({
+        candidateId: application.candidateId,
+        applicationId: id,
+        companyName: company.name,
+        jobTitle: application.job.title,
+        message: text,
+        subject,
+      }).catch((e) => console.error("[notificação] recado:", e));
+    }
+
+    if (send.email && application.email.includes("@")) {
       const manager = await findManagerByCompanyId(companyId);
       await sendManagerMessageEmail({
         brand: emailBrand(company),
@@ -1171,7 +1183,8 @@ export async function getApplicationSummaries(
 export async function requestApplicationInfo(
   companyId: string,
   id: string,
-  fields: InfoField[]
+  fields: InfoField[],
+  channels: ContactChannel[] = DEFAULT_CHANNELS
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return { ok: false, error: "Candidatura não encontrada." };
@@ -1189,15 +1202,20 @@ export async function requestApplicationInfo(
     infoRequestedAt: new Date(),
   });
 
-  runInBackground("pedir informações da pré-entrevista", async () => {
-    await notifyInfoRequested({
-      candidateId: application.candidateId,
-      applicationId: id,
-      companyName: company.name,
-      jobTitle: application.job.title,
-    }).catch((e) => console.error("[notificação] pedido de informações:", e));
+  const send = serverChannels(channels);
+  if (!send.system && !send.email) return { ok: true };
 
-    if (application.email.includes("@")) {
+  runInBackground("pedir informações da pré-entrevista", async () => {
+    if (send.system) {
+      await notifyInfoRequested({
+        candidateId: application.candidateId,
+        applicationId: id,
+        companyName: company.name,
+        jobTitle: application.job.title,
+      }).catch((e) => console.error("[notificação] pedido de informações:", e));
+    }
+
+    if (send.email && application.email.includes("@")) {
       const manager = await findManagerByCompanyId(companyId);
       await sendInfoRequestEmail({
         brand: emailBrand(company),

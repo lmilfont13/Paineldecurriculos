@@ -92,11 +92,19 @@ export function DecisionBlock({
   applicationId,
   status,
   candidateName,
+  candidatePhone,
+  jobTitle,
+  hasEmail,
+  hasAccount,
   interview,
 }: {
   applicationId: string;
   status: AppStatusKey;
   candidateName: string;
+  candidatePhone?: string;
+  jobTitle?: string;
+  hasEmail?: boolean;
+  hasAccount?: boolean;
   interview?: ScheduledInterview | null;
 }) {
   const [pending, startTransition] = useTransition();
@@ -133,6 +141,10 @@ export function DecisionBlock({
         <InterviewDialog
           applicationId={applicationId}
           candidateName={candidateName}
+          candidatePhone={candidatePhone}
+          jobTitle={jobTitle}
+          hasEmail={hasEmail}
+          hasAccount={hasAccount}
           current={
             interview
               ? {

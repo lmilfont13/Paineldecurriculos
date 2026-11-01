@@ -13,6 +13,7 @@ import {
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
+import { channelsFromCsv, parseChannels } from "@/server/models/contact-channels.model";
 import { askAboutApplication } from "@/server/services/ai.service";
 import { askAcrossApplications, type AssistantResult } from "@/server/services/assistant.service";
 import { sendBulkMessage, type BulkMessageResult } from "@/server/services/bulk-message.service";
@@ -96,11 +97,18 @@ export async function scheduleInterviewAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const result = await scheduleInterview(user.companyId, applicationId, {
-    at: new Date(parsed.data.at),
-    mode: parsed.data.mode,
-    location: parsed.data.location.trim() || null,
-  });
+  const channels = channelsFromCsv(formData.get("channels") as string | null);
+  if (channels.length === 0) return { error: "Escolha ao menos um canal para avisar." };
+  const result = await scheduleInterview(
+    user.companyId,
+    applicationId,
+    {
+      at: new Date(parsed.data.at),
+      mode: parsed.data.mode,
+      location: parsed.data.location.trim() || null,
+    },
+    channels
+  );
   if (!result.ok) return { error: "Candidatura não encontrada." };
   try {
     const app = await getCompanyApplication(user.companyId, applicationId);
@@ -137,11 +145,14 @@ export async function sendMessageAction(
   const message = String(formData.get("message") ?? "").trim();
   if (message.length < 2) return { error: "Escreva o recado antes de enviar." };
   const subject = String(formData.get("subject") ?? "").trim().slice(0, MAX_SUBJECT_LENGTH);
+  const channels = channelsFromCsv(formData.get("channels") as string | null);
+  if (channels.length === 0) return { error: "Escolha ao menos um canal para enviar." };
   const result = await sendManagerMessage(
     user.companyId,
     applicationId,
     message,
-    subject || undefined
+    subject || undefined,
+    channels
   );
   if (!result.ok) return { error: "Não foi possível enviar o recado." };
   // Com assunto, o texto enviado fica salvo para os próximos recados.
@@ -168,7 +179,7 @@ export async function sendMessageAction(
       entityType: "CANDIDATURA",
       entityId: applicationId,
       entityLabel: app?.name,
-      metadata: { jobTitle: app?.job.title, preview: message.slice(0, 80) },
+      metadata: { jobTitle: app?.job.title, preview: message.slice(0, 80), channels },
     });
   } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/candidaturas/${applicationId}`);
@@ -472,13 +483,16 @@ export async function deleteApplicationsAction(
 /** Pré-entrevista: o gestor escolhe o que pedir; o candidato é avisado (site + e-mail). */
 export async function requestInfoAction(
   applicationId: string,
-  fields: string[]
+  fields: string[],
+  channelsRaw?: string[]
 ): Promise<{ ok: true } | { error: string }> {
   const user = await requireManager();
+  const channels = parseChannels(channelsRaw);
+  if (channels.length === 0) return { error: "Escolha ao menos um canal para enviar." };
   const valid = fields.filter((f): f is InfoField =>
     (INFO_FIELDS as readonly string[]).includes(f)
   );
-  const result = await requestApplicationInfo(user.companyId, applicationId, valid);
+  const result = await requestApplicationInfo(user.companyId, applicationId, valid, channels);
   if (!result.ok) return { error: result.error };
   try {
     const app = await getCompanyApplication(user.companyId, applicationId);
@@ -492,7 +506,7 @@ export async function requestInfoAction(
       entityId: applicationId,
       entityLabel: app?.name,
       // só as chaves pedidas, nunca valores
-      metadata: { jobTitle: app?.job.title, fields: valid },
+      metadata: { jobTitle: app?.job.title, fields: valid, channels },
     });
   } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath(`/candidaturas/${applicationId}`);
@@ -604,10 +618,13 @@ export async function suggestCustomMessageAction(
 export async function sendBulkMessageAction(
   applicationIds: string[],
   subject: string,
-  template: string
+  template: string,
+  channelsRaw?: string[]
 ): Promise<BulkMessageResult> {
   const user = await requireManager();
-  const result = await sendBulkMessage(user.companyId, applicationIds, subject, template);
+  const channels = parseChannels(channelsRaw);
+  if (channels.length === 0) return { ok: false, error: "Escolha ao menos um canal para enviar." };
+  const result = await sendBulkMessage(user.companyId, applicationIds, subject, template, channels);
   if (!result.ok) return result;
   try {
     await createAuditLog({

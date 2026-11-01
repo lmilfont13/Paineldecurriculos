@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 
+import { ChannelPicker } from "@/components/gestor/channel-picker";
 import { sendBulkMessageAction } from "@/server/controllers/application.controller";
+import { DEFAULT_CHANNELS, type ContactChannel } from "@/server/models/contact-channels.model";
 import { REJECTION_TEMPLATE, fillTemplate } from "@/server/models/message-templates.model";
 import type { BulkMessageResult } from "@/server/services/bulk-message.service";
 
@@ -33,6 +35,7 @@ export function BulkMessageDialog({
   const [subject, setSubject] = useState("");
   const [text, setText] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [channels, setChannels] = useState<ContactChannel[]>([...DEFAULT_CHANNELS]);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
   const [pending, start] = useTransition();
@@ -42,12 +45,12 @@ export function BulkMessageDialog({
     sample && text.trim()
       ? fillTemplate(text, { firstName: sample.firstName, companyName, jobTitle: sample.jobTitle })
       : "";
-  const canSend = text.trim().length >= 2 && confirmed && !pending;
+  const canSend = text.trim().length >= 2 && confirmed && !pending && channels.length > 0;
 
   function send() {
     setError(null);
     start(async () => {
-      const result = await sendBulkMessageAction(ids, subject, text);
+      const result = await sendBulkMessageAction(ids, subject, text, channels);
       if (result.ok) {
         setSent(result);
         onDone();
@@ -72,9 +75,38 @@ export function BulkMessageDialog({
           <>
             <h2 className="text-lg font-semibold text-[#0a0a0a]">Mensagem enviada</h2>
             <p className="mt-2 text-sm leading-6 text-[#57534e]">
-              {sent.total} candidato{sent.total === 1 ? "" : "s"}: {sent.notified} receberam o aviso no site e{" "}
-              {sent.emailed} estão recebendo e-mail agora.
+              {sent.total} candidato{sent.total === 1 ? "" : "s"}
+              {channels.includes("system") ? `: ${sent.notified} receberam a mensagem no sistema` : ""}
+              {channels.includes("email") ? `${channels.includes("system") ? " e" : ":"} ${sent.emailed} estão recebendo e-mail agora` : ""}
+              {!channels.includes("system") && !channels.includes("email") ? ": pelo WhatsApp, abaixo" : ""}.
             </p>
+            {sent.whatsapp.length > 0 && (
+              <div className="mt-3 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3">
+                <p className="text-[12px] font-medium text-[#0a0a0a]">
+                  WhatsApp: abra cada conversa com o texto pronto ({sent.whatsapp.length})
+                </p>
+                <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+                  {sent.whatsapp.map((w) => (
+                    <li key={w.id} className="flex items-center justify-between gap-3 text-[13px]">
+                      <span className="truncate text-[#0a0a0a]">{w.name}</span>
+                      <a
+                        href={w.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 rounded-full bg-[#25D366] px-3 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                      >
+                        Abrir no WhatsApp
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {sent.noPhone > 0 && (
+              <p className="mt-2 text-[13px] text-[#a16207]">
+                {sent.noPhone} não têm telefone válido para o WhatsApp.
+              </p>
+            )}
             {sent.noChannel > 0 && (
               <p className="mt-2 text-[13px] text-[#a16207]">
                 {sent.noChannel} não têm conta no site nem e-mail válido, então ninguém foi avisado nesses casos.
@@ -101,8 +133,8 @@ export function BulkMessageDialog({
             </h2>
             <p className="mt-1 text-[12px] text-[#71717a]">
               {names.join(", ")}
-              {count > names.length ? ` e mais ${count - names.length}` : ""}. Cada um recebe o aviso no site e por
-              e-mail, com o nome e a vaga dele.
+              {count > names.length ? ` e mais ${count - names.length}` : ""}. Cada um recebe pelos canais que você
+              escolher abaixo, com o nome e a vaga dele.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-1.5">
@@ -161,6 +193,13 @@ export function BulkMessageDialog({
                 <p className="mt-1 whitespace-pre-line text-[13px] leading-5 text-[#3f3f46]">{preview}</p>
               </div>
             )}
+
+            <div className="mt-4">
+              <ChannelPicker value={channels} onChange={setChannels} hasPhone />
+              <p className="mt-1 text-[11px] text-[#a1a1aa]">
+                Quem não tem telefone, e-mail ou conta no site não recebe naquele canal. O WhatsApp gera um link por pessoa, que você abre ao final.
+              </p>
+            </div>
 
             <label className="mt-4 flex items-start gap-2.5 text-[13px] text-[#0a0a0a]">
               <input

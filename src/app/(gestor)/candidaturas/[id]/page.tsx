@@ -383,6 +383,8 @@ export default async function CandidaturaDetailPage({
               companyName={app.company.name}
               jobTitle={app.job.title}
               templates={messageTemplates}
+              hasEmail={app.email.includes("@")}
+              hasAccount={Boolean(app.candidateId)}
             />
           </section>
 
@@ -400,6 +402,8 @@ export default async function CandidaturaDetailPage({
               candidatePhone={app.phone ?? undefined}
               companyName={app.company.name}
               jobTitle={app.job.title}
+              hasEmail={app.email.includes("@")}
+              hasAccount={Boolean(app.candidateId)}
               formUrl={`${appUrl()}/${app.company.slug}/minhas-candidaturas/${app.id}/pre-entrevista`}
               known={Object.fromEntries(
                 INFO_FIELDS.map((f) => [
@@ -469,6 +473,10 @@ export default async function CandidaturaDetailPage({
             applicationId={app.id}
             status={app.status}
             candidateName={app.name}
+            candidatePhone={app.phone ?? undefined}
+            jobTitle={app.job.title}
+            hasEmail={app.email.includes("@")}
+            hasAccount={Boolean(app.candidateId)}
             interview={interview}
           />
 

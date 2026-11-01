@@ -835,6 +835,7 @@ export function findApplicationsForBulkMessage(companyId: string, ids: string[])
       id: true,
       name: true,
       email: true,
+      phone: true,
       candidateId: true,
       isDemo: true,
       job: { select: { title: true, code: true } },
