@@ -157,6 +157,12 @@ model Candidate {
   street            String?
   streetNumber      String?
   complement        String?
+  /// Admissão (opcional, adianta o processo): documentos e tamanhos de uniforme.
+  rg                String?
+  cpf               String?
+  bootSize          String?
+  pantsSize         String?
+  shirtSize         String?
   desiredRole       String?
   salaryExpectation String?
   workPreference    String? // "REMOTE" | "HYBRID" | "ONSITE" | "ANY"
@@ -192,6 +198,10 @@ model Application {
   street            String?
   streetNumber      String?
   complement        String?
+  /// Tamanhos de uniforme informados na candidatura (opcional).
+  bootSize          String?
+  pantsSize         String?
+  shirtSize         String?
   desiredRole       String?
   salaryExpectation String?
   workPreference    String?

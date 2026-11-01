@@ -11,6 +11,7 @@ import {
 } from "@/server/controllers/candidate.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
 import { AddressFields } from "@/components/public/address-fields";
+import { AdmissionFields } from "@/components/public/admission-fields";
 
 const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
@@ -128,6 +129,22 @@ export function ProfileForm({
               neighborhood: candidate.neighborhood ?? "",
               city: candidate.city ?? "",
               state: candidate.state ?? "",
+            }}
+          />
+        </div>
+
+        {/* Admissão (opcional): adianta o processo de quem for aprovado */}
+        <div className="rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">
+          <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-[#71717a]">
+            Documentos e uniforme (opcional)
+          </span>
+          <AdmissionFields
+            initial={{
+              rg: candidate.rg ?? "",
+              cpf: candidate.cpf ?? "",
+              bootSize: candidate.bootSize ?? "",
+              pantsSize: candidate.pantsSize ?? "",
+              shirtSize: candidate.shirtSize ?? "",
             }}
           />
         </div>

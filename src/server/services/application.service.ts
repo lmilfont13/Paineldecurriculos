@@ -86,6 +86,7 @@ import { findJobById } from "@/server/repositories/job.repository";
 import { findAgeSourcesForCompany, findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
 import { effectiveAge } from "@/server/models/age.model";
 import { cepDigits } from "@/server/models/address.model";
+import { parseAdmissionInput } from "@/server/models/admission.model";
 import {
   extractResumeContact,
   generateCandidateSummary,
@@ -707,6 +708,16 @@ export async function submitApplication(
     }
   }
 
+  // Admissão (opcional): em branco passa; preenchido precisa ser válido.
+  const admissionParsed = parseAdmissionInput({
+    rg: input.rg,
+    cpf: input.cpf,
+    bootSize: input.bootSize,
+    pantsSize: input.pantsSize,
+    shirtSize: input.shirtSize,
+  });
+  if (!admissionParsed.ok) return { ok: false, error: admissionParsed.error };
+
   // Sem arquivo novo, reaproveita o currículo salvo no perfil (CA3) ou o
   // que o gestor já anexou no cadastro rápido.
   let resumeUrl: string | null = candidate.resumeUrl ?? existing?.resumeUrl ?? null;
@@ -741,6 +752,11 @@ export async function submitApplication(
   const street = input.street ?? candidate.street ?? null;
   const streetNumber = input.streetNumber ?? candidate.streetNumber ?? null;
   const complement = input.complement ?? candidate.complement ?? null;
+  const rg = admissionParsed.data.rg ?? candidate.rg ?? null;
+  const cpf = admissionParsed.data.cpf ?? candidate.cpf ?? null;
+  const bootSize = admissionParsed.data.bootSize ?? candidate.bootSize ?? null;
+  const pantsSize = admissionParsed.data.pantsSize ?? candidate.pantsSize ?? null;
+  const shirtSize = admissionParsed.data.shirtSize ?? candidate.shirtSize ?? null;
   const desiredRole = input.desiredRole ?? candidate.desiredRole ?? null;
   const salaryExpectation = input.salaryExpectation ?? candidate.salaryExpectation ?? null;
   const workPreference = input.workPreference ?? candidate.workPreference ?? null;
@@ -764,6 +780,11 @@ export async function submitApplication(
         street,
         streetNumber,
         complement,
+        rg,
+        cpf,
+        bootSize,
+        pantsSize,
+        shirtSize,
         desiredRole,
         salaryExpectation,
         workPreference,
@@ -789,6 +810,11 @@ export async function submitApplication(
         street,
         streetNumber,
         complement,
+        rg,
+        cpf,
+        bootSize,
+        pantsSize,
+        shirtSize,
         desiredRole,
         salaryExpectation,
         workPreference,
@@ -815,6 +841,11 @@ export async function submitApplication(
     street,
     streetNumber,
     complement,
+    rg,
+    cpf,
+    bootSize,
+    pantsSize,
+    shirtSize,
     desiredRole,
     salaryExpectation,
     workPreference,

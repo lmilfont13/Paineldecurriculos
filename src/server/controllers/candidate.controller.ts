@@ -1,6 +1,7 @@
 "use server";
 
 import { cepDigits } from "@/server/models/address.model";
+import { parseAdmissionInput, type AdmissionData } from "@/server/models/admission.model";
 import { redirect } from "next/navigation";
 
 import { revalidatePath } from "next/cache";
@@ -94,6 +95,21 @@ export async function updateProfileAction(
     resumeUrl = verified.path;
   }
 
+  // Admissão (opcional): em branco limpa; preenchido precisa ser válido.
+  const admissionSent = ["rg", "cpf", "bootSize", "pantsSize", "shirtSize"].some((k) => formData.has(k));
+  let admission: AdmissionData | undefined;
+  if (admissionSent) {
+    const parsedAdmission = parseAdmissionInput({
+      rg: formData.get("rg") as string | null,
+      cpf: formData.get("cpf") as string | null,
+      bootSize: formData.get("bootSize") as string | null,
+      pantsSize: formData.get("pantsSize") as string | null,
+      shirtSize: formData.get("shirtSize") as string | null,
+    });
+    if (!parsedAdmission.ok) return { error: parsedAdmission.error };
+    admission = parsedAdmission.data;
+  }
+
   const rawBirthDate = String(formData.get("birthDate") ?? "").trim();
   let birthDate: Date | null | undefined = undefined;
   if (rawBirthDate) {
@@ -153,6 +169,7 @@ export async function updateProfileAction(
     ...(street !== undefined ? { street } : {}),
     ...(streetNumber !== undefined ? { streetNumber } : {}),
     ...(complement !== undefined ? { complement } : {}),
+    ...(admission ?? {}),
     ...(city !== undefined ? { city } : {}),
     ...(state !== undefined ? { state } : {}),
     ...(desiredRole !== undefined ? { desiredRole } : {}),

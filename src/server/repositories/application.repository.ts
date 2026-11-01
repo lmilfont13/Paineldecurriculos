@@ -594,6 +594,11 @@ export function createApplication(data: {
   street?: string | null;
   streetNumber?: string | null;
   complement?: string | null;
+  rg?: string | null;
+  cpf?: string | null;
+  bootSize?: string | null;
+  pantsSize?: string | null;
+  shirtSize?: string | null;
   desiredRole?: string | null;
   salaryExpectation?: string | null;
   workPreference?: string | null;
@@ -687,6 +692,11 @@ export function completePreRegisteredApplication(
     street?: string | null;
     streetNumber?: string | null;
     complement?: string | null;
+    rg?: string | null;
+    cpf?: string | null;
+    bootSize?: string | null;
+    pantsSize?: string | null;
+    shirtSize?: string | null;
     desiredRole?: string | null;
     salaryExpectation?: string | null;
     workPreference?: string | null;

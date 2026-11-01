@@ -15,11 +15,17 @@ import {
 } from "@/server/controllers/application.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
 import { AddressFields } from "@/components/public/address-fields";
+import { AdmissionFields } from "@/components/public/admission-fields";
 import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 
 const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
 
 type WizardData = {
+  rg: string;
+  cpf: string;
+  bootSize: string;
+  pantsSize: string;
+  shirtSize: string;
   zipCode: string;
   street: string;
   streetNumber: string;
@@ -67,6 +73,11 @@ export function ApplyWizard({
     birthDate: candidate.birthDate
       ? new Date(candidate.birthDate).toISOString().split("T")[0]
       : "",
+    rg: candidate.rg ?? "",
+    cpf: candidate.cpf ?? "",
+    bootSize: candidate.bootSize ?? "",
+    pantsSize: candidate.pantsSize ?? "",
+    shirtSize: candidate.shirtSize ?? "",
     zipCode: candidate.zipCode ?? "",
     street: candidate.street ?? "",
     streetNumber: candidate.streetNumber ?? "",
@@ -183,6 +194,11 @@ export function ApplyWizard({
         formData.set("name", data.name.trim());
         formData.set("phone", data.phone.trim());
         if (data.birthDate) formData.set("birthDate", data.birthDate);
+        if (data.rg) formData.set("rg", data.rg.trim());
+        if (data.cpf) formData.set("cpf", data.cpf);
+        if (data.bootSize) formData.set("bootSize", data.bootSize.trim());
+        if (data.pantsSize) formData.set("pantsSize", data.pantsSize.trim());
+        if (data.shirtSize) formData.set("shirtSize", data.shirtSize.trim());
         if (data.zipCode) formData.set("zipCode", data.zipCode);
         if (data.street) formData.set("street", data.street.trim());
         if (data.streetNumber) formData.set("streetNumber", data.streetNumber.trim());
@@ -500,6 +516,19 @@ export function ApplyWizard({
                   />
                 </div>
               </Field>
+              <div className="mt-2 rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">
+                <p className="mb-2 text-sm font-semibold text-[#0a0a0a]">Adiante a sua admissão (opcional)</p>
+                <AdmissionFields
+                  initial={{
+                    rg: data.rg,
+                    cpf: data.cpf,
+                    bootSize: data.bootSize,
+                    pantsSize: data.pantsSize,
+                    shirtSize: data.shirtSize,
+                  }}
+                  onChange={(a) => setData((d) => ({ ...d, ...a }))}
+                />
+              </div>
             </StepShell>
           )}
 
