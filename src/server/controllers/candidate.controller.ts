@@ -1,5 +1,6 @@
 "use server";
 
+import { cepDigits } from "@/server/models/address.model";
 import { redirect } from "next/navigation";
 
 import { revalidatePath } from "next/cache";
@@ -107,6 +108,13 @@ export async function updateProfileAction(
   const neighborhood = formData.has("neighborhood")
     ? String(formData.get("neighborhood") ?? "").trim() || null
     : undefined;
+  const text = (name: string, max = 120) =>
+    formData.has(name) ? String(formData.get(name) ?? "").trim().slice(0, max) || null : undefined;
+  const zipRaw = text("zipCode", 20);
+  const zipCode = zipRaw === undefined ? undefined : zipRaw === null ? null : cepDigits(zipRaw) || null;
+  const street = text("street", 160);
+  const streetNumber = text("streetNumber", 20);
+  const complement = text("complement", 80);
   const city = formData.has("city")
     ? String(formData.get("city") ?? "").trim() || null
     : undefined;
@@ -141,6 +149,10 @@ export async function updateProfileAction(
     ...(resumeUrl !== undefined ? { resumeUrl } : {}),
     ...(birthDate !== undefined ? { birthDate } : {}),
     ...(neighborhood !== undefined ? { neighborhood } : {}),
+    ...(zipCode !== undefined ? { zipCode } : {}),
+    ...(street !== undefined ? { street } : {}),
+    ...(streetNumber !== undefined ? { streetNumber } : {}),
+    ...(complement !== undefined ? { complement } : {}),
     ...(city !== undefined ? { city } : {}),
     ...(state !== undefined ? { state } : {}),
     ...(desiredRole !== undefined ? { desiredRole } : {}),

@@ -10,6 +10,7 @@ import {
   type CandidateAuthState,
 } from "@/server/controllers/candidate.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { AddressFields } from "@/components/public/address-fields";
 
 const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
@@ -113,47 +114,22 @@ export function ProfileForm({
           </label>
         </div>
 
-        {/* Localização rápida para adequação de vagas e VT */}
+        {/* Endereço completo: usado na admissão, na adequação de vagas e no VT */}
         <div className="rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">
           <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-[#71717a]">
-            Localização e Transporte
+            Endereço
           </span>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
-                Bairro
-              </span>
-              <input
-                name="neighborhood"
-                defaultValue={candidate.neighborhood ?? ""}
-                placeholder="Ex: Aldeota, Centro, Pinheiros"
-                className={inputClass}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
-                Cidade
-              </span>
-              <input
-                name="city"
-                defaultValue={candidate.city ?? ""}
-                placeholder="Ex: Fortaleza, São Paulo"
-                className={inputClass}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
-                Estado (UF)
-              </span>
-              <input
-                name="state"
-                maxLength={2}
-                defaultValue={candidate.state ?? ""}
-                placeholder="Ex: CE, SP, RJ"
-                className={`${inputClass} uppercase`}
-              />
-            </label>
-          </div>
+          <AddressFields
+            initial={{
+              zipCode: candidate.zipCode ?? "",
+              street: candidate.street ?? "",
+              streetNumber: candidate.streetNumber ?? "",
+              complement: candidate.complement ?? "",
+              neighborhood: candidate.neighborhood ?? "",
+              city: candidate.city ?? "",
+              state: candidate.state ?? "",
+            }}
+          />
         </div>
 
         {/* Critérios Essenciais de Triagem */}

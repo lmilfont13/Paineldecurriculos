@@ -85,6 +85,7 @@ import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
 import { findAgeSourcesForCompany, findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
 import { effectiveAge } from "@/server/models/age.model";
+import { cepDigits } from "@/server/models/address.model";
 import {
   extractResumeContact,
   generateCandidateSummary,
@@ -736,6 +737,10 @@ export async function submitApplication(
   const city = input.city ?? candidate.city ?? null;
   const state = input.state ?? candidate.state ?? null;
   const neighborhood = input.neighborhood ?? candidate.neighborhood ?? null;
+  const zipCode = cepDigits(input.zipCode ?? candidate.zipCode) || null;
+  const street = input.street ?? candidate.street ?? null;
+  const streetNumber = input.streetNumber ?? candidate.streetNumber ?? null;
+  const complement = input.complement ?? candidate.complement ?? null;
   const desiredRole = input.desiredRole ?? candidate.desiredRole ?? null;
   const salaryExpectation = input.salaryExpectation ?? candidate.salaryExpectation ?? null;
   const workPreference = input.workPreference ?? candidate.workPreference ?? null;
@@ -755,6 +760,10 @@ export async function submitApplication(
         city,
         state,
         neighborhood,
+        zipCode,
+        street,
+        streetNumber,
+        complement,
         desiredRole,
         salaryExpectation,
         workPreference,
@@ -776,6 +785,10 @@ export async function submitApplication(
         city,
         state,
         neighborhood,
+        zipCode,
+        street,
+        streetNumber,
+        complement,
         desiredRole,
         salaryExpectation,
         workPreference,
@@ -798,6 +811,10 @@ export async function submitApplication(
     city,
     state,
     neighborhood,
+    zipCode,
+    street,
+    streetNumber,
+    complement,
     desiredRole,
     salaryExpectation,
     workPreference,

@@ -152,6 +152,11 @@ model Candidate {
   city              String?
   state             String?
   neighborhood      String?
+  /// Endereço completo (necessário na admissão): CEP, rua, número e complemento.
+  zipCode           String?
+  street            String?
+  streetNumber      String?
+  complement        String?
   desiredRole       String?
   salaryExpectation String?
   workPreference    String? // "REMOTE" | "HYBRID" | "ONSITE" | "ANY"
@@ -182,6 +187,11 @@ model Application {
   city              String?
   state             String?
   neighborhood      String?
+  /// Endereço completo (necessário na admissão): CEP, rua, número e complemento.
+  zipCode           String?
+  street            String?
+  streetNumber      String?
+  complement        String?
   desiredRole       String?
   salaryExpectation String?
   workPreference    String?

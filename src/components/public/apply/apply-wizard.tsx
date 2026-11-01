@@ -14,11 +14,16 @@ import {
   submitApplicationAction,
 } from "@/server/controllers/application.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { AddressFields } from "@/components/public/address-fields";
 import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 
 const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
 
 type WizardData = {
+  zipCode: string;
+  street: string;
+  streetNumber: string;
+  complement: string;
   name: string;
   phone: string;
   birthDate: string;
@@ -62,6 +67,10 @@ export function ApplyWizard({
     birthDate: candidate.birthDate
       ? new Date(candidate.birthDate).toISOString().split("T")[0]
       : "",
+    zipCode: candidate.zipCode ?? "",
+    street: candidate.street ?? "",
+    streetNumber: candidate.streetNumber ?? "",
+    complement: candidate.complement ?? "",
     neighborhood: candidate.neighborhood ?? "",
     city: candidate.city ?? "",
     state: candidate.state ?? "",
@@ -174,6 +183,10 @@ export function ApplyWizard({
         formData.set("name", data.name.trim());
         formData.set("phone", data.phone.trim());
         if (data.birthDate) formData.set("birthDate", data.birthDate);
+        if (data.zipCode) formData.set("zipCode", data.zipCode);
+        if (data.street) formData.set("street", data.street.trim());
+        if (data.streetNumber) formData.set("streetNumber", data.streetNumber.trim());
+        if (data.complement) formData.set("complement", data.complement.trim());
         if (data.neighborhood) formData.set("neighborhood", data.neighborhood.trim());
         if (data.city) formData.set("city", data.city.trim());
         if (data.state) formData.set("state", data.state.trim().toUpperCase());
@@ -317,33 +330,20 @@ export function ApplyWizard({
                   title="E-mail da sua conta"
                 />
               </Field>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Field label="Bairro">
-                  <TextInput
-                    value={data.neighborhood}
-                    onChange={(v) => setData((d) => ({ ...d, neighborhood: v }))}
-                    placeholder="Seu bairro"
-                  />
-                </Field>
-                <Field label="Cidade">
-                  <TextInput
-                    value={data.city}
-                    onChange={(v) => setData((d) => ({ ...d, city: v }))}
-                    placeholder="Sua cidade"
-                  />
-                </Field>
-                <Field label="Estado (UF)">
-                  <TextInput
-                    value={data.state}
-                    onChange={(v) =>
-                      setData((d) => ({
-                        ...d,
-                        state: v.slice(0, 2).toUpperCase(),
-                      }))
-                    }
-                    placeholder="UF (ex: SP)"
-                  />
-                </Field>
+              <div>
+                <p className="mb-2 text-sm font-medium text-[#0a0a0a]">Endereço</p>
+                <AddressFields
+                  initial={{
+                    zipCode: candidate.zipCode ?? "",
+                    street: candidate.street ?? "",
+                    streetNumber: candidate.streetNumber ?? "",
+                    complement: candidate.complement ?? "",
+                    neighborhood: candidate.neighborhood ?? "",
+                    city: candidate.city ?? "",
+                    state: candidate.state ?? "",
+                  }}
+                  onChange={(a) => setData((d) => ({ ...d, ...a }))}
+                />
               </div>
             </StepShell>
           )}

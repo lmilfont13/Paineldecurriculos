@@ -590,6 +590,10 @@ export function createApplication(data: {
   city?: string | null;
   state?: string | null;
   neighborhood?: string | null;
+  zipCode?: string | null;
+  street?: string | null;
+  streetNumber?: string | null;
+  complement?: string | null;
   desiredRole?: string | null;
   salaryExpectation?: string | null;
   workPreference?: string | null;
@@ -679,6 +683,10 @@ export function completePreRegisteredApplication(
     city?: string | null;
     state?: string | null;
     neighborhood?: string | null;
+    zipCode?: string | null;
+    street?: string | null;
+    streetNumber?: string | null;
+    complement?: string | null;
     desiredRole?: string | null;
     salaryExpectation?: string | null;
     workPreference?: string | null;
