@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import type React from "react";
 import type { AIState } from "@prisma/client";
-import { setApplicationStatusAction } from "@/server/controllers/application.controller";
+import { bulkSetApplicationStatusAction, setApplicationStatusAction } from "@/server/controllers/application.controller";
 import { appStatusLabels, formatWaiting, type AppStatusKey } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
@@ -32,6 +32,14 @@ export function VagaPipeline({ applications, aiMinScore }: { applications: Pipel
     const previous=people; setPeople(current=>current.map(p=>p.id===id?{...p,status:stage}:p));
     startTransition(async()=>{try{await setApplicationStatusAction(id,stage);setToast(`${person.name} → ${appStatusLabels[stage]}.`);}catch{setPeople(previous);setToast("Não foi possível mover o candidato. Tente novamente.");}});
   }
+  /** Quem está na triagem e já atingiu a nota mínima da vaga: passa todos de uma vez. */
+  const ready=people.filter(p=>p.status==="PENDING"&&p.aiScore!==null&&p.aiScore>=aiMinScore);
+  function passAllReady(){
+    if(ready.length===0||!window.confirm(`Passar ${ready.length} candidato${ready.length===1?"":"s"} que atingiram a nota mínima (${aiMinScore}) para "Passou da triagem"?`))return;
+    const ids=ready.map(p=>p.id); const previous=people;
+    setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"SHORTLISTED"}:p));
+    startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast(`${updated} candidato${updated===1?"":"s"} passou${updated===1?"":"ram"} da triagem.`);}catch{setPeople(previous);setToast("Não foi possível passar os candidatos. Tente novamente.");}});
+  }
   function askMove(id:string,stage:AppStatusKey){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
     if(stage==="REJECTED"){setConfirm({id,name:person.name,stage});return;} move(id,stage);
@@ -41,7 +49,7 @@ export function VagaPipeline({ applications, aiMinScore }: { applications: Pipel
 
   return <>
     <div className="mt-4 rounded-2xl border border-[#e4e4e7] bg-[#f7f6f4] p-2">
-      <div className="mb-2 flex items-center justify-between px-2 py-1.5"><p className="text-[11px] text-[#8a8781]">Arraste um candidato para a próxima etapa.</p><span className="hidden text-[10px] font-medium text-[#aaa39c] sm:block">{pending?"Salvando movimento…":"Drag & drop ativo"}</span></div>
+      <div className="mb-2 flex items-center justify-between px-2 py-1.5"><p className="text-[11px] text-[#8a8781]">Arraste um candidato para a próxima etapa.</p>{ready.length>0&&<button type="button" disabled={pending} onClick={passAllReady} className="h-8 rounded-lg px-3 text-[11px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50" style={{backgroundColor:"var(--brand-primary)",color:"var(--brand-foreground)"}}>Passar quem atende o mínimo ({ready.length})</button>}<span className="hidden text-[10px] font-medium text-[#aaa39c] sm:block">{pending?"Salvando movimento…":"Drag & drop ativo"}</span></div>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
         {STAGES.map(stage=>{const rows=people.filter(p=>p.status===stage.key);const active=overStage===stage.key&&draggingId!==null;return <section key={stage.key} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setOverStage(stage.key)}} onDragEnter={()=>setOverStage(stage.key)} onDrop={e=>onDrop(e,stage.key)} className={`min-h-[238px] rounded-xl border bg-white transition-all ${active?"border-[#811201] bg-[#fffaf8] shadow-[0_0_0_3px_rgba(129,18,1,0.08)]":"border-[#e4e4e7]"}`}>
           <header className="flex items-center justify-between border-b border-[#e4e4e7] px-3.5 py-3"><div><div className="flex items-center gap-2"><span className="text-[13px] font-semibold text-[#0a0a0a]">{stage.label}</span><span className="rounded-full bg-[#f1f0ed] px-2 text-[10px] font-semibold" style={{color:stage.accent}}>{rows.length}</span></div><p className="mt-0.5 text-[9px] text-[#aaa39c]">{stage.hint}</p></div>{active&&<span className="rounded-full bg-[#811201]/[0.08] px-2 py-1 text-[9px] font-semibold text-[#811201]">Soltar aqui</span>}</header>
