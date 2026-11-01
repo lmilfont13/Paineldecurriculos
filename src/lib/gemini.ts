@@ -41,7 +41,8 @@ export async function geminiGenerate(params: {
   if (!key) throw new Error("GROQ_API_KEY não configurada");
 
   // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
-  const delays = [15_000, 45_000];
+  // Somam menos que o maxDuration (60s) das páginas que chamam a IA.
+  const delays = [12_000, 25_000];
   let res = await callGroq(key, params);
 
   for (const delay of delays) {

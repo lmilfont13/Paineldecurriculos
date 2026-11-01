@@ -25,7 +25,8 @@ export type ShortlistPick = {
 
 /** Quantos candidatos cabem numa análise (limite de tamanho do pedido à IA). */
 export const SHORTLIST_MAX_CANDIDATES = 15;
-const RESUME_EXCERPT = 1500;
+// A Groq limita a 8.000 tokens/minuto: 15 trechos + resposta precisam caber nisso.
+const RESUME_EXCERPT = 700;
 
 /** Quem entra na análise: sem reprovados, maior nota primeiro, sem nota por último. */
 export function pickCandidatesForShortlist(
