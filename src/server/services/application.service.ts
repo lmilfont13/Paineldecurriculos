@@ -725,6 +725,9 @@ export async function submitApplication(
     rg: input.rg,
     cpf: input.cpf,
     bootSize: input.bootSize,
+    hasBankAccount: input.hasBankAccount,
+    bankNames: input.bankNames,
+    bankAccountType: input.bankAccountType,
     pantsSize: input.pantsSize,
     shirtSize: input.shirtSize,
   });
@@ -767,6 +770,9 @@ export async function submitApplication(
   const rg = admissionParsed.data.rg ?? candidate.rg ?? null;
   const cpf = admissionParsed.data.cpf ?? candidate.cpf ?? null;
   const bootSize = admissionParsed.data.bootSize ?? candidate.bootSize ?? null;
+  const hasBankAccount = admissionParsed.data.hasBankAccount ?? candidate.hasBankAccount ?? null;
+  const bankNames = admissionParsed.data.bankNames ?? candidate.bankNames ?? null;
+  const bankAccountType = admissionParsed.data.bankAccountType ?? candidate.bankAccountType ?? null;
   const pantsSize = admissionParsed.data.pantsSize ?? candidate.pantsSize ?? null;
   const shirtSize = admissionParsed.data.shirtSize ?? candidate.shirtSize ?? null;
   const desiredRole = input.desiredRole ?? candidate.desiredRole ?? null;
@@ -795,6 +801,9 @@ export async function submitApplication(
         rg,
         cpf,
         bootSize,
+        hasBankAccount,
+        bankNames,
+        bankAccountType,
         pantsSize,
         shirtSize,
         desiredRole,
@@ -825,6 +834,9 @@ export async function submitApplication(
         rg,
         cpf,
         bootSize,
+        hasBankAccount,
+        bankNames,
+        bankAccountType,
         pantsSize,
         shirtSize,
         desiredRole,
@@ -856,6 +868,9 @@ export async function submitApplication(
     rg,
     cpf,
     bootSize,
+    hasBankAccount,
+    bankNames,
+    bankAccountType,
     pantsSize,
     shirtSize,
     desiredRole,

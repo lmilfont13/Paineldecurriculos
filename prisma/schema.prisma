@@ -161,6 +161,10 @@ model Candidate {
   rg                String?
   cpf               String?
   bootSize          String?
+  /// Conta bancária (opcional): "yes" | "no"; bancos e tipo (corrente, poupanca, salario).
+  hasBankAccount    String?
+  bankNames         String?
+  bankAccountType   String?
   pantsSize         String?
   shirtSize         String?
   desiredRole       String?
@@ -200,6 +204,10 @@ model Application {
   complement        String?
   /// Tamanhos de uniforme informados na candidatura (opcional).
   bootSize          String?
+  /// Conta bancária (opcional): "yes" | "no"; bancos e tipo (corrente, poupanca, salario).
+  hasBankAccount    String?
+  bankNames         String?
+  bankAccountType   String?
   pantsSize         String?
   shirtSize         String?
   desiredRole       String?

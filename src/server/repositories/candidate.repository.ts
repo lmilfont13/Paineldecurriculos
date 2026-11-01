@@ -35,6 +35,9 @@ export function updateCandidate(
     rg: string | null;
     cpf: string | null;
     bootSize: string | null;
+    hasBankAccount: string | null;
+    bankNames: string | null;
+    bankAccountType: string | null;
     pantsSize: string | null;
     shirtSize: string | null;
     desiredRole: string | null;

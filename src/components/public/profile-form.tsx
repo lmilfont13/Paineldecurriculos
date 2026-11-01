@@ -143,6 +143,9 @@ export function ProfileForm({
               rg: candidate.rg ?? "",
               cpf: candidate.cpf ?? "",
               bootSize: candidate.bootSize ?? "",
+              hasBankAccount: candidate.hasBankAccount ?? "",
+              bankNames: candidate.bankNames ?? "",
+              bankAccountType: candidate.bankAccountType ?? "",
               pantsSize: candidate.pantsSize ?? "",
               shirtSize: candidate.shirtSize ?? "",
             }}

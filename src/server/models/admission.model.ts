@@ -21,7 +21,17 @@ export type AdmissionData = {
   bootSize: string | null;
   pantsSize: string | null;
   shirtSize: string | null;
+  /** "yes" | "no" | null (não respondeu). */
+  hasBankAccount: string | null;
+  bankNames: string | null;
+  bankAccountType: string | null;
 };
+
+export const BANK_ACCOUNT_TYPES = [
+  { value: "corrente", label: "Conta corrente" },
+  { value: "poupanca", label: "Poupança" },
+  { value: "salario", label: "Conta salário" },
+] as const;
 
 type RawAdmission = Partial<Record<keyof AdmissionData, string | null | undefined>>;
 
@@ -39,6 +49,11 @@ export function parseAdmissionInput(
     return { ok: false, error: "CPF inválido. Confira os números ou deixe em branco." };
   }
 
+  const hasRaw = clean(raw.hasBankAccount, 5);
+  const hasBankAccount = hasRaw === "yes" || hasRaw === "no" ? hasRaw : null;
+  const typeRaw = clean(raw.bankAccountType, 20);
+  const knownType = BANK_ACCOUNT_TYPES.some((t) => t.value === typeRaw);
+
   return {
     ok: true,
     data: {
@@ -47,6 +62,10 @@ export function parseAdmissionInput(
       bootSize: clean(raw.bootSize, 10),
       pantsSize: clean(raw.pantsSize, 10),
       shirtSize: clean(raw.shirtSize, 10),
+      hasBankAccount,
+      // Quem não tem conta não tem banco nem tipo para informar.
+      bankNames: hasBankAccount === "yes" ? clean(raw.bankNames, 120) : null,
+      bankAccountType: hasBankAccount === "yes" && knownType ? typeRaw : null,
     },
   };
 }

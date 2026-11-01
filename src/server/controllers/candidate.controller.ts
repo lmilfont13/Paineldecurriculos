@@ -105,13 +105,16 @@ export async function updateProfileAction(
   }
 
   // Admissão (opcional): em branco limpa; preenchido precisa ser válido.
-  const admissionSent = ["rg", "cpf", "bootSize", "pantsSize", "shirtSize"].some((k) => formData.has(k));
+  const admissionSent = ["rg", "cpf", "bootSize", "pantsSize", "shirtSize", "hasBankAccount", "bankNames", "bankAccountType"].some((k) => formData.has(k));
   let admission: AdmissionData | undefined;
   if (admissionSent) {
     const parsedAdmission = parseAdmissionInput({
       rg: formData.get("rg") as string | null,
       cpf: formData.get("cpf") as string | null,
       bootSize: formData.get("bootSize") as string | null,
+      hasBankAccount: formData.get("hasBankAccount") as string | null,
+      bankNames: formData.get("bankNames") as string | null,
+      bankAccountType: formData.get("bankAccountType") as string | null,
       pantsSize: formData.get("pantsSize") as string | null,
       shirtSize: formData.get("shirtSize") as string | null,
     });

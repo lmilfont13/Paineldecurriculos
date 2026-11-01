@@ -24,6 +24,9 @@ type WizardData = {
   rg: string;
   cpf: string;
   bootSize: string;
+  hasBankAccount: string;
+  bankNames: string;
+  bankAccountType: string;
   pantsSize: string;
   shirtSize: string;
   zipCode: string;
@@ -76,6 +79,9 @@ export function ApplyWizard({
     rg: candidate.rg ?? "",
     cpf: candidate.cpf ?? "",
     bootSize: candidate.bootSize ?? "",
+    hasBankAccount: candidate.hasBankAccount ?? "",
+    bankNames: candidate.bankNames ?? "",
+    bankAccountType: candidate.bankAccountType ?? "",
     pantsSize: candidate.pantsSize ?? "",
     shirtSize: candidate.shirtSize ?? "",
     zipCode: candidate.zipCode ?? "",
@@ -197,6 +203,9 @@ export function ApplyWizard({
         if (data.rg) formData.set("rg", data.rg.trim());
         if (data.cpf) formData.set("cpf", data.cpf);
         if (data.bootSize) formData.set("bootSize", data.bootSize.trim());
+        if (data.hasBankAccount) formData.set("hasBankAccount", data.hasBankAccount.trim());
+        if (data.bankNames) formData.set("bankNames", data.bankNames.trim());
+        if (data.bankAccountType) formData.set("bankAccountType", data.bankAccountType.trim());
         if (data.pantsSize) formData.set("pantsSize", data.pantsSize.trim());
         if (data.shirtSize) formData.set("shirtSize", data.shirtSize.trim());
         if (data.zipCode) formData.set("zipCode", data.zipCode);
@@ -523,6 +532,9 @@ export function ApplyWizard({
                     rg: data.rg,
                     cpf: data.cpf,
                     bootSize: data.bootSize,
+                    hasBankAccount: data.hasBankAccount,
+                    bankNames: data.bankNames,
+                    bankAccountType: data.bankAccountType,
                     pantsSize: data.pantsSize,
                     shirtSize: data.shirtSize,
                   }}

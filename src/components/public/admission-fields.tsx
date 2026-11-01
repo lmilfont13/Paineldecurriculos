@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { formatCpfInput } from "@/server/models/admission.model";
+import { BANK_ACCOUNT_TYPES, formatCpfInput } from "@/server/models/admission.model";
 
 export type AdmissionValue = {
   rg: string;
@@ -10,6 +10,9 @@ export type AdmissionValue = {
   bootSize: string;
   pantsSize: string;
   shirtSize: string;
+  hasBankAccount: string;
+  bankNames: string;
+  bankAccountType: string;
 };
 
 const inputClass =
@@ -43,6 +46,9 @@ export function AdmissionFields({
     bootSize: initial?.bootSize ?? "",
     pantsSize: initial?.pantsSize ?? "",
     shirtSize: initial?.shirtSize ?? "",
+    hasBankAccount: initial?.hasBankAccount ?? "",
+    bankNames: initial?.bankNames ?? "",
+    bankAccountType: initial?.bankAccountType ?? "",
   });
 
   function update(patch: Partial<AdmissionValue>) {
@@ -118,6 +124,63 @@ export function AdmissionFields({
             className={inputClass}
           />
         </Label>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-[#e4e4e7] bg-white p-3">
+        <fieldset>
+          <legend className="mb-1.5 text-xs font-medium text-[#0a0a0a]">Você possui conta bancária? (opcional)</legend>
+          <div className="flex gap-4 text-sm text-[#0a0a0a]">
+            {[
+              { v: "yes", l: "Sim" },
+              { v: "no", l: "Não" },
+            ].map((o) => (
+              <label key={o.v} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="hasBankAccount"
+                  value={o.v}
+                  checked={value.hasBankAccount === o.v}
+                  onChange={() => update({ hasBankAccount: o.v })}
+                  className="size-4 accent-[#0a0a0a]"
+                />
+                {o.l}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {value.hasBankAccount === "yes" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Label text="Em quais bancos? (opcional)">
+              <input
+                name="bankNames"
+                value={value.bankNames}
+                onChange={(e) => update({ bankNames: e.target.value })}
+                placeholder="Ex.: Nubank, Caixa, Bradesco"
+                maxLength={120}
+                className={inputClass}
+              />
+            </Label>
+            <Label text="Tipo de conta (opcional)">
+              <select
+                name="bankAccountType"
+                value={value.bankAccountType}
+                onChange={(e) => update({ bankAccountType: e.target.value })}
+                className={inputClass}
+              >
+                <option value="">Selecione</option>
+                {BANK_ACCOUNT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </Label>
+          </div>
+        )}
+        <p className="text-[11px] leading-4 text-[#71717a]">
+          Se for aprovado(a), usamos para agilizar o pagamento do seu salário. Se ainda não tem conta, sem problema.
+        </p>
       </div>
     </div>
   );
