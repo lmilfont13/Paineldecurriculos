@@ -14,6 +14,7 @@ import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
 import { askAboutApplication } from "@/server/services/ai.service";
+import { askAcrossApplications, type AssistantResult } from "@/server/services/assistant.service";
 import { sendBulkMessage, type BulkMessageResult } from "@/server/services/bulk-message.service";
 import { suggestComparison, type ComparisonOutcome } from "@/server/services/compare.service";
 import {
@@ -667,4 +668,13 @@ export async function correctAnswersAction(
     revalidatePath(`/candidaturas/${applicationId}`);
   }
   return { ok: true, changed: result.changed.length };
+}
+
+/** Pergunta à IA olhando todas as candidaturas da empresa (com a vaga em foco, se houver). */
+export async function askAcrossCandidatesAction(
+  jobId: string | null,
+  question: string
+): Promise<AssistantResult> {
+  const user = await requireManager();
+  return askAcrossApplications(user.companyId, jobId, question);
 }

@@ -446,7 +446,7 @@ export default async function CandidaturaDetailPage({
 
           {app.aiState === "DONE" && (
             <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-              <AskAiBox applicationId={app.id} />
+              <AskAiBox applicationId={app.id} jobId={app.job.id} />
             </section>
           )}
         </main>

@@ -11,6 +11,7 @@ import { JobStatusActions } from "@/components/gestor/job-status-actions";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { ShortlistPanel } from "@/components/gestor/shortlist-panel";
 import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
+import { AskAiBox } from "@/components/gestor/ask-ai-box";
 import { VagaPipeline } from "@/components/gestor/vaga-pipeline";
 import { getVagaDetailData } from "@/server/controllers/gestor.controller";
 import {
@@ -226,6 +227,10 @@ export default async function VagaHubPage({
           age: ages[person.id] ?? null,
         }))}
       />
+
+      <section className="mt-6 rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
+        <AskAiBox jobId={job.id} />
+      </section>
 
       {/* Divulgação e critérios: o resto do processo, fora do caminho */}
       <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2">
