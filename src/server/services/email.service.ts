@@ -191,7 +191,7 @@ export async function sendStatusUpdateEmail(params: {
     REJECTED: {
       subject: `Sobre sua candidatura: ${params.jobTitle}`,
       title: "Processo encerrado",
-      body: `A ${company} seguiu com outras pessoas para a vaga de ${job}. Obrigado pelo tempo que você dedicou. Seu cadastro continua salvo para as próximas vagas.`,
+      body: `Muito obrigado por se candidatar à vaga de ${job} na ${company}. Seu currículo é bom e agradecemos o tempo que você dedicou, mas, neste momento, vamos seguir com outros perfis. Isso não diminui o que você construiu até aqui. Seu cadastro continua ativo para as próximas vagas: continue firme e acredite no seu potencial!`,
     },
   }[params.status];
 

@@ -1,8 +1,8 @@
-/** Negativa pronta, com marcadores {nome}, {vaga} e {empresa}: texto fixo, sem IA, sem motivo e sem promessa. */
+/** Negativa pronta, com marcadores {nome}, {vaga} e {empresa}: texto fixo, sem IA, sem motivo e sem promessa de retorno. */
 export const REJECTION_TEMPLATE =
-  "{nome}, agradecemos o seu interesse na vaga de {vaga} na {empresa} e o tempo dedicado ao processo.\n" +
-  "Depois de analisar os perfis, neste momento não vamos seguir com a sua candidatura.\n" +
-  "Seu cadastro continua ativo para você se candidatar a outras vagas da {empresa}. Desejamos sucesso na sua trajetória.";
+  "{nome}, muito obrigado por se candidatar à vaga de {vaga} na {empresa}. Ficamos felizes com o seu interesse e agradecemos o tempo e o cuidado que você dedicou ao processo.\n" +
+  "Seu currículo é bom e mostra uma trajetória que merece respeito, mas, neste momento, não vamos seguir com a sua candidatura e vamos avançar com outros perfis. Isso não diminui em nada o que você construiu até aqui.\n" +
+  "Seu cadastro continua ativo, e você pode se candidatar às próximas vagas da {empresa}. Continue firme e acredite no seu potencial: desejamos muito sucesso na sua caminhada!";
 
 /** Negativa para um candidato específico. */
 export function rejectionMessage(

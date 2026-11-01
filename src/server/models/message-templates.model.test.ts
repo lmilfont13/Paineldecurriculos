@@ -10,6 +10,11 @@ describe("rejectionMessage", () => {
     expect(text).toContain("Consultor de Vendas");
     expect(text).toContain("Loja X");
   });
+  it("é humana: agradece, elogia o currículo e incentiva", () => {
+    expect(text).toMatch(/muito obrigado/i);
+    expect(text).toMatch(/currículo é bom/i);
+    expect(text).toMatch(/acredite no seu potencial/i);
+  });
   it("é respeitosa e não dá motivo nem promete retorno", () => {
     expect(text).toMatch(/não vamos seguir/i);
     expect(text).not.toMatch(/entraremos em contato|guardaremos|banco de talentos/i);

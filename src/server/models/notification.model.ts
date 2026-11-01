@@ -35,7 +35,7 @@ export function stageNotification(
       return {
         type: "RESULT",
         title: "Processo finalizado",
-        body: `A ${companyName} seguiu com outros candidatos para a vaga de ${jobTitle}. Obrigado por ter participado. Suas outras candidaturas continuam ativas.`,
+        body: `Muito obrigado por se candidatar à vaga de ${jobTitle} na ${companyName}. Seu currículo é bom, mas, neste momento, vamos seguir com outros perfis. Suas outras candidaturas continuam ativas: continue firme e acredite no seu potencial!`,
       };
     case "PENDING":
       // Voltar para triagem é conserto de erro do gestor; não vira novidade.
