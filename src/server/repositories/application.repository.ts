@@ -289,6 +289,14 @@ export function findApplicationsByCompany(
   });
 }
 
+/** Data de nascimento e texto do currículo de uma vaga, só para calcular a idade exibida ao gestor. */
+export function findAgeSourcesForJob(companyId: string, jobId: string) {
+  return prisma.application.findMany({
+    where: { companyId, jobId },
+    select: { id: true, birthDate: true, resumeText: true },
+  });
+}
+
 /** Busca avançada de CVs (nível Michelin): dados enriquecidos para busca facetada e snippets. */
 export function findApplicationsForCvSearch(companyId: string) {
   return prisma.application.findMany({

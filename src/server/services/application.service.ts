@@ -83,7 +83,8 @@ import {
 } from "@/server/services/email.service";
 import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
-import { updateAnswerValues } from "@/server/repositories/application.repository";
+import { findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
+import { effectiveAge } from "@/server/models/age.model";
 import {
   extractResumeContact,
   generateCandidateSummary,
@@ -145,6 +146,12 @@ export async function listCompanyApplications(
   return jobId
     ? applications.filter((a) => a.job.id === jobId)
     : applications;
+}
+
+/** Idade (só para exibir e filtrar) de cada candidato de uma vaga, por id da candidatura. */
+export async function listJobApplicantAges(companyId: string, jobId: string) {
+  const rows = await findAgeSourcesForJob(companyId, jobId);
+  return Object.fromEntries(rows.map((r) => [r.id, effectiveAge(r.birthDate, r.resumeText)])) as Record<string, number | null>;
 }
 
 /** Busca avançada de CVs (nível Michelin): lista enriquecida com fotos assinadas e respostas. */

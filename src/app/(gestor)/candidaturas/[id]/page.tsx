@@ -145,6 +145,12 @@ export default async function CandidaturaDetailPage({
                 </h1>
                 <p className="mt-1 text-xs text-[#71717a]">
                   {app.preRegistered ? "Cadastrado por você em" : "Candidatou-se em"} {formatAppliedAt(app.createdAt, true)}
+                  {app.age !== null && (
+                    <span className="text-[#a1a1aa]" title="Só para sua conferência: não entra na nota nem vai para a IA">
+                      {" · "}
+                      {app.age} anos
+                    </span>
+                  )}
                   {app.status === "PENDING" && (
                     <>
                       {" · "}

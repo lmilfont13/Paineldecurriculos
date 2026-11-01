@@ -61,7 +61,7 @@ export default async function VagaHubPage({
   const { jobId } = await params;
   const data = await getVagaDetailData(jobId);
   if (!data) notFound();
-  const { job, publicUrl, applications } = data;
+  const { job, publicUrl, applications, ages } = data;
 
   const byStage = (stage: AppStatusKey) =>
     applications.filter((a) => a.status === stage);
@@ -223,6 +223,7 @@ export default async function VagaHubPage({
           aiState: person.aiState,
           createdAt: person.createdAt.toISOString(),
           photoUrl: person.photoUrl,
+          age: ages[person.id] ?? null,
         }))}
       />
 

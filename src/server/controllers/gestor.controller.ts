@@ -17,6 +17,7 @@ import {
   getOtherApplicationsOfPerson,
   listCompanyApplications,
   listApplicationsForCvSearch,
+  listJobApplicantAges,
 } from "@/server/services/application.service";
 import {
   calculateAge,
@@ -36,6 +37,7 @@ import {
 import { getDashboard } from "@/server/services/dashboard.service";
 import { getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
 import { appUrl } from "@/lib/env";
+import { effectiveAge } from "@/server/models/age.model";
 
 /** Dados do shell do gestor (sidebar/topbar) — 1x por request. */
 export const getGestorShell = cache(async () => {
@@ -160,6 +162,7 @@ export async function getVagaDetailData(jobId: string) {
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
+  const ages = await listJobApplicantAges(user.companyId, jobId);
   const questions = await getJobQuestions(user.companyId, jobId);
   const standby = await getStandbyForJob(user.companyId, jobId);
   return {
@@ -170,6 +173,7 @@ export async function getVagaDetailData(jobId: string) {
     companySlug: company.slug,
     publicUrl: `${appUrl()}/${company.slug}/vagas/${job.id}`,
     applications,
+    ages,
   };
 }
 
@@ -183,7 +187,12 @@ export async function getCandidaturaDetail(id: string) {
     application.email,
     id
   );
-  return { ...withPhoto, name: titleCasePt(withPhoto.name), otherApplications };
+  return {
+    ...withPhoto,
+    name: titleCasePt(withPhoto.name),
+    otherApplications,
+    age: effectiveAge(application.birthDate, application.resumeText),
+  };
 }
 
 /** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
