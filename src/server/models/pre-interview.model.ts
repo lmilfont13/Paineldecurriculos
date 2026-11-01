@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cepDigits, isValidCep } from "@/server/models/address.model";
+
 /** Perguntas que o gestor pode pedir ao candidato aprovado (pré-entrevista). */
 export const INFO_FIELDS = [
   "maritalStatus",
@@ -7,6 +9,8 @@ export const INFO_FIELDS = [
   "professionalSummary",
   "rg",
   "cpf",
+  "address",
+  "uniform",
 ] as const;
 
 export type InfoField = (typeof INFO_FIELDS)[number];
@@ -17,6 +21,8 @@ export const infoFieldLabels: Record<InfoField, string> = {
   professionalSummary: "Resumo profissional",
   rg: "RG",
   cpf: "CPF",
+  address: "Endereço",
+  uniform: "Uniforme (blusa, calça e bota)",
 };
 
 export const MARITAL_STATUSES = [
@@ -61,6 +67,10 @@ export type KnownInfo = {
   professionalSummary: string | null;
   rg: string | null;
   cpf: string | null;
+  /** Endereço completo (CEP, rua e número) já informado. */
+  hasAddress: boolean;
+  /** Os três tamanhos de uniforme já informados. */
+  hasUniform: boolean;
   /** Currículo com texto extraído: já traz a vida profissional. */
   hasResumeText: boolean;
 };
@@ -73,6 +83,12 @@ export function knownInfoOf(application: {
   rg: string | null;
   cpf: string | null;
   resumeText: string | null;
+  zipCode?: string | null;
+  street?: string | null;
+  streetNumber?: string | null;
+  bootSize?: string | null;
+  pantsSize?: string | null;
+  shirtSize?: string | null;
 }): KnownInfo {
   return {
     maritalStatus: application.maritalStatus,
@@ -80,6 +96,8 @@ export function knownInfoOf(application: {
     professionalSummary: application.professionalSummary,
     rg: application.rg,
     cpf: application.cpf,
+    hasAddress: Boolean(application.zipCode && application.street && application.streetNumber),
+    hasUniform: Boolean(application.bootSize && application.pantsSize && application.shirtSize),
     hasResumeText: Boolean(application.resumeText?.trim()),
   };
 }
@@ -93,6 +111,8 @@ export function missingInfoFields(known: KnownInfo): InfoField[] {
     missing.push("professionalSummary");
   if (!known.rg) missing.push("rg");
   if (!known.cpf) missing.push("cpf");
+  if (!known.hasAddress) missing.push("address");
+  if (!known.hasUniform) missing.push("uniform");
   return missing;
 }
 
@@ -133,6 +153,28 @@ export function buildInfoAnswerSchema(fields: InfoField[]) {
       .string()
       .refine(isValidCpf, "CPF inválido.")
       .transform(digitsOf);
+  if (fields.includes("address")) {
+    shape.zipCode = z
+      .string()
+      .refine(isValidCep, "Informe um CEP válido.")
+      .transform(cepDigits);
+    shape.street = z.string().trim().min(2, "Informe a rua.").max(160);
+    shape.streetNumber = z.string().trim().min(1, "Informe o número.").max(20);
+    shape.complement = z.string().trim().max(80).optional();
+    shape.neighborhood = z.string().trim().min(2, "Informe o bairro.").max(120);
+    shape.city = z.string().trim().min(2, "Informe a cidade.").max(120);
+    shape.state = z
+      .string()
+      .trim()
+      .length(2, "Informe a UF (2 letras).")
+      .transform((v) => v.toUpperCase());
+  }
+  if (fields.includes("uniform")) {
+    const size = (msg: string) => z.string().trim().min(1, msg).max(10, "Tamanho muito longo.");
+    shape.bootSize = size("Informe o tamanho da bota.");
+    shape.pantsSize = size("Informe o tamanho da calça.");
+    shape.shirtSize = size("Informe o tamanho da blusa.");
+  }
   return z.object(shape);
 }
 

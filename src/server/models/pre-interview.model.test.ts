@@ -18,6 +18,8 @@ const nothingKnown: KnownInfo = {
   professionalSummary: null,
   rg: null,
   cpf: null,
+  hasAddress: false,
+  hasUniform: false,
   hasResumeText: true,
 };
 
@@ -50,6 +52,8 @@ describe("missingInfoFields", () => {
       "children",
       "rg",
       "cpf",
+      "address",
+      "uniform",
     ]);
   });
   it("sem texto de currículo, o resumo é pedido", () => {
@@ -65,7 +69,38 @@ describe("missingInfoFields", () => {
         hasChildren: false,
         cpf: "52998224725",
       })
-    ).toEqual(["rg"]);
+    ).toEqual(["rg", "address", "uniform"]);
+  });
+});
+
+describe("endereço e uniforme na segunda fase", () => {
+  it("não pede de novo o que o candidato já adiantou no cadastro", () => {
+    expect(
+      missingInfoFields({ ...nothingKnown, hasAddress: true, hasUniform: true })
+    ).toEqual(["maritalStatus", "children", "rg", "cpf"]);
+  });
+  it("endereço exige CEP válido, rua e número", () => {
+    const schema = buildInfoAnswerSchema(["address"]);
+    const ok = {
+      zipCode: "60115-190",
+      street: "Rua Silva Jatahy",
+      streetNumber: "1200",
+      complement: "Apto 2",
+      neighborhood: "Meireles",
+      city: "Fortaleza",
+      state: "ce",
+    };
+    const parsed = schema.safeParse(ok);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && (parsed.data as { zipCode: string; state: string }).zipCode).toBe("60115190");
+    expect(parsed.success && (parsed.data as { zipCode: string; state: string }).state).toBe("CE");
+    expect(schema.safeParse({ ...ok, zipCode: "123" }).success).toBe(false);
+    expect(schema.safeParse({ ...ok, streetNumber: "" }).success).toBe(false);
+  });
+  it("uniforme exige os três tamanhos", () => {
+    const schema = buildInfoAnswerSchema(["uniform"]);
+    expect(schema.safeParse({ bootSize: "40", pantsSize: "42", shirtSize: "M" }).success).toBe(true);
+    expect(schema.safeParse({ bootSize: "40", pantsSize: "", shirtSize: "M" }).success).toBe(false);
   });
 });
 

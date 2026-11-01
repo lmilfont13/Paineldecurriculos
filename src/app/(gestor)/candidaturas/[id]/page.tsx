@@ -415,6 +415,8 @@ export default async function CandidaturaDetailPage({
                 hasChildren: app.hasChildren,
                 childrenCount: app.childrenCount,
                 professionalSummary: app.professionalSummary,
+                address: formatAddress(app),
+                uniform: uniformLine,
                 rgMasked: app.rg ? maskRg(app.rg) : null,
                 cpfMasked: app.cpf ? maskCpf(app.cpf) : null,
               }}

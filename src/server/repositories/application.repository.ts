@@ -748,6 +748,16 @@ export function updateInfoAnswers(
     professionalSummary?: string;
     rg?: string;
     cpf?: string;
+    zipCode?: string;
+    street?: string;
+    streetNumber?: string;
+    complement?: string | null;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    bootSize?: string;
+    pantsSize?: string;
+    shirtSize?: string;
     infoAnsweredAt: Date;
   }
 ) {

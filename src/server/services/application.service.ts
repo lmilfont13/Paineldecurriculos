@@ -1242,7 +1242,41 @@ export async function saveInfoAnswers(
       : {}),
     ...(a.rg !== undefined ? { rg: a.rg as string } : {}),
     ...(a.cpf !== undefined ? { cpf: a.cpf as string } : {}),
+    ...(a.zipCode !== undefined
+      ? {
+          zipCode: a.zipCode as string,
+          street: a.street as string,
+          streetNumber: a.streetNumber as string,
+          complement: ((a.complement as string | undefined) ?? "") || null,
+          neighborhood: a.neighborhood as string,
+          city: a.city as string,
+          state: a.state as string,
+        }
+      : {}),
+    ...(a.bootSize !== undefined
+      ? { bootSize: a.bootSize as string, pantsSize: a.pantsSize as string, shirtSize: a.shirtSize as string }
+      : {}),
     infoAnsweredAt: new Date(),
+  });
+
+  // O que foi respondido também vira perfil, para as próximas candidaturas e a admissão.
+  await updateCandidateProfile(candidateId, {
+    ...(a.rg !== undefined ? { rg: a.rg as string } : {}),
+    ...(a.cpf !== undefined ? { cpf: a.cpf as string } : {}),
+    ...(a.zipCode !== undefined
+      ? {
+          zipCode: a.zipCode as string,
+          street: a.street as string,
+          streetNumber: a.streetNumber as string,
+          complement: ((a.complement as string | undefined) ?? "") || null,
+          neighborhood: a.neighborhood as string,
+          city: a.city as string,
+          state: a.state as string,
+        }
+      : {}),
+    ...(a.bootSize !== undefined
+      ? { bootSize: a.bootSize as string, pantsSize: a.pantsSize as string, shirtSize: a.shirtSize as string }
+      : {}),
   });
   return { ok: true };
 }

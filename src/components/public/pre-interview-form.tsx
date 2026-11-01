@@ -7,6 +7,7 @@ import {
   submitInfoAnswersAction,
   type InterviewState,
 } from "@/server/controllers/application.controller";
+import { AddressFields } from "@/components/public/address-fields";
 import {
   MARITAL_STATUSES,
   isValidCpf,
@@ -170,6 +171,33 @@ export function PreInterviewForm({
             className={inputClass}
           />
         </label>
+      )}
+
+      {fields.includes("address") && (
+        <fieldset>
+          <legend className={label}>Endereço</legend>
+          <AddressFields />
+        </fieldset>
+      )}
+
+      {fields.includes("uniform") && (
+        <fieldset>
+          <legend className={label}>Tamanho do uniforme</legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(
+              [
+                ["shirtSize", "Blusa", "Ex.: M"],
+                ["pantsSize", "Calça", "Ex.: 42"],
+                ["bootSize", "Bota / sapato", "Ex.: 40"],
+              ] as const
+            ).map(([name, text, placeholder]) => (
+              <label key={name} className="block">
+                <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">{text}</span>
+                <input name={name} required maxLength={10} placeholder={placeholder} className={inputClass} />
+              </label>
+            ))}
+          </div>
+        </fieldset>
       )}
 
       <p className="text-[12px] leading-5 text-[#71717a]">

@@ -25,6 +25,7 @@ const apps: Record<string, App> = {
   },
 };
 const saved: Record<string, unknown>[] = [];
+const profiles: Record<string, unknown>[] = [];
 
 vi.mock("@/server/repositories/application.repository", async (orig) => ({
   ...(await orig<object>()),
@@ -37,10 +38,18 @@ vi.mock("@/server/repositories/application.repository", async (orig) => ({
   }),
 }));
 
+vi.mock("@/server/repositories/candidate.repository", async (orig) => ({
+  ...(await orig<object>()),
+  updateCandidate: vi.fn(async (_id: string, data: Record<string, unknown>) => {
+    profiles.push(data);
+  }),
+}));
+
 import { saveInfoAnswers } from "@/server/services/application.service";
 
 beforeEach(() => {
   saved.length = 0;
+  profiles.length = 0;
 });
 
 describe("saveInfoAnswers", () => {
@@ -54,6 +63,34 @@ describe("saveInfoAnswers", () => {
     expect(saved[0]).toMatchObject({ cpf: "52998224725" });
     expect(saved[0]).not.toHaveProperty("rg");
     expect(saved[0]).toHaveProperty("infoAnsweredAt");
+  });
+
+  it("endereço e uniforme pedidos são gravados e viram perfil do candidato", async () => {
+    apps.a4 = { id: "a4", candidateId: "c1", infoRequestedFields: ["address", "uniform"], infoAnsweredAt: null };
+    const result = await saveInfoAnswers("c1", "a4", {
+      zipCode: "60115-190",
+      street: "Rua Silva Jatahy",
+      streetNumber: "1200",
+      complement: "",
+      neighborhood: "Meireles",
+      city: "Fortaleza",
+      state: "ce",
+      bootSize: "40",
+      pantsSize: "42",
+      shirtSize: "M",
+    });
+    expect(result).toEqual({ ok: true });
+    expect(saved[0]).toMatchObject({
+      zipCode: "60115190",
+      street: "Rua Silva Jatahy",
+      streetNumber: "1200",
+      complement: null,
+      state: "CE",
+      bootSize: "40",
+      pantsSize: "42",
+      shirtSize: "M",
+    });
+    expect(profiles[0]).toMatchObject({ zipCode: "60115190", bootSize: "40", shirtSize: "M" });
   });
 
   it("candidato não responde a candidatura de outro", async () => {
