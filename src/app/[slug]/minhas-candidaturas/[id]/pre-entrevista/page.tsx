@@ -63,6 +63,14 @@ export default async function PreEntrevistaPage({
           {application.job.title} · {application.company.name}
         </p>
 
+        {pending && (
+          <p className="mt-5 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-4 text-sm leading-6 text-[#57534e]">
+            Seu currículo avançou! Para a <strong className="text-[#0a0a0a]">próxima fase</strong>, a{" "}
+            {company.name} precisa dos dados abaixo. Sem eles não conseguimos seguir com o seu
+            processo, então preencha com atenção.
+          </p>
+        )}
+
         {pending ? (
           <PreInterviewForm
             slug={slug}

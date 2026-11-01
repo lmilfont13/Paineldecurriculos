@@ -126,6 +126,6 @@ export function infoRequestedNotification(
   return {
     type: "INFO_REQUESTED",
     title: `${companyName} pediu algumas informações`,
-    body: `Para seguir com a vaga de ${jobTitle}, preencha um formulário rápido na sua área.`,
+    body: `Para a próxima fase da vaga de ${jobTitle}, precisamos de alguns dados seus. Preencha o formulário rápido na sua área para seguir no processo.`,
   };
 }

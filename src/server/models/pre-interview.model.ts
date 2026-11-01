@@ -199,7 +199,8 @@ export function whatsappInfoLink(params: {
   const first = params.candidateName.trim().split(/\s+/)[0] ?? "";
   const text =
     `Oi, ${first}! Aqui é da ${params.companyName}. ` +
-    `Para seguir com a vaga de ${params.jobTitle}, preciso que você preencha ` +
-    `algumas informações neste link: ${params.url}`;
+    `Seu currículo para a vaga de ${params.jobTitle} avançou! ` +
+    `Para a próxima fase, vamos precisar de alguns dados seus (documentos, endereço e tamanhos de uniforme, conforme o que ainda faltar no seu cadastro). ` +
+    `Sem eles não conseguimos seguir com o seu processo. Preencha rapidinho neste link: ${params.url}`;
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
