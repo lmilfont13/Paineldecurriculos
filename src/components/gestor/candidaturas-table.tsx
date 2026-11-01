@@ -245,15 +245,28 @@ export function CandidaturasTable({
 
   /** Ações que enviam e-mail ao candidato exigem confirmação (irreversível). */
   function requestBulk(newStatus: AppStatusKey) {
-    if (newStatus === "PENDING") return runBulk(newStatus);
+    // Voltar para a triagem e "passou da triagem" não avisam o candidato por e-mail: sem confirmação.
+    if (newStatus === "PENDING" || newStatus === "SHORTLISTED") return runBulk(newStatus);
     setConfirm(newStatus);
   }
 
-  function runBulk(newStatus: AppStatusKey) {
-    const ids = [...selected];
+  /** Quem está na triagem e já atingiu a nota mínima da própria vaga (respeita os filtros da tela). */
+  const readyToPass = filtered.filter((r) => r.status === "PENDING" && meetsMinimum(r));
+
+  function passAllMeetingMinimum() {
+    if (!window.confirm(`Passar ${readyToPass.length} candidato${readyToPass.length === 1 ? "" : "s"} que atingiram a nota mínima para "Passou da triagem"?`)) return;
+    runBulk("SHORTLISTED", readyToPass.map((r) => r.id));
+  }
+
+  function runBulk(newStatus: AppStatusKey, only?: string[]) {
+    const ids = only ?? [...selected];
     setConfirm(null);
     startTransition(async () => {
-      const { updated } = await bulkSetApplicationStatusAction(ids, newStatus);
+      // A ação aceita até 100 por chamada: manda em lotes para não deixar ninguém de fora.
+      let updated = 0;
+      for (let i = 0; i < ids.length; i += 100) {
+        updated += (await bulkSetApplicationStatusAction(ids.slice(i, i + 100), newStatus)).updated;
+      }
       setToast(
         `${updated} candidato${updated === 1 ? "" : "s"} movido${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}".`
       );
@@ -518,6 +531,19 @@ export function CandidaturasTable({
           />
           Somente com foto
         </label>
+
+        {(tab === "PENDING" || tab === "ALL") && readyToPass.length > 0 && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={passAllMeetingMinimum}
+            title="Move para 'Passou da triagem' todos da triagem que atingiram a nota mínima da vaga"
+            className="h-10 rounded-xl px-4 text-[13px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
+          >
+            Passar quem atende o mínimo ({readyToPass.length})
+          </button>
+        )}
 
         <div className="ml-auto flex h-10 items-center gap-0.5 rounded-xl border border-[#e4e4e7] bg-white p-1">
           <button
