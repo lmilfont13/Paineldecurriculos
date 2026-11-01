@@ -1,5 +1,6 @@
 "use server";
 
+import { signInPath } from "@/server/models/candidate.model";
 import { cepDigits } from "@/server/models/address.model";
 import { parseAdmissionInput, type AdmissionData } from "@/server/models/admission.model";
 import { redirect } from "next/navigation";
@@ -71,6 +72,14 @@ export async function logoutCandidateAction(slug: string): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect(`/${slug}/vagas`);
+}
+
+/** Sai da conta aberta e leva à tela de entrada, que depois volta para a página pedida. */
+export async function switchCandidateAccountAction(slug: string, next: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  const target = next.startsWith(`/${slug}/`) && !next.startsWith("//") ? next : `/${slug}/minhas-candidaturas`;
+  redirect(signInPath(slug, target));
 }
 
 /** CA5 · Atualiza nome, telefone e (opcionalmente) o currículo do perfil. */

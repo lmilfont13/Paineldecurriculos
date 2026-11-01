@@ -1,3 +1,4 @@
+import { WrongAccountNotice } from "@/components/public/wrong-account-notice";
 import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -50,7 +51,17 @@ export default async function MinhaCandidaturaPage({
     );
   }
   const { company, candidate, application } = data;
-  if (!application) notFound();
+  if (!application) {
+    return (
+      <>
+        <CompanyHeader company={company} candidate={candidate} />
+        <main className="mx-auto w-full max-w-[560px] flex-1 px-6">
+          <WrongAccountNotice slug={slug} nextPath={`/${slug}/minhas-candidaturas/${id}`} currentEmail={candidate.email} />
+        </main>
+        <CompanyFooter company={company} />
+      </>
+    );
+  }
 
   return (
     <>
