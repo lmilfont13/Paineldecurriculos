@@ -539,6 +539,16 @@ export async function submitInfoAnswersAction(
     professionalSummary: text("professionalSummary"),
     rg: text("rg"),
     cpf: text("cpf"),
+    zipCode: text("zipCode"),
+    street: text("street"),
+    streetNumber: text("streetNumber"),
+    complement: text("complement"),
+    neighborhood: text("neighborhood"),
+    city: text("city"),
+    state: text("state"),
+    bootSize: text("bootSize"),
+    pantsSize: text("pantsSize"),
+    shirtSize: text("shirtSize"),
   });
   if (!result.ok) return { error: result.error };
   revalidatePath(`/${slug}/minhas-candidaturas/${applicationId}`);
