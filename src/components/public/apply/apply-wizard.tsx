@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone, maskPhoneInput } from "@/lib/phone";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -339,8 +340,8 @@ export function ApplyWizard({
                   <TextInput
                     type="tel"
                     value={data.phone}
-                    onChange={(v) => setData((d) => ({ ...d, phone: v }))}
-                    placeholder="(85) 9 0000-0000"
+                    onChange={(v) => setData((d) => ({ ...d, phone: maskPhoneInput(v) }))}
+                    placeholder="(85) 99999-0000"
                     autoComplete="tel"
                   />
                 </Field>
@@ -584,7 +585,7 @@ export function ApplyWizard({
               <dl>
                 <ReviewRow label="Nome" value={data.name} />
                 <ReviewRow label="E-mail" value={candidate.email} />
-                <ReviewRow label="Telefone" value={data.phone} />
+                <ReviewRow label="Telefone" value={formatPhone(data.phone)} />
                 {data.birthDate && (
                   <ReviewRow
                     label="Data de nascimento"

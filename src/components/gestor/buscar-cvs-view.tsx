@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
@@ -1133,7 +1134,7 @@ export function BuscarCvsView({
                         {item.phone && (
                           <>
                             <span>•</span>
-                            <span>{item.phone}</span>
+                            <span>{formatPhone(item.phone)}</span>
                           </>
                         )}
                         <button
@@ -1368,7 +1369,7 @@ export function BuscarCvsView({
                       <div>
                         <span className="text-[10px] text-[#a1a1aa]">Telefone</span>
                         <p className="font-semibold text-[#0a0a0a]">
-                          {selectedCandidate.phone || "Não informado"}
+                          {formatPhone(selectedCandidate.phone) || "Não informado"}
                         </p>
                       </div>
                     </div>

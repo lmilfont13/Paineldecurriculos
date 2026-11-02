@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone, maskPhoneInput } from "@/lib/phone";
 import { useActionState, useRef, useState, useTransition } from "react";
 
 import type { CandidateProfile } from "@/server/models/candidate.model";
@@ -108,8 +109,10 @@ export function ProfileForm({
             </span>
             <input
               name="phone"
-              defaultValue={candidate.phone ?? ""}
-              placeholder="(85) 9 0000-0000"
+              defaultValue={formatPhone(candidate.phone)}
+              onChange={(e) => (e.currentTarget.value = maskPhoneInput(e.currentTarget.value))}
+              inputMode="tel"
+              placeholder="(85) 99999-0000"
               className={inputClass}
             />
           </label>

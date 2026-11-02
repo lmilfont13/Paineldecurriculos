@@ -1,4 +1,5 @@
 import { WrongAccountNotice } from "@/components/public/wrong-account-notice";
+import { formatPhone } from "@/lib/phone";
 import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -232,7 +233,7 @@ export default async function MinhaCandidaturaPage({
             <div>
               <dt className="text-[11px] text-[#71717a]">Telefone</dt>
               <dd className="mt-0.5 text-[13px] text-[#0a0a0a]">
-                {application.phone ?? "—"}
+                {formatPhone(application.phone) || "—"}
               </dd>
             </div>
             {application.answers.map((answer) => (

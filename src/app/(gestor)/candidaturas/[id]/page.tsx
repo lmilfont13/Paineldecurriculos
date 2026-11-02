@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -111,7 +112,7 @@ export default async function CandidaturaDetailPage({
         : null;
   const infoPairs: [string, string][] = [
     ["E-mail", app.email],
-    ["Telefone", app.phone ?? "—"],
+    ["Telefone", formatPhone(app.phone) || "—"],
     ...(formatAddress(app) ? ([["Endereço", formatAddress(app) as string]] as [string, string][]) : []),
     ...(uniformLine ? ([["Uniforme", uniformLine]] as [string, string][]) : []),
     ...(bankLine ? ([["Conta bancária", bankLine]] as [string, string][]) : []),
