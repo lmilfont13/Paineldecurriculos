@@ -145,9 +145,16 @@ export async function resetManagerPassword(
   }
   const admin = createAdminClient();
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const authUser = data.users.find((u) => u.email === managerEmail);
+  const authUser = data.users.find((u) => u.email?.toLowerCase() === managerEmail.toLowerCase());
   if (!authUser) {
-    return { ok: false, error: "Usuário de acesso não encontrado no Auth." };
+    // Gestor cadastrado no painel mas sem login no Auth: cria o acesso já com a senha informada.
+    const { error: createError } = await admin.auth.admin.createUser({
+      email: managerEmail,
+      password: newPassword,
+      email_confirm: true,
+    });
+    if (createError) return { ok: false, error: "Não foi possível criar o acesso do gestor." };
+    return { ok: true, email: managerEmail };
   }
   const { error } = await admin.auth.admin.updateUserById(authUser.id, {
     password: newPassword,
