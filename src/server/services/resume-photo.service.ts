@@ -6,9 +6,12 @@ import { extractImages, type getDocumentProxy } from "unpdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PHOTO_SIZE,
+  faceCropRegion,
   photoStoragePath,
+  pickPageImageIndex,
   pickPhotoIndex,
 } from "@/server/models/photo.model";
+import { findFace } from "@/server/services/face-detect.service";
 import { updateApplicationPhoto } from "@/server/repositories/application.repository";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
@@ -33,19 +36,41 @@ export async function captureResumePhoto(
       images = await extractImages(pdf, 2);
       index = pickPhotoIndex(images);
     }
-    if (index === null) {
+
+    let jpeg: Buffer | null = null;
+    if (index !== null) {
+      const img = images[index];
+      jpeg = await sharp(Buffer.from(img.data), {
+        raw: { width: img.width, height: img.height, channels: img.channels as 3 | 4 },
+      })
+        .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: sharp.strategy.attention })
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: 82 })
+        .toBuffer();
+    } else {
+      // Currículo que é uma figura só (página inteira): procura o rosto na imagem.
+      const pageIndex = pickPageImageIndex(images);
+      if (pageIndex !== null) {
+        const img = images[pageIndex];
+        const channels = img.channels as 3 | 4;
+        const face = await findFace(img.data, img.width, img.height, channels);
+        if (face) {
+          const { left, top, size } = faceCropRegion(face, img.width, img.height);
+          jpeg = await sharp(Buffer.from(img.data), {
+            raw: { width: img.width, height: img.height, channels },
+          })
+            .extract({ left, top, width: size, height: size })
+            .resize(PHOTO_SIZE, PHOTO_SIZE)
+            .flatten({ background: "#ffffff" })
+            .jpeg({ quality: 82 })
+            .toBuffer();
+        }
+      }
+    }
+    if (!jpeg) {
       if (target.currentPath) await updateApplicationPhoto(target.applicationId, null);
       return false;
     }
-
-    const img = images[index];
-    const jpeg = await sharp(Buffer.from(img.data), {
-      raw: { width: img.width, height: img.height, channels: img.channels as 3 | 4 },
-    })
-      .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: sharp.strategy.attention })
-      .flatten({ background: "#ffffff" })
-      .jpeg({ quality: 82 })
-      .toBuffer();
 
     const path = photoStoragePath(target.companyId, target.applicationId);
     const storage = createAdminClient().storage;

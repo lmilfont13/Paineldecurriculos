@@ -42,3 +42,53 @@ export function pickPhotoIndex(images: PdfImageInfo[]): number | null {
 export function photoStoragePath(companyId: string, applicationId: string): string {
   return `photos/${companyId}/${applicationId}.jpg`;
 }
+
+/** Rosto achado numa imagem: centro (x, y) e diâmetro aproximado, em pixels. */
+export type FaceDetection = { x: number; y: number; size: number; score: number };
+
+/** Confiança mínima do detector; abaixo disso é mais provável ser ruído. */
+export const FACE_MIN_SCORE = 5;
+
+/**
+ * Escolhe a melhor detecção ([linha, coluna, tamanho, confiança], formato do
+ * pico.js): a de maior confiança acima do mínimo e com tamanho plausível.
+ */
+export function bestFace(dets: number[][], width: number, height: number): FaceDetection | null {
+  let best: FaceDetection | null = null;
+  for (const [r, c, s, q] of dets) {
+    if (!(q >= FACE_MIN_SCORE)) continue;
+    if (s < 24 || s > Math.min(width, height)) continue;
+    if (!best || q > best.score) best = { x: c, y: r, size: s, score: q };
+  }
+  return best;
+}
+
+/**
+ * Recorte quadrado em volta do rosto, com folga para cabelo e ombros, sempre
+ * dentro da imagem.
+ */
+export function faceCropRegion(
+  face: FaceDetection,
+  width: number,
+  height: number
+): { left: number; top: number; size: number } {
+  const size = Math.min(Math.round(face.size * 1.5), width, height);
+  const left = Math.min(Math.max(Math.round(face.x - size / 2), 0), width - size);
+  const top = Math.min(Math.max(Math.round(face.y - size / 2), 0), height - size);
+  return { left, top, size };
+}
+
+/**
+ * Para currículo que é uma imagem só (página inteira), devolve o índice da
+ * maior imagem colorida, onde vale procurar um rosto.
+ */
+export function pickPageImageIndex(images: PdfImageInfo[]): number | null {
+  let best: { index: number; area: number } | null = null;
+  images.forEach((img, index) => {
+    if (img.channels < 3 || img.width < 400 || img.height < 400) return;
+    if (img.width > 6000 || img.height > 6000) return;
+    const area = img.width * img.height;
+    if (!best || area > best.area) best = { index, area };
+  });
+  return best ? (best as { index: number }).index : null;
+}
