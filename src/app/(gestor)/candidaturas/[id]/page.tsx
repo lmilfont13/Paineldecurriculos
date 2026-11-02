@@ -18,6 +18,7 @@ import {
   type InfoField,
 } from "@/server/models/pre-interview.model";
 import { NotesForm } from "@/components/gestor/notes-form";
+import { formatBirthDate } from "@/server/models/age.model";
 import { formatAddress } from "@/server/models/address.model";
 import { AnswersEditor } from "@/components/gestor/answers-editor";
 import { AskAiBox } from "@/components/gestor/ask-ai-box";
@@ -439,6 +440,8 @@ export default async function CandidaturaDetailPage({
                 professionalSummary: app.professionalSummary,
                 address: formatAddress(app),
                 uniform: uniformLine,
+                birthDate: formatBirthDate(app.birthDate),
+                bank: bankLine,
                 rgMasked: app.rg ? maskRg(app.rg) : null,
                 cpfMasked: app.cpf ? maskCpf(app.cpf) : null,
               }}

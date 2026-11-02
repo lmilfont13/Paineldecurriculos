@@ -39,3 +39,18 @@ export function inAgeRange(age: number | null, range: AgeRange): boolean {
   if (typeof range.max === "number" && age > range.max) return false;
   return true;
 }
+
+/** "05/03/1990 (35 anos)" — a data guardada é meia-noite UTC, então lê-se em UTC. */
+export function formatBirthDate(
+  birthDate: Date | null | undefined,
+  now: Date = new Date()
+): string | null {
+  if (!birthDate || isNaN(birthDate.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${pad(birthDate.getUTCDate())}/${pad(birthDate.getUTCMonth() + 1)}/${birthDate.getUTCFullYear()}`;
+  const age = ageOn(
+    new Date(birthDate.getUTCFullYear(), birthDate.getUTCMonth(), birthDate.getUTCDate()),
+    now
+  );
+  return age === null ? date : `${date} (${age} anos)`;
+}

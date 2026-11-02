@@ -29,6 +29,8 @@ export type InfoAnswers = {
   cpfMasked: string | null;
   address?: string | null;
   uniform?: string | null;
+  birthDate?: string | null;
+  bank?: string | null;
 };
 
 export function InfoRequestBox({
@@ -98,7 +100,9 @@ export function InfoRequestBox({
     answers.rgMasked !== null ||
     answers.cpfMasked !== null ||
     Boolean(answers.address) ||
-    Boolean(answers.uniform);
+    Boolean(answers.uniform) ||
+    Boolean(answers.birthDate) ||
+    Boolean(answers.bank);
   const hasSensitive = answers.rgMasked !== null || answers.cpfMasked !== null;
   const waHref = candidatePhone
     ? whatsappInfoLink({
@@ -195,6 +199,7 @@ export function InfoRequestBox({
 
       {hasAnswers && (
         <dl className="divide-y divide-[#f0f0f0] rounded-xl border border-[#e4e4e7] text-[13px]">
+          {answers.birthDate && <Row label="Data de nascimento" value={answers.birthDate} />}
           {answers.maritalStatus && (
             <Row label="Estado civil" value={answers.maritalStatus} />
           )}
@@ -219,6 +224,7 @@ export function InfoRequestBox({
           )}
           {answers.address && <Row label="Endereço" value={answers.address} />}
           {answers.uniform && <Row label="Uniforme" value={answers.uniform} />}
+          {answers.bank && <Row label="Conta bancária" value={answers.bank} />}
         </dl>
       )}
       {hasSensitive && !revealed && (

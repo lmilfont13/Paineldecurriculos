@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { effectiveAge, inAgeRange } from "@/server/models/age.model";
+import { effectiveAge, formatBirthDate, inAgeRange } from "@/server/models/age.model";
 
 describe("effectiveAge", () => {
   const now = new Date("2026-11-01T12:00:00Z");
@@ -35,5 +35,16 @@ describe("inAgeRange", () => {
   it("sem idade conhecida: aparece por padrão e some se o gestor pedir", () => {
     expect(inAgeRange(null, { min: 18, max: 30 })).toBe(true);
     expect(inAgeRange(null, { min: 18, max: 30, hideUnknown: true })).toBe(false);
+  });
+});
+
+describe("formatBirthDate", () => {
+  it("mostra a data e a idade", () => {
+    expect(formatBirthDate(new Date("1990-03-05T00:00:00Z"), new Date(2026, 10, 2))).toBe(
+      "05/03/1990 (36 anos)"
+    );
+  });
+  it("sem data devolve null", () => {
+    expect(formatBirthDate(null)).toBeNull();
   });
 });
