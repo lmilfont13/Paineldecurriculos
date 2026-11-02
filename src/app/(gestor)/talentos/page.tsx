@@ -3,7 +3,8 @@ import Link from "next/link";
 import { FolderOpen } from "lucide-react";
 
 import { TalentFolderActions } from "@/components/gestor/talent-folder-actions";
-import { loadTalentFolders } from "@/server/controllers/talent.controller";
+import { TalentBankLink } from "@/components/gestor/talent-bank-link";
+import { loadTalentBankLink, loadTalentFolders } from "@/server/controllers/talent.controller";
 import { FOLDER_SEPARATOR, groupFoldersByArea } from "@/server/models/talent.model";
 
 export const metadata: Metadata = { title: "Banco de talentos · Triagem" };
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: "Banco de talentos · Triagem" };
  */
 export default async function TalentosPage() {
   const folders = await loadTalentFolders();
+  const bankLink = await loadTalentBankLink();
   const total = folders.reduce((sum, f) => sum + f.count, 0);
   const groups = groupFoldersByArea(folders);
 
@@ -27,6 +29,8 @@ export default async function TalentosPage() {
           do currículo. Eles ficam em stand-by: quando abrir uma vaga parecida, a IA confere quem combina.
         </p>
       </div>
+
+      {bankLink && <TalentBankLink url={bankLink} />}
 
       {folders.length === 0 ? (
         <div className="mt-7 rounded-2xl border border-dashed border-[#e4e4e7] bg-white p-8 text-center">

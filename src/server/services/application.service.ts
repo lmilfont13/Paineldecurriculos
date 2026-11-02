@@ -88,6 +88,7 @@ import { effectiveAge } from "@/server/models/age.model";
 import { cepDigits } from "@/server/models/address.model";
 import { DEFAULT_CHANNELS, serverChannels, type ContactChannel } from "@/server/models/contact-channels.model";
 import { parseAdmissionInput } from "@/server/models/admission.model";
+import { addToSpontaneousFolder } from "@/server/services/talent-bank.service";
 import {
   extractResumeContact,
   generateCandidateSummary,
@@ -895,6 +896,9 @@ export async function submitApplication(
 
   // Regra 2: candidatura já salva — daqui pra baixo nada pode falhar o fluxo.
   enqueueTriage(application.id);
+  if (job.isTalentPool) {
+    runInBackground("guardar no banco de talentos", () => addToSpontaneousFolder(companyId, application.id));
+  }
 
   runInBackground("avisos da nova candidatura", async () => {
     const company = await getCompanyById(companyId);

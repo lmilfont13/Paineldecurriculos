@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { appUrl } from "@/lib/env";
 import { requireManager } from "@/server/controllers/guards";
+import { getCompanyById } from "@/server/services/company.service";
 import { runCareerAnalysis } from "@/server/services/career.service";
 import {
   analyzeStandbyForApplication,
@@ -19,6 +21,13 @@ import {
 /** Banco de talentos. O tenant vem sempre da sessão (regra 1). */
 
 const ID = /^[a-z0-9]{10,40}$/i;
+
+/** Link público do cadastro sem vaga, para o RH compartilhar. */
+export async function loadTalentBankLink(): Promise<string | null> {
+  const manager = await requireManager();
+  const company = await getCompanyById(manager.companyId);
+  return company ? `${appUrl()}/${company.slug}/banco-de-talentos` : null;
+}
 
 export async function loadTalentFolders() {
   const manager = await requireManager();

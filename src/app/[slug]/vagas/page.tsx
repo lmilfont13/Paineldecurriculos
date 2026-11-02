@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
@@ -80,6 +81,25 @@ export default async function PublicJobsPage({
           loggedIn={Boolean(candidate)}
           appliedJobIds={appliedJobIds}
         />
+
+        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e8e3de] bg-white p-6 md:p-7">
+          <div className="max-w-[620px]">
+            <h2 className="text-lg font-semibold tracking-[-0.2px] text-[#1c1917]">
+              Não encontrou a vaga ideal?
+            </h2>
+            <p className="mt-1.5 text-[14px] leading-6 text-[#57534e]">
+              Deixe seu currículo no nosso banco de talentos. Quando surgir uma vaga com o seu perfil, a{" "}
+              {company.name} entra em contato com você.
+            </p>
+          </div>
+          <Link
+            href={`/${company.slug}/banco-de-talentos`}
+            className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
+          >
+            Cadastrar meu currículo
+          </Link>
+        </section>
 
         {company.aboutText && (
           <section className="mt-10 grid gap-4 rounded-2xl border border-[#e8e3de] bg-white p-6 md:grid-cols-[220px_1fr] md:gap-10 md:p-7">

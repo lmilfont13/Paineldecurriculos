@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getTalentPoolJobId } from "@/server/services/talent-bank.service";
 import { cache } from "react";
 
 import type { CandidateProfile } from "@/server/models/candidate.model";
@@ -162,4 +163,12 @@ export async function getMinhasCandidaturasData(slug: string) {
     applications,
     unread: notifications.filter((n) => !n.readAt).slice(0, 3),
   };
+}
+
+/** Caminho do cadastro sem vaga (banco de talentos) da empresa; null se a empresa não existe. */
+export async function getTalentBankEntryPath(slug: string): Promise<string | null> {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const jobId = await getTalentPoolJobId(company.id, company.name);
+  return `/${company.slug}/vagas/${jobId}/candidatar`;
 }
