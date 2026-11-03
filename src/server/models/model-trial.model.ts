@@ -128,7 +128,10 @@ export function explainAiError(message: string): { reason: string; action: strin
   if (m.includes("credit") || m.includes("billing") || m.includes("balance") || m.includes("402")) {
     return { reason: "A conta da IA está sem crédito.", action: "Adicione crédito no painel do provedor (para a Anthropic: console.anthropic.com → Billing)." };
   }
-  if (m.includes("404") || m.includes("not_found") || m.includes("model")) {
+  if (m.includes("invalid_request")) {
+    return { reason: "A IA recusou o formato do pedido (incompatibilidade do sistema com este modelo).", action: "Mande o detalhe técnico abaixo para quem cuida do código." };
+  }
+  if (m.includes("404") || m.includes("not_found_error")) {
     return { reason: "Este modelo não está disponível para a conta de IA.", action: "Confira no painel do provedor se o modelo está liberado, ou teste outro modelo." };
   }
   if (m.includes("429") || m.includes("529") || m.includes("rate") || m.includes("overloaded")) {

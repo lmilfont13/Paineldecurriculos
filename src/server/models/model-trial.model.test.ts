@@ -55,5 +55,9 @@ describe("explicação do erro da IA", () => {
     expect(explainAiError('Claude 404: {"type":"not_found_error","message":"model: claude-haiku-5-5"}').reason).toMatch(/não está disponível/);
     expect(explainAiError("Claude 529: overloaded").reason).toMatch(/sobrecarregada/);
     expect(explainAiError("Score inválido retornado pela IA: oi").reason).toMatch(/fora do formato/);
+    // O caso real: a palavra "model" na mensagem não pode virar "modelo indisponível".
+    expect(
+      explainAiError('Claude 400: {"type":"error","error":{"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}}').reason
+    ).toMatch(/formato do pedido/);
   });
 });

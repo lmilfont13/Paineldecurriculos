@@ -96,6 +96,17 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
   return data.choices?.[0]?.message?.content ?? "";
 }
 
+/**
+ * Modelos Claude que recusam `temperature` ("deprecated for this model"). Os
+ * mais novos recusam; os mais antigos aceitam. Aprendido na primeira recusa e
+ * lembrado enquanto a função estiver viva.
+ */
+const CLAUDE_NO_TEMPERATURE = new Set<string>();
+
+function isTemperatureRejection(status: number, body: string): boolean {
+  return status === 400 && /temperature/i.test(body);
+}
+
 async function generateWithClaude(model: string, params: GenerateParams): Promise<string> {
   const key = readEnv("ANTHROPIC_API_KEY");
   if (!key) throw new Error("ANTHROPIC_API_KEY não configurada");
@@ -105,25 +116,34 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
     ? `${params.system}\n\nResponda somente com o JSON válido, sem texto antes ou depois.`
     : params.system;
 
-  const res = await fetch(CLAUDE_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: params.maxTokens ?? 300,
-      temperature: 0.2,
-      system,
-      messages: [{ role: "user", content: params.prompt }],
-    }),
-  });
+  const call = (withTemperature: boolean) =>
+    fetch(CLAUDE_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: params.maxTokens ?? 300,
+        ...(withTemperature ? { temperature: 0.2 } : {}),
+        system,
+        messages: [{ role: "user", content: params.prompt }],
+      }),
+    });
 
+  let res = await call(!CLAUDE_NO_TEMPERATURE.has(model));
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Claude ${res.status}: ${body.slice(0, 300)}`);
+    if (!CLAUDE_NO_TEMPERATURE.has(model) && isTemperatureRejection(res.status, body)) {
+      // Modelo novo: repete sem temperature e não manda mais para ele.
+      CLAUDE_NO_TEMPERATURE.add(model);
+      res = await call(false);
+      if (!res.ok) throw new Error(`Claude ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    } else {
+      throw new Error(`Claude ${res.status}: ${body.slice(0, 300)}`);
+    }
   }
 
   const data = (await res.json()) as { content?: { type: string; text?: string }[] };

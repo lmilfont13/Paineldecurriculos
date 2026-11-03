@@ -43,3 +43,22 @@ describe("qual modelo de fato respondeu", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("modelos que recusam temperature", () => {
+  it("repete sem temperature e não manda mais para esse modelo", async () => {
+    const reject = () =>
+      new Response('{"type":"error","error":{"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}}', { status: 400 });
+    fetchMock
+      .mockResolvedValueOnce(reject())
+      .mockResolvedValueOnce(ok({ content: [{ type: "text", text: "{\"score\":70}" }] }))
+      .mockResolvedValueOnce(ok({ content: [{ type: "text", text: "{}" }] }));
+    const r = await generateWithModelInfo({ system: "s", prompt: "p", model: "claude-haiku-5-5" });
+    expect(r.text).toBe('{"score":70}');
+    const bodies = fetchMock.mock.calls.map((c) => JSON.parse(String((c[1] as RequestInit).body)));
+    expect(bodies[0].temperature).toBe(0.2);
+    expect(bodies[1].temperature).toBeUndefined();
+    await generateWithModelInfo({ system: "s", prompt: "p", model: "claude-haiku-5-5" });
+    expect(JSON.parse(String((fetchMock.mock.calls[2][1] as RequestInit).body)).temperature).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
