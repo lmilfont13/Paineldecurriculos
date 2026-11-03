@@ -45,6 +45,8 @@ export type CandidateCvCard = {
 
 export type CvSearchFilters = {
   keyword: string;
+  /** Busca só no nome: sem acento/maiúscula, por pedaço de cada palavra. */
+  nameQuery?: string;
   selectedAreas: string[];
   selectedLevels: string[];
   selectedJobId: string;
@@ -252,6 +254,22 @@ const NOT_COMPANY =
 const DATE_RANGE =
   /\(?\b(?:\d{1,2}\s*[\/.]\s*)?(?:19|20)\d{2}\b.*$|\b(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\.?\s*(?:de\s*)?(?:19|20)\d{2}.*$/i;
 
+/** Mês por extenso ou abreviado ("Agosto", "ago", "Agosto 2019"): é data, não empresa. */
+const MONTH_ONLY =
+  /^(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\.?(\s*(de\s+)?\d{2,4})?$/i;
+
+/** Trechos de frase da descrição de atividades que a leitura confunde com empresa. */
+const DUTY_PHRASE =
+  /\b(da empresa|na empresa|normas|respons[aá]vel|atendimento ao|realizava|realizar|auxiliar n[ao]s?)\b/i;
+
+/** Filtro conservador do que sai como "empresa" do texto do currículo. */
+export function looksLikeCompanyName(name: string): boolean {
+  if (MONTH_ONLY.test(name)) return false;
+  if (DUTY_PHRASE.test(normalizeText(name).replace(/[áàâã]/g, "a"))) return false;
+  if (!/[a-zà-ú]/i.test(name)) return false; // só números/símbolos
+  return true;
+}
+
 /**
  * Extrai nomes de empresas do histórico profissional do currículo.
  * Heurística: rótulo "Empresa:", trechos com sufixos típicos (Ltda, Supermercados…)
@@ -278,8 +296,9 @@ export function extractCompaniesFromText(text: string | null | undefined): strin
 
   const found = new Map<string, string>();
   const add = (raw: string) => {
-    const name = raw.replace(/^[\s\-–—:;,.]+|[\s\-–—:;,.]+$/g, "").trim();
+    const name = raw.replace(/^[\s\-–—:;,./]+|[\s\-–—:;,./]+$/g, "").trim();
     if (name.length < 3 || name.length > 45) return;
+    if (!looksLikeCompanyName(name)) return;
     const key = normalizeText(name);
     if (!found.has(key)) found.set(key, name);
   };
@@ -298,7 +317,12 @@ export function extractCompaniesFromText(text: string | null | undefined): strin
     if (line.length > 90) continue;
     const label = line.match(/^(?:empresa|empregador|local\s+de\s+trabalho)\s*[:\-–]\s*(.+)$/i);
     if (label) {
-      add(label[1].replace(DATE_RANGE, "").split(/\s*\(|\s[-–—]\s|,/)[0]);
+      // Corta no próximo rótulo da mesma linha ("Empresa: X Função: Y").
+      add(
+        label[1]
+          .replace(DATE_RANGE, "")
+          .split(/\s*\(|\s[-–—]\s|,|\s+\b(?:fun[cç][aã]o|cargo|per[ií]odo|atividades?|sal[aá]rio)\s*[:\-–]/i)[0]
+      );
       continue;
     }
     const hasDates = DATE_RANGE.test(line);
@@ -355,6 +379,16 @@ export function computeCompanyFacets(candidates: CandidateCvCard[]): FacetCount[
     .slice(0, 300);
 }
 
+/** Conectores que ficam minúsculos no meio do nome ("Jardim das Oliveiras"). */
+const FACET_CONNECTORS = new Set(["e", "de", "da", "do", "das", "dos", "em", "na", "no"]);
+
+/** Caixa de cada palavra de bairro/função: inicial maiúscula, conectores minúsculos. */
+function facetWordCase(word: string, index: number): string {
+  const lower = word.toLowerCase();
+  if (index > 0 && FACET_CONNECTORS.has(lower)) return lower;
+  return word.length > 2 ? word[0].toUpperCase() + lower.slice(1) : lower;
+}
+
 /** Agrupa contagens de bairros para a sidebar de filtro. */
 export function computeNeighborhoodFacets(candidates: CandidateCvCard[]): FacetCount[] {
   const map = new Map<string, number>();
@@ -363,7 +397,7 @@ export function computeNeighborhoodFacets(candidates: CandidateCvCard[]): FacetC
     if (!raw) continue;
     const formatted = raw
       .split(/\s+/)
-      .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()))
+      .map((w, i) => facetWordCase(w, i))
       .join(" ");
     map.set(formatted, (map.get(formatted) ?? 0) + 1);
   }
@@ -380,7 +414,7 @@ export function computeDesiredRoleFacets(candidates: CandidateCvCard[]): FacetCo
     if (!raw) continue;
     const formatted = raw
       .split(/\s+/)
-      .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()))
+      .map((w, i) => facetWordCase(w, i))
       .join(" ");
     map.set(formatted, (map.get(formatted) ?? 0) + 1);
   }
@@ -421,6 +455,18 @@ export function computeLevelFacets(candidates: CandidateCvCard[]): FacetCount[] 
     });
 }
 
+/**
+ * Busca por nome, tolerante: ignora acento, maiúscula e a ordem das palavras,
+ * e cada palavra digitada precisa ser o começo de alguma palavra do nome.
+ * "joa cos" acha "Joana Darc Rocha Costa"; "ana" não acha "Fernanda".
+ */
+export function matchesName(name: string, query: string): boolean {
+  const terms = normalizeText(query).split(" ").filter(Boolean);
+  if (terms.length === 0) return true;
+  const words = normalizeText(name).split(/[\s'’.-]+/).filter(Boolean);
+  return terms.every((term) => words.some((word) => word.startsWith(term)));
+}
+
 /** Busca booleana simples: avalia AND / OR / NOT ou palavras soltas. */
 function matchesBooleanSearch(text: string, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -445,43 +491,59 @@ function matchesBooleanSearch(text: string, query: string): boolean {
   return terms.every((term) => text.includes(term));
 }
 
+/**
+ * Todo o material pesquisável do candidato, já sem acento. Guardado por
+ * candidato: o texto do currículo é grande e a busca roda a cada tecla.
+ */
+const searchableTextCache = new WeakMap<CandidateCvCard, string>();
+function searchableText(item: CandidateCvCard): string {
+  const cached = searchableTextCache.get(item);
+  if (cached !== undefined) return cached;
+  const text = normalizeText(
+    [
+      item.name,
+      item.email,
+      item.phone ?? "",
+      item.neighborhood ?? "",
+      item.city ?? "",
+      item.state ?? "",
+      item.desiredRole ?? "",
+      item.salaryExpectation ?? "",
+      item.workPreference ?? "",
+      item.hasCnh ?? "",
+      item.isPcd ? "pcd deficiência acessibilidade" : "",
+      item.pcdDetails ?? "",
+      item.aiProfile ?? "",
+      item.aiArea ?? "",
+      item.aiLevel ?? "",
+      item.job.title,
+      item.aiReasoning ?? "",
+      item.education ?? "",
+      item.languages ?? "",
+      ...(item.skills ?? []),
+      item.resumeText ?? "",
+    ].join(" ")
+  );
+  searchableTextCache.set(item, text);
+  return text;
+}
+
 /** Aplica todos os filtros facetados e busca textual. */
 export function filterCandidates(
   candidates: CandidateCvCard[],
   filters: CvSearchFilters
 ): CandidateCvCard[] {
-  const q = filters.keyword.trim().toLowerCase();
+  // Sem acento dos dois lados: "joao" acha "João", "pcd" acha "PcD".
+  const q = normalizeText(filters.keyword);
+  const nameQuery = filters.nameQuery?.trim() ?? "";
 
   return candidates.filter((item) => {
+    // 0. Nome do candidato
+    if (nameQuery && !matchesName(item.name, nameQuery)) return false;
+
     // 1. Busca textual inteligente (booleana e em todo o material)
     if (q) {
-      const allText = [
-        item.name,
-        item.email,
-        item.phone ?? "",
-        item.neighborhood ?? "",
-        item.city ?? "",
-        item.state ?? "",
-        item.desiredRole ?? "",
-        item.salaryExpectation ?? "",
-        item.workPreference ?? "",
-        item.hasCnh ?? "",
-        item.isPcd ? "pcd deficiência acessibilidade" : "",
-        item.pcdDetails ?? "",
-        item.aiProfile ?? "",
-        item.aiArea ?? "",
-        item.aiLevel ?? "",
-        item.job.title,
-        item.aiReasoning ?? "",
-        item.education ?? "",
-        item.languages ?? "",
-        ...(item.skills ?? []),
-        item.resumeText ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      if (!matchesBooleanSearch(allText, q)) {
+      if (!matchesBooleanSearch(searchableText(item), q)) {
         return false;
       }
     }

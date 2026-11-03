@@ -331,6 +331,17 @@ e-mail personalizados.
   estado inicial: `node --env-file=.env prisma/seed-demo-apresentacao.mjs`.
 - **Banco de Talentos:** filtros fixos com rolagem própria, modo Dossiê ou
   Compacto, e foto do candidato ampliada em alta qualidade ao clicar.
+- **Consentimento LGPD na candidatura:** no último passo, o candidato precisa
+  marcar que leu e concorda com o Aviso de Privacidade
+  (`/[slug]/privacidade`, também no rodapé). O servidor recusa candidatura sem
+  o aceite e grava data e versão do texto (`consentAt`, `consentVersion`); a
+  ficha do candidato mostra "LGPD aceita". O texto fica em
+  `src/server/models/consent.model.ts` — **ao mudar o texto, troque
+  `CONSENT_VERSION`**. Vale uma revisão do texto por um advogado.
+- **Banco de Talentos (busca e filtros):** busca por nome que ignora acento e
+  maiúscula; palavra-chave no currículo também ignora acento; data de cadastro
+  discreta nos dois modos; todas as seções de filtro no mesmo padrão; lista
+  "Já trabalhou em" sem datas e frases soltas do currículo.
 - **Google for Jobs:** cada vaga aberta leva os dados estruturados
   (`JobPosting`) que o Google lê para mostrá-la na busca de empregos, mais
   `sitemap.xml` e `robots.txt`. A vaga oculta do banco de talentos e a empresa

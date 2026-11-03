@@ -80,6 +80,7 @@ export function BuscarCvsView({
 }) {
   const [filters, setFilters] = useState<CvSearchFilters>({
     keyword: "",
+    nameQuery: "",
     selectedAreas: [],
     selectedLevels: [],
     selectedJobId: "",
@@ -192,6 +193,7 @@ export function BuscarCvsView({
 
   const hasActiveFilters =
     Boolean(filters.keyword.trim()) ||
+    Boolean(filters.nameQuery?.trim()) ||
     filters.selectedAreas.length > 0 ||
     filters.selectedLevels.length > 0 ||
     Boolean(filters.selectedJobId) ||
@@ -302,6 +304,7 @@ export function BuscarCvsView({
   function clearAllFilters() {
     setFilters({
       keyword: "",
+      nameQuery: "",
       selectedAreas: [],
       selectedLevels: [],
       selectedJobId: "",
@@ -469,400 +472,262 @@ export function BuscarCvsView({
         {/* Fixa no desktop com rolagem própria, independente da rolagem da lista de candidatos */}
         <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <div className="rounded-3xl border border-[#e4e4e7] bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-3.5">
-              <span className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-[#0a0a0a]">
-                <Filter className="size-3.5 text-stone-500" /> Filtros Facetados
+            <div className="mb-4 flex items-center justify-between border-b border-[#f4f4f5] pb-3.5">
+              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
+                <Filter className="size-3.5 text-[#a1a1aa]" /> Filtros
               </span>
-              <span className="text-[11px] text-[#71717a] font-medium">
+              <span className="text-[11px] font-medium tabular-nums text-[#71717a]">
                 {sorted.length} de {people.length}
               </span>
             </div>
 
-            {/* 1. Busca Booleana & Palavra-chave no Currículo */}
-            <div className="mt-4 space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-                Palavra-chave no Currículo
-              </label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-[#a1a1aa]" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={filters.keyword}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, keyword: e.target.value }))
-                  }
-                  placeholder="Ex: React, Sped, Vendas, CNH..."
-                  className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] py-2 pl-9 pr-8 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
-                />
-                {filters.keyword && (
-                  <button
-                    type="button"
-                    onClick={() => setFilters((prev) => ({ ...prev, keyword: "" }))}
-                    className="absolute right-2.5 top-2.5 text-[#a1a1aa] hover:text-[#0a0a0a]"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-              <p className="text-[10px] text-[#a1a1aa] leading-tight">
-                Suporta busca booleana: <code className="bg-stone-100 px-1 py-0.5 rounded">AND</code>,{" "}
-                <code className="bg-stone-100 px-1 py-0.5 rounded">OR</code>,{" "}
-                <code className="bg-stone-100 px-1 py-0.5 rounded">NOT</code>.
-              </p>
-            </div>
+            {/* Nome do candidato — só no nome, sem acento/maiúscula */}
+            <FilterSection icon={User} title="Nome do candidato">
+              <FilterTextInput
+                value={filters.nameQuery ?? ""}
+                onChange={(v) => setFilters((p) => ({ ...p, nameQuery: v }))}
+                placeholder="Ex: joao silva, marilia…"
+              />
+            </FilterSection>
 
-            {/* 2. Área Profissional */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-                  Área Profissional
-                </span>
-                {filters.selectedAreas.length > 0 && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                    {filters.selectedAreas.length} selecionada(s)
-                  </span>
-                )}
-              </div>
+            {/* Palavra-chave no currículo (booleana) */}
+            <FilterSection icon={Search} title="Palavra-chave no currículo">
+              <FilterTextInput
+                inputRef={searchInputRef}
+                value={filters.keyword}
+                onChange={(v) => setFilters((p) => ({ ...p, keyword: v }))}
+                placeholder="Ex: vendas, caixa, CNH…"
+              />
+              <FilterHint>
+                Também aceita <code className="rounded bg-stone-100 px-1">AND</code>{" "}
+                <code className="rounded bg-stone-100 px-1">OR</code>{" "}
+                <code className="rounded bg-stone-100 px-1">NOT</code>. Ignora acentos.
+              </FilterHint>
+            </FilterSection>
 
+            {/* Área profissional */}
+            <FilterSection
+              icon={Layers}
+              title="Área profissional"
+              selectedCount={filters.selectedAreas.length}
+              onClear={
+                filters.selectedAreas.length > 0
+                  ? () => setFilters((p) => ({ ...p, selectedAreas: [] }))
+                  : undefined
+              }
+            >
               {allAreas.length > 4 && (
-                <input
-                  type="text"
+                <FilterTextInput
                   value={areaSearch}
-                  onChange={(e) => setAreaSearch(e.target.value)}
+                  onChange={setAreaSearch}
                   placeholder="Pesquisar áreas…"
-                  className="w-full rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1 text-[11px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+                  className="mb-2"
                 />
               )}
+              <FacetRows
+                items={visibleAreas}
+                isSelected={(key) => filters.selectedAreas.includes(key)}
+                onToggle={toggleArea}
+                scroll
+              />
+            </FilterSection>
 
-              <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-                {visibleAreas.map((area) => {
-                  const selected = filters.selectedAreas.includes(area.key);
-                  return (
-                    <label
-                      key={area.key}
-                      className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition ${
-                        selected
-                          ? "bg-[#0a0a0a] text-white font-medium shadow-xs"
-                          : "text-[#3f3f46] hover:bg-[#fafaf9]"
-                      }`}
-                    >
-                      <span className="truncate pr-2">{area.label}</span>
-                      <span
-                        className={`text-[10px] font-mono ${
-                          selected ? "text-white/80" : "text-[#a1a1aa]"
-                        }`}
-                      >
-                        ({area.count})
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleArea(area.key)}
-                        className="sr-only"
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Senioridade */}
+            <FilterSection
+              icon={Award}
+              title="Senioridade"
+              selectedCount={filters.selectedLevels.length}
+              onClear={
+                filters.selectedLevels.length > 0
+                  ? () => setFilters((p) => ({ ...p, selectedLevels: [] }))
+                  : undefined
+              }
+            >
+              <FacetRows
+                items={allLevels}
+                isSelected={(key) => filters.selectedLevels.includes(key)}
+                onToggle={toggleLevel}
+              />
+            </FilterSection>
 
-            {/* 3. Nível de Senioridade */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-                Senioridade
-              </span>
-              <div className="space-y-1">
-                {allLevels.map((lvl) => {
-                  const selected = filters.selectedLevels.includes(lvl.key);
-                  return (
-                    <label
-                      key={lvl.key}
-                      className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition ${
-                        selected
-                          ? "bg-[#0a0a0a] text-white font-medium shadow-xs"
-                          : "text-[#3f3f46] hover:bg-[#fafaf9]"
-                      }`}
-                    >
-                      <span className="truncate">{lvl.label}</span>
-                      <span
-                        className={`text-[10px] font-mono ${
-                          selected ? "text-white/80" : "text-[#a1a1aa]"
-                        }`}
-                      >
-                        ({lvl.count})
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleLevel(lvl.key)}
-                        className="sr-only"
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 4. Vagas de Inscrição */}
+            {/* Vaga de origem */}
             {jobs.length > 0 && (
-              <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-                  Vaga de Origem
-                </span>
-                <select
+              <FilterSection icon={Briefcase} title="Vaga de origem">
+                <FilterSelect
                   value={filters.selectedJobId}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, selectedJobId: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-2 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
-                >
-                  <option value="">Todas as vagas da empresa</option>
-                  {jobs.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  onChange={(v) => setFilters((p) => ({ ...p, selectedJobId: v }))}
+                  options={[
+                    { value: "", label: "Todas as vagas da empresa" },
+                    ...jobs.map((j) => ({ value: j.id, label: j.title })),
+                  ]}
+                />
+              </FilterSection>
             )}
 
-            {/* 5. Função Pretendida */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                  <Target className="size-3 text-indigo-600" /> Função Pretendida
-                </span>
-                {filters.selectedDesiredRole && (
-                  <button
-                    type="button"
-                    onClick={() => {
+            {/* Função pretendida */}
+            <FilterSection
+              icon={Target}
+              title="Função pretendida"
+              onClear={
+                filters.selectedDesiredRole
+                  ? () => {
                       setRoleSearch("");
                       setFilters((p) => ({ ...p, selectedDesiredRole: "" }));
-                    }}
-                    className="text-[10px] text-red-600 hover:underline"
-                  >
-                    limpar
-                  </button>
-                )}
-              </div>
-              <input
-                type="text"
+                    }
+                  : undefined
+              }
+            >
+              <FilterTextInput
                 value={filters.selectedDesiredRole || roleSearch}
-                onChange={(e) => {
-                  setRoleSearch(e.target.value);
-                  setFilters((p) => ({ ...p, selectedDesiredRole: e.target.value }));
+                onChange={(v) => {
+                  setRoleSearch(v);
+                  setFilters((p) => ({ ...p, selectedDesiredRole: v }));
                 }}
                 placeholder="Ex: Assistente, Vendedor…"
-                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
               />
-              {visibleRoles.length > 0 && !filters.selectedDesiredRole && (
-                <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto pr-1">
-                  {visibleRoles.slice(0, 6).map((role) => (
-                    <button
-                      key={role.key}
-                      type="button"
-                      onClick={() => setFilters((p) => ({ ...p, selectedDesiredRole: role.key }))}
-                      className="rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-2 py-0.5 text-[10px] text-[#3f3f46] hover:bg-stone-100 transition"
-                    >
-                      {role.label} <span className="font-mono text-[#a1a1aa]">({role.count})</span>
-                    </button>
-                  ))}
-                </div>
+              {!filters.selectedDesiredRole && (
+                <FacetChips
+                  items={visibleRoles.slice(0, 12)}
+                  isSelected={() => false}
+                  onToggle={(key) => setFilters((p) => ({ ...p, selectedDesiredRole: key }))}
+                />
               )}
-            </div>
+            </FilterSection>
 
-            {/* 6. Bairro e Região */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                  <Home className="size-3 text-emerald-600" /> Bairro / Região
-                </span>
-                {filters.selectedNeighborhood && (
-                  <button
-                    type="button"
-                    onClick={() => {
+            {/* Bairro / região */}
+            <FilterSection
+              icon={Home}
+              title="Bairro / região"
+              onClear={
+                filters.selectedNeighborhood
+                  ? () => {
                       setNeighborhoodSearch("");
                       setFilters((p) => ({ ...p, selectedNeighborhood: "" }));
-                    }}
-                    className="text-[10px] text-red-600 hover:underline"
-                  >
-                    limpar
-                  </button>
-                )}
-              </div>
-              <input
-                type="text"
+                    }
+                  : undefined
+              }
+            >
+              <FilterTextInput
                 value={filters.selectedNeighborhood || neighborhoodSearch}
-                onChange={(e) => {
-                  setNeighborhoodSearch(e.target.value);
-                  setFilters((p) => ({ ...p, selectedNeighborhood: e.target.value }));
+                onChange={(v) => {
+                  setNeighborhoodSearch(v);
+                  setFilters((p) => ({ ...p, selectedNeighborhood: v }));
                 }}
                 placeholder="Ex: Centro, Aldeota…"
-                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
               />
-              {visibleNeighborhoods.length > 0 && !filters.selectedNeighborhood && (
-                <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto pr-1">
-                  {visibleNeighborhoods.slice(0, 6).map((neigh) => (
-                    <button
-                      key={neigh.key}
-                      type="button"
-                      onClick={() => setFilters((p) => ({ ...p, selectedNeighborhood: neigh.key }))}
-                      className="rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-2 py-0.5 text-[10px] text-[#3f3f46] hover:bg-stone-100 transition"
-                    >
-                      {neigh.label} <span className="font-mono text-[#a1a1aa]">({neigh.count})</span>
-                    </button>
-                  ))}
-                </div>
+              {!filters.selectedNeighborhood && (
+                <FacetChips
+                  items={visibleNeighborhoods.slice(0, 12)}
+                  isSelected={() => false}
+                  onToggle={(key) => setFilters((p) => ({ ...p, selectedNeighborhood: key }))}
+                />
               )}
-            </div>
+            </FilterSection>
 
-            {/* 6b. Empresa onde já trabalhou */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                  <Building2 className="size-3 text-indigo-600" /> Já trabalhou em
-                </span>
-                {filters.previousCompany && (
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, previousCompany: "" }))}
-                    className="text-[10px] text-red-600 hover:underline"
-                  >
-                    limpar
-                  </button>
-                )}
-              </div>
-              <input
-                type="text"
+            {/* Já trabalhou em */}
+            <FilterSection
+              icon={Building2}
+              title="Já trabalhou em"
+              selectedCount={selectedCompanies.length}
+              onClear={
+                filters.previousCompany
+                  ? () => setFilters((p) => ({ ...p, previousCompany: "" }))
+                  : undefined
+              }
+            >
+              <FilterTextInput
                 value={filters.previousCompany ?? ""}
-                onChange={(e) => setFilters((p) => ({ ...p, previousCompany: e.target.value }))}
+                onChange={(v) => setFilters((p) => ({ ...p, previousCompany: v }))}
                 placeholder="Ex: Assaí, Pague Menos…"
-                className="w-full rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1.5 text-xs text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none transition"
               />
-              <p className="text-[10px] text-[#a1a1aa]">
+              <FilterHint>
                 {allCompanies.length > 0
-                  ? `${allCompanies.length} empresas encontradas nos currículos. Clique para escolher (pode marcar várias).`
+                  ? `${allCompanies.length} empresas lidas nos currículos. Pode marcar várias.`
                   : "Digite o nome da empresa. Separe várias por vírgula."}
-              </p>
-              {visibleCompanies.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-1 max-h-40 overflow-y-auto pr-1">
-                  {visibleCompanies.slice(0, 40).map((co) => {
-                    const active = selectedCompanies.some(
-                      (c) => normalizeText(c) === normalizeText(co.label)
-                    );
-                    return (
-                      <button
-                        key={co.key}
-                        type="button"
-                        onClick={() => toggleCompany(co.label)}
-                        className={`rounded-md border px-2 py-0.5 text-[10px] transition ${
-                          active
-                            ? "border-indigo-600 bg-indigo-600 text-white"
-                            : "border-[#e4e4e7] bg-[#fafaf9] text-[#3f3f46] hover:bg-stone-100"
-                        }`}
-                      >
-                        {co.label}{" "}
-                        <span className={active ? "font-mono text-indigo-200" : "font-mono text-[#a1a1aa]"}>
-                          ({co.count})
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              </FilterHint>
+              <FacetChips
+                items={visibleCompanies.slice(0, 40)}
+                isSelected={(_, label) =>
+                  selectedCompanies.some((c) => normalizeText(c) === normalizeText(label))
+                }
+                onToggle={(_, label) => toggleCompany(label)}
+              />
+            </FilterSection>
 
-            {/* 7. Faixa Etária */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                <Calendar className="size-3 text-blue-600" /> Faixa Etária
-              </span>
-              <select
+            {/* Faixa etária */}
+            <FilterSection icon={Calendar} title="Faixa etária">
+              <FilterSelect
                 value={filters.ageBracket || ""}
-                onChange={(e) => setFilters((p) => ({ ...p, ageBracket: e.target.value }))}
-                className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-2 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
-              >
-                <option value="">Todas as idades</option>
-                <option value="18_24">18 a 24 anos (Jovem Aprendiz / Início)</option>
-                <option value="25_34">25 a 34 anos (Pleno desenvolvimento)</option>
-                <option value="35_44">35 a 44 anos (Maduro / Especialista)</option>
-                <option value="45_54">45 a 54 anos</option>
-                <option value="55_PLUS">55+ anos (Talento Sênior 50+)</option>
-              </select>
-            </div>
+                onChange={(v) => setFilters((p) => ({ ...p, ageBracket: v }))}
+                options={[
+                  { value: "", label: "Todas as idades" },
+                  { value: "18_24", label: "18 a 24 anos" },
+                  { value: "25_34", label: "25 a 34 anos" },
+                  { value: "35_44", label: "35 a 44 anos" },
+                  { value: "45_54", label: "45 a 54 anos" },
+                  { value: "55_PLUS", label: "55 anos ou mais" },
+                ]}
+              />
+            </FilterSection>
 
-            {/* 8. Pretensão Salarial */}
-            <div className="mt-5 space-y-2 border-t border-[#f4f4f5] pt-4">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                <DollarSign className="size-3 text-emerald-600" /> Pretensão Salarial
-              </span>
-              <select
+            {/* Pretensão salarial */}
+            <FilterSection icon={DollarSign} title="Pretensão salarial">
+              <FilterSelect
                 value={filters.salaryBracket || ""}
-                onChange={(e) => setFilters((p) => ({ ...p, salaryBracket: e.target.value }))}
-                className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-2 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
-              >
-                <option value="">Qualquer pretensão</option>
-                <option value="Até R$ 2.000">Até R$ 2.000</option>
-                <option value="R$ 2.000 a R$ 3.500">R$ 2.000 a R$ 3.500</option>
-                <option value="R$ 3.500 a R$ 5.000">R$ 3.500 a R$ 5.000</option>
-                <option value="R$ 5.000 a R$ 8.000">R$ 5.000 a R$ 8.000</option>
-                <option value="R$ 8.000 a R$ 12.000">R$ 8.000 a R$ 12.000</option>
-                <option value="Acima de R$ 12.000">Acima de R$ 12.000</option>
-              </select>
-            </div>
+                onChange={(v) => setFilters((p) => ({ ...p, salaryBracket: v }))}
+                options={[
+                  { value: "", label: "Qualquer pretensão" },
+                  { value: "Até R$ 2.000", label: "Até R$ 2.000" },
+                  { value: "R$ 2.000 a R$ 3.500", label: "R$ 2.000 a R$ 3.500" },
+                  { value: "R$ 3.500 a R$ 5.000", label: "R$ 3.500 a R$ 5.000" },
+                  { value: "R$ 5.000 a R$ 8.000", label: "R$ 5.000 a R$ 8.000" },
+                  { value: "R$ 8.000 a R$ 12.000", label: "R$ 8.000 a R$ 12.000" },
+                  { value: "Acima de R$ 12.000", label: "Acima de R$ 12.000" },
+                ]}
+              />
+            </FilterSection>
 
-            {/* 9. Modalidade & Habilitação CNH */}
-            <div className="mt-5 space-y-3 border-t border-[#f4f4f5] pt-4">
-              <div>
-                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                  <Compass className="size-3 text-stone-600" /> Modalidade de Trabalho
-                </span>
-                <select
-                  value={filters.selectedWorkPreference || ""}
-                  onChange={(e) =>
-                    setFilters((p) => ({ ...p, selectedWorkPreference: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
-                >
-                  <option value="">Qualquer modalidade</option>
-                  <option value="ONSITE">Presencial</option>
-                  <option value="HYBRID">Híbrido</option>
-                  <option value="REMOTE">100% Remoto</option>
-                </select>
-              </div>
+            {/* Modalidade */}
+            <FilterSection icon={Compass} title="Modalidade de trabalho">
+              <FilterSelect
+                value={filters.selectedWorkPreference || ""}
+                onChange={(v) => setFilters((p) => ({ ...p, selectedWorkPreference: v }))}
+                options={[
+                  { value: "", label: "Qualquer modalidade" },
+                  { value: "ONSITE", label: "Presencial" },
+                  { value: "HYBRID", label: "Híbrido" },
+                  { value: "REMOTE", label: "100% remoto" },
+                ]}
+              />
+            </FilterSection>
 
-              <div>
-                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#71717a] flex items-center gap-1.5">
-                  <Car className="size-3 text-stone-600" /> Carteira CNH
-                </span>
-                <select
-                  value={filters.selectedCnh || ""}
-                  onChange={(e) => setFilters((p) => ({ ...p, selectedCnh: e.target.value }))}
-                  className="w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-xs text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
-                >
-                  <option value="">Qualquer / Não exige CNH</option>
-                  <option value="A">Categoria A (Moto)</option>
-                  <option value="B">Categoria B (Carro)</option>
-                  <option value="AB">Categoria AB (Carro e Moto)</option>
-                  <option value="C_D_E">Categoria C/D/E (Pesados)</option>
-                </select>
-              </div>
+            {/* CNH */}
+            <FilterSection icon={Car} title="Carteira de motorista (CNH)">
+              <FilterSelect
+                value={filters.selectedCnh || ""}
+                onChange={(v) => setFilters((p) => ({ ...p, selectedCnh: v }))}
+                options={[
+                  { value: "", label: "Com ou sem CNH" },
+                  { value: "A", label: "Categoria A (moto)" },
+                  { value: "B", label: "Categoria B (carro)" },
+                  { value: "AB", label: "Categoria AB (carro e moto)" },
+                  { value: "C_D_E", label: "Categoria C, D ou E (pesados)" },
+                ]}
+              />
+            </FilterSection>
 
-              <div className="pt-1">
-                <label className="flex items-center gap-2 cursor-pointer rounded-xl bg-purple-50/70 border border-purple-200/80 p-2.5">
-                  <input
-                    type="checkbox"
-                    checked={filters.onlyPcd || false}
-                    onChange={(e) => setFilters((p) => ({ ...p, onlyPcd: e.target.checked }))}
-                    className="size-4 rounded border-purple-300 text-purple-700 focus:ring-purple-600"
-                  />
-                  <span className="text-xs font-bold text-purple-900 flex items-center gap-1">
-                    <HeartHandshake className="size-3.5 text-purple-700" /> Apenas Candidatos PCD
-                  </span>
-                </label>
-              </div>
-            </div>
+            {/* PCD */}
+            <FilterSection icon={HeartHandshake} title="Inclusão">
+              <label className="flex h-9 cursor-pointer items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 text-xs text-[#3f3f46] transition hover:bg-white">
+                <input
+                  type="checkbox"
+                  checked={filters.onlyPcd || false}
+                  onChange={(e) => setFilters((p) => ({ ...p, onlyPcd: e.target.checked }))}
+                  className="size-4 rounded border-[#d4d4d8] accent-[#0a0a0a]"
+                />
+                Só pessoas com deficiência (PcD)
+              </label>
+            </FilterSection>
           </div>
         </aside>
 
@@ -1016,6 +881,12 @@ export function BuscarCvsView({
                         </div>
                       </div>
 
+                      <span
+                        className="hidden shrink-0 text-[10px] tabular-nums text-[#a1a1aa] sm:inline"
+                        title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
+                      >
+                        {formatCadastro(item.createdAt)}
+                      </span>
                       {item.aiScore !== null && (
                         <span
                           className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -1273,7 +1144,14 @@ export function BuscarCvsView({
 
                     {/* Rodapé do Card */}
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-3 text-xs">
-                      <div className="flex items-center gap-2 text-[#71717a]">
+                      <div className="flex flex-wrap items-center gap-2 text-[#71717a]">
+                        <span
+                          className="tabular-nums text-[#a1a1aa]"
+                          title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
+                        >
+                          Cadastro {formatCadastro(item.createdAt)}
+                        </span>
+                        <span className="text-[#d4d4d8]">•</span>
                         <span>{item.email}</span>
                         {item.phone && (
                           <>
@@ -1665,4 +1543,237 @@ export function BuscarCvsView({
       )}
     </div>
   );
+}
+
+/* ───────────── Peças da barra de filtros (um padrão só para todas) ───────────── */
+
+type FacetItem = { key: string; label: string; count: number };
+
+/** Seção de filtro: mesmo espaçamento, título e ícone neutro em todas. */
+function FilterSection({
+  icon: Icon,
+  title,
+  selectedCount = 0,
+  onClear,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  selectedCount?: number;
+  onClear?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-[#f4f4f5] py-4 first-of-type:border-t-0 first-of-type:pt-0 last:pb-0">
+      <div className="mb-2 flex h-5 items-center justify-between gap-2">
+        <h3 className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
+          <Icon className="size-3.5 shrink-0 text-[#a1a1aa]" />
+          <span className="truncate">{title}</span>
+          {selectedCount > 0 && (
+            <span className="rounded-full bg-[#0a0a0a] px-1.5 text-[10px] font-semibold tabular-nums leading-4 text-white">
+              {selectedCount}
+            </span>
+          )}
+        </h3>
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 text-[11px] font-medium text-[#71717a] transition hover:text-[#0a0a0a]"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+const FIELD_BASE =
+  "h-9 w-full rounded-xl border border-[#e4e4e7] text-xs text-[#0a0a0a] transition focus:border-[#0a0a0a] focus:outline-none";
+
+/** Campo de texto padrão (lupa à esquerda, X para limpar). */
+function FilterTextInput({
+  value,
+  onChange,
+  placeholder,
+  inputRef,
+  className = "",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  inputRef?: React.Ref<HTMLInputElement>;
+  className?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#a1a1aa]" />
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`${FIELD_BASE} bg-[#fafaf9] pl-8 pr-8 placeholder:text-[#a1a1aa] focus:bg-white`}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Limpar campo"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#0a0a0a]"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Lista de seleção padrão. */
+function FilterSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`${FIELD_BASE} bg-white px-3 ${value ? "font-semibold" : ""}`}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Linhas marcáveis com contagem (área, senioridade). */
+function FacetRows({
+  items,
+  isSelected,
+  onToggle,
+  scroll = false,
+}: {
+  items: FacetItem[];
+  isSelected: (key: string) => boolean;
+  onToggle: (key: string) => void;
+  scroll?: boolean;
+}) {
+  if (items.length === 0) return <FilterHint>Nada para filtrar ainda.</FilterHint>;
+  return (
+    <div className={`space-y-0.5 ${scroll ? "max-h-44 overflow-y-auto pr-1" : ""}`}>
+      {items.map((item) => {
+        const selected = isSelected(item.key);
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onToggle(item.key)}
+            aria-pressed={selected}
+            className={`flex h-8 w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-xs transition ${
+              selected ? "bg-[#0a0a0a] font-medium text-white" : "text-[#3f3f46] hover:bg-[#fafaf9]"
+            }`}
+          >
+            <span className="truncate" title={item.label}>
+              {item.label}
+            </span>
+            <span className={`shrink-0 text-[10px] tabular-nums ${selected ? "text-white/70" : "text-[#a1a1aa]"}`}>
+              {item.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Etiquetas clicáveis com contagem (função, bairro, empresa): mesmo tamanho e alinhamento. */
+function FacetChips({
+  items,
+  isSelected,
+  onToggle,
+}: {
+  items: FacetItem[];
+  isSelected: (key: string, label: string) => boolean;
+  onToggle: (key: string, label: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
+      {items.map((item) => {
+        const selected = isSelected(item.key, item.label);
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onToggle(item.key, item.label)}
+            aria-pressed={selected}
+            title={item.label}
+            className={`inline-flex h-7 max-w-full items-center gap-1 rounded-lg border px-2 text-left text-[11px] transition ${
+              selected
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-[#fafaf9] text-[#3f3f46] hover:border-[#d4d4d8] hover:bg-white"
+            }`}
+          >
+            <span className="truncate">{titleCaseLabel(item.label)}</span>
+            <span className={`shrink-0 tabular-nums ${selected ? "text-white/70" : "text-[#a1a1aa]"}`}>
+              {item.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Texto de ajuda padrão, abaixo do campo. */
+function FilterHint({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1.5 text-[10px] leading-snug text-[#a1a1aa]">{children}</p>;
+}
+
+/**
+ * "AMAZONAS IMPORTAÇÕES" → "Amazonas Importações": currículo escrito todo em
+ * maiúsculas não pode destoar das outras etiquetas. Siglas curtas (S/A, CE) ficam.
+ */
+const LOWER_CONNECTORS = new Set(["e", "de", "da", "do", "das", "dos", "em", "na", "no"]);
+const KEEP_UPPER = /[/&]|^(sa|ltda|me|epp|eireli)$/;
+
+function titleCaseLabel(label: string): string {
+  if (label !== label.toUpperCase()) return label;
+  return label
+    .toLowerCase()
+    .split(" ")
+    .map((w, i) => {
+      if (!w) return w;
+      if (KEEP_UPPER.test(w)) return w.toUpperCase();
+      if (i > 0 && LOWER_CONNECTORS.has(w)) return w;
+      return w[0].toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Data de cadastro discreta: "03/11/26"; com `full`, data e hora para o
+ * tooltip. Sempre no fuso de Brasília, igual para todo gestor.
+ */
+function formatCadastro(iso: string, full = false): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: full ? "numeric" : "2-digit",
+    ...(full ? { hour: "2-digit", minute: "2-digit" } : {}),
+  });
 }
