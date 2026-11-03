@@ -1,3 +1,4 @@
+import { stageEmailCopy } from "@/server/models/stage-message.model";
 import { chunk } from "@/lib/chunk";
 import "server-only";
 
@@ -175,25 +176,12 @@ export async function sendStatusUpdateEmail(params: {
   applicationId: string;
 }): Promise<EmailOutcome> {
   const { brand } = params;
+  // Texto vem do modelo (o mesmo da prévia ao mover); aqui só escapa e destaca a vaga.
+  const copy = stageEmailCopy(params.status, brand.name, params.jobTitle);
   const job = `<strong style="color:#1c1917">${esc(params.jobTitle)}</strong>`;
-  const company = esc(brand.name);
-  const copy = {
-    INTERVIEW: {
-      subject: `Você avançou: ${params.jobTitle}`,
-      title: "Você avançou para a entrevista",
-      body: `A ${company} quer conversar com você sobre a vaga de ${job}. Em breve alguém entra em contato para combinar o horário.`,
-    },
-    APPROVED: {
-      subject: `Você foi aprovado: ${params.jobTitle}`,
-      title: "Você foi aprovado",
-      body: `A ${company} aprovou sua candidatura para ${job}. O próximo contato é sobre a contratação.`,
-    },
-    REJECTED: {
-      subject: `Sobre sua candidatura: ${params.jobTitle}`,
-      title: "Processo encerrado",
-      body: `Muito obrigado por se candidatar à vaga de ${job} na ${company}. Seu currículo é bom e agradecemos o tempo que você dedicou, mas, neste momento, vamos seguir com outros perfis. Isso não diminui o que você construiu até aqui. Seu cadastro continua ativo para as próximas vagas: continue firme e acredite no seu potencial!`,
-    },
-  }[params.status];
+  const bodyHtml = params.jobTitle
+    ? esc(copy.body).split(esc(params.jobTitle)).join(job)
+    : esc(copy.body);
 
   return send("atualização de etapa", {
     from: from(brand),
@@ -201,7 +189,7 @@ export async function sendStatusUpdateEmail(params: {
     subject: copy.subject,
     html: shell(brand, {
       title: copy.title,
-      paragraphs: [`Oi, ${firstName(params.candidateName)}.`, copy.body],
+      paragraphs: [`Oi, ${firstName(params.candidateName)}.`, bodyHtml],
       cta: {
         label: "Ver na minha área",
         href: candidateLink(brand, params.applicationId),

@@ -31,6 +31,11 @@ import {
   type BulkRejectResult,
 } from "@/server/services/bulk-reject.service";
 import {
+  moveApplication,
+  type MoveNotice,
+  type MoveResult,
+} from "@/server/services/stage-move.service";
+import {
   deleteCompanyApplications,
   extractApplicationPhoto,
   extractPhotosBulk,
@@ -298,6 +303,31 @@ export async function bulkSetApplicationStatusAction(
   revalidatePath("/candidaturas");
   revalidatePath("/painel");
   return { updated };
+}
+
+/**
+ * Mover de etapa escolhendo o aviso ao candidato (padrão, editado ou sem
+ * aviso) — a caixa de prévia do funil. Decisão sempre manual (regra 2).
+ */
+export async function moveApplicationAction(
+  applicationId: string,
+  status: AppStatus,
+  notice: { mode: "standard" | "silent" | "custom"; subject?: string; text?: string }
+): Promise<MoveResult> {
+  const user = await requireManager();
+  const allowed: AppStatus[] = ["PENDING", "SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"];
+  if (!allowed.includes(status)) return { ok: false, error: "Etapa inválida." };
+  const parsed: MoveNotice =
+    notice?.mode === "custom"
+      ? { mode: "custom", subject: String(notice.subject ?? "").slice(0, 80), text: String(notice.text ?? "") }
+      : notice?.mode === "silent"
+        ? { mode: "silent" }
+        : { mode: "standard" };
+  const result = await moveApplication(user.companyId, String(applicationId), status, parsed);
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  return result;
 }
 
 /** Mudança de status pelo gestor (E4) — decisão sempre manual (regra 2). */
