@@ -42,6 +42,7 @@ model Company {
   agentRuns     AgentRun[]
   talentFolders TalentFolder[]
   messageTemplates MessageTemplate[]
+  interviewEvaluations InterviewEvaluation[]
 }
 
 model User {
@@ -287,6 +288,7 @@ model Application {
   @@index([companyId, isDemo])
   @@index([companyId, neighborhood])
   @@index([companyId, desiredRole])
+  interviewEvaluations InterviewEvaluation[]
 }
 
 /// Novidade do processo na visão do candidato — o mesmo evento que vira
@@ -481,4 +483,29 @@ model MessageTemplate {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, subjectKey])
+}
+
+/// Ficha de avaliação da entrevista, preenchida por quem entrevistou. Uma por
+/// avaliador por candidatura (editável). Interna: o candidato nunca vê, a IA
+/// não recebe e não muda a etapa (regras 2 e 3) — a decisão continua manual.
+model InterviewEvaluation {
+  id             String   @id @default(cuid())
+  companyId      String
+  applicationId  String
+  evaluatorId    String
+  evaluatorName  String?
+  evaluatorEmail String
+  /// [{ name, score (1–5 ou null), note }]
+  criteria       Json     @default("[]")
+  /// STRONG_YES | YES | MAYBE | NO
+  recommendation String?
+  summary        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, evaluatorId])
+  @@index([companyId, applicationId])
 }

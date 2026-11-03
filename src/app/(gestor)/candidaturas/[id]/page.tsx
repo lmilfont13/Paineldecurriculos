@@ -34,7 +34,15 @@ import { loadApplicationTalentInfo } from "@/server/controllers/talent.controlle
 import { suggestTalentPool } from "@/server/models/talent.model";
 import { readChecklist } from "@/server/models/ai.model";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
-import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
+import {
+  listInterviewEvaluationsAction,
+  listMessageTemplatesAction,
+} from "@/server/controllers/application.controller";
+import { InterviewEvaluationCard } from "@/components/gestor/interview-evaluation-card";
+import {
+  showInterviewEvaluation,
+  suggestedCriteria,
+} from "@/server/models/interview-evaluation.model";
 import {
   appStatusLabels,
   formatAppliedAt,
@@ -131,6 +139,14 @@ export default async function CandidaturaDetailPage({
         past: isPastInterview(app.interviewAt),
       }
     : null;
+
+  // Ficha de avaliação da entrevista (interna). Sequencial: connection_limit=1.
+  const { evaluations, currentUserId } = await listInterviewEvaluationsAction(app.id);
+  const showEvaluation = showInterviewEvaluation({
+    status: app.status,
+    interviewAt: app.interviewAt,
+    hasEvaluations: evaluations.length > 0,
+  });
 
   return (
     <div className="mx-auto w-full max-w-[1080px]">
@@ -238,6 +254,15 @@ export default async function CandidaturaDetailPage({
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
         <main className="min-w-0 space-y-5">
+          {showEvaluation && (
+            <InterviewEvaluationCard
+              applicationId={app.id}
+              suggestedCriteria={suggestedCriteria(app.job.aiCriteria)}
+              evaluations={evaluations}
+              currentUserId={currentUserId}
+              interviewSummary={interview ? interview.summary : null}
+            />
+          )}
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

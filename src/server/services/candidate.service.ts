@@ -22,6 +22,7 @@ import {
   anonymizeApplicationsByCandidate,
   findResumePathsByCandidate,
 } from "@/server/repositories/application.repository";
+import { deleteInterviewEvaluationsByCandidate } from "@/server/repositories/interview-evaluation.repository";
 import {
   createCandidate,
   deleteCandidate,
@@ -224,7 +225,9 @@ export async function deleteCandidateAccount(candidate: {
       .remove([...paths].filter((p) => !p.startsWith("demo/")));
   }
 
-  // 2. Anonimiza candidaturas e apaga o perfil
+  // 2. Anonimiza candidaturas e apaga o perfil. As avaliações de entrevista
+  // (opiniões sobre a pessoa) são apagadas, não anonimizadas.
+  await deleteInterviewEvaluationsByCandidate(candidate.id);
   await anonymizeApplicationsByCandidate(candidate.id);
   const row = await findCandidateByEmail(candidate.email);
   await deleteCandidate(candidate.id);

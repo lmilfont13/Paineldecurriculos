@@ -18,6 +18,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   RECADO_ENVIADO:               { label: "Recado enviado",          color: "bg-[#fff7ed] text-[#c2410c]" },
   RECADO_EM_MASSA:              { label: "Recado em massa",         color: "bg-[#fff7ed] text-[#c2410c]" },
   REPROVACAO_EM_MASSA:          { label: "Reprovação em massa",     color: "bg-[#fbeae8] text-[#c23b3b]" },
+  AVALIACAO_ENTREVISTA:         { label: "Avaliação de entrevista", color: "bg-[#eef4ff] text-[#2f5fa8]" },
   INFO_SOLICITADA:              { label: "Informações solicitadas", color: "bg-[#fff7ed] text-[#c2410c]" },
   DADOS_SENSIVEIS_VISTOS:       { label: "Dados sensíveis vistos",  color: "bg-[#fef2f2] text-[#b91c1c]" },
   NOTA_SALVA:                   { label: "Nota interna salva",      color: "bg-[#f1f0ed] text-[#71717a]" },

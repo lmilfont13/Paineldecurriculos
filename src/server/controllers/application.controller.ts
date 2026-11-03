@@ -31,6 +31,11 @@ import {
   type BulkRejectResult,
 } from "@/server/services/bulk-reject.service";
 import {
+  listInterviewEvaluations,
+  saveInterviewEvaluation,
+  type InterviewEvaluationView,
+} from "@/server/services/interview-evaluation.service";
+import {
   moveApplication,
   type MoveNotice,
   type MoveResult,
@@ -755,6 +760,49 @@ export async function bulkRejectWithMessageAction(
   revalidatePath(`/vagas/${jobId}`);
   revalidatePath("/candidaturas");
   revalidatePath("/painel");
+  return result;
+}
+
+/** Fichas de avaliação da entrevista desta candidatura (da empresa da sessão). */
+export async function listInterviewEvaluationsAction(applicationId: string): Promise<{
+  evaluations: InterviewEvaluationView[];
+  currentUserId: string;
+}> {
+  const user = await requireManager();
+  const evaluations = await listInterviewEvaluations(user.companyId, String(applicationId));
+  return { evaluations, currentUserId: user.id };
+}
+
+/** Salva a ficha de quem está logado. Interna: não muda etapa nem vai para a IA. */
+export async function saveInterviewEvaluationAction(
+  applicationId: string,
+  input: unknown
+): Promise<{ ok: true; evaluation: InterviewEvaluationView } | { ok: false; error: string }> {
+  const user = await requireManager();
+  const result = await saveInterviewEvaluation(
+    user.companyId,
+    { id: user.id, email: user.email, name: user.name ?? null },
+    String(applicationId),
+    input
+  );
+  if (!result.ok) return result;
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "AVALIACAO_ENTREVISTA",
+      entityType: "CANDIDATURA",
+      entityId: String(applicationId),
+      // Só o resumo: os comentários ficam na ficha, não no log.
+      metadata: {
+        recommendation: result.evaluation.recommendation,
+        average: result.evaluation.average,
+      },
+    });
+  } catch { /* auditoria nunca bloqueia */ }
+  revalidatePath(`/candidaturas/${applicationId}`);
   return result;
 }
 
