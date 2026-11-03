@@ -43,7 +43,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
+import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
 import { extractPhotosBulkAction } from "@/server/controllers/application.controller";
 import {
   calculateAge,
@@ -976,7 +976,8 @@ export function BuscarCvsView({
                       }`}
                     >
                       <div className="relative shrink-0">
-                        <CandidateAvatar
+                        <ZoomableCandidateAvatar
+                          applicationId={item.id}
                           name={item.name}
                           photoUrl={item.photoUrl}
                           className="size-9 rounded-xl bg-[#1c1917] text-xs font-bold text-white object-cover"
@@ -1084,7 +1085,8 @@ export function BuscarCvsView({
                       {/* Avatar e Perfil */}
                       <div className="flex min-w-0 items-start gap-4">
                         <div className="relative shrink-0">
-                          <CandidateAvatar
+                          <ZoomableCandidateAvatar
+                            applicationId={item.id}
                             name={item.name}
                             photoUrl={item.photoUrl}
                             className="size-16 sm:size-20 rounded-2xl bg-[#1c1917] text-xl font-bold text-white shadow-xs object-cover"
@@ -1390,7 +1392,8 @@ export function BuscarCvsView({
             {/* Topo do Drawer */}
             <div className="flex items-start justify-between border-b border-[#e4e4e7] pb-4">
               <div className="flex items-center gap-3.5">
-                <CandidateAvatar
+                <ZoomableCandidateAvatar
+                  applicationId={selectedCandidate.id}
                   name={selectedCandidate.name}
                   photoUrl={selectedCandidate.photoUrl}
                   className="size-14 rounded-2xl bg-[#1c1917] text-lg font-bold text-white shadow-xs object-cover"

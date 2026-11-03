@@ -1,5 +1,6 @@
 import type { AppStatus } from "@prisma/client";
 import { removeNulChars } from "@/server/models/text.model";
+import { withLargePhotoPaths } from "@/server/models/photo.model";
 import "server-only";
 
 import { Prisma, type AIState } from "@prisma/client";
@@ -411,7 +412,9 @@ export async function findResumePathsByCandidate(candidateId: string) {
     select: { resumeUrl: true, photoPath: true },
   });
   // Currículos e fotos recortadas (LGPD: tudo sai junto com a conta).
-  return apps.flatMap((a) => [a.resumeUrl, a.photoPath]).filter((p): p is string => !!p);
+  return withLargePhotoPaths(
+    apps.flatMap((a) => [a.resumeUrl, a.photoPath]).filter((p): p is string => !!p)
+  );
 }
 
 /**

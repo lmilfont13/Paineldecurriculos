@@ -41,7 +41,7 @@ import {
   formatWaiting,
   type AppStatusKey,
 } from "@/server/models/application.model";
-import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
+import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
 import {
   interviewSummary,
   isPastInterview,
@@ -155,7 +155,8 @@ export default async function CandidaturaDetailPage({
               Candidatura · {jobLabel(app.job.title, app.job.code)}
             </p>
             <div className="mt-5 flex items-center gap-4">
-              <CandidateAvatar
+              <ZoomableCandidateAvatar
+                applicationId={app.id}
                 name={app.name}
                 photoUrl={app.photoUrl}
                 className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm"

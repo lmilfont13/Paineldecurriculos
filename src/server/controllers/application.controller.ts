@@ -30,6 +30,7 @@ import {
   deleteCompanyApplications,
   extractApplicationPhoto,
   extractPhotosBulk,
+  getLargePhotoUrl,
   searchCompanyApplicationIds,
   getApplicationSummaries,
   getCompanyApplication,
@@ -257,6 +258,12 @@ export async function extractPhotosBulkAction(
   const result = await extractPhotosBulk(user.companyId, ids);
   revalidatePath("/candidaturas");
   return result;
+}
+
+/** URL da foto ampliada (clique na foto), sempre do tenant da sessão. */
+export async function getLargePhotoUrlAction(applicationId: string): Promise<string | null> {
+  const user = await requireManager();
+  return getLargePhotoUrl(user.companyId, String(applicationId ?? ""));
 }
 
 /** Busca por conteúdo (nome, e-mail, perfil e texto do currículo). */

@@ -43,6 +43,38 @@ export function photoStoragePath(companyId: string, applicationId: string): stri
   return `photos/${companyId}/${applicationId}.jpg`;
 }
 
+/**
+ * Lado máximo da versão ampliada (px), aberta ao clicar na foto. Nunca
+ * amplia além do original do PDF — só reduz se a foto for maior que isso.
+ */
+export const PHOTO_LARGE_MAX = 800;
+
+/** Caminho da versão ampliada, derivado do avatar: `x.jpg` → `x-lg.jpg`. */
+export function photoLargePath(photoPath: string): string {
+  return photoPath.replace(/\.jpg$/, "-lg.jpg");
+}
+
+/** Lado da versão ampliada para um recorte quadrado de `side` px. */
+export function largePhotoSide(side: number): number {
+  return Math.max(1, Math.min(Math.round(side), PHOTO_LARGE_MAX));
+}
+
+/**
+ * Junta às fotos da lista as suas versões ampliadas, para que excluir uma
+ * candidatura ou conta (LGPD) apague as duas. Outros caminhos passam iguais.
+ */
+export function withLargePhotoPaths(paths: string[]): string[] {
+  const out = new Set<string>();
+  for (const p of paths) {
+    if (!p) continue;
+    out.add(p);
+    if (p.startsWith("photos/") && p.endsWith(".jpg") && !p.endsWith("-lg.jpg")) {
+      out.add(photoLargePath(p));
+    }
+  }
+  return [...out];
+}
+
 /** Rosto achado numa imagem: centro (x, y) e diâmetro aproximado, em pixels. */
 export type FaceDetection = { x: number; y: number; size: number; score: number };
 

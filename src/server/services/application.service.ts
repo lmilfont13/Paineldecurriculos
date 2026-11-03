@@ -109,8 +109,10 @@ import {
 import {
   captureResumePhoto,
   removeResumePhotos,
+  signLargePhotoUrl,
   withPhotoUrls,
 } from "@/server/services/resume-photo.service";
+import { withLargePhotoPaths } from "@/server/models/photo.model";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
@@ -368,6 +370,35 @@ export async function extractApplicationPhoto(
     applicationId,
     currentPath: application.photoPath ?? null,
   });
+}
+
+/**
+ * URL da foto ampliada (clique na foto). Sempre do tenant da sessão.
+ * Fotos recortadas antes da versão ampliada não a têm: gera agora a partir
+ * do PDF (uma vez só; das próximas já existe) e, se não der, devolve o
+ * avatar normal para o gestor ver ao menos a foto.
+ */
+export async function getLargePhotoUrl(
+  companyId: string,
+  applicationId: string
+): Promise<string | null> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application?.photoPath) return null;
+  const existing = await signLargePhotoUrl(application.photoPath);
+  if (existing) return existing;
+  try {
+    if (await extractApplicationPhoto(companyId, applicationId)) {
+      const fresh = await getCompanyApplication(companyId, applicationId);
+      if (fresh?.photoPath) {
+        const regenerated = await signLargePhotoUrl(fresh.photoPath);
+        if (regenerated) return regenerated;
+      }
+    }
+  } catch (error) {
+    console.error("[foto] Não foi possível gerar a foto ampliada:", applicationId, error);
+  }
+  const [fallback] = await withPhotoUrls([{ photoPath: application.photoPath }]);
+  return fallback?.photoUrl ?? null;
 }
 
 /**
@@ -983,7 +1014,7 @@ export async function deleteCompanyApplications(
     ) {
       resumePaths.push(application.resumeUrl);
     }
-    if (application.photoPath) resumePaths.push(application.photoPath);
+    if (application.photoPath) resumePaths.push(...withLargePhotoPaths([application.photoPath]));
   }
 
   if (resumePaths.length > 0) {

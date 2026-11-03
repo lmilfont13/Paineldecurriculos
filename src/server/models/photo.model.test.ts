@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   bestFace,
   faceCropRegion,
+  largePhotoSide,
+  photoLargePath,
   photoStoragePath,
   pickPageImageIndex,
   pickPhotoIndex,
+  withLargePhotoPaths,
 } from "@/server/models/photo.model";
 
 describe("pickPhotoIndex", () => {
@@ -62,5 +65,22 @@ describe("rosto em currículo de figura única", () => {
     const corner = faceCropRegion({ x: 10, y: 10, size: 100, score: 50 }, 1000, 1500);
     expect(corner.left).toBe(0);
     expect(corner.top).toBe(0);
+  });
+});
+
+describe("versão ampliada da foto", () => {
+  it("deriva o caminho da versão ampliada do avatar", () => {
+    expect(photoLargePath("photos/c1/a1.jpg")).toBe("photos/c1/a1-lg.jpg");
+  });
+
+  it("nunca amplia além do original e limita a 800px", () => {
+    expect(largePhotoSide(300)).toBe(300);
+    expect(largePhotoSide(2400)).toBe(800);
+  });
+
+  it("inclui a versão ampliada ao excluir, sem mexer nos currículos", () => {
+    expect(
+      withLargePhotoPaths(["c1/cv.pdf", "photos/c1/a1.jpg", "photos/c1/a1-lg.jpg", ""])
+    ).toEqual(["c1/cv.pdf", "photos/c1/a1.jpg", "photos/c1/a1-lg.jpg"]);
   });
 });
