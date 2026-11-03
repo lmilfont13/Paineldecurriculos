@@ -867,7 +867,14 @@ export function BuscarCvsView({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="truncate text-xs font-bold text-[#0a0a0a]">{item.name}</span>
+                          <Link
+                            href={`/candidaturas/${item.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Abrir o cadastro"
+                            className="truncate text-xs font-bold text-[#0a0a0a] underline-offset-2 hover:underline"
+                          >
+                            {item.name}
+                          </Link>
                           {item.aiLevel && (
                             <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${levelBadgeClass}`}>
                               {item.aiLevel}
@@ -994,7 +1001,14 @@ export function BuscarCvsView({
                           {/* Nome do candidato — sempre o título em destaque, igual ao modo Compacto */}
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="truncate text-base sm:text-lg font-bold text-[#0a0a0a]">
-                              {item.name}
+                              <Link
+                                href={`/candidaturas/${item.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Abrir o cadastro"
+                                className="underline-offset-4 hover:underline"
+                              >
+                                {item.name}
+                              </Link>
                             </h2>
                             {item.isPcd && (
                               <span className="rounded-md bg-purple-100 border border-purple-300 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">
