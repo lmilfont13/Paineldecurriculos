@@ -150,48 +150,76 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
             </div>
           )}
 
-          <div className="mt-4 overflow-x-auto rounded-xl border border-[#e4e4e7]">
-            <table className="w-full min-w-[480px] text-left text-[12px]">
-              <thead className="bg-[#fafaf9] text-[11px] uppercase tracking-wider text-[#a1a1aa]">
-                <tr>
-                  <th className="px-3 py-2 font-semibold">Candidato</th>
-                  <th className="px-3 py-2 text-right font-semibold">Mínimo</th>
-                  <th className="px-3 py-2 text-right font-semibold">{labelFor[ok.referenceModel] ?? "Atual"}</th>
-                  <th className="px-3 py-2 text-right font-semibold">{labelFor[ok.candidateModel] ?? "Teste"}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#f4f4f5]">
-                {ok.rows.map((r) => (
-                  <tr key={r.applicationId} className={flagged.has(r.applicationId) ? "bg-[#fdf6e7]" : ""}>
-                    <td className="px-3 py-2">
-                      <a href={`/candidaturas/${r.applicationId}`} className="font-medium text-[#0a0a0a] hover:underline">
+          {/* Um cartão por candidato, as duas leituras lado a lado; discordâncias primeiro. */}
+          <ul className="mt-4 space-y-2">
+            {[...ok.rows]
+              .sort((a, b) => Number(flagged.has(b.applicationId)) - Number(flagged.has(a.applicationId)))
+              .map((r) => (
+                <li
+                  key={r.applicationId}
+                  className={`rounded-xl border p-3 ${
+                    flagged.has(r.applicationId) ? "border-[#f0dcae] bg-[#fffbf2]" : "border-[#e4e4e7]"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`/candidaturas/${r.applicationId}`}
+                        className="text-[13px] font-semibold text-[#0a0a0a] hover:underline"
+                      >
                         {r.name}
                       </a>
                       {flagged.has(r.applicationId) && (
-                        <span className="ml-2 text-[10px] font-semibold text-[#8a5d10]">olhar este</span>
+                        <span className="rounded-full bg-[#fdf0d2] px-2 py-0.5 text-[10px] font-semibold text-[#8a5d10]">
+                          discordam: quem acertou?
+                        </span>
                       )}
-                      {"score" in r.candidate && r.candidate.reasoning && (
-                        <p className="mt-0.5 line-clamp-2 text-[11px] text-[#71717a]">{r.candidate.reasoning}</p>
-                      )}
-                    </td>
-                    <td
-                      className="px-3 py-2 text-right tabular-nums text-[#a1a1aa]"
+                    </div>
+                    <span
+                      className="text-[11px] tabular-nums text-[#a1a1aa]"
                       title={r.minIsDefault ? "Vaga sem nota mínima (banco de talentos): comparado com 60" : undefined}
                     >
-                      {r.minScore}
+                      {r.jobTitle} · mínimo {r.minScore}
                       {r.minIsDefault ? "*" : ""}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">{scoreText(r.reference)}</td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">{scoreText(r.candidate)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {(
+                      [
+                        [labelFor[ok.referenceModel] ?? "Atual", "atual", r.reference],
+                        [labelFor[ok.candidateModel] ?? "Testado", "testado", r.candidate],
+                      ] as const
+                    ).map(([label, role, sc]) => {
+                      const passes = "score" in sc && sc.score >= r.minScore;
+                      return (
+                        <div key={role} className="rounded-lg bg-white p-2.5 ring-1 ring-[#f0f0ef]">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[11px] font-medium text-[#71717a]">
+                              {label} <span className="text-[#a1a1aa]">({role})</span>
+                            </span>
+                            <span className="flex items-baseline gap-1.5">
+                              <span className="text-lg font-bold tabular-nums text-[#0a0a0a]">{scoreText(sc)}</span>
+                              {"score" in sc && (
+                                <span className={`text-[10px] font-semibold ${passes ? "text-[#1f7a4d]" : "text-[#c23b3b]"}`}>
+                                  {passes ? "atende" : "não atende"}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] leading-4 text-[#57534e]">
+                            {"score" in sc ? sc.reasoning || "Sem justificativa." : explainAiError(sc.error).reason}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </li>
+              ))}
+          </ul>
           <p className="mt-2 text-[11px] text-[#a1a1aa]">
             {ok.rows.some((r) => r.minIsDefault) && "* Vaga sem nota mínima (banco de talentos): comparado com 60. "}
-            Notas de IA variam alguns pontos até no mesmo modelo; o que pesa é a mesma decisão. A justificativa abaixo do
-            nome é a do modelo testado. Se gostar do resultado, troque o modelo acima.
+            Notas de IA variam alguns pontos até no mesmo modelo; o que pesa é a mesma decisão. Para desempatar, teste
+            também um terceiro modelo (ex.: Claude Sonnet 5.5) e veja com qual dos dois ele concorda.
           </p>
         </div>
       )}

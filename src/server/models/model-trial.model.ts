@@ -94,18 +94,23 @@ export function summarizeTrial(rows: TrialRow[]): TrialSummary {
   return { compared, sameDecision, borderline, meanAbsDiff, candidateErrors, flagged, verdict };
 }
 
+/**
+ * Veredito. Discordar do modelo atual NÃO quer dizer que o testado errou — o
+ * atual também erra. Quando discordam, quem decide é o gestor, lendo as
+ * justificativas dos dois nos casos destacados.
+ */
 export const verdictCopy: Record<TrialVerdict, { title: string; body: string }> = {
   SUFFICIENT: {
-    title: "Dá conta",
-    body: "Os dois modelos tomaram a mesma decisão em quase todos os candidatos, com notas próximas. Dá para trocar com segurança.",
+    title: "Os dois concordam",
+    body: "Mesma decisão em quase todos os candidatos, com notas próximas. Dá para trocar sem mudar o resultado da triagem; escolha pelo custo ou pela clareza das justificativas.",
   },
   REVIEW: {
-    title: "Dá conta, com ressalvas",
-    body: "Concordam na maioria, mas há casos diferentes. Olhe os candidatos destacados: se você concordar com o modelo em teste, pode trocar.",
+    title: "Concordam na maioria",
+    body: "Há alguns casos diferentes. Leia as duas justificativas nos destacados: fique com o modelo que acertou mais segundo o que você sabe dos candidatos.",
   },
   INSUFFICIENT: {
-    title: "Não recomendo trocar",
-    body: "O modelo em teste discordou do atual em muitos candidatos. Para a triagem desta empresa, mantenha o modelo atual.",
+    title: "Discordam em vários candidatos",
+    body: "Isso não diz qual está certo: o modelo atual também pode errar. Leia as duas justificativas nos casos destacados e veja qual bate com o currículo. Se o testado acertar mais, troque; se não, mantenha o atual.",
   },
   INCONCLUSIVE: {
     title: "Poucos dados para concluir",
