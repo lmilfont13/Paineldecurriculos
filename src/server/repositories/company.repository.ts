@@ -2,6 +2,15 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 
+/**
+ * Empresa de demonstração (slug "demo") usada para apresentar o sistema a
+ * empresas em prospecção: continua acessível por link direto
+ * (getPublicCompanyBySlug / login do gestor), mas fica fora do seletor
+ * público da tela de login — não é uma empresa real, não deve aparecer para
+ * qualquer candidato que passe por ali.
+ */
+const HIDDEN_FROM_DIRECTORY_SLUGS = ["demo"];
+
 export function findCompanyBySlug(slug: string) {
   return prisma.company.findUnique({ where: { slug } });
 }
@@ -32,7 +41,7 @@ export function countCompanies() {
 /** Lista de empresas ativas para a tela de seleção pública. */
 export function findActiveCompanies() {
   return prisma.company.findMany({
-    where: { isActive: true },
+    where: { isActive: true, slug: { notIn: HIDDEN_FROM_DIRECTORY_SLUGS } },
     orderBy: { name: "asc" },
     select: {
       name: true,
@@ -48,7 +57,7 @@ export function findActiveCompanies() {
 /** Primeira empresa ativa — usada como destino padrão da raiz do site. */
 export function findFirstActiveCompany() {
   return prisma.company.findFirst({
-    where: { isActive: true },
+    where: { isActive: true, slug: { notIn: HIDDEN_FROM_DIRECTORY_SLUGS } },
     orderBy: { createdAt: "asc" },
   });
 }
