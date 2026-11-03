@@ -114,6 +114,7 @@ export function BuscarCvsView({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showHotkeysHelp, setShowHotkeysHelp] = useState(true);
   const [isExtractingPhotos, startPhotoExtraction] = useTransition();
+  const [, startViewTransition] = useTransition();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -886,7 +887,7 @@ export function BuscarCvsView({
               <div className="flex items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-0.5">
                 <button
                   type="button"
-                  onClick={() => setViewMode("detailed")}
+                  onClick={() => startViewTransition(() => setViewMode("detailed"))}
                   title="Modo Dossiê: cards detalhados"
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
                     viewMode === "detailed"
@@ -899,7 +900,7 @@ export function BuscarCvsView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setViewMode("compact")}
+                  onClick={() => startViewTransition(() => setViewMode("compact"))}
                   title="Modo Compacto: linhas resumidas"
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
                     viewMode === "compact"
