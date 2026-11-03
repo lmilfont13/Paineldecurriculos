@@ -275,7 +275,8 @@ Por ordem de importância:
    saem marcadas para o Google for Jobs e existe um `sitemap.xml`, mas o
    Google acha tudo bem mais rápido quando o site está cadastrado: entre em
    search.google.com/search-console → *Adicionar propriedade* → *Prefixo do
-   URL* `https://mt-triagem.vercel.app` → confirme a propriedade (o jeito mais
+   URL* `https://paineldecurriculos-ptsc.vercel.app` (o endereço em que este
+   repositório publica hoje; se mudar para domínio próprio, cadastre o novo) → confirme a propriedade (o jeito mais
    simples é a *tag HTML*: peça ao Claude para colocá-la no site) → *Sitemaps*
    → envie `sitemap.xml`. Para conferir uma vaga: *Teste de pesquisa
    aprimorada* (search.google.com/test/rich-results) com o link dela.
