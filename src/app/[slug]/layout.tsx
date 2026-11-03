@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getTenant } from "@/server/controllers/public.controller";
-import { brandCssVars } from "@/server/models/company.model";
+import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
 
 export async function generateMetadata({
   params,
@@ -16,6 +16,8 @@ export async function generateMetadata({
     title: `Vagas · ${company.name}`,
     description: company.heroSubtitle,
     ...(company.logoUrl ? { icons: { icon: company.logoUrl } } : {}),
+    // Empresa de demonstração: acessível por link, mas fora do Google.
+    ...(isHiddenFromDirectory(company.slug) ? { robots: { index: false, follow: false } } : {}),
   };
 }
 

@@ -28,6 +28,7 @@ import {
   countApplicants,
   getOpenJob,
   listOpenJobs,
+  listSitemapJobs,
 } from "@/server/services/job.service";
 
 /**
@@ -171,4 +172,9 @@ export async function getTalentBankEntryPath(slug: string): Promise<string | nul
   if (!company) return null;
   const jobId = await getTalentPoolJobId(company.id, company.name);
   return `/${company.slug}/vagas/${jobId}/candidatar`;
+}
+
+/** Vagas públicas abertas para o sitemap.xml (Google for Jobs). */
+export async function getSitemapJobs() {
+  return listSitemapJobs();
 }

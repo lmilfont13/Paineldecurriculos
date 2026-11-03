@@ -27,6 +27,7 @@ export type PublicJob = Pick<
   | "contract"
   | "workMode"
   | "createdAt"
+  | "isTalentPool"
 >;
 
 export function toPublicJob(job: Job): PublicJob {
@@ -41,6 +42,7 @@ export function toPublicJob(job: Job): PublicJob {
     workMode: job.workMode,
     // Para quem lê a vaga, a data que importa é quando ela entrou no ar.
     createdAt: job.publishedAt ?? job.createdAt,
+    isTalentPool: job.isTalentPool,
   };
 }
 

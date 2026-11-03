@@ -83,6 +83,7 @@ describe("formatJobMeta", () => {
     description: "x",
     requirements: null,
     createdAt: new Date(),
+    isTalentPool: false,
   };
   it("com localização → 'local · modelo'", () => {
     expect(

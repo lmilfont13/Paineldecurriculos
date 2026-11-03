@@ -1,15 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-
-/**
- * Empresa de demonstração (slug "demo") usada para apresentar o sistema a
- * empresas em prospecção: continua acessível por link direto
- * (getPublicCompanyBySlug / login do gestor), mas fica fora do seletor
- * público da tela de login — não é uma empresa real, não deve aparecer para
- * qualquer candidato que passe por ali.
- */
-const HIDDEN_FROM_DIRECTORY_SLUGS = ["demo"];
+import { HIDDEN_FROM_DIRECTORY_SLUGS } from "@/server/models/company.model";
 
 export function findCompanyBySlug(slug: string) {
   return prisma.company.findUnique({ where: { slug } });
@@ -102,3 +94,4 @@ export function updateCompany(
 ) {
   return prisma.company.update({ where: { id }, data });
 }
+

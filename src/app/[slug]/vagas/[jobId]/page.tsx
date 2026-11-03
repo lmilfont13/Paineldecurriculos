@@ -19,6 +19,8 @@ import {
   getPublicSession,
 } from "@/server/controllers/public.controller";
 import { appUrl } from "@/lib/env";
+import { isHiddenFromDirectory } from "@/server/models/company.model";
+import { buildJobPostingJsonLd, serializeJsonLd } from "@/server/models/job-posting.model";
 
 export async function generateMetadata({
   params,
@@ -27,10 +29,35 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, jobId } = await params;
   const data = await getJobDetailPageData(slug, jobId);
+  if (!data) return { title: "Vaga" };
+  const { company, job } = data;
+  const title = `${job.title}${job.code ? ` #${job.code}` : ""} · ${company.name}`;
+  const description = [
+    job.title,
+    job.location,
+    workModeLabels[job.workMode],
+    contractLabels[job.contract],
+  ]
+    .filter(Boolean)
+    .join(" · ")
+    .concat(`. ${job.description.replace(/\s+/g, " ").trim()}`)
+    .slice(0, 160);
+  const url = `${appUrl()}/${company.slug}/vagas/${job.id}`;
+  // Demo e vaga oculta do banco de talentos não vão para buscador.
+  const hidden = job.isTalentPool || isHiddenFromDirectory(company.slug);
   return {
-    title: data
-      ? `${data.job.title}${data.job.code ? ` #${data.job.code}` : ""} · ${data.company.name}`
-      : "Vaga",
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: company.name,
+      type: "website",
+      ...(company.logoUrl ? { images: [company.logoUrl] } : {}),
+    },
+    ...(hidden ? { robots: { index: false, follow: false } } : {}),
   };
 }
 
@@ -48,6 +75,8 @@ export default async function PublicJobDetailPage({
   if (!data) notFound();
   const { company, job, applicantCount } = data;
   const publicJobUrl = `${appUrl()}/${company.slug}/vagas/${job.id}`;
+  // Google for Jobs: dados estruturados da vaga (null para demo / banco de talentos).
+  const jobPostingLd = buildJobPostingJsonLd({ company, job, url: publicJobUrl });
   const bullets = requirementsToBullets(job.requirements);
   const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
   const tags = [
@@ -58,6 +87,12 @@ export default async function PublicJobDetailPage({
 
   return (
     <>
+      {jobPostingLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jobPostingLd) }}
+        />
+      )}
       <CompanyHeader company={company} candidate={candidate} />
       <main className="mx-auto w-full max-w-[1120px] flex-1 px-5 pt-8 md:px-8 md:pt-10">
         <Link

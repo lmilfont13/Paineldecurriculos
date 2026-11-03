@@ -86,7 +86,20 @@ export type PublicCompany = Pick<
   | "heroTitle"
   | "heroSubtitle"
   | "aboutText"
+  | "website"
 >;
+
+/**
+ * Empresas fora das vitrines públicas: seletor do /login, sitemap e buscadores
+ * (Google for Jobs). A "demo" é a empresa de demonstração para prospecção —
+ * vagas fictícias não podem aparecer para candidatos de verdade. Continua
+ * acessível por link direto.
+ */
+export const HIDDEN_FROM_DIRECTORY_SLUGS = ["demo"];
+
+export function isHiddenFromDirectory(slug: string): boolean {
+  return HIDDEN_FROM_DIRECTORY_SLUGS.includes(slug);
+}
 
 /**
  * Cor de texto legível sobre a cor da marca (branco em cores escuras,
@@ -161,6 +174,7 @@ export function toPublicCompany(company: Company): PublicCompany {
     heroTitle: company.heroTitle,
     heroSubtitle: company.heroSubtitle,
     aboutText: company.aboutText,
+    website: company.website,
   };
 }
 

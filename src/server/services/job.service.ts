@@ -18,6 +18,7 @@ import {
   findJobById,
   findJobsByCompanyId,
   findOpenJobsByCompanyId,
+  findPublicOpenJobsForSitemap,
   incrementWhatsappShares,
   updateJob,
 } from "@/server/repositories/job.repository";
@@ -141,4 +142,16 @@ export async function deleteCompanyJob(
 
   await deleteJob(jobId);
   return { title: job.title, deletedApplications };
+}
+
+/**
+ * Vagas abertas de todas as vitrines públicas, para o sitemap (Google). Dado
+ * público por natureza (mesmo que qualquer visitante vê): sem demo, sem banco
+ * de talentos.
+ */
+export async function listSitemapJobs(): Promise<
+  { slug: string; jobId: string; updatedAt: Date }[]
+> {
+  const jobs = await findPublicOpenJobsForSitemap();
+  return jobs.map((j) => ({ slug: j.company.slug, jobId: j.id, updatedAt: j.updatedAt }));
 }

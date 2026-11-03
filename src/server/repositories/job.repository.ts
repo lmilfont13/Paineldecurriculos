@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { HIDDEN_FROM_DIRECTORY_SLUGS } from "@/server/models/company.model";
 
 export function findOpenJobsByCompanyId(companyId: string) {
   return prisma.job.findMany({
@@ -94,5 +95,22 @@ export function createTalentPoolJob(companyId: string, companyName: string) {
       isTalentPool: true,
       publishedAt: new Date(),
     },
+  });
+}
+
+/**
+ * Vagas abertas das vitrines públicas, para o sitemap (Google). Só empresas
+ * ativas e fora da lista oculta (demo); nunca a vaga oculta do banco de talentos.
+ */
+export function findPublicOpenJobsForSitemap() {
+  return prisma.job.findMany({
+    where: {
+      status: "OPEN",
+      isTalentPool: false,
+      company: { isActive: true, slug: { notIn: HIDDEN_FROM_DIRECTORY_SLUGS } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 5000,
+    select: { id: true, updatedAt: true, company: { select: { slug: true } } },
   });
 }

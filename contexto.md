@@ -271,13 +271,14 @@ atual.
 
 Por ordem de importância:
 
-1. **E-mails para candidatos.** Enquanto não houver domínio verificado no
-   Resend, os e-mails saem de `onboarding@resend.dev`, que **só entrega para o
-   dono da conta Resend**. Ou seja: hoje os candidatos não recebem e-mail
-   nenhum. Os avisos dentro do site funcionam normalmente. Para resolver:
-   Resend → *Domains → Add domain* → adicionar os registros DNS no provedor do
-   domínio da Tarhget → depois colocar `EMAIL_FROM_ADDRESS` (por exemplo,
-   `vagas@seudominio.com.br`) na Vercel e publicar de novo.
+1. **Cadastrar o site no Google Search Console** (uma vez só). As vagas já
+   saem marcadas para o Google for Jobs e existe um `sitemap.xml`, mas o
+   Google acha tudo bem mais rápido quando o site está cadastrado: entre em
+   search.google.com/search-console → *Adicionar propriedade* → *Prefixo do
+   URL* `https://mt-triagem.vercel.app` → confirme a propriedade (o jeito mais
+   simples é a *tag HTML*: peça ao Claude para colocá-la no site) → *Sitemaps*
+   → envie `sitemap.xml`. Para conferir uma vaga: *Teste de pesquisa
+   aprimorada* (search.google.com/test/rich-results) com o link dela.
 2. **"Esqueci minha senha".** No Supabase: *Authentication → URL
    Configuration* → *Site URL* = `https://mt-triagem.vercel.app` e, em
    *Redirect URLs*, adicionar `https://mt-triagem.vercel.app/redefinir-senha`.
@@ -321,6 +322,18 @@ e-mail personalizados.
   página de vagas e login com a identidade da empresa, painel usável no
   celular, e-mails com nome e cor da Tarhget, e tela de Configurações para a
   própria empresa editar a página de vagas.
+- **E-mails para candidatos:** confirmado em novembro de 2026 que estão
+  chegando normalmente.
+- **Empresa de demonstração** (slug `demo`, login `demo@tarhget.com.br`):
+  vagas e candidatos fictícios para apresentar o sistema a outras empresas.
+  Fica fora do seletor do `/login`, do sitemap e do Google. Para voltar ao
+  estado inicial: `node --env-file=.env prisma/seed-demo-apresentacao.mjs`.
+- **Banco de Talentos:** filtros fixos com rolagem própria, modo Dossiê ou
+  Compacto, e foto do candidato ampliada em alta qualidade ao clicar.
+- **Google for Jobs:** cada vaga aberta leva os dados estruturados
+  (`JobPosting`) que o Google lê para mostrá-la na busca de empregos, mais
+  `sitemap.xml` e `robots.txt`. A vaga oculta do banco de talentos e a empresa
+  demo ficam de fora.
 
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.
