@@ -23,14 +23,17 @@ const ago = (d) => new Date(Date.now() - d * day);
 const inFuture = (d) => new Date(Date.now() + d * day);
 
 // Currículos PDF reais já existentes em /public/demo (mesmo truque usado na
-// sala de simulação /agentes — ver prisma/.../simulation.model.ts).
+// sala de simulação /agentes — ver prisma/.../simulation.model.ts). SEM barra
+// inicial: é o formato que isDemoResumePath() reconhece (prefixo "demo/") —
+// com barra, o sistema tenta baixar do Storage em vez do /public e falha ao
+// abrir ou reanalisar o currículo.
 const RESUMES = [
   "demo/curriculo-candidato-ficticio.pdf",
   "demo/curriculo-ficticio-bruno.pdf",
   "demo/curriculo-ficticio-juliana.pdf",
   "demo/curriculo-ficticio-rafael.pdf",
 ];
-const resumeFor = (i) => "/" + RESUMES[i % RESUMES.length];
+const resumeFor = (i) => RESUMES[i % RESUMES.length];
 
 async function ensureAuthUser(email) {
   const { error } = await supabase.auth.admin.createUser({
