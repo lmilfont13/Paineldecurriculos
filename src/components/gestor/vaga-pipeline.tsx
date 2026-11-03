@@ -3,13 +3,14 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import type React from "react";
 import type { AIState } from "@prisma/client";
-import { bulkSetApplicationStatusAction, setApplicationStatusAction } from "@/server/controllers/application.controller";
+import { bulkSetApplicationStatusAction, moveApplicationAction } from "@/server/controllers/application.controller";
 import { appStatusLabels, formatWaiting, type AppStatusKey } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { Toast } from "@/components/gestor/toast";
 import { inAgeRange } from "@/server/models/age.model";
 import { BulkRejectDialog } from "@/components/gestor/bulk-reject-dialog";
+import { StageMoveDialog, type MoveNoticeChoice } from "@/components/gestor/stage-move-dialog";
 
 const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818", hint: "Novas candidaturas" },
@@ -29,7 +30,8 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
   const [people,setPeople]=useState(applications);
   const [draggingId,setDraggingId]=useState<string|null>(null);
   const [overStage,setOverStage]=useState<AppStatusKey|null>(null);
-  const [confirm,setConfirm]=useState<{id:string;name:string;stage:AppStatusKey}|null>(null);
+  // Movimento aguardando confirmação: a caixa mostra o que o candidato vai receber.
+  const [confirm,setConfirm]=useState<{id:string;name:string;from:AppStatusKey;stage:AppStatusKey}|null>(null);
   const [toast,setToast]=useState<string|null>(null);
   const [pending,startTransition]=useTransition();
   // Filtro de idade: só muda o que aparece no funil. Idade nunca entra na nota nem vai para a IA.
@@ -43,11 +45,20 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
   const visible=people.filter(p=>inAgeRange(p.age??null,range));
   const hiddenByAge=people.length-visible.length;
 
-  function move(id:string,stage:AppStatusKey){
+  function move(id:string,stage:AppStatusKey,notice:MoveNoticeChoice){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
-    setConfirm(null); setDraggingId(null); setOverStage(null);
-    const previous=people; setPeople(current=>current.map(p=>p.id===id?{...p,status:stage}:p));
-    startTransition(async()=>{try{await setApplicationStatusAction(id,stage);setToast(`${person.name} → ${appStatusLabels[stage]}.`);}catch{setPeople(previous);setToast("Não foi possível mover o candidato. Tente novamente.");}});
+    setDraggingId(null); setOverStage(null);
+    const previous=people;
+    startTransition(async()=>{
+      try{
+        const result=await moveApplicationAction(id,stage,notice);
+        if(!result.ok){setToast(result.error);return;}
+        setPeople(current=>current.map(p=>p.id===id?{...p,status:stage}:p));
+        setConfirm(null);
+        const aviso=notice.mode==="silent"?" (sem aviso)":notice.mode==="custom"?" com a sua mensagem":"";
+        setToast(`${person.name} → ${appStatusLabels[stage]}${aviso}.`);
+      }catch{setPeople(previous);setToast("Não foi possível mover o candidato. Tente novamente.");}
+    });
   }
   /** Quem está na triagem e já atingiu a nota mínima da vaga: passa todos de uma vez. */
   const ready=visible.filter(p=>p.status==="PENDING"&&p.aiScore!==null&&p.aiScore>=aiMinScore);
@@ -66,7 +77,8 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
   }
   function askMove(id:string,stage:AppStatusKey){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
-    if(stage==="REJECTED"){setConfirm({id,name:person.name,stage});return;} move(id,stage);
+    setDraggingId(null); setOverStage(null);
+    setConfirm({id,name:person.name,from:person.status,stage});
   }
   function onDragStart(e:React.DragEvent<HTMLElement>,id:string){setDraggingId(id);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",id);}
   function onDrop(e:React.DragEvent<HTMLElement>,stage:AppStatusKey){e.preventDefault();const id=e.dataTransfer.getData("text/plain")||draggingId;if(id)askMove(id,stage);}
@@ -100,7 +112,8 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
     {rejectOpen&&<BulkRejectDialog jobId={jobId} jobTitle={jobTitle} companyName={companyName} templates={templates}
       candidates={stillPending.map(p=>({id:p.id,name:p.name,aiScore:p.aiScore,photoUrl:p.photoUrl,analyzing:p.aiState==="WAITING"||p.aiState==="PROCESSING"}))}
       onClose={()=>setRejectOpen(false)} onDone={onBulkRejected}/>}
-    {confirm&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-5" role="dialog" aria-modal="true" onClick={()=>setConfirm(null)}><div className="w-full max-w-[390px] rounded-2xl bg-white p-6 shadow-2xl" onClick={e=>e.stopPropagation()}><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a1a1aa]">Mover candidato</p><h3 className="mt-2 text-lg font-semibold text-[#0a0a0a]">Reprovar {confirm.name}?</h3><p className="mt-2 text-sm leading-6 text-[#71717a]">O candidato será retirado do funil ativo. Confirme apenas se esta for a decisão.</p><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={()=>setConfirm(null)} className="h-10 rounded-xl border border-[#e4e4e7] px-4 text-[13px] font-medium text-[#57534e]">Cancelar</button><button type="button" disabled={pending} onClick={()=>move(confirm.id,confirm.stage)} className="h-10 rounded-xl bg-[#c23b3b] px-4 text-[13px] font-semibold text-white disabled:opacity-50">Reprovar candidato</button></div></div></div>}
+    {confirm&&<StageMoveDialog candidateName={confirm.name} from={confirm.from} to={confirm.stage} companyName={companyName} jobTitle={jobTitle}
+      pending={pending} onCancel={()=>setConfirm(null)} onConfirm={(notice)=>move(confirm.id,confirm.stage,notice)}/>}
     {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
   </>;
 }
