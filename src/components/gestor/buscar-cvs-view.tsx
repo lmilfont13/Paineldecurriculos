@@ -733,8 +733,15 @@ export function BuscarCvsView({
 
         {/* FEED PRINCIPAL: Dossiês Executivos de Candidatos (Direita) */}
         <main className="space-y-4">
-          {/* Header da Lista de Resultados — fixo no topo ao rolar a lista */}
-          <div className="sticky top-6 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white/95 px-5 py-3.5 shadow-xs backdrop-blur-sm">
+          {/*
+            Header da lista, fixo ao rolar. Gruda no topo da tela (abaixo da
+            barra superior no celular) com uma faixa opaca da cor da página
+            cobrindo o vão acima — os cards somem por baixo dela, sem aparecer
+            por trás. -mt-6/pt-6 mantém a posição original antes de rolar e
+            alinha o card com a barra de filtros (top-6) quando fixo.
+          */}
+          <div className="sticky top-14 z-20 -mt-6 bg-[#fafaf9] pt-6 md:top-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-5 py-3.5 shadow-xs">
             <div className="flex items-center gap-2 text-xs text-[#71717a]">
               <span>
                 <strong className="text-sm font-bold text-[#0a0a0a]">{sorted.length}</strong>{" "}
@@ -789,6 +796,12 @@ export function BuscarCvsView({
                 <option value="name">🔤 Nome (A-Z)</option>
               </select>
             </div>
+          </div>
+            {/* Esfumaçado sob a faixa: os cards se dissolvem em vez de cortar seco */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-full h-4 bg-linear-to-b from-[#fafaf9] to-transparent"
+            />
           </div>
 
           {/* Lista de Dossiês */}
