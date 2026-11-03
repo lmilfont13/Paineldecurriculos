@@ -15,6 +15,8 @@ export type TrialRow = {
   name: string;
   jobTitle: string;
   minScore: number;
+  /** A vaga não tem nota mínima (ex.: banco de talentos): usamos DEFAULT_CUTOFF. */
+  minIsDefault?: boolean;
   reference: TrialScore;
   candidate: TrialScore;
 };
@@ -44,6 +46,8 @@ export type TrialSummary = {
 export const BIG_DIFF = 20;
 /** Distância da nota mínima (pontos) em que uma divergência é "linha de corte". */
 export const NEAR_CUTOFF = 8;
+/** Linha de corte usada quando a vaga não tem nota mínima (banco de talentos). */
+export const DEFAULT_CUTOFF = 60;
 /** Mínimo de comparações para o veredito valer. */
 export const MIN_COMPARED = 5;
 
@@ -108,3 +112,30 @@ export const verdictCopy: Record<TrialVerdict, { title: string; body: string }> 
     body: `É preciso comparar pelo menos ${MIN_COMPARED} candidatos com currículo. Rode de novo quando houver mais candidaturas analisadas.`,
   },
 };
+
+/**
+ * Erro técnico da IA → explicação e o que fazer, para o gestor (ou quem cuida
+ * das chaves) resolver sem precisar ler log.
+ */
+export function explainAiError(message: string): { reason: string; action: string } {
+  const m = message.toLowerCase();
+  if (m.includes("não configurada")) {
+    return { reason: "A chave deste provedor de IA não está configurada no site.", action: "Cadastre a chave na Vercel (Environment Variables) e publique de novo." };
+  }
+  if (m.includes("401") || m.includes("invalid x-api-key") || m.includes("authentication")) {
+    return { reason: "A chave da IA foi recusada (inválida ou revogada).", action: "Gere uma chave nova no painel do provedor e atualize na Vercel." };
+  }
+  if (m.includes("credit") || m.includes("billing") || m.includes("balance") || m.includes("402")) {
+    return { reason: "A conta da IA está sem crédito.", action: "Adicione crédito no painel do provedor (para a Anthropic: console.anthropic.com → Billing)." };
+  }
+  if (m.includes("404") || m.includes("not_found") || m.includes("model")) {
+    return { reason: "Este modelo não está disponível para a conta de IA.", action: "Confira no painel do provedor se o modelo está liberado, ou teste outro modelo." };
+  }
+  if (m.includes("429") || m.includes("529") || m.includes("rate") || m.includes("overloaded")) {
+    return { reason: "A IA está sobrecarregada ou no limite de uso.", action: "Espere alguns minutos e rode o teste de novo." };
+  }
+  if (m.includes("score inválido")) {
+    return { reason: "O modelo respondeu fora do formato esperado.", action: "Se acontecer em vários candidatos, este modelo não serve para a triagem." };
+  }
+  return { reason: "A IA não respondeu.", action: "Tente de novo em alguns minutos." };
+}

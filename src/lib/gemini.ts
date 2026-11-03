@@ -136,18 +136,35 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
  * (O nome "geminiGenerate" é histórico — o provedor mudou mais de uma vez.)
  */
 export async function geminiGenerate(params: GenerateParams): Promise<string> {
+  return (await generateWithModelInfo(params)).text;
+}
+
+/**
+ * Como geminiGenerate, mas diz qual modelo DE FATO respondeu ("anthropic:…" ou
+ * "groq:…") — quando o Claude falha e a Groq assume, a nota precisa registrar
+ * a Groq, não o modelo escolhido.
+ */
+export async function generateWithModelInfo(
+  params: GenerateParams
+): Promise<{ text: string; modelUsed: string }> {
   if (params.model) {
-    if (params.model.startsWith("groq:")) return generateWithGroq(params.model.slice(5), params);
-    if (params.model.startsWith("claude-")) return generateWithClaude(params.model, params);
+    if (params.model.startsWith("groq:")) {
+      return { text: await generateWithGroq(params.model.slice(5), params), modelUsed: params.model };
+    }
+    if (params.model.startsWith("claude-")) {
+      return { text: await generateWithClaude(params.model, params), modelUsed: `anthropic:${params.model}` };
+    }
     throw new Error(`Modelo desconhecido: ${params.model}`);
   }
   const choice = await resolveChoice(params.companyId);
-  if (choice.provider === "groq") return generateWithGroq(choice.model, params);
+  if (choice.provider === "groq") {
+    return { text: await generateWithGroq(choice.model, params), modelUsed: `groq:${choice.model}` };
+  }
   try {
-    return await generateWithClaude(choice.model, params);
+    return { text: await generateWithClaude(choice.model, params), modelUsed: `anthropic:${choice.model}` };
   } catch (error) {
     if (!readEnv("GROQ_API_KEY")) throw error;
     console.error("[ia] Claude falhou, usando a Groq como reserva:", error);
-    return generateWithGroq(GROQ_MODEL, params);
+    return { text: await generateWithGroq(GROQ_MODEL, params), modelUsed: `groq:${GROQ_MODEL}` };
   }
 }

@@ -7,7 +7,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { Prisma } from "@prisma/client";
 
-import { aiModelId, geminiGenerate } from "@/lib/gemini";
+import { geminiGenerate, generateWithModelInfo } from "@/lib/gemini";
 import { parseCareer, type CareerProfile } from "@/server/models/career.model";
 import { parseContactJson } from "@/server/models/intake.model";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -126,12 +126,12 @@ async function scoreMaterial(
   material: string,
   companyId?: string,
   model?: string
-): Promise<{ score: number; reasoning: string }> {
+): Promise<{ score: number; reasoning: string; modelUsed: string }> {
   const criteria =
     job.aiCriteria.length > 0
       ? job.aiCriteria.map((c) => `- ${c}`).join("\n")
       : (job.requirements ?? "Sem critérios específicos.");
-  const raw = await geminiGenerate({
+  const { text: raw, modelUsed } = await generateWithModelInfo({
     system: AI_PROMPT,
     prompt: `Vaga: ${job.title}\n\nCritérios de aderência:\n${criteria}\n\n${material}`,
     maxTokens: 300,
@@ -147,7 +147,7 @@ async function scoreMaterial(
   if (!Number.isFinite(score) || score < 0 || score > 100) {
     throw new Error(`Score inválido retornado pela IA: ${raw}`);
   }
-  return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500) };
+  return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500), modelUsed };
 }
 
 /** Texto de um PDF do Storage (ou da demonstração). */
@@ -378,7 +378,8 @@ export async function analyzeApplication(
     await onStep(
       `Comparando ${material.length.toLocaleString("pt-BR")} caracteres com os critérios da vaga`
     );
-    const { score, reasoning } = await scoreMaterial(application.job, material, application.company.id);
+    // modelUsed: o modelo que DE FATO deu a nota (pode ser a reserva, se o escolhido falhou).
+    const { score, reasoning, modelUsed } = await scoreMaterial(application.job, material, application.company.id);
 
     await onStep(
       criteriaList.length > 0 ? "Conferindo critério por critério" : "Resumindo o perfil"
@@ -388,7 +389,7 @@ export async function analyzeApplication(
     await updateApplicationAi(applicationId, {
       aiScore: score,
       aiReasoning: reasoning,
-      aiModel: await aiModelId(application.company.id),
+      aiModel: modelUsed,
       aiChecklist: checklist ?? Prisma.DbNull,
       aiProfile: segment.role,
       aiArea: segment.area,

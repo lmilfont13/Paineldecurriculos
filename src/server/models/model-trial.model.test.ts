@@ -44,3 +44,16 @@ describe("veredito do teste de modelo", () => {
     expect(s.compared).toBe(5);
   });
 });
+
+import { explainAiError } from "@/server/models/model-trial.model";
+
+describe("explicação do erro da IA", () => {
+  it("traduz os erros comuns em motivo e ação", () => {
+    expect(explainAiError("ANTHROPIC_API_KEY não configurada").reason).toMatch(/não está configurada/);
+    expect(explainAiError('Claude 401: {"type":"authentication_error","message":"invalid x-api-key"}').reason).toMatch(/recusada/);
+    expect(explainAiError('Claude 400: {"message":"Your credit balance is too low"}').reason).toMatch(/sem crédito/);
+    expect(explainAiError('Claude 404: {"type":"not_found_error","message":"model: claude-haiku-5-5"}').reason).toMatch(/não está disponível/);
+    expect(explainAiError("Claude 529: overloaded").reason).toMatch(/sobrecarregada/);
+    expect(explainAiError("Score inválido retornado pela IA: oi").reason).toMatch(/fora do formato/);
+  });
+});

@@ -2,7 +2,7 @@ import "server-only";
 
 import { currentModelOption } from "@/lib/gemini";
 import { AI_MODEL_OPTIONS } from "@/server/models/ai-model.model";
-import { summarizeTrial, type TrialRow, type TrialScore, type TrialSummary } from "@/server/models/model-trial.model";
+import { DEFAULT_CUTOFF, summarizeTrial, type TrialRow, type TrialScore, type TrialSummary } from "@/server/models/model-trial.model";
 import { titleCasePt } from "@/server/models/text.model";
 import { findRecentAnalyzedApplications } from "@/server/repositories/application.repository";
 import { loadApplicationMaterial, scoreMaterialWithModel } from "@/server/services/ai.service";
@@ -18,6 +18,7 @@ async function safeScore(fn: () => Promise<{ score: number; reasoning: string }>
   try {
     return await fn();
   } catch (error) {
+    console.error("[teste de modelo] falha da IA:", error);
     return { error: error instanceof Error ? error.message.slice(0, 160) : "Falha na IA." };
   }
 }
@@ -75,7 +76,8 @@ export async function runModelTrial(companyId: string, candidateModel: string): 
     applicationId: app.id,
     name: titleCasePt(app.name),
     jobTitle: app.job.title,
-    minScore: app.job.aiMinScore,
+    minScore: app.job.aiMinScore > 0 ? app.job.aiMinScore : DEFAULT_CUTOFF,
+    minIsDefault: !(app.job.aiMinScore > 0),
     reference: scores[i * 2],
     candidate: scores[i * 2 + 1],
   }));

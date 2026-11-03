@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { FlaskConical, Loader2 } from "lucide-react";
 
 import { runModelTrialAction } from "@/server/controllers/settings.controller";
-import { verdictCopy, type TrialScore, type TrialVerdict } from "@/server/models/model-trial.model";
+import { explainAiError, verdictCopy, type TrialScore, type TrialVerdict } from "@/server/models/model-trial.model";
 import type { ModelTrialResult } from "@/server/services/model-trial.service";
 
 type Option = { id: string; label: string; available: boolean };
@@ -41,6 +41,20 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
 
   const ok = result?.ok ? result : null;
   const flagged = new Set(ok?.summary.flagged ?? []);
+  // Erros do modelo em teste, agrupados pelo motivo (o mais comum primeiro).
+  const errorGroups = (() => {
+    if (!ok) return [];
+    const counts = new Map<string, { reason: string; action: string; detail: string; count: number }>();
+    for (const r of ok.rows) {
+      if ("error" in r.candidate) {
+        const e = explainAiError(r.candidate.error);
+        const cur = counts.get(e.reason);
+        if (cur) cur.count += 1;
+        else counts.set(e.reason, { ...e, detail: r.candidate.error, count: 1 });
+      }
+    }
+    return [...counts.values()].sort((a, b) => b.count - a.count);
+  })();
 
   return (
     <section className="mt-6 rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
@@ -116,6 +130,26 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
             </p>
           </div>
 
+          {errorGroups.length > 0 && (
+            <div className="mt-4 rounded-xl border border-[#f0c4c0] bg-[#fbeae8] p-4 text-[#7a2424]">
+              <p className="text-[13px] font-semibold">
+                O {labelFor[ok.candidateModel] ?? "modelo testado"} não respondeu em{" "}
+                {errorGroups.reduce((n, g) => n + g.count, 0)} de {ok.rows.length} candidatos
+              </p>
+              {errorGroups.map((g) => (
+                <div key={g.reason} className="mt-2 text-[13px] leading-5">
+                  <p>
+                    <strong>Motivo:</strong> {g.reason} ({g.count}×)
+                  </p>
+                  <p>
+                    <strong>O que fazer:</strong> {g.action}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-[11px] opacity-80">Detalhe técnico: {g.detail}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="mt-4 overflow-x-auto rounded-xl border border-[#e4e4e7]">
             <table className="w-full min-w-[480px] text-left text-[12px]">
               <thead className="bg-[#fafaf9] text-[11px] uppercase tracking-wider text-[#a1a1aa]">
@@ -140,7 +174,13 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
                         <p className="mt-0.5 line-clamp-2 text-[11px] text-[#71717a]">{r.candidate.reasoning}</p>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-[#a1a1aa]">{r.minScore}</td>
+                    <td
+                      className="px-3 py-2 text-right tabular-nums text-[#a1a1aa]"
+                      title={r.minIsDefault ? "Vaga sem nota mínima (banco de talentos): comparado com 60" : undefined}
+                    >
+                      {r.minScore}
+                      {r.minIsDefault ? "*" : ""}
+                    </td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{scoreText(r.reference)}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{scoreText(r.candidate)}</td>
                   </tr>
@@ -149,6 +189,7 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
             </table>
           </div>
           <p className="mt-2 text-[11px] text-[#a1a1aa]">
+            {ok.rows.some((r) => r.minIsDefault) && "* Vaga sem nota mínima (banco de talentos): comparado com 60. "}
             Notas de IA variam alguns pontos até no mesmo modelo; o que pesa é a mesma decisão. A justificativa abaixo do
             nome é a do modelo testado. Se gostar do resultado, troque o modelo acima.
           </p>

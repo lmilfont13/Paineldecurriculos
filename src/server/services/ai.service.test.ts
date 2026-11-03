@@ -27,8 +27,9 @@ vi.mock("@/server/repositories/application.repository", () => ({
 
 const generate = vi.fn();
 vi.mock("@/lib/gemini", () => ({
-  aiModelId: () => "groq:teste",
   geminiGenerate: (...a: unknown[]) => generate(...a),
+  // A nota grava o modelo que DE FATO respondeu (aqui, a reserva da Groq).
+  generateWithModelInfo: async (...a: unknown[]) => ({ text: await generate(...a), modelUsed: "groq:teste" }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 const captureResumePhoto = vi.fn(async () => false);
