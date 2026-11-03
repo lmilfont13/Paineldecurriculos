@@ -26,6 +26,17 @@ export async function getPublicCompanyBySlug(
   return toPublicCompany(company);
 }
 
+/**
+ * E-mail para o candidato exercer os direitos da LGPD (Aviso de Privacidade):
+ * o e-mail da empresa, se for um e-mail válido. Só empresa ativa.
+ */
+export async function getPrivacyContactEmail(slug: string): Promise<string | null> {
+  const company = await findCompanyBySlug(slug);
+  if (!company || !company.isActive) return null;
+  const email = company.email?.trim() ?? "";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
 /** Empresa do gestor logado (uso interno — dados completos). */
 export function getCompanyById(id: string) {
   return findCompanyById(id);

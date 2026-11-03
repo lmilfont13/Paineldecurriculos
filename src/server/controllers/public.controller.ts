@@ -17,6 +17,7 @@ import {
 import { getSessionCandidate } from "@/server/services/candidate.service";
 import {
   getDefaultCompanySlug,
+  getPrivacyContactEmail,
   getPublicCompanyBySlug,
 } from "@/server/services/company.service";
 import { listApplicationFormFields } from "@/server/services/form.service";
@@ -177,4 +178,12 @@ export async function getTalentBankEntryPath(slug: string): Promise<string | nul
 /** Vagas públicas abertas para o sitemap.xml (Google for Jobs). */
 export async function getSitemapJobs() {
   return listSitemapJobs();
+}
+
+/** Aviso de Privacidade (LGPD) da empresa: dados públicos + e-mail de contato. */
+export async function getPrivacyPageData(slug: string) {
+  const company = await getTenant(slug);
+  if (!company) return null;
+  const contactEmail = await getPrivacyContactEmail(slug);
+  return { company, contactEmail };
 }

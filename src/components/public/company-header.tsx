@@ -217,12 +217,15 @@ export function CompanyFooter({ company }: { company: PublicCompany }) {
           {company.sector ? ` · ${company.sector}` : ""}
         </span>
         <div className="flex items-center gap-4">
-          <a
-            href="/login"
+          <Link
+            href={`/${company.slug}/privacidade`}
             className="transition-colors hover:text-[#78716c]"
           >
+            Privacidade
+          </Link>
+          <Link href="/login" className="transition-colors hover:text-[#78716c]">
             Área do gestor
-          </a>
+          </Link>
           <span>Página de vagas feita com Triagem</span>
         </div>
       </div>

@@ -614,6 +614,8 @@ export function createApplication(data: {
   pcdDetails?: string | null;
   aiState: AIState;
   answers: { fieldId: string; value: string }[];
+  consentAt?: Date | null;
+  consentVersion?: string | null;
   isDemo?: boolean;
   preRegistered?: boolean;
 }) {
@@ -714,6 +716,8 @@ export function completePreRegisteredApplication(
     isPcd?: boolean;
     pcdDetails?: string | null;
     answers: { fieldId: string; value: string }[];
+    consentAt?: Date | null;
+    consentVersion?: string | null;
   }
 ) {
   const { answers, ...rest } = data;

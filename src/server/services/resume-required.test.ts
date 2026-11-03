@@ -19,7 +19,7 @@ vi.mock("@/server/services/form.service", () => ({
 
 import { submitApplication } from "@/server/services/application.service";
 
-const input = { jobId: "j1", name: "Maria", phone: "85999991234", isPcd: false, answers: {} };
+const input = { jobId: "j1", name: "Maria", phone: "85999991234", isPcd: false, answers: {}, consent: true };
 const candidate = (resumeUrl: string | null) =>
   ({ id: "c1", resumeUrl, birthDate: null }) as never;
 

@@ -234,6 +234,10 @@ model Application {
   /// Cadastro rápido feito pelo gestor (só e-mail): o candidato completa depois.
   preRegistered Boolean   @default(false)
   photoPath     String?
+  /// LGPD: quando o candidato aceitou o Aviso de Privacidade nesta candidatura
+  /// e qual versão do texto (prova do consentimento — art. 8º, §2º).
+  consentAt      DateTime?
+  consentVersion String?
   /// Texto extraído do PDF do currículo — alimenta a busca por conteúdo.
   resumeText    String?
   aiProfile     String?

@@ -68,6 +68,8 @@ export const applicationInputSchema = z.object({
   name: z.string().min(2, "Informe seu nome completo."),
   // e-mail vem da conta do candidato (sessão), não do formulário
   phone: z.string().min(8, "Informe um telefone válido."),
+  /** LGPD: aceite do Aviso de Privacidade (exigido em submitApplication). */
+  consent: z.boolean().optional(),
   birthDate: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),

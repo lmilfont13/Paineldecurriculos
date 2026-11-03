@@ -113,6 +113,7 @@ import {
   withPhotoUrls,
 } from "@/server/services/resume-photo.service";
 import { withLargePhotoPaths } from "@/server/models/photo.model";
+import { CONSENT_REQUIRED_MESSAGE, CONSENT_VERSION } from "@/server/models/consent.model";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
@@ -724,6 +725,10 @@ export async function submitApplication(
   input: Omit<ApplicationInput, "slug">,
   uploadedResumePath: string | null
 ): Promise<SubmitApplicationResult> {
+  // LGPD: sem o aceite do Aviso de Privacidade, nada é gravado.
+  if (input.consent !== true) {
+    return { ok: false, error: CONSENT_REQUIRED_MESSAGE };
+  }
   const job = await findJobById(input.jobId);
   if (!job || job.companyId !== companyId || job.status !== "OPEN") {
     return { ok: false, error: "Esta vaga não está mais aberta." };
@@ -817,6 +822,7 @@ export async function submitApplication(
 
   // Cadastro rápido do gestor: o candidato completa a mesma candidatura
   // (mantém histórico e notas); senão, cria uma nova.
+  const consentAt = new Date();
   const application = existing
     ? await completePreRegisteredApplication(existing.id, {
         name: titleCasePt(input.name),
@@ -846,6 +852,8 @@ export async function submitApplication(
         isPcd,
         pcdDetails,
         answers,
+        consentAt,
+        consentVersion: CONSENT_VERSION,
       })
     : await createApplication({
         jobId: job.id,
@@ -882,6 +890,8 @@ export async function submitApplication(
         // duas coisas. A própria análise marca NO_RESUME se não houver material.
         aiState: "WAITING",
         answers,
+        consentAt,
+        consentVersion: CONSENT_VERSION,
       });
 
   // CA2: o que o candidato preencheu vira perfil para as próximas vagas

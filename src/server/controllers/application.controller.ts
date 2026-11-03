@@ -377,6 +377,7 @@ export async function submitApplicationAction(
     hasCnh: formData.get("hasCnh") || undefined,
     isPcd: formData.get("isPcd") === "true",
     pcdDetails: formData.get("pcdDetails") || undefined,
+    consent: formData.get("consent") === "true",
     answers,
   });
   if (!parsed.success) {

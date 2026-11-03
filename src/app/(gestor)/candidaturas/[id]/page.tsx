@@ -183,6 +183,15 @@ export default async function CandidaturaDetailPage({
                       {app.age} anos
                     </span>
                   )}
+                  {app.consentAt && (
+                    <span
+                      className="text-[#a1a1aa]"
+                      title={`Aceitou o Aviso de Privacidade (LGPD) em ${formatAppliedAt(app.consentAt, true)} · versão ${app.consentVersion ?? "-"}`}
+                    >
+                      {" · "}
+                      LGPD aceita
+                    </span>
+                  )}
                   {app.status === "PENDING" && (
                     <>
                       {" · "}

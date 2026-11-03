@@ -11,6 +11,10 @@ import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
 import {
+  CONSENT_REQUIRED_MESSAGE,
+  consentCheckboxText,
+} from "@/server/models/consent.model";
+import {
   requestResumeUploadAction,
   submitApplicationAction,
 } from "@/server/controllers/application.controller";
@@ -108,6 +112,8 @@ export function ApplyWizard({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // LGPD: aceite do Aviso de Privacidade, exigido para enviar (e de novo no servidor).
+  const [consent, setConsent] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,6 +177,10 @@ export function ApplyWizard({
   }
 
   function submit() {
+    if (!consent) {
+      setError(CONSENT_REQUIRED_MESSAGE);
+      return;
+    }
     setError(null);
 
     startTransition(async () => {
@@ -243,6 +253,7 @@ export function ApplyWizard({
           }
         }
         formData.set("answers", JSON.stringify(mergedAnswers));
+        formData.set("consent", String(consent));
         if (resumePath) formData.set("resumePath", resumePath);
 
         const result = await submitApplicationAction(formData);
@@ -646,6 +657,38 @@ export function ApplyWizard({
                   }
                 />
               </dl>
+
+              {/* LGPD: consentimento específico e destacado antes do envio */}
+              <label
+                className={`mb-4 mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                  consent
+                    ? "border-[var(--brand-primary)] bg-white"
+                    : "border-[#e4e4e7] bg-[#fafaf9]"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => {
+                    setConsent(e.target.checked);
+                    if (e.target.checked) setError(null);
+                  }}
+                  className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                />
+                <span className="text-[13px] leading-5 text-[#3f3f46]">
+                  {consentCheckboxText(company.name)}{" "}
+                  <a
+                    href={`/${company.slug}/privacidade`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium underline underline-offset-2"
+                    style={{ color: "var(--brand-primary)" }}
+                  >
+                    Ler o Aviso de Privacidade
+                  </a>
+                </span>
+              </label>
             </StepShell>
           )}
         </div>
@@ -686,7 +729,8 @@ export function ApplyWizard({
             <button
               type="button"
               onClick={submit}
-              disabled={pending}
+              disabled={pending || !consent}
+              title={consent ? undefined : CONSENT_REQUIRED_MESSAGE}
               className="flex h-10 w-[200px] items-center justify-center gap-2 rounded-2xl text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60"
               style={{
                 backgroundColor: "var(--brand-primary)",
