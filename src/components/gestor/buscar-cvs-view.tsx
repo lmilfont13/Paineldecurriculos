@@ -28,10 +28,12 @@ import {
   Keyboard,
   Languages,
   Layers,
+  List,
   MapPin,
   MessageCircle,
   Printer,
   RotateCcw,
+  Rows3,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -97,6 +99,11 @@ export function BuscarCvsView({
   });
 
   const [sort, setSort] = useState<CvSearchSort>("score");
+  const [viewMode, setViewMode] = useState<"detailed" | "compact">(() => {
+    if (typeof window === "undefined") return "detailed";
+    const stored = window.localStorage.getItem("buscar-cvs-view-mode");
+    return stored === "detailed" || stored === "compact" ? stored : "detailed";
+  });
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateCvCard | null>(null);
   const [drawerTab, setDrawerTab] = useState<"pdf" | "ai" | "text">("pdf");
@@ -110,6 +117,11 @@ export function BuscarCvsView({
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Lembra o modo de exibição escolhido (Dossiê x Compacto) entre visitas
+  useEffect(() => {
+    window.localStorage.setItem("buscar-cvs-view-mode", viewMode);
+  }, [viewMode]);
 
   // Facetas calculadas da base inteira
   // Uma entrada por pessoa: quem se candidatou a várias vagas não aparece repetido.
@@ -453,7 +465,8 @@ export function BuscarCvsView({
       {/* Grid Principal: Sidebar Facetada (Esquerda) + Feed de Candidatos (Direita) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
         {/* BARRA LATERAL ESQUERDA: Filtros Facetados (Padrão InfoJobs Michelin) */}
-        <aside className="space-y-4">
+        {/* Fixa no desktop com rolagem própria, independente da rolagem da lista de candidatos */}
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <div className="rounded-3xl border border-[#e4e4e7] bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-3.5">
               <span className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-[#0a0a0a]">
@@ -854,8 +867,8 @@ export function BuscarCvsView({
 
         {/* FEED PRINCIPAL: Dossiês Executivos de Candidatos (Direita) */}
         <main className="space-y-4">
-          {/* Header da Lista de Resultados */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-5 py-3.5 shadow-xs">
+          {/* Header da Lista de Resultados — fixo no topo ao rolar a lista */}
+          <div className="sticky top-6 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white/95 px-5 py-3.5 shadow-xs backdrop-blur-sm">
             <div className="flex items-center gap-2 text-xs text-[#71717a]">
               <span>
                 <strong className="text-sm font-bold text-[#0a0a0a]">{sorted.length}</strong>{" "}
@@ -869,6 +882,36 @@ export function BuscarCvsView({
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Alternância de modo de exibição: Dossiê (detalhado) x Compacto */}
+              <div className="flex items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("detailed")}
+                  title="Modo Dossiê: cards detalhados"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    viewMode === "detailed"
+                      ? "bg-white text-[#0a0a0a] shadow-xs"
+                      : "text-[#71717a] hover:text-[#0a0a0a]"
+                  }`}
+                >
+                  <Rows3 className="size-3.5" />
+                  Dossiê
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("compact")}
+                  title="Modo Compacto: linhas resumidas"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    viewMode === "compact"
+                      ? "bg-white text-[#0a0a0a] shadow-xs"
+                      : "text-[#71717a] hover:text-[#0a0a0a]"
+                  }`}
+                >
+                  <List className="size-3.5" />
+                  Compacto
+                </button>
+              </div>
+
               <span className="text-xs font-medium text-[#a1a1aa]">Ordenar:</span>
               <select
                 value={sort}
@@ -905,7 +948,7 @@ export function BuscarCvsView({
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className={viewMode === "compact" ? "divide-y divide-[#f0f0ef] rounded-3xl border border-[#e4e4e7] bg-white shadow-xs" : "space-y-4"}>
               {sorted.map((item, index) => {
                 const isSelected = selectedIndex === index;
                 const snippet = extractResumeSnippet(item.resumeText, filters.keyword);
@@ -918,6 +961,102 @@ export function BuscarCvsView({
                       `Olá ${item.name.split(" ")[0]}, tudo bem? Vimos seu perfil e gostaríamos de conversar sobre uma oportunidade.`
                     )}`
                   : null;
+
+                if (viewMode === "compact") {
+                  return (
+                    <div
+                      key={item.id}
+                      ref={(el) => {
+                        cardRefs.current[index] = el;
+                      }}
+                      onClick={() => setSelectedIndex(index)}
+                      className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 transition ${
+                        isSelected ? "bg-stone-50 ring-1 ring-inset ring-[#0a0a0a]/10" : "hover:bg-[#fafaf9]"
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <CandidateAvatar
+                          name={item.name}
+                          photoUrl={item.photoUrl}
+                          className="size-9 rounded-xl bg-[#1c1917] text-xs font-bold text-white object-cover"
+                        />
+                        {isTopMatch && (
+                          <Sparkles className="absolute -right-1 -top-1 size-3 fill-amber-400 text-amber-500" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-xs font-bold text-[#0a0a0a]">{item.name}</span>
+                          {item.aiLevel && (
+                            <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${levelBadgeClass}`}>
+                              {item.aiLevel}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-[#71717a]">
+                          <span className="truncate">{item.desiredRole || item.aiProfile || item.job.title}</span>
+                          {(item.neighborhood || item.city) && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-0.5 shrink-0">
+                                <MapPin className="size-2.5 text-[#a1a1aa]" />
+                                {[item.neighborhood, item.city].filter(Boolean).join(", ")}
+                              </span>
+                            </>
+                          )}
+                          {item.salaryExpectation && (
+                            <>
+                              <span>•</span>
+                              <span className="shrink-0">{item.salaryExpectation}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {item.aiScore !== null && (
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            item.aiScore >= 80
+                              ? "bg-emerald-50 text-emerald-700"
+                              : item.aiScore >= 60
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-stone-100 text-stone-600"
+                          }`}
+                        >
+                          {item.aiScore}%
+                        </span>
+                      )}
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        {whatsappUrl && (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="WhatsApp"
+                            className="inline-flex size-7 items-center justify-center rounded-lg text-emerald-700 hover:bg-emerald-50"
+                          >
+                            <MessageCircle className="size-4" />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCandidate(item);
+                            setDrawerTab(item.resumeUrl ? "pdf" : "ai");
+                          }}
+                          title="Ver Dossiê / PDF"
+                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] hover:bg-stone-100 hover:text-[#0a0a0a]"
+                        >
+                          <Eye className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
 
                 return (
                   <div
