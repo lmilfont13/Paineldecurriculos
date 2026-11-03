@@ -16,6 +16,12 @@ type GenerateParams = {
   json?: boolean;
   /** Empresa dona da análise: define o modelo escolhido nas Configurações. */
   companyId?: string;
+  /**
+   * Força um modelo ("claude-…" ou "groq:…"), ignorando a escolha da empresa e
+   * SEM a reserva automática na Groq — usado no teste de modelos, para nunca
+   * comparar um modelo achando que é outro.
+   */
+  model?: string;
 };
 
 type Choice = { provider: "anthropic" | "groq"; model: string };
@@ -30,6 +36,12 @@ async function resolveChoice(companyId?: string): Promise<Choice> {
     return { provider: "anthropic", model: readEnv("ANTHROPIC_MODEL") ?? CLAUDE_DEFAULT_MODEL };
   }
   return { provider: "groq", model: GROQ_MODEL };
+}
+
+/** Modelo que a empresa usa hoje, no formato das opções ("claude-…" ou "groq:…"). */
+export async function currentModelOption(companyId?: string): Promise<string> {
+  const c = await resolveChoice(companyId);
+  return c.provider === "groq" ? `groq:${c.model}` : c.model;
 }
 
 /** Identificação do modelo gravada em cada nota (Application.aiModel). */
@@ -124,6 +136,11 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
  * (O nome "geminiGenerate" é histórico — o provedor mudou mais de uma vez.)
  */
 export async function geminiGenerate(params: GenerateParams): Promise<string> {
+  if (params.model) {
+    if (params.model.startsWith("groq:")) return generateWithGroq(params.model.slice(5), params);
+    if (params.model.startsWith("claude-")) return generateWithClaude(params.model, params);
+    throw new Error(`Modelo desconhecido: ${params.model}`);
+  }
   const choice = await resolveChoice(params.companyId);
   if (choice.provider === "groq") return generateWithGroq(choice.model, params);
   try {

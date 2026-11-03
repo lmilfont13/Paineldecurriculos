@@ -124,7 +124,8 @@ function composeMaterial(resumeText: string, answersText: string): string {
 async function scoreMaterial(
   job: ScorableJob,
   material: string,
-  companyId?: string
+  companyId?: string,
+  model?: string
 ): Promise<{ score: number; reasoning: string }> {
   const criteria =
     job.aiCriteria.length > 0
@@ -136,6 +137,7 @@ async function scoreMaterial(
     maxTokens: 300,
     json: true,
     companyId,
+    model,
   });
   const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
     score?: unknown;
@@ -172,7 +174,7 @@ export async function extractResumeContact(text: string) {
 }
 
 /** Currículo (texto do PDF) + respostas de uma candidatura, ou null sem material. */
-async function loadApplicationMaterial(applicationId: string): Promise<string | null> {
+export async function loadApplicationMaterial(applicationId: string): Promise<string | null> {
   const application = await findApplicationById(applicationId);
   if (!application) return null;
   const answersText = buildAnswersText(application.answers);
@@ -266,6 +268,18 @@ export async function generateCandidateSummary(
       error: error instanceof Error ? error.message.slice(0, 200) : "Falha na IA.",
     };
   }
+}
+
+/**
+ * Teste de modelos: a mesma nota da triagem (AI_PROMPT imutável, regra 3),
+ * forçando um modelo. Não grava nada — só devolve a nota.
+ */
+export function scoreMaterialWithModel(
+  job: ScorableJob,
+  material: string,
+  model: string
+): Promise<{ score: number; reasoning: string }> {
+  return scoreMaterial(job, material, undefined, model);
 }
 
 /**

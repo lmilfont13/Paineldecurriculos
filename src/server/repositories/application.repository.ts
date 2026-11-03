@@ -883,3 +883,17 @@ export function findApplicationsForPortfolio(companyId: string) {
     },
   });
 }
+
+/** Teste de modelo: últimas candidaturas já analisadas da empresa (com material). */
+export function findRecentAnalyzedApplications(companyId: string, limit: number) {
+  return prisma.application.findMany({
+    where: { companyId, isDemo: false, aiState: "DONE", resumeUrl: { not: null } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      job: { select: { title: true, aiMinScore: true, aiCriteria: true, requirements: true } },
+    },
+  });
+}

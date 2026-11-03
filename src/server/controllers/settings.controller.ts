@@ -1,5 +1,6 @@
 "use server";
 
+import { runModelTrial, type ModelTrialResult } from "@/server/services/model-trial.service";
 import { revalidatePath } from "next/cache";
 
 import { AI_MODEL_OPTIONS, parseAiModelChoice } from "@/server/models/ai-model.model";
@@ -176,4 +177,13 @@ export async function updateAiModelAction(
   } catch { /* auditoria nunca bloqueia a ação principal */ }
   revalidatePath("/configuracoes/ia");
   return { ok: true };
+}
+
+/**
+ * Teste de modelo de IA: compara o modelo atual com outro nos últimos
+ * candidatos da empresa, sem gravar nada. Só gestor (empresa da sessão).
+ */
+export async function runModelTrialAction(candidateModel: string): Promise<ModelTrialResult> {
+  const user = await requireManager();
+  return runModelTrial(user.companyId, String(candidateModel ?? ""));
 }
