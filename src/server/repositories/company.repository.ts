@@ -49,7 +49,7 @@ export function findActiveCompanies() {
       logoUrl: true,
       primaryColor: true,
       sector: true,
-      _count: { select: { jobs: { where: { status: "OPEN" } } } },
+      _count: { select: { jobs: { where: { status: "OPEN", isTalentPool: false } } } },
     },
   });
 }
