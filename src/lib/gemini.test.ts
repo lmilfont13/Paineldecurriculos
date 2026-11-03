@@ -62,3 +62,19 @@ describe("modelos que recusam temperature", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("recusa de temperature com chamadas em paralelo", () => {
+  it("todas as chamadas que saíram com temperature repetem sem — nenhuma desiste", async () => {
+    const reject = () =>
+      new Response('{"error":{"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}}', { status: 400 });
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      await new Promise((r) => setTimeout(r, 5));
+      return "temperature" in body ? reject() : ok({ content: [{ type: "text", text: "ok" }] });
+    });
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () => generateWithModelInfo({ system: "s", prompt: "p", model: "claude-sonnet-5-5" }))
+    );
+    expect(results.every((r) => r.text === "ok")).toBe(true);
+  });
+});

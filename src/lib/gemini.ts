@@ -133,10 +133,13 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
       }),
     });
 
-  let res = await call(!CLAUDE_NO_TEMPERATURE.has(model));
+  // Decide pela chamada que FOI feita: em paralelo, outra chamada pode já ter
+  // marcado o modelo enquanto esta ainda saía com temperature.
+  const sentTemperature = !CLAUDE_NO_TEMPERATURE.has(model);
+  let res = await call(sentTemperature);
   if (!res.ok) {
     const body = await res.text();
-    if (!CLAUDE_NO_TEMPERATURE.has(model) && isTemperatureRejection(res.status, body)) {
+    if (sentTemperature && isTemperatureRejection(res.status, body)) {
       // Modelo novo: repete sem temperature e não manda mais para ele.
       CLAUDE_NO_TEMPERATURE.add(model);
       res = await call(false);

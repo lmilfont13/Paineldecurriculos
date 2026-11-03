@@ -185,3 +185,42 @@ export function parseSegment(raw: string): ProfileSegment {
 export function parseProfile(raw: string): string | null {
   return parseSegment(raw).role;
 }
+
+/**
+ * Lê a resposta da nota ({ score, reasoning }). Tolerante a JSON cortado no
+ * fim (modelo que escreve demais e bate no limite de tokens): a nota que já
+ * veio é aproveitada, e a justificativa entra até onde chegou, com "…".
+ * Sem nota válida (0–100), é erro.
+ */
+export function parseScoreResponse(raw: string): { score: number; reasoning: string } {
+  let score = NaN;
+  let reasoning = "";
+  const full = raw.match(/\{[\s\S]*\}/)?.[0];
+  if (full) {
+    try {
+      const parsed = JSON.parse(full) as { score?: unknown; reasoning?: unknown };
+      score = Math.round(Number(parsed.score));
+      reasoning = String(parsed.reasoning ?? "");
+    } catch {
+      /* cai na leitura tolerante abaixo */
+    }
+  }
+  if (!Number.isFinite(score)) {
+    const s = raw.match(/"score"\s*:\s*"?(\d{1,3}(?:\.\d+)?)/);
+    if (s) score = Math.round(Number(s[1]));
+    const r = raw.match(/"reasoning"\s*:\s*"((?:[^"\\]|\\.)*)("?)/);
+    if (r) {
+      let text = r[1];
+      try {
+        text = JSON.parse(`"${text.replace(/\\$/, "")}"`) as string;
+      } catch {
+        /* mantém o texto cru */
+      }
+      reasoning = r[2] === '"' ? text : `${text.trim()}…`;
+    }
+  }
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    throw new Error(`Score inválido retornado pela IA: ${raw.slice(0, 300)}`);
+  }
+  return { score, reasoning: reasoning.trim().slice(0, 500) };
+}

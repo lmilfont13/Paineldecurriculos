@@ -19,6 +19,7 @@ import {
   parseSegment,
   type ProfileSegment,
   type ChecklistItem,
+  parseScoreResponse,
 } from "@/server/models/ai.model";
 import {
   createAgentRun,
@@ -134,20 +135,14 @@ async function scoreMaterial(
   const { text: raw, modelUsed } = await generateWithModelInfo({
     system: AI_PROMPT,
     prompt: `Vaga: ${job.title}\n\nCritérios de aderência:\n${criteria}\n\n${material}`,
-    maxTokens: 300,
+    // Folga: alguns modelos escrevem justificativas longas e o JSON era cortado.
+    maxTokens: 600,
     json: true,
     companyId,
     model,
   });
-  const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
-    score?: unknown;
-    reasoning?: unknown;
-  };
-  const score = Math.round(Number(parsed.score));
-  if (!Number.isFinite(score) || score < 0 || score > 100) {
-    throw new Error(`Score inválido retornado pela IA: ${raw}`);
-  }
-  return { score, reasoning: String(parsed.reasoning ?? "").slice(0, 500), modelUsed };
+  const { score, reasoning } = parseScoreResponse(raw);
+  return { score, reasoning, modelUsed };
 }
 
 /** Texto de um PDF do Storage (ou da demonstração). */
