@@ -1104,16 +1104,11 @@ export function BuscarCvsView({
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          {/* Título de Cargo / Perfil em Destaque */}
+                          {/* Nome do candidato — sempre o título em destaque, igual ao modo Compacto */}
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="truncate text-base sm:text-lg font-bold text-[#0a0a0a]">
-                              {item.desiredRole || item.aiProfile || item.name}
+                              {item.name}
                             </h2>
-                            {item.desiredRole && item.aiProfile && item.desiredRole !== item.aiProfile && (
-                              <span className="rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-900 flex items-center gap-1">
-                                <Target className="size-3 text-indigo-600" /> Pretende: {item.desiredRole}
-                              </span>
-                            )}
                             {item.isPcd && (
                               <span className="rounded-md bg-purple-100 border border-purple-300 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">
                                 ♿ PCD
@@ -1138,10 +1133,17 @@ export function BuscarCvsView({
                             )}
                           </div>
 
-                          {/* Nome Real + Vaga + Localização / Bairro */}
+                          {/* Cargo Pretendido/Perfil IA + Localização / Bairro + Vaga */}
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#71717a]">
-                            <span className="font-semibold text-[#0a0a0a]">{item.name}</span>
-                            <span>•</span>
+                            {(item.desiredRole || item.aiProfile) && (
+                              <>
+                                <span className="flex items-center gap-1 font-semibold text-[#0a0a0a]">
+                                  <Target className="size-3 text-indigo-600" />
+                                  {item.desiredRole || item.aiProfile}
+                                </span>
+                                <span>•</span>
+                              </>
+                            )}
                             {(item.neighborhood || item.city) ? (
                               <span className="flex items-center gap-1 font-medium text-emerald-950 bg-emerald-50/80 rounded px-1.5 py-0.5 border border-emerald-200/60">
                                 <MapPin className="size-3 text-emerald-600" />
