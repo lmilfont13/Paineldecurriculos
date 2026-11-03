@@ -17,6 +17,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   ENTREVISTA_AGENDADA:          { label: "Entrevista agendada",     color: "bg-[#f5f3ff] text-[#6d28d9]" },
   RECADO_ENVIADO:               { label: "Recado enviado",          color: "bg-[#fff7ed] text-[#c2410c]" },
   RECADO_EM_MASSA:              { label: "Recado em massa",         color: "bg-[#fff7ed] text-[#c2410c]" },
+  REPROVACAO_EM_MASSA:          { label: "Reprovação em massa",     color: "bg-[#fbeae8] text-[#c23b3b]" },
   INFO_SOLICITADA:              { label: "Informações solicitadas", color: "bg-[#fff7ed] text-[#c2410c]" },
   DADOS_SENSIVEIS_VISTOS:       { label: "Dados sensíveis vistos",  color: "bg-[#fef2f2] text-[#b91c1c]" },
   NOTA_SALVA:                   { label: "Nota interna salva",      color: "bg-[#f1f0ed] text-[#71717a]" },

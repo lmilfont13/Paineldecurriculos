@@ -27,6 +27,10 @@ import {
 } from "@/server/services/message-template.service";
 import { createAuditLog } from "@/server/repositories/audit.repository";
 import {
+  rejectPendingWithMessage,
+  type BulkRejectResult,
+} from "@/server/services/bulk-reject.service";
+import {
   deleteCompanyApplications,
   extractApplicationPhoto,
   extractPhotosBulk,
@@ -671,6 +675,56 @@ export async function sendBulkMessageAction(
     } catch { /* salvar o modelo nunca bloqueia o envio */ }
   }
   revalidatePath("/candidaturas");
+  return result;
+}
+
+/**
+ * Reprova de uma vez quem ficou na triagem da vaga e envia a mensagem
+ * escolhida (no lugar do aviso automático). Decisão manual do gestor.
+ */
+export async function bulkRejectWithMessageAction(
+  jobId: string,
+  applicationIds: string[],
+  subject: string,
+  template: string,
+  channelsRaw?: string[]
+): Promise<BulkRejectResult> {
+  const user = await requireManager();
+  const result = await rejectPendingWithMessage(user.companyId, {
+    jobId: String(jobId ?? ""),
+    applicationIds: Array.isArray(applicationIds) ? applicationIds.map(String) : [],
+    subject: String(subject ?? ""),
+    template: String(template ?? ""),
+    channels: parseChannels(channelsRaw),
+  });
+  if (!result.ok) return result;
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "REPROVACAO_EM_MASSA",
+      entityType: "VAGA",
+      entityId: String(jobId),
+      metadata: {
+        rejected: result.rejected,
+        skipped: result.skipped,
+        notified: result.message?.ok ? result.message.notified : 0,
+        emailed: result.message?.ok ? result.message.emailed : 0,
+        subject: subject.trim().slice(0, 80),
+        preview: template.trim().slice(0, 80),
+      },
+    });
+  } catch { /* auditoria nunca bloqueia a ação principal */ }
+  if (subject.trim()) {
+    try {
+      await saveMessageTemplate(user.companyId, subject, template);
+    } catch { /* salvar o modelo nunca bloqueia */ }
+  }
+  revalidatePath(`/vagas/${jobId}`);
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
   return result;
 }
 

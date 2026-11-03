@@ -188,7 +188,13 @@ export async function getCompanyApplication(companyId: string, id: string) {
 export async function setApplicationStatus(
   companyId: string,
   id: string,
-  status: AppStatus
+  status: AppStatus,
+  /**
+   * communicate=false: muda a etapa sem o aviso/e-mail automático da etapa —
+   * usado quando o gestor manda a própria mensagem no lugar (reprovação em
+   * massa), para o candidato não receber duas.
+   */
+  options: { communicate?: boolean } = {}
 ) {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return null;
@@ -203,7 +209,7 @@ export async function setApplicationStatus(
     });
   }
 
-  if (status !== application.status) {
+  if (status !== application.status && options.communicate !== false) {
     // O gestor não espera e-mail/notificação: o evento é processado em
     // background. O fallback em after() mantém a comunicação funcionando
     // enquanto o Inngest de produção não estiver configurado.
