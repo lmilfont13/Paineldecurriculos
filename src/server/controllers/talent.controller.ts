@@ -9,6 +9,7 @@ import { runCareerAnalysis } from "@/server/services/career.service";
 import {
   analyzeStandbyForApplication,
   analyzeStandbyForJob,
+  backfillTalentCategories,
   deleteCompanyTalentFolder,
   getApplicationTalentInfo,
   getTalentFolder,
@@ -110,4 +111,15 @@ export async function analyzeCareerAction(applicationId: string) {
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/agentes");
   return result.ok ? { ok: true as const, jobsCompared: result.jobsCompared } : result;
+}
+
+/**
+ * Categorização retroativa: classifica candidatos já analisados pela IA
+ * (com aiArea/aiProfile) que ainda não estão em nenhuma pasta do banco de talentos.
+ */
+export async function backfillTalentCategoriesAction() {
+  const manager = await requireManager();
+  const count = await backfillTalentCategories(manager.companyId);
+  revalidatePath("/talentos");
+  return { count };
 }

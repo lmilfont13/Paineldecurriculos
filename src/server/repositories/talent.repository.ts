@@ -87,6 +87,26 @@ export function findFolderIdsForApplication(applicationId: string) {
 }
 
 /**
+ * Candidatos com perfil de IA (aiArea ou aiProfile) mas que não estão em
+ * nenhuma pasta do banco de talentos. Usado para categorização retroativa.
+ */
+export function findUncategorizedApplications(companyId: string) {
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      aiState: "DONE",
+      OR: [{ aiArea: { not: null } }, { aiProfile: { not: null } }],
+      talentItems: { none: {} },
+    },
+    select: {
+      id: true,
+      aiArea: true,
+      aiProfile: true,
+    },
+  });
+}
+
+/**
  * Candidatos em stand-by: todos os que estão em alguma pasta do banco de
  * talentos da empresa, com o perfil e as pastas de cada um.
  */

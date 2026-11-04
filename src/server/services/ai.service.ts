@@ -28,6 +28,7 @@ import {
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
 import { captureResumePhoto } from "@/server/services/resume-photo.service";
+import { autoCategorizeTalent } from "@/server/services/talent.service";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
 /**
@@ -527,6 +528,24 @@ export async function runTriageWithTracking(
         durationMs: Date.now() - startedAt.getTime(),
         finishedAt: new Date(),
       });
+
+      // Categorização automática: adiciona ao banco de talentos pela área/perfil
+      // identificados pela IA. Roda em background para não atrasar o fluxo.
+      if (result) {
+        try {
+          const fresh = await findApplicationById(applicationId);
+          if (fresh) {
+            await autoCategorizeTalent(fresh.company.id, applicationId, {
+              area: fresh.aiArea,
+              role: fresh.aiProfile,
+            });
+          }
+        } catch (e) {
+          // Falha na categorização não deve afetar o resultado da triagem.
+          console.error("[triagem] Falha na categorização automática:", e);
+        }
+      }
+
       return;
     } catch (error) {
       lastError = error;

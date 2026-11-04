@@ -25,6 +25,7 @@ import {
   findStandbyPool,
   findTalentMatchesForApplication,
   findTalentMatchesForJob,
+  findUncategorizedApplications,
   removeTalentFolderItem,
   renameTalentFolder,
   upsertTalentMatch,
@@ -95,6 +96,52 @@ async function findOrCreateFolder(companyId: string, rawName: string, area: stri
   const parsed = folderArea({ name });
   const fromName = name.includes(FOLDER_SEPARATOR) ? parsed : null;
   return createTalentFolder(companyId, name, fromName ?? area ?? null);
+}
+
+/**
+ * Categorização automática: após a IA analisar o currículo, cria (ou encontra)
+ * a pasta pelo perfil identificado (aiArea + aiProfile) e adiciona o candidato.
+ * Chamado em background após `analyzeApplication` — nunca bloqueia o candidato.
+ */
+export async function autoCategorizeTalent(
+  companyId: string,
+  applicationId: string,
+  segment: { area: string | null; role: string | null }
+): Promise<{ folderId: string; folderName: string } | null> {
+  const name = suggestFolderName(segment);
+  if (!name) return null;
+
+  // Já está nalguma pasta? Não duplica.
+  const existing = await findFolderIdsForApplication(applicationId);
+  if (existing.length > 0) return null;
+
+  const folder = await findOrCreateFolder(companyId, name, segment.area);
+  if (!folder) return null;
+
+  await addTalentFolderItem(folder.id, applicationId);
+  return { folderId: folder.id, folderName: folder.name };
+}
+
+/**
+ * Categoriza retroativamente todos os candidatos que já foram analisados pela
+ * IA (aiArea/aiProfile preenchidos) mas ainda não estão em nenhuma pasta.
+ * Retorna quantos foram categorizados.
+ */
+export async function backfillTalentCategories(companyId: string): Promise<number> {
+  const uncategorized = await findUncategorizedApplications(companyId);
+  let count = 0;
+  for (const app of uncategorized) {
+    try {
+      const result = await autoCategorizeTalent(companyId, app.id, {
+        area: app.aiArea,
+        role: app.aiProfile,
+      });
+      if (result) count++;
+    } catch (e) {
+      console.error(`[backfill] Falha ao categorizar ${app.id}:`, e);
+    }
+  }
+  return count;
 }
 
 export async function saveToTalentFolder(

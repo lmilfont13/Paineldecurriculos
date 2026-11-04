@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FolderOpen } from "lucide-react";
 
+import { TalentBackfillButton } from "@/components/gestor/talent-backfill-button";
 import { TalentFolderActions } from "@/components/gestor/talent-folder-actions";
 import { TalentBankLink } from "@/components/gestor/talent-bank-link";
 import { loadTalentBankLink, loadTalentFolders } from "@/server/controllers/talent.controller";
@@ -31,6 +32,10 @@ export default async function TalentosPage() {
       </div>
 
       {bankLink && <TalentBankLink url={bankLink} />}
+
+      <div className="mt-5">
+        <TalentBackfillButton />
+      </div>
 
       {folders.length === 0 ? (
         <div className="mt-7 rounded-2xl border border-dashed border-[#e4e4e7] bg-white p-8 text-center">
