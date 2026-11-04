@@ -93,29 +93,72 @@ export type TalentFolderSummary = {
 export const FOLDER_SEPARATOR = " · ";
 
 /**
- * Nome sugerido para a pasta, segmentado como o currículo: "Área · Função"
- * (ex.: "Logística · Motorista e entregador"). Sem área, só a função.
+ * Nome sugerido para a pasta: só a área canônica (ex.: "Vendas", "Logística").
+ * Antes usava "Área · Função", agora simplifica para ter no máximo ~10 pastas.
  */
 export function suggestFolderName(segment: { area: string | null; role: string | null }): string {
-  const role = segment.role?.trim() ?? "";
   const area = segment.area?.trim() ?? "";
-  if (!role) return area;
-  if (!area || sameFolderName(area, role)) return role;
-  return normalizeFolderName(`${area}${FOLDER_SEPARATOR}${role}`);
+  if (area) return normalizeArea(area);
+  // Sem área mas com função: tenta usar a função como área
+  const role = segment.role?.trim() ?? "";
+  return role ? normalizeArea(role) : "Outros";
 }
 
 /**
- * Normaliza área: simplifica variantes como "Vendas e Beleza", "Vendas e
- * Cosméticos", "Vendas e Estética" → "Vendas". A área deve ser ampla,
- * sem subdivisões granulares.
+ * Mapa de áreas canônicas: normaliza sinônimos e termos compostos para manter
+ * o banco de talentos com no máximo ~10 pastas. Chave = lowercase sem acento.
+ */
+const AREA_MAP: Record<string, string> = {
+  vendas: "Vendas",
+  atendimento: "Atendimento",
+  beleza: "Beleza",
+  cosmeticos: "Beleza",
+  estetica: "Beleza",
+  gestao: "Gestão",
+  logistica: "Logística",
+  transporte: "Logística",
+  "trade marketing": "Trade Marketing",
+  promocao: "Vendas",
+  varejo: "Vendas",
+  administrativo: "Administrativo",
+  saude: "Saúde",
+  ti: "TI",
+  industria: "Indústria",
+  desconhecida: "Outros",
+  indefinida: "Outros",
+};
+
+function stripAccents(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+function lookupArea(term: string): string | undefined {
+  return AREA_MAP[stripAccents(term.trim().toLowerCase())];
+}
+
+/**
+ * Normaliza área: mapeia para uma área canônica, simplifica compostos como
+ * "Vendas e Beleza" → "Vendas", "Cosméticos e vendas" → "Beleza".
+ * Desconhecida/Indefinida/vazio → "Outros".
  */
 export function normalizeArea(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "Outros";
-  // Se a área contém " e " e a primeira palavra é ampla o bastante, usa só ela.
-  // Ex.: "Vendas e Atendimento" → "Vendas", "Varejo e Atendimento" → "Varejo"
-  const match = trimmed.match(/^(\S+)\s+e\s+/i);
-  if (match) return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+
+  // Direto no mapa? (ex.: "Vendas", "Desconhecida", "Trade marketing")
+  const direct = lookupArea(trimmed);
+  if (direct) return direct;
+
+  // Composto "X e Y": pega o primeiro termo antes de " e "
+  const match = trimmed.match(/^(.+?)\s+e\s+/i);
+  if (match) {
+    const first = lookupArea(match[1]);
+    if (first) return first;
+    // Não está no mapa: capitaliza o primeiro termo
+    const t = match[1].trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 

@@ -100,6 +100,7 @@ export function CandidaturasTable({
   initialOnlyMeets = false,
   messageTemplates = [],
   companyName = "",
+  hasOpenJobs = true,
 }: {
   rows: CandidaturaRow[];
   jobs: { id: string; title: string; code?: string | null }[];
@@ -109,6 +110,8 @@ export function CandidaturasTable({
   /** Recados salvos da empresa, para o envio em massa. */
   messageTemplates?: { id: string; subject: string; body: string }[];
   companyName?: string;
+  /** Se a empresa tem vagas abertas — muda a apresentação dos pendentes. */
+  hasOpenJobs?: boolean;
 }) {
   const pendingTotal = rows.filter((r) => r.status === "PENDING").length;
 
@@ -360,17 +363,29 @@ export function CandidaturasTable({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">Candidatos</h1>
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
+            {hasOpenJobs ? "Candidatos" : "Banco de talentos"}
+          </h1>
           <span className="rounded-full bg-[#f1f0ed] px-2.5 py-1 text-[11px] font-medium text-[#57534e]">{rows.length}</span>
         </div>
         <p className="text-sm text-[#71717a]">
-          {rows.length} no total
-          {pendingTotal > 0 && (
+          {hasOpenJobs ? (
             <>
+              {rows.length} no total
+              {pendingTotal > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-medium text-[#b07818]">
+                    {pendingTotal} esperando sua resposta
+                  </span>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {rows.length} {rows.length === 1 ? "pessoa cadastrada" : "pessoas cadastradas"}
               {" · "}
-              <span className="font-medium text-[#b07818]">
-                {pendingTotal} esperando sua resposta
-              </span>
+              <span className="text-[#a1a1aa]">Nenhuma vaga aberta no momento</span>
             </>
           )}
           {anyAnalyzing && (

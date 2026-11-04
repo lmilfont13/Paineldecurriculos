@@ -10,6 +10,7 @@ import {
 import {
   FOLDER_SEPARATOR,
   folderArea,
+  normalizeArea,
   normalizeFolderName,
   sameFolderName,
   suggestFolderName,
@@ -92,12 +93,14 @@ async function findOrCreateFolder(companyId: string, rawName: string, area: stri
   const name = normalizeFolderName(rawName);
   if (!name) return null;
   const folders = await findTalentFolders(companyId);
+  // Primeiro tenta achar por nome exato normalizado
   const existing = folders.find((f) => sameFolderName(f.name, name));
   if (existing) return existing;
-  // Área: a do currículo, se o nome começa por ela; senão o prefixo "Área · ".
-  const parsed = folderArea({ name });
-  const fromName = name.includes(FOLDER_SEPARATOR) ? parsed : null;
-  return createTalentFolder(companyId, name, fromName ?? area ?? null);
+  // Depois tenta achar pela área canônica (para não duplicar "Vendas" com nomes antigos)
+  const canonical = normalizeArea(name);
+  const byArea = folders.find((f) => folderArea(f) === canonical);
+  if (byArea) return byArea;
+  return createTalentFolder(companyId, canonical, canonical);
 }
 
 /**
@@ -147,35 +150,41 @@ export async function backfillTalentCategories(companyId: string): Promise<numbe
 }
 
 /**
- * Consolida pastas duplicadas: renomeia cada pasta com o nome normalizado
- * (gênero neutro, ordem alfabética dos termos compostos) e faz merge das
- * que passam a ter o mesmo nome. Retorna { merged, renamed }.
+ * Consolida pastas por área canônica: todas as pastas cuja área normaliza
+ * para o mesmo nome (ex.: "Vendas e atendimento · Promotor" e "Vendas ·
+ * Vendedor" viram ambas "Vendas") são mescladas numa única pasta. Retorna
+ * { merged, renamed }.
  */
 export async function consolidateTalentFolders(companyId: string): Promise<{ merged: number; renamed: number }> {
   const folders = await findTalentFolders(companyId);
   let merged = 0;
   let renamed = 0;
 
-  // Mapa: chave normalizada → pasta destino (a primeira encontrada)
-  const canonical = new Map<string, { id: string; name: string; count: number }>();
+  // Mapa: área canônica → pasta destino (a com mais candidatos)
+  const canonical = new Map<string, { id: string; name: string; area: string; count: number }>();
 
-  for (const folder of folders) {
-    const newName = normalizeFolderName(folder.name);
-    const key = newName.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // Ordena: pastas com mais candidatos primeiro, para que a maior se torne destino
+  const sorted = [...folders].sort((a, b) => b._count.items - a._count.items);
 
-    const target = canonical.get(key);
+  for (const folder of sorted) {
+    // "Cadastros espontâneos" fica intocada
+    if (folder.name === "Cadastros espontâneos") continue;
+
+    const area = folderArea(folder);
+
+    const target = canonical.get(area);
     if (target) {
-      // Merge: move itens da pasta duplicada para a pasta canônica
+      // Merge: move itens para a pasta canônica
       await mergeTalentFolders(folder.id, target.id);
       target.count += folder._count.items;
       merged++;
     } else {
-      // Renomeia se o nome mudou (gênero normalizado, etc.)
-      if (folder.name !== newName) {
-        await updateTalentFolder(folder.id, { name: newName });
+      // Primeira pasta desta área: renomeia para o nome canônico
+      if (folder.name !== area) {
+        await updateTalentFolder(folder.id, { name: area, area });
         renamed++;
       }
-      canonical.set(key, { id: folder.id, name: newName, count: folder._count.items });
+      canonical.set(area, { id: folder.id, name: area, area, count: folder._count.items });
     }
   }
 

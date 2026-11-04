@@ -53,6 +53,8 @@ export default async function CandidaturasPage({
     age: ages[app.id] ?? null,
   }));
 
+  const hasOpenJobs = jobs.some((j) => j.status === "OPEN");
+
   return (
     <>
       <CandidaturasTable
@@ -63,6 +65,7 @@ export default async function CandidaturasPage({
         messageTemplates={messageTemplates}
         companyName={companyName}
         initialOnlyMeets={atende === "1"}
+        hasOpenJobs={hasOpenJobs}
       />
     </>
   );

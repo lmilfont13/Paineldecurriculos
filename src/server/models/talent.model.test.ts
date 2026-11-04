@@ -4,6 +4,7 @@ import {
   normalizeFolderName,
   normalizeArea,
   sameFolderName,
+  suggestFolderName,
   suggestTalentPool,
 } from "@/server/models/talent.model";
 import { parseProfile } from "@/server/models/ai.model";
@@ -41,18 +42,50 @@ describe("pastas do banco de talentos", () => {
 });
 
 describe("normalizeArea", () => {
-  it("simplifica áreas compostas", () => {
+  it("mapeia sinônimos para área canônica", () => {
+    expect(normalizeArea("Vendas")).toBe("Vendas");
+    expect(normalizeArea("varejo")).toBe("Vendas");
+    expect(normalizeArea("promoção")).toBe("Vendas");
+    expect(normalizeArea("Cosméticos")).toBe("Beleza");
+    expect(normalizeArea("Estética")).toBe("Beleza");
+    expect(normalizeArea("Transporte")).toBe("Logística");
+    expect(normalizeArea("Desconhecida")).toBe("Outros");
+    expect(normalizeArea("Indefinida")).toBe("Outros");
+  });
+
+  it("simplifica áreas compostas pelo primeiro termo", () => {
     expect(normalizeArea("Vendas e Atendimento")).toBe("Vendas");
     expect(normalizeArea("Vendas e Beleza")).toBe("Vendas");
     expect(normalizeArea("Vendas e Cosméticos")).toBe("Vendas");
-    expect(normalizeArea("Vendas e Estética")).toBe("Vendas");
-    expect(normalizeArea("Varejo e Atendimento")).toBe("Varejo");
+    expect(normalizeArea("Varejo e Atendimento")).toBe("Vendas");
+    expect(normalizeArea("Cosméticos e vendas")).toBe("Beleza");
   });
 
   it("mantém áreas simples intactas", () => {
-    expect(normalizeArea("Vendas")).toBe("Vendas");
     expect(normalizeArea("Logística")).toBe("Logística");
+    expect(normalizeArea("Trade Marketing")).toBe("Trade Marketing");
     expect(normalizeArea("")).toBe("Outros");
+  });
+
+  it("capitaliza áreas desconhecidas do mapa", () => {
+    expect(normalizeArea("educação")).toBe("Educação");
+  });
+});
+
+describe("suggestFolderName", () => {
+  it("retorna a área canônica", () => {
+    expect(suggestFolderName({ area: "Vendas e atendimento", role: "Promotor" })).toBe("Vendas");
+    expect(suggestFolderName({ area: "Cosméticos", role: "Manicure" })).toBe("Beleza");
+  });
+
+  it("usa o role como fallback quando não há área", () => {
+    expect(suggestFolderName({ area: null, role: "Logística" })).toBe("Logística");
+    expect(suggestFolderName({ area: "", role: "varejo" })).toBe("Vendas");
+  });
+
+  it("retorna Outros quando não há nada", () => {
+    expect(suggestFolderName({ area: null, role: null })).toBe("Outros");
+    expect(suggestFolderName({ area: "", role: "" })).toBe("Outros");
   });
 });
 
