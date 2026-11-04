@@ -141,6 +141,46 @@ export async function findStandbyPool(companyId: string) {
   return [...byApp.values()];
 }
 
+/**
+ * Merge: move todos os itens de uma pasta para outra (ignora duplicatas) e
+ * apaga a pasta de origem.
+ */
+export async function mergeTalentFolders(sourceId: string, targetId: string) {
+  // Itens que já estão no destino
+  const existing = await prisma.talentFolderItem.findMany({
+    where: { folderId: targetId },
+    select: { applicationId: true },
+  });
+  const existingIds = new Set(existing.map((e) => e.applicationId));
+
+  // Itens da origem que NÃO estão no destino
+  const toMove = await prisma.talentFolderItem.findMany({
+    where: { folderId: sourceId },
+    select: { applicationId: true },
+  });
+  const newItems = toMove.filter((i) => !existingIds.has(i.applicationId));
+
+  // Move os novos para o destino
+  for (const item of newItems) {
+    await prisma.talentFolderItem.upsert({
+      where: { folderId_applicationId: { folderId: targetId, applicationId: item.applicationId } },
+      create: { folderId: targetId, applicationId: item.applicationId },
+      update: {},
+    });
+  }
+
+  // Remove todos da origem e apaga a pasta
+  await prisma.talentFolderItem.deleteMany({ where: { folderId: sourceId } });
+  await prisma.talentFolder.delete({ where: { id: sourceId } });
+
+  return newItems.length;
+}
+
+/** Renomeia e opcionalmente atualiza a área de uma pasta. */
+export function updateTalentFolder(id: string, data: { name?: string; area?: string | null }) {
+  return prisma.talentFolder.update({ where: { id }, data });
+}
+
 export function upsertTalentMatch(data: {
   companyId: string;
   applicationId: string;

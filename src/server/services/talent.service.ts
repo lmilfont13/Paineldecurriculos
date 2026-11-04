@@ -26,8 +26,10 @@ import {
   findTalentMatchesForApplication,
   findTalentMatchesForJob,
   findUncategorizedApplications,
+  mergeTalentFolders,
   removeTalentFolderItem,
   renameTalentFolder,
+  updateTalentFolder,
   upsertTalentMatch,
 } from "@/server/repositories/talent.repository";
 import { findCompanyById } from "@/server/repositories/company.repository";
@@ -142,6 +144,42 @@ export async function backfillTalentCategories(companyId: string): Promise<numbe
     }
   }
   return count;
+}
+
+/**
+ * Consolida pastas duplicadas: renomeia cada pasta com o nome normalizado
+ * (gênero neutro, ordem alfabética dos termos compostos) e faz merge das
+ * que passam a ter o mesmo nome. Retorna { merged, renamed }.
+ */
+export async function consolidateTalentFolders(companyId: string): Promise<{ merged: number; renamed: number }> {
+  const folders = await findTalentFolders(companyId);
+  let merged = 0;
+  let renamed = 0;
+
+  // Mapa: chave normalizada → pasta destino (a primeira encontrada)
+  const canonical = new Map<string, { id: string; name: string; count: number }>();
+
+  for (const folder of folders) {
+    const newName = normalizeFolderName(folder.name);
+    const key = newName.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+    const target = canonical.get(key);
+    if (target) {
+      // Merge: move itens da pasta duplicada para a pasta canônica
+      await mergeTalentFolders(folder.id, target.id);
+      target.count += folder._count.items;
+      merged++;
+    } else {
+      // Renomeia se o nome mudou (gênero normalizado, etc.)
+      if (folder.name !== newName) {
+        await updateTalentFolder(folder.id, { name: newName });
+        renamed++;
+      }
+      canonical.set(key, { id: folder.id, name: newName, count: folder._count.items });
+    }
+  }
+
+  return { merged, renamed };
 }
 
 export async function saveToTalentFolder(

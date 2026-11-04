@@ -103,8 +103,8 @@ export type TriageStepReporter = (label: string) => Promise<void>;
 const CHECKLIST_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Para cada critério da vaga, diga se o material do candidato mostra evidência.
 Classifique também o perfil profissional pelo que o material mostra, sem dados pessoais:
-- area: área ampla em até 3 palavras (ex.: "Logística", "Administrativo", "Vendas e trade marketing", "Atendimento")
-- role: função em até 4 palavras (ex.: "Motorista e entregador", "Promotor de vendas")
+- area: UMA PALAVRA só, a área mais ampla (ex.: "Logística", "Administrativo", "Vendas", "Atendimento", "Saúde", "Beleza", "Indústria", "TI"). Nunca combine duas áreas com "e".
+- role: função principal em até 4 palavras, sempre no MASCULINO SINGULAR (ex.: "Promotor de vendas", "Motorista e entregador", "Consultor comercial", "Vendedor"). Nunca use feminino (promotora, vendedora, consultora).
 - level: um de "Operacional", "Júnior", "Pleno", "Sênior", "Liderança"
 Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ], "profile": { "area": "...", "role": "...", "level": "..." } }`;
 

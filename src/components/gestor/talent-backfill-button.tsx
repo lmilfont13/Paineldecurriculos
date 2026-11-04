@@ -1,48 +1,70 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { FolderSync, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 
-import { backfillTalentCategoriesAction } from "@/server/controllers/talent.controller";
+import { backfillTalentCategoriesAction, consolidateTalentFoldersAction } from "@/server/controllers/talent.controller";
 
 /**
- * Botao que categoriza retroativamente todos os candidatos ja analisados
- * pela IA mas que ainda nao estao em nenhuma pasta do banco de talentos.
+ * Duas ações para o banco de talentos:
+ * 1. Categorizar candidatos existentes (backfill)
+ * 2. Consolidar pastas duplicadas (merge + normalização)
  */
 export function TalentBackfillButton() {
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ count: number } | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  function run() {
+  function runBackfill() {
     startTransition(async () => {
+      setMessage(null);
       const res = await backfillTalentCategoriesAction();
-      setResult(res);
+      setMessage(
+        res.count === 0
+          ? "Todos os candidatos já estavam em pastas."
+          : `${res.count} ${res.count === 1 ? "candidato categorizado" : "candidatos categorizados"}.`
+      );
+    });
+  }
+
+  function runConsolidate() {
+    startTransition(async () => {
+      setMessage(null);
+      const res = await consolidateTalentFoldersAction();
+      if (res.merged === 0 && res.renamed === 0) {
+        setMessage("Nenhuma pasta duplicada encontrada.");
+      } else {
+        const parts: string[] = [];
+        if (res.merged > 0) parts.push(`${res.merged} ${res.merged === 1 ? "pasta mesclada" : "pastas mescladas"}`);
+        if (res.renamed > 0) parts.push(`${res.renamed} ${res.renamed === 1 ? "pasta renomeada" : "pastas renomeadas"}`);
+        setMessage(parts.join(", ") + ".");
+      }
     });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        onClick={run}
-        disabled={isPending}
-        className="flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition-colors"
-        style={{
-          backgroundColor: isPending
-            ? "color-mix(in srgb, var(--brand-primary) 60%, white)"
-            : "var(--brand-primary)",
-          color: "var(--brand-foreground, #fff)",
-        }}
-      >
-        <Sparkles className="size-3.5" aria-hidden />
-        {isPending ? "Categorizando..." : "Categorizar candidatos existentes"}
-      </button>
-      {result !== null && !isPending && (
-        <span className="text-[13px] text-[#71717a]">
-          {result.count === 0
-            ? "Todos os candidatos ja estavam em pastas."
-            : `${result.count} ${result.count === 1 ? "candidato categorizado" : "candidatos categorizados"}.`}
-        </span>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={runBackfill}
+          disabled={isPending}
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] font-medium text-[#3f3f46] transition-colors hover:bg-[#f4f4f5] disabled:opacity-50"
+        >
+          <Sparkles className="size-3.5" aria-hidden />
+          {isPending ? "Processando..." : "Categorizar existentes"}
+        </button>
+        <button
+          type="button"
+          onClick={runConsolidate}
+          disabled={isPending}
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] font-medium text-[#3f3f46] transition-colors hover:bg-[#f4f4f5] disabled:opacity-50"
+        >
+          <FolderSync className="size-3.5" aria-hidden />
+          {isPending ? "Processando..." : "Consolidar pastas"}
+        </button>
+      </div>
+      {message && !isPending && (
+        <span className="text-[13px] text-[#71717a]">{message}</span>
       )}
     </div>
   );

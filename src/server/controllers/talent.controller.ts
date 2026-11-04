@@ -10,6 +10,7 @@ import {
   analyzeStandbyForApplication,
   analyzeStandbyForJob,
   backfillTalentCategories,
+  consolidateTalentFolders,
   deleteCompanyTalentFolder,
   getApplicationTalentInfo,
   getTalentFolder,
@@ -122,4 +123,15 @@ export async function backfillTalentCategoriesAction() {
   const count = await backfillTalentCategories(manager.companyId);
   revalidatePath("/talentos");
   return { count };
+}
+
+/**
+ * Consolida pastas duplicadas: normaliza nomes (gênero, ordem de termos
+ * compostos) e faz merge das pastas que passam a ter o mesmo nome.
+ */
+export async function consolidateTalentFoldersAction() {
+  const manager = await requireManager();
+  const result = await consolidateTalentFolders(manager.companyId);
+  revalidatePath("/talentos");
+  return result;
 }
