@@ -12,6 +12,7 @@ import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { ShortlistPanel } from "@/components/gestor/shortlist-panel";
 import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
 import { AskAiBox } from "@/components/gestor/ask-ai-box";
+import { JobMetrics } from "@/components/gestor/job-metrics";
 import { VagaPipeline } from "@/components/gestor/vaga-pipeline";
 import { getVagaDetailData } from "@/server/controllers/gestor.controller";
 import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
@@ -207,6 +208,8 @@ export default async function VagaHubPage({
           </p>
         </Link>
       </div>
+
+      <JobMetrics jobId={job.id} />
 
       <ShortlistPanel
         jobId={job.id}

@@ -6,9 +6,12 @@
 import type { ReferrerDTO, ReferrerInput } from "@/server/models/attribution.model";
 import { nameToCode, referrerSchema } from "@/server/models/attribution.model";
 import {
+  applicationsPerDay,
+  avgTimeToHire,
   countApplicationsByReferrer,
   countApplicationsBySource,
   countApplicationsBySourceCompany,
+  countApplicationsByStatus,
   countHiredByReferrer,
   createReferrer,
   deleteReferrer,
@@ -89,4 +92,25 @@ export async function getSourceReport(companyId: string, jobId: string) {
 
 export async function getCompanySourceReport(companyId: string) {
   return countApplicationsBySourceCompany(companyId);
+}
+
+// ── Métricas da vaga (Feature 6) ─────────────────────────────────
+
+export type JobMetrics = {
+  sourceBreakdown: Record<string, number>;
+  statusFunnel: Record<string, number>;
+  avgDaysToHire: number | null;
+  applicationsTimeline: Record<string, number>;
+};
+
+export async function getJobMetrics(
+  companyId: string,
+  jobId: string,
+): Promise<JobMetrics> {
+  // Sequencial (connection_limit=1)
+  const sourceBreakdown = await countApplicationsBySource(companyId, jobId);
+  const statusFunnel = await countApplicationsByStatus(companyId, jobId);
+  const avgDaysToHire = await avgTimeToHire(companyId, jobId);
+  const applicationsTimeline = await applicationsPerDay(companyId, jobId);
+  return { sourceBreakdown, statusFunnel, avgDaysToHire, applicationsTimeline };
 }

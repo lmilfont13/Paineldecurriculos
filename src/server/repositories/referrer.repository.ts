@@ -102,6 +102,53 @@ export async function countApplicationsBySource(
   return map;
 }
 
+/** Funil por status para uma vaga (quantos em cada etapa). */
+export async function countApplicationsByStatus(
+  companyId: string,
+  jobId: string,
+) {
+  const rows = await prisma.application.groupBy({
+    by: ["status"],
+    where: { companyId, jobId, isDemo: false },
+    _count: true,
+  });
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    map[r.status] = r._count;
+  }
+  return map;
+}
+
+/** Tempo médio (em dias) entre candidatura e aprovação para uma vaga. */
+export async function avgTimeToHire(companyId: string, jobId: string) {
+  const approved = await prisma.application.findMany({
+    where: { companyId, jobId, status: "APPROVED", isDemo: false },
+    select: { createdAt: true, updatedAt: true },
+  });
+  if (approved.length === 0) return null;
+  const total = approved.reduce((sum, a) => {
+    return sum + (a.updatedAt.getTime() - a.createdAt.getTime());
+  }, 0);
+  return Math.round(total / approved.length / (1000 * 60 * 60 * 24));
+}
+
+/** Candidaturas por dia para uma vaga (últimos 30 dias). */
+export async function applicationsPerDay(companyId: string, jobId: string) {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const rows = await prisma.application.findMany({
+    where: { companyId, jobId, isDemo: false, createdAt: { gte: since } },
+    select: { createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    const day = r.createdAt.toISOString().slice(0, 10);
+    map[day] = (map[day] ?? 0) + 1;
+  }
+  return map;
+}
+
 /** Candidaturas por fonte para toda a empresa. */
 export async function countApplicationsBySourceCompany(companyId: string) {
   const rows = await prisma.application.groupBy({

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/configuracoes/formulario", label: "Formulário de candidatura" },
   { href: "/configuracoes/ia", label: "Inteligência artificial" },
   { href: "/configuracoes/usuarios", label: "Usuários" },
+  { href: "/configuracoes/indicadores", label: "Indicadores" },
 ];
 
 /** Abas de Configurações: o que é ajuste, fora da navegação do dia a dia. */
