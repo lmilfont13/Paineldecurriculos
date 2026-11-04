@@ -29,9 +29,11 @@ import {
   renameTalentFolder,
   upsertTalentMatch,
 } from "@/server/repositories/talent.repository";
+import { findCompanyById } from "@/server/repositories/company.repository";
 import { findJobById, findOpenJobsByCompanyId } from "@/server/repositories/job.repository";
 import { scoreApplicationAgainstJob } from "@/server/services/ai.service";
 import { getCompanyApplication } from "@/server/services/application.service";
+import { notifyTalentMatch } from "@/server/services/notification.service";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 
 /**
@@ -167,7 +169,8 @@ export async function deleteCompanyTalentFolder(companyId: string, folderId: str
 export async function scoreStandby(
   companyId: string,
   applicationId: string,
-  job: { id: string; title: string; aiCriteria: string[]; requirements: string | null }
+  job: { id: string; title: string; aiCriteria: string[]; requirements: string | null; aiMinScore: number | null },
+  candidateId?: string | null,
 ) {
   const base = { companyId, applicationId, jobId: job.id };
   await upsertTalentMatch({ ...base, state: "PROCESSING" });
@@ -178,6 +181,20 @@ export async function scoreStandby(
       return;
     }
     await upsertTalentMatch({ ...base, state: "DONE", score: result.score, reasoning: result.reasoning });
+
+    // Banco de talentos ativo: avisa o candidato se a nota atingir o mínimo da vaga.
+    const threshold = job.aiMinScore ?? 50;
+    if (candidateId && result.score >= threshold) {
+      const company = await findCompanyById(companyId);
+      if (company) {
+        await notifyTalentMatch({
+          candidateId,
+          companyName: company.name,
+          jobTitle: job.title,
+          linkUrl: `/${company.slug}/vagas/${job.id}`,
+        }).catch((err) => console.error("[stand-by] Falha ao notificar candidato:", err));
+      }
+    }
   } catch (error) {
     console.error("[stand-by] Falha ao analisar:", error);
     await upsertTalentMatch({ ...base, state: "FAILED" });
@@ -201,7 +218,7 @@ export async function analyzeStandbyForApplication(
     jobs.map((job) => ({ item: job, relevance: relevance(job, person) })),
     STANDBY_CANDIDATE_JOBS_LIMIT
   );
-  for (const job of picked) await scoreStandby(companyId, applicationId, job);
+  for (const job of picked) await scoreStandby(companyId, applicationId, job, person.candidateId);
   return picked.length;
 }
 
@@ -217,7 +234,7 @@ export async function analyzeStandbyForJob(companyId: string, jobId: string): Pr
     pool.map((person) => ({ item: person, relevance: relevance(job, person) })),
     STANDBY_JOB_LIMIT
   );
-  for (const person of picked) await scoreStandby(companyId, person.id, job);
+  for (const person of picked) await scoreStandby(companyId, person.id, job, person.candidateId);
   return picked.length;
 }
 

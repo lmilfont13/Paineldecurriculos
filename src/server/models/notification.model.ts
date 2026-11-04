@@ -118,6 +118,18 @@ export function whatHappensNow(
   }
 }
 
+/** Banco de talentos ativo: avisa o candidato quando abre vaga parecida com o perfil dele. */
+export function talentMatchNotification(
+  companyName: string,
+  jobTitle: string
+): { type: NotificationType; title: string; body: string } {
+  return {
+    type: "NEW_JOB",
+    title: `Nova vaga que combina com seu perfil`,
+    body: `A ${companyName} abriu a vaga de ${jobTitle} e o seu currículo tem tudo a ver. Se tiver interesse, candidate-se!`,
+  };
+}
+
 /** Pedido de pré-entrevista: nunca cita os dados pedidos, só que há um formulário. */
 export function infoRequestedNotification(
   companyName: string,

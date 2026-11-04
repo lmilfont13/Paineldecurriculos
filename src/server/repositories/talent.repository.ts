@@ -98,6 +98,7 @@ export async function findStandbyPool(companyId: string) {
       application: {
         select: {
           id: true,
+          candidateId: true,
           name: true,
           phone: true,
           jobId: true,

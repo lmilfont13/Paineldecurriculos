@@ -613,6 +613,8 @@ export function createApplication(data: {
   hasCnh?: string | null;
   isPcd?: boolean;
   pcdDetails?: string | null;
+  source?: string | null;
+  referrerCode?: string | null;
   aiState: AIState;
   answers: { fieldId: string; value: string }[];
   consentAt?: Date | null;

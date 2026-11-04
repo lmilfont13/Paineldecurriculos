@@ -97,10 +97,14 @@ export default async function NotificacoesPage({
               </>
             );
 
-            return item.application ? (
+            const href = item.application
+              ? `/${slug}/minhas-candidaturas/${item.application.id}`
+              : item.linkUrl ?? null;
+
+            return href ? (
               <Link
                 key={item.id}
-                href={`/${slug}/minhas-candidaturas/${item.application.id}`}
+                href={href}
                 className="flex gap-3 px-5 py-4 transition-colors hover:bg-[#fafaf9]"
               >
                 {inner}

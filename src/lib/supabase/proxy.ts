@@ -1,6 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  ATTRIBUTION_COOKIE,
+  COOKIE_MAX_AGE,
+  REFERRER_COOKIE,
+  extractAttribution,
+  isGoogleReferer,
+} from "@/server/models/attribution.model";
+
 /** Prefixos que exigem sessão (gestor e admin). O papel é checado nos guards. */
 const PROTECTED_PREFIXES = [
   "/painel",
@@ -20,15 +28,49 @@ function isProtectedPath(pathname: string): boolean {
 }
 
 /**
+ * Captura a origem do candidato (?origem=, ?ref=, Referer do Google) e
+ * grava em cookies de 30 dias. Não sobrescreve se já existir (first-touch).
+ */
+function captureAttribution(
+  request: NextRequest,
+  response: NextResponse,
+): void {
+  const { source, referrerCode } = extractAttribution(request.nextUrl);
+
+  // Google via Referer header (se não veio por ?origem=)
+  const effectiveSource =
+    source ?? (isGoogleReferer(request.headers.get("referer")) ? "google" : null);
+
+  // First-touch: só grava se não existir ainda
+  if (effectiveSource && !request.cookies.get(ATTRIBUTION_COOKIE)) {
+    response.cookies.set(ATTRIBUTION_COOKIE, effectiveSource, {
+      maxAge: COOKIE_MAX_AGE,
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+    });
+  }
+  if (referrerCode && !request.cookies.get(REFERRER_COOKIE)) {
+    response.cookies.set(REFERRER_COOKIE, referrerCode, {
+      maxAge: COOKIE_MAX_AGE,
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+    });
+  }
+}
+
+/**
  * Mantém a sessão Supabase sincronizada (refresh de token via cookies) e
  * redireciona para /login quem acessa área protegida sem sessão.
  */
 export async function updateSession(request: NextRequest) {
-  // Performance: só as rotas protegidas validam a sessão na borda. Nas
-  // páginas públicas, a sessão do candidato é resolvida na própria página
-  // quando necessário.
+  // Captura de atribuição: rotas públicas com slug (candidatos).
+  // Rápido e sem I/O — só lê a URL e seta cookies se necessário.
   if (!isProtectedPath(request.nextUrl.pathname)) {
-    return NextResponse.next({ request });
+    const response = NextResponse.next({ request });
+    captureAttribution(request, response);
+    return response;
   }
 
   let supabaseResponse = NextResponse.next({ request });

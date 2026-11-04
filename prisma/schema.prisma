@@ -43,6 +43,7 @@ model Company {
   talentFolders TalentFolder[]
   messageTemplates MessageTemplate[]
   interviewEvaluations InterviewEvaluation[]
+  referrers            Referrer[]
 }
 
 model User {
@@ -225,6 +226,11 @@ model Application {
   isPcd             Boolean   @default(false)
   pcdDetails        String?
 
+  /// De onde o candidato veio: "instagram" | "whatsapp" | "google" | "indicacao" | "direto" | …
+  source        String?
+  /// Código do indicador (liga com Referrer.code). Preenchido pelo cookie ?ref=.
+  referrerCode  String?
+
   status        AppStatus @default(PENDING)
   aiState       AIState   @default(WAITING)
   aiScore       Int?
@@ -292,6 +298,8 @@ model Application {
   @@index([companyId, isDemo])
   @@index([companyId, neighborhood])
   @@index([companyId, desiredRole])
+  @@index([companyId, source])
+  @@index([jobId, source])
   interviewEvaluations InterviewEvaluation[]
 }
 
@@ -304,6 +312,8 @@ model Notification {
   type          NotificationType
   title         String
   body          String?
+  /// Link direto (ex.: vaga do banco de talentos). Usado quando não há applicationId.
+  linkUrl       String?
   readAt        DateTime?
   createdAt     DateTime         @default(now())
 
@@ -512,4 +522,20 @@ model InterviewEvaluation {
 
   @@unique([applicationId, evaluatorId])
   @@index([companyId, applicationId])
+}
+
+/// Funcionário ou colaborador que indica candidatos via link próprio.
+/// Cada indicador tem um código único por empresa (ex.: "joao-silva").
+model Referrer {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  /// Código curto e legível (slug), único por empresa. Usado no link: ?ref=joao-silva
+  code      String
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@index([companyId])
 }

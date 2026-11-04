@@ -730,7 +730,8 @@ export async function submitApplication(
   companyId: string,
   candidate: CandidateProfile,
   input: Omit<ApplicationInput, "slug">,
-  uploadedResumePath: string | null
+  uploadedResumePath: string | null,
+  attribution?: { source: string | null; referrerCode: string | null }
 ): Promise<SubmitApplicationResult> {
   // LGPD: sem o aceite do Aviso de Privacidade, nada é gravado.
   if (input.consent !== true) {
@@ -899,6 +900,9 @@ export async function submitApplication(
         hasCnh,
         isPcd,
         pcdDetails,
+        // Atribuição de origem (de onde o candidato veio)
+        source: attribution?.source ?? null,
+        referrerCode: attribution?.referrerCode ?? null,
         // Toda candidatura entra na análise: com PDF, só com as respostas, ou as
         // duas coisas. A própria análise marca NO_RESUME se não houver material.
         aiState: "WAITING",

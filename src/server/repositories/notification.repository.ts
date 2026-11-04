@@ -10,6 +10,7 @@ export function createNotification(data: {
   type: NotificationType;
   title: string;
   body: string | null;
+  linkUrl?: string | null;
 }) {
   return prisma.notification.create({ data });
 }

@@ -8,6 +8,7 @@ import {
   managerMessageNotification,
   receivedNotification,
   stageNotification,
+  talentMatchNotification,
 } from "@/server/models/notification.model";
 import {
   countUnreadNotifications,
@@ -127,6 +128,30 @@ export async function markRead(
 ): Promise<number> {
   const { count } = await markNotificationsRead(candidateId, ids);
   return count;
+}
+
+/**
+ * Banco de talentos ativo: avisa o candidato que abriu uma vaga parecida
+ * com o perfil dele. applicationId é null porque ele não tem candidatura
+ * nessa vaga — a notificação é um convite para se candidatar.
+ */
+export async function notifyTalentMatch(params: {
+  candidateId: string | null;
+  companyName: string;
+  jobTitle: string;
+  /** Link para a vaga pública, ex.: "/tarhget/vagas/abc123" */
+  linkUrl?: string | null;
+}): Promise<void> {
+  if (!params.candidateId) return;
+  const content = talentMatchNotification(params.companyName, params.jobTitle);
+  await createNotification({
+    candidateId: params.candidateId,
+    applicationId: null,
+    type: content.type,
+    title: content.title,
+    body: content.body,
+    linkUrl: params.linkUrl ?? null,
+  });
 }
 
 export async function notifyInfoRequested(params: {
