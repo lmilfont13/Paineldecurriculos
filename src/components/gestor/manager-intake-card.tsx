@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { Check, Copy, FileUp, Loader2, MessageCircle } from "lucide-react";
 
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { resumeExtForMime } from "@/server/models/application.model";
 import {
   attachManagerResumeAction,
   requestManagerResumeUploadAction,
@@ -50,7 +51,8 @@ export function ManagerIntakeCard({
         setMessage(problem);
         return;
       }
-      const target = await requestManagerResumeUploadAction(applicationId);
+      const ext = resumeExtForMime(file.type);
+      const target = await requestManagerResumeUploadAction(applicationId, ext);
       if (!target) {
         setMessage("Não foi possível preparar o envio. Tente de novo.");
         return;
@@ -108,7 +110,7 @@ export function ManagerIntakeCard({
       <input
         ref={fileRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg,image/png,.png,image/webp,.webp"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -123,9 +125,9 @@ export function ManagerIntakeCard({
         className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafafa] disabled:opacity-60"
       >
         {pending ? <Loader2 className="size-3.5 animate-spin" /> : <FileUp className="size-3.5" />}
-        {pending ? "Enviando…" : hasResume ? "Trocar currículo (PDF)" : "Anexar currículo (PDF)"}
+        {pending ? "Enviando…" : hasResume ? "Trocar currículo" : "Anexar currículo"}
       </button>
-      <p className="mt-1.5 text-[10px] text-[#a1a1aa]">Só PDF, até 5 MB.</p>
+      <p className="mt-1.5 text-[10px] text-[#a1a1aa]">PDF ou imagem, até 5 MB.</p>
 
       {message && (
         <p className="mt-2 break-words text-[11px] text-[#52525b]" role="status">

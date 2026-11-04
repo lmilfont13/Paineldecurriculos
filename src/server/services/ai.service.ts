@@ -11,7 +11,7 @@ import { geminiGenerate, generateWithModelInfo } from "@/lib/gemini";
 import { parseCareer, type CareerProfile } from "@/server/models/career.model";
 import { parseContactJson } from "@/server/models/intake.model";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isDemoResumePath } from "@/server/models/application.model";
+import { isDemoResumePath, isImageResumePath } from "@/server/models/application.model";
 import {
   buildAnswersText,
   hasMaterial,
@@ -56,6 +56,34 @@ export async function loadResumeBytes(resumePath: string): Promise<Uint8Array> {
     throw new Error(`Falha ao baixar currículo: ${error?.message}`);
   }
   return new Uint8Array(await data.arrayBuffer());
+}
+
+/** MIME type inferido da extensão do caminho no Storage. */
+function mimeFromPath(p: string): string {
+  if (/\.png$/i.test(p)) return "image/png";
+  if (/\.webp$/i.test(p)) return "image/webp";
+  return "image/jpeg"; // .jpg / .jpeg
+}
+
+/**
+ * Extrai texto de um currículo em imagem usando a visão da IA. Manda a foto
+ * para o modelo com um prompt de OCR e recebe o texto de volta.
+ */
+async function extractTextFromImage(
+  bytes: Uint8Array,
+  mime: string,
+  companyId?: string
+): Promise<string> {
+  const base64 = Buffer.from(bytes).toString("base64");
+  return geminiGenerate({
+    system:
+      "Você é um leitor de documentos. Extraia TODO o texto visível na imagem, preservando a estrutura (seções, listas, datas). Não invente nada que não esteja escrito. Se a imagem não contiver texto legível, responda com uma string vazia.",
+    prompt: "Extraia o texto completo deste currículo.",
+    maxTokens: 4000,
+    companyId,
+    imageBase64: base64,
+    imageMime: mime,
+  });
 }
 
 /** Regra 3: prompt da IA — NÃO ALTERAR. */
@@ -145,9 +173,13 @@ async function scoreMaterial(
   return { score, reasoning, modelUsed };
 }
 
-/** Texto de um PDF do Storage (ou da demonstração). */
+/** Texto de um PDF ou imagem do Storage (ou da demonstração). */
 export async function readResumeText(resumePath: string): Promise<string> {
-  const pdf = await getDocumentProxy(await loadResumeBytes(resumePath));
+  const bytes = await loadResumeBytes(resumePath);
+  if (isImageResumePath(resumePath)) {
+    return extractTextFromImage(bytes, mimeFromPath(resumePath));
+  }
+  const pdf = await getDocumentProxy(bytes);
   return (await extractText(pdf, { mergePages: true })).text;
 }
 
@@ -168,15 +200,24 @@ export async function extractResumeContact(text: string) {
   return parseContactJson(raw);
 }
 
-/** Currículo (texto do PDF) + respostas de uma candidatura, ou null sem material. */
+/** Currículo (texto do PDF ou imagem) + respostas de uma candidatura, ou null sem material. */
 export async function loadApplicationMaterial(applicationId: string): Promise<string | null> {
   const application = await findApplicationById(applicationId);
   if (!application) return null;
   const answersText = buildAnswersText(application.answers);
   let resumeText = "";
   if (application.resumeUrl) {
-    const pdf = await getDocumentProxy(await loadResumeBytes(application.resumeUrl));
-    resumeText = (await extractText(pdf, { mergePages: true })).text;
+    const bytes = await loadResumeBytes(application.resumeUrl);
+    if (isImageResumePath(application.resumeUrl)) {
+      resumeText = await extractTextFromImage(
+        bytes,
+        mimeFromPath(application.resumeUrl),
+        application.company?.id
+      );
+    } else {
+      const pdf = await getDocumentProxy(bytes);
+      resumeText = (await extractText(pdf, { mergePages: true })).text;
+    }
   }
   if (!hasMaterial(resumeText, answersText)) return null;
   return composeMaterial(resumeText, answersText);
@@ -342,27 +383,40 @@ export async function analyzeApplication(
   try {
     let resumeText = "";
     if (application.resumeUrl) {
-      await onStep("Baixando o currículo em PDF");
+      const isImage = isImageResumePath(application.resumeUrl);
+      await onStep(isImage ? "Baixando o currículo (imagem)" : "Baixando o currículo em PDF");
       const bytes = await loadResumeBytes(application.resumeUrl);
 
-      await onStep("Lendo o texto do PDF");
-      const pdf = await getDocumentProxy(bytes);
-      resumeText = (await extractText(pdf, { mergePages: true })).text;
+      if (isImage) {
+        // Currículo em foto: usa a visão da IA para extrair o texto.
+        await onStep("Lendo o texto da imagem com IA");
+        resumeText = await extractTextFromImage(
+          bytes,
+          mimeFromPath(application.resumeUrl),
+          application.company.id
+        );
+        // Foto do candidato: para imagens, não faz sentido extrair retrato
+        // (a imagem inteira É o currículo).
+      } else {
+        await onStep("Lendo o texto do PDF");
+        const pdf = await getDocumentProxy(bytes);
+        resumeText = (await extractText(pdf, { mergePages: true })).text;
 
-      // Foto: referência visual para o gestor — sempre tentada, mesmo em PDFs
-      // com pouco texto extraído. captureResumePhoto retorna false sem lançar
-      // se não encontrar imagem com cara de foto. A IA não recebe a foto (regra 3).
-      await captureResumePhoto(pdf, {
-        companyId: application.company.id,
-        applicationId,
-        currentPath: application.photoPath ?? null,
-      });
+        // Foto: referência visual para o gestor — sempre tentada, mesmo em PDFs
+        // com pouco texto extraído. captureResumePhoto retorna false sem lançar
+        // se não encontrar imagem com cara de foto. A IA não recebe a foto (regra 3).
+        await captureResumePhoto(pdf, {
+          companyId: application.company.id,
+          applicationId,
+          currentPath: application.photoPath ?? null,
+        });
+      }
     } else {
       await onStep("Sem PDF: lendo as respostas do formulário");
     }
 
     if (!hasMaterial(resumeText, answersText)) {
-      // PDF escaneado (imagem) sem texto e sem respostas úteis.
+      // Sem texto extraído e sem respostas úteis.
       await updateApplicationAi(applicationId, { aiState: "NO_RESUME" });
       return null;
     }

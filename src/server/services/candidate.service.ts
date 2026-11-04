@@ -186,9 +186,10 @@ export function updateCandidateProfile(
  * no Storage (o arquivo não passa pela server action).
  */
 export function requestProfileResumeUpload(
-  candidateId: string
+  candidateId: string,
+  ext = ".pdf"
 ): Promise<ResumeUploadTarget | null> {
-  return createResumeUploadTarget(profileResumePrefix(candidateId));
+  return createResumeUploadTarget(profileResumePrefix(candidateId), ext);
 }
 
 /** Confere o PDF enviado pelo navegador antes de vinculá-lo ao perfil. */

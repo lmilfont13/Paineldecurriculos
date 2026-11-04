@@ -467,7 +467,8 @@ export async function submitApplicationAction(
  */
 export async function requestResumeUploadAction(
   slug: string,
-  jobId: string
+  jobId: string,
+  ext = ".pdf"
 ): Promise<
   { ok: true; path: string; token: string } | { ok: false; error: string }
 > {
@@ -478,10 +479,15 @@ export async function requestResumeUploadAction(
   const company = await getPublicCompanyBySlug(slug);
   if (!company) return { ok: false, error: "Empresa não encontrada." };
 
+  // Valida a extensão para evitar extensões arbitrárias
+  const allowed = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp"]);
+  const safeExt = allowed.has(ext.toLowerCase()) ? ext.toLowerCase() : ".pdf";
+
   const target = await requestApplicationResumeUpload(
     company.id,
     jobId,
-    candidate.id
+    candidate.id,
+    safeExt
   );
   if (!target) {
     return {

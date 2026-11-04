@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 
-import { profileChoiceLabel } from "@/server/models/application.model";
+import { profileChoiceLabel, resumeExtForMime } from "@/server/models/application.model";
 import { parseInstagram } from "@/server/models/instagram.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
@@ -195,7 +195,8 @@ export function ApplyWizard({
         let resumePath = uploadedPath;
         if (resume && !resumePath) {
           setUploading(true);
-          const target = await requestResumeUploadAction(company.slug, job.id);
+          const ext = resumeExtForMime(resume.type);
+          const target = await requestResumeUploadAction(company.slug, job.id, ext);
           if (!target.ok) {
             setError(target.error);
             return;
@@ -532,7 +533,7 @@ export function ApplyWizard({
                           : "Nenhum arquivo escolhido"}
                     </span>
                     <span className="block text-xs text-[#71717a]">
-                      PDF até 5 MB
+                      PDF ou imagem até 5 MB
                     </span>
                   </span>
                   <button
@@ -545,7 +546,7 @@ export function ApplyWizard({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="application/pdf,.pdf"
+                    accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg,image/png,.png,image/webp,.webp"
                     className="hidden"
                     onChange={(e) => void pickResume(e.target.files?.[0] ?? null)}
                   />

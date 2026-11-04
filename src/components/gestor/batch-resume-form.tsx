@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Check, Copy, FileText, Loader2, MessageCircle, Upload } from "lucide-react";
 
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { resumeExtForMime } from "@/server/models/application.model";
 import {
   importBatchResumeAction,
   requestBatchUploadsAction,
@@ -59,12 +60,12 @@ export function BatchResumeForm({
     setRows((current) => current.map((r) => (r.key === key ? { ...r, ...data } : r)));
 
   function addFiles(list: FileList | File[]) {
-    const pdfs = Array.from(list).slice(0, LIMIT);
+    const files = Array.from(list).slice(0, LIMIT);
     setRows((current) =>
       [
         ...current.filter((r) => r.state !== "pronto"),
         ...current.filter((r) => r.state === "pronto"),
-        ...pdfs.map((file, i) => ({ key: `${Date.now()}-${i}-${file.name}`, file, state: "pronto" as const })),
+        ...files.map((file, i) => ({ key: `${Date.now()}-${i}-${file.name}`, file, state: "pronto" as const })),
       ].slice(-LIMIT * 2)
     );
   }
@@ -103,7 +104,8 @@ export function BatchResumeForm({
       if (valid.length === 0) return;
 
       // 2) URLs assinadas e upload direto ao Storage (3 por vez)
-      const targets = await requestBatchUploadsAction(jobId, valid.length);
+      const exts = valid.map((r) => resumeExtForMime(r.file.type));
+      const targets = await requestBatchUploadsAction(jobId, valid.length, exts);
       if (!targets || targets.length < valid.length) {
         valid.forEach((r) => patch(r.key, { state: "erro", message: "Não foi possível preparar o envio." }));
         return;
@@ -199,11 +201,11 @@ export function BatchResumeForm({
         >
           <Upload className="size-5 text-[#a1a1aa]" aria-hidden />
           <p className="mt-2 text-[13px] font-medium text-[#0a0a0a]">Arraste os currículos aqui ou clique para escolher</p>
-          <p className="mt-0.5 text-[11px] text-[#a1a1aa]">PDF até 5 MB cada · até {LIMIT} por vez</p>
+          <p className="mt-0.5 text-[11px] text-[#a1a1aa]">PDF ou imagem até 5 MB cada · até {LIMIT} por vez</p>
           <input
             ref={inputRef}
             type="file"
-            accept="application/pdf,.pdf"
+            accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg,image/png,.png,image/webp,.webp"
             multiple
             className="hidden"
             onChange={(e) => {

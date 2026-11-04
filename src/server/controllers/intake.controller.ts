@@ -72,11 +72,13 @@ export async function preRegisterAction(jobId: string, text: string): Promise<In
   };
 }
 
-/** Gestor anexa o PDF: 1) pede a URL assinada; 2) confirma o arquivo. */
-export async function requestManagerResumeUploadAction(applicationId: string) {
+/** Gestor anexa currículo (PDF ou imagem): 1) pede a URL assinada; 2) confirma o arquivo. */
+export async function requestManagerResumeUploadAction(applicationId: string, ext = ".pdf") {
   const manager = await requireManager();
   if (!ID.test(applicationId)) return null;
-  return requestManagerResumeUpload(manager.companyId, applicationId);
+  const allowed = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp"]);
+  const safeExt = allowed.has(ext.toLowerCase()) ? ext.toLowerCase() : ".pdf";
+  return requestManagerResumeUpload(manager.companyId, applicationId, safeExt);
 }
 
 export async function attachManagerResumeAction(applicationId: string, path: string) {
@@ -102,14 +104,16 @@ export async function getIntakeInvite(applicationId: string, jobId: string, jobT
   };
 }
 
-/** Lote de PDFs · passo 1: URLs para subir os arquivos direto ao Storage. */
-export async function requestBatchUploadsAction(jobId: string, count: number) {
+/** Lote de currículos · passo 1: URLs para subir os arquivos direto ao Storage. */
+export async function requestBatchUploadsAction(jobId: string, count: number, exts?: string[]) {
   const manager = await requireManager();
   if (!ID.test(jobId)) return null;
-  return requestBatchResumeUploads(manager.companyId, jobId, Number(count) || 0);
+  const allowed = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp"]);
+  const safeExts = exts?.map((e) => (allowed.has(e.toLowerCase()) ? e.toLowerCase() : ".pdf"));
+  return requestBatchResumeUploads(manager.companyId, jobId, Number(count) || 0, safeExts);
 }
 
-/** Lote de PDFs · passo 2 (um por arquivo): lê, pré-cadastra e manda analisar. */
+/** Lote de currículos · passo 2 (um por arquivo): lê, pré-cadastra e manda analisar. */
 export async function importBatchResumeAction(
   jobId: string,
   path: string,

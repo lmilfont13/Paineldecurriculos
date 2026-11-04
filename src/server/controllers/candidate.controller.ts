@@ -205,13 +205,17 @@ export async function updateProfileAction(
   return null;
 }
 
-/** CA5 · Destino assinado para subir o PDF do perfil direto no Storage. */
-export async function requestProfileResumeUploadAction(): Promise<
+/** CA5 · Destino assinado para subir o currículo (PDF ou imagem) do perfil direto no Storage. */
+export async function requestProfileResumeUploadAction(
+  ext = ".pdf"
+): Promise<
   { ok: true; path: string; token: string } | { ok: false; error: string }
 > {
   const candidate = await getSessionCandidate();
   if (!candidate) return { ok: false, error: "Sessão expirada. Entre novamente." };
-  const target = await requestProfileResumeUpload(candidate.id);
+  const allowed = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp"]);
+  const safeExt = allowed.has(ext.toLowerCase()) ? ext.toLowerCase() : ".pdf";
+  const target = await requestProfileResumeUpload(candidate.id, safeExt);
   if (!target) {
     return { ok: false, error: "Não foi possível preparar o envio do currículo." };
   }

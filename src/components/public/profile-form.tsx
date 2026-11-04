@@ -11,6 +11,7 @@ import {
   type CandidateAuthState,
 } from "@/server/controllers/candidate.controller";
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
+import { resumeExtForMime } from "@/server/models/application.model";
 import { AddressFields } from "@/components/public/address-fields";
 import { AdmissionFields } from "@/components/public/admission-fields";
 
@@ -50,7 +51,8 @@ export function ProfileForm({
             if (file instanceof File && file.size > 0) {
               const problem = await checkResumeFile(file);
               if (problem) return setUploadError(problem);
-              const target = await requestProfileResumeUploadAction();
+              const ext = resumeExtForMime(file.type);
+              const target = await requestProfileResumeUploadAction(ext);
               if (!target.ok) return setUploadError(target.error);
               const uploaded = await uploadResumeToStorage(file, target);
               if (!uploaded.ok) return setUploadError(uploaded.error);
@@ -314,7 +316,7 @@ export function ProfileForm({
               ref={fileRef}
               type="file"
               name="resume"
-              accept="application/pdf,.pdf"
+              accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg,image/png,.png,image/webp,.webp"
               className="hidden"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />

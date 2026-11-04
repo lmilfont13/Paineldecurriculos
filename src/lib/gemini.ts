@@ -22,6 +22,13 @@ type GenerateParams = {
    * comparar um modelo achando que é outro.
    */
   model?: string;
+  /**
+   * Imagem em base64 para enviar junto com o prompt (visão). Currículos em
+   * foto usam isso para que a IA leia o conteúdo direto da imagem.
+   */
+  imageBase64?: string;
+  /** MIME type da imagem (ex.: "image/jpeg"). Obrigatório se imageBase64 vier. */
+  imageMime?: string;
 };
 
 type Choice = { provider: "anthropic" | "groq"; model: string };
@@ -51,6 +58,17 @@ export async function aiModelId(companyId?: string): Promise<string> {
 }
 
 async function callGroq(key: string, model: string, params: GenerateParams): Promise<Response> {
+  // Groq (OpenAI-compatible): visão via content array com image_url (base64 data URI).
+  const userContent: unknown = params.imageBase64 && params.imageMime
+    ? [
+        {
+          type: "image_url",
+          image_url: { url: `data:${params.imageMime};base64,${params.imageBase64}` },
+        },
+        { type: "text", text: params.prompt },
+      ]
+    : params.prompt;
+
   return fetch(GROQ_ENDPOINT, {
     method: "POST",
     headers: {
@@ -61,7 +79,7 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
       model,
       messages: [
         { role: "system", content: params.system },
-        { role: "user", content: params.prompt },
+        { role: "user", content: userContent },
       ],
       max_tokens: params.maxTokens ?? 300,
       temperature: 0.2,
@@ -116,6 +134,21 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
     ? `${params.system}\n\nResponda somente com o JSON válido, sem texto antes ou depois.`
     : params.system;
 
+  // Conteúdo do usuário: texto simples ou [imagem + texto] quando há visão.
+  const userContent: unknown = params.imageBase64 && params.imageMime
+    ? [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: params.imageMime,
+            data: params.imageBase64,
+          },
+        },
+        { type: "text", text: params.prompt },
+      ]
+    : params.prompt;
+
   const call = (withTemperature: boolean) =>
     fetch(CLAUDE_ENDPOINT, {
       method: "POST",
@@ -129,7 +162,7 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
         max_tokens: params.maxTokens ?? 300,
         ...(withTemperature ? { temperature: 0.2 } : {}),
         system,
-        messages: [{ role: "user", content: params.prompt }],
+        messages: [{ role: "user", content: userContent }],
       }),
     });
 

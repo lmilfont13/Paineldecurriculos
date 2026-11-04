@@ -706,12 +706,14 @@ export function enqueueTriage(applicationId: string): void {
 export async function requestApplicationResumeUpload(
   companyId: string,
   jobId: string,
-  candidateId: string
+  candidateId: string,
+  ext = ".pdf"
 ): Promise<ResumeUploadTarget | null> {
   const job = await findJobById(jobId);
   if (!job || job.companyId !== companyId || job.status !== "OPEN") return null;
   return createResumeUploadTarget(
-    applicationResumePrefix(companyId, jobId, candidateId)
+    applicationResumePrefix(companyId, jobId, candidateId),
+    ext
   );
 }
 
@@ -1112,15 +1114,17 @@ export async function preRegisterCandidates(
   return { jobTitle: job.title, created, skipped };
 }
 
-/** URL assinada para o gestor anexar o PDF (ex.: currículo recebido por e-mail). */
+/** URL assinada para o gestor anexar o currículo (PDF ou imagem recebida por e-mail/WhatsApp). */
 export async function requestManagerResumeUpload(
   companyId: string,
-  applicationId: string
+  applicationId: string,
+  ext = ".pdf"
 ): Promise<ResumeUploadTarget | null> {
   const application = await getCompanyApplication(companyId, applicationId);
   if (!application?.candidateId) return null;
   return createResumeUploadTarget(
-    applicationResumePrefix(companyId, application.jobId, application.candidateId)
+    applicationResumePrefix(companyId, application.jobId, application.candidateId),
+    ext
   );
 }
 
@@ -1146,17 +1150,19 @@ export async function attachManagerResume(
   return { ok: true };
 }
 
-/** Lote de PDFs: URLs assinadas para o navegador subir direto ao Storage. */
+/** Lote de currículos (PDF ou imagem): URLs assinadas para o navegador subir direto ao Storage. */
 export async function requestBatchResumeUploads(
   companyId: string,
   jobId: string,
-  count: number
+  count: number,
+  exts?: string[]
 ): Promise<ResumeUploadTarget[] | null> {
   const job = await findJobById(jobId);
   if (!job || job.companyId !== companyId) return null;
   const targets: ResumeUploadTarget[] = [];
   for (let i = 0; i < Math.min(Math.max(count, 0), BATCH_RESUME_LIMIT); i++) {
-    const target = await createResumeUploadTarget(batchResumePrefix(companyId, jobId));
+    const ext = exts?.[i] ?? ".pdf";
+    const target = await createResumeUploadTarget(batchResumePrefix(companyId, jobId), ext);
     if (target) targets.push(target);
   }
   return targets;

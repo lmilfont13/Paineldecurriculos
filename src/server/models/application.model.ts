@@ -3,6 +3,29 @@ import { z } from "zod";
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB (regra 5)
 export const RESUME_MIME = "application/pdf";
 
+/** MIME types de imagem aceitos como currículo (foto/screenshot). */
+export const IMAGE_RESUME_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+/** Extensões de imagem aceitas, mapeadas ao MIME. */
+const IMAGE_EXT_TO_MIME: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
+
+/** Todos os MIME types que o bucket de currículos deve aceitar. */
+export const ALL_RESUME_MIMES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
 /**
  * MIME types que o celular costuma informar para um PDF vindo do WhatsApp,
  * Drive ou gerenciador de arquivos. Nesses casos a extensão decide, e o
@@ -24,10 +47,48 @@ export function looksLikePdf(file: { name: string; type: string }): boolean {
   );
 }
 
+/** Aceita imagem (JPEG, PNG, WebP) pelo MIME ou pela extensão. */
+export function looksLikeImage(file: { name: string; type: string }): boolean {
+  if (IMAGE_RESUME_MIMES.has(file.type)) return true;
+  const ext = file.name.trim().match(/\.[^.]+$/)?.[0]?.toLowerCase() ?? "";
+  return ext in IMAGE_EXT_TO_MIME;
+}
+
+/** Aceita PDF ou imagem como currículo. */
+export function looksLikeResume(file: { name: string; type: string }): boolean {
+  return looksLikePdf(file) || looksLikeImage(file);
+}
+
+/**
+ * Determina o MIME type a usar no upload, baseado no arquivo. Para PDFs
+ * ambíguos retorna "application/pdf"; para imagens sem MIME retorna pelo
+ * extensão. Retorna null se não reconhecer.
+ */
+export function resolveResumeMime(file: { name: string; type: string }): string | null {
+  if (looksLikePdf(file)) return "application/pdf";
+  if (IMAGE_RESUME_MIMES.has(file.type)) return file.type;
+  const ext = file.name.trim().match(/\.[^.]+$/)?.[0]?.toLowerCase() ?? "";
+  return IMAGE_EXT_TO_MIME[ext] ?? null;
+}
+
+/** Extensão de arquivo para o caminho no Storage, baseada no MIME. */
+export function resumeExtForMime(mime: string): string {
+  if (mime === "application/pdf") return ".pdf";
+  if (mime === "image/jpeg") return ".jpg";
+  if (mime === "image/png") return ".png";
+  if (mime === "image/webp") return ".webp";
+  return ".pdf"; // fallback
+}
+
 /** Assinatura de arquivo PDF: os 5 primeiros bytes são "%PDF-". */
 export function hasPdfSignature(bytes: Uint8Array): boolean {
   const sig = [0x25, 0x50, 0x44, 0x46, 0x2d];
   return sig.every((b, i) => bytes[i] === b);
+}
+
+/** Verifica se o caminho no Storage aponta para uma imagem (não PDF). */
+export function isImageResumePath(path: string): boolean {
+  return /\.(jpe?g|png|webp)$/i.test(path);
 }
 
 /** Destino de upload direto no Storage (URL assinada, válida por 2 h). */
@@ -50,10 +111,10 @@ export function profileResumePrefix(candidateId: string): string {
   return `profile/${candidateId}/`;
 }
 
-/** Caminho válido: prefixo esperado + UUID + ".pdf", sem "..". */
+/** Caminho válido: prefixo esperado + UUID + extensão permitida, sem "..". */
 export function isAllowedResumePath(path: string, prefix: string): boolean {
   if (!path.startsWith(prefix) || path.includes("..")) return false;
-  return /^[0-9a-f-]{36}\.pdf$/.test(path.slice(prefix.length));
+  return /^[0-9a-f-]{36}\.(pdf|jpe?g|png|webp)$/.test(path.slice(prefix.length));
 }
 
 /** Arquivo de demonstração servido de /public (não está no Storage). */
