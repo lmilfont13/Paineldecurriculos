@@ -410,6 +410,7 @@ export async function submitApplicationAction(
     pantsSize: formData.get("pantsSize") || undefined,
     shirtSize: formData.get("shirtSize") || undefined,
     desiredRole: formData.get("desiredRole") || undefined,
+    instagram: formData.get("instagram") || undefined,
     salaryExpectation: formData.get("salaryExpectation") || undefined,
     workPreference: formData.get("workPreference") || undefined,
     availability: formData.get("availability") || undefined,

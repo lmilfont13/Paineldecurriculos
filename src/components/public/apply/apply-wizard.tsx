@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 import { profileChoiceLabel } from "@/server/models/application.model";
+import { parseInstagram } from "@/server/models/instagram.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
@@ -40,6 +41,7 @@ type WizardData = {
   complement: string;
   name: string;
   phone: string;
+  instagram: string;
   birthDate: string;
   neighborhood: string;
   city: string;
@@ -78,6 +80,7 @@ export function ApplyWizard({
   const [data, setData] = useState<WizardData>({
     name: candidate.name,
     phone: candidate.phone ?? "",
+    instagram: candidate.instagram ? `@${candidate.instagram}` : "",
     birthDate: candidate.birthDate
       ? new Date(candidate.birthDate).toISOString().split("T")[0]
       : "",
@@ -133,6 +136,8 @@ export function ApplyWizard({
     if (step === 0) {
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
+      const ig = parseInstagram(data.instagram);
+      if ("error" in ig) return ig.error;
     }
     if (step === 1 && !resume && !candidate.resumeUrl)
       return "Anexe seu currículo em PDF para continuar.";
@@ -210,6 +215,7 @@ export function ApplyWizard({
         formData.set("jobId", job.id);
         formData.set("name", data.name.trim());
         formData.set("phone", data.phone.trim());
+        if (data.instagram.trim()) formData.set("instagram", data.instagram.trim());
         if (data.birthDate) formData.set("birthDate", data.birthDate);
         if (data.rg) formData.set("rg", data.rg.trim());
         if (data.cpf) formData.set("cpf", data.cpf);
@@ -365,6 +371,14 @@ export function ApplyWizard({
                   disabled
                   className="h-10 w-full rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-3 text-sm text-[#71717a]"
                   title="E-mail da sua conta"
+                />
+              </Field>
+              <Field label="Instagram (opcional)">
+                <TextInput
+                  value={data.instagram}
+                  onChange={(v) => setData((d) => ({ ...d, instagram: v }))}
+                  placeholder="@seu.usuario"
+                  autoComplete="off"
                 />
               </Field>
               <div>
@@ -597,6 +611,15 @@ export function ApplyWizard({
                 <ReviewRow label="Nome" value={data.name} />
                 <ReviewRow label="E-mail" value={candidate.email} />
                 <ReviewRow label="Telefone" value={formatPhone(data.phone)} />
+                {data.instagram.trim() && (
+                  <ReviewRow
+                    label="Instagram"
+                    value={(() => {
+                      const ig = parseInstagram(data.instagram);
+                      return "handle" in ig && ig.handle ? `@${ig.handle}` : data.instagram.trim();
+                    })()}
+                  />
+                )}
                 {data.birthDate && (
                   <ReviewRow
                     label="Data de nascimento"

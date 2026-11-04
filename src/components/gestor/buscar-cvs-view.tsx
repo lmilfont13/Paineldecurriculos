@@ -4,6 +4,7 @@ import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  AtSign,
   Award,
   BookOpen,
   Briefcase,
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 
 import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
+import { instagramUrl } from "@/server/models/instagram.model";
 import { extractPhotosBulkAction } from "@/server/controllers/application.controller";
 import {
   calculateAge,
@@ -922,6 +924,20 @@ export function BuscarCvsView({
                       )}
 
                       <div className="flex shrink-0 items-center gap-1">
+                        {item.instagram && (
+                          <a
+                            href={instagramUrl(item.instagram)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Instagram: @${item.instagram}`}
+                            className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] hover:bg-stone-100 hover:text-[#0a0a0a]"
+                          >
+                            <AtSign className="size-4" />
+                          </a>
+                        )}
+                        {/* Sem Instagram: mesmo espaço, para data e nota ficarem alinhadas entre as linhas. */}
+                        {!item.instagram && <span aria-hidden className="inline-block size-7" />}
                         {whatsappUrl && (
                           <a
                             href={whatsappUrl}
@@ -1184,6 +1200,22 @@ export function BuscarCvsView({
                           <>
                             <span>•</span>
                             <span>{formatPhone(item.phone)}</span>
+                          </>
+                        )}
+                        {item.instagram && (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={instagramUrl(item.instagram)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Abrir o Instagram"
+                              className="inline-flex items-center gap-0.5 font-medium text-[#0a0a0a] hover:underline"
+                            >
+                              <AtSign className="size-3" />
+                              {item.instagram}
+                            </a>
                           </>
                         )}
                         <button

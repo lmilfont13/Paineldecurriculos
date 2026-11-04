@@ -7,8 +7,8 @@
  * quem trata os dados).
  */
 
-/** Versão do texto (data em que entrou no ar). */
-export const CONSENT_VERSION = "2026-11-03";
+/** Versão do texto: data em que entrou no ar (AAAA-MM-DD) e, se mudou no mesmo dia, ".N". */
+export const CONSENT_VERSION = "2026-11-03.2"; // .2: inclui o Instagram (opcional)
 
 /** Mensagem quando a candidatura chega sem o aceite. */
 export const CONSENT_REQUIRED_MESSAGE =
@@ -49,7 +49,7 @@ export function privacyNotice(companyName: string, contactEmail: string | null):
     {
       title: "2. Quais dados coletamos",
       paragraphs: [
-        "Os dados que você mesmo informa: nome, e-mail, telefone, data de nascimento, endereço, " +
+        "Os dados que você mesmo informa: nome, e-mail, telefone, perfil do Instagram (opcional), data de nascimento, endereço, " +
           "currículo (e a foto que estiver nele), pretensão salarial, disponibilidade, respostas " +
           "do formulário e, quando a empresa pedir na pré-entrevista, documentos como RG e CPF.",
         "Informar se você é pessoa com deficiência é opcional. Esse é um dado sensível pela LGPD " +

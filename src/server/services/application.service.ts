@@ -113,6 +113,7 @@ import {
   withPhotoUrls,
 } from "@/server/services/resume-photo.service";
 import { withLargePhotoPaths } from "@/server/models/photo.model";
+import { parseInstagram } from "@/server/models/instagram.model";
 import { CONSENT_REQUIRED_MESSAGE, CONSENT_VERSION } from "@/server/models/consent.model";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
@@ -819,6 +820,10 @@ export async function submitApplication(
   const pantsSize = admissionParsed.data.pantsSize ?? candidate.pantsSize ?? null;
   const shirtSize = admissionParsed.data.shirtSize ?? candidate.shirtSize ?? null;
   const desiredRole = input.desiredRole ?? candidate.desiredRole ?? null;
+  // Instagram: o candidato digita como quiser (@, usuário ou link); guarda o usuário.
+  const instagramParsed = parseInstagram(input.instagram);
+  if ("error" in instagramParsed) return { ok: false, error: instagramParsed.error };
+  const instagram = instagramParsed.handle ?? candidate.instagram ?? null;
   const salaryExpectation = input.salaryExpectation ?? candidate.salaryExpectation ?? null;
   const workPreference = input.workPreference ?? candidate.workPreference ?? null;
   const availability = input.availability ?? candidate.availability ?? null;
@@ -851,6 +856,7 @@ export async function submitApplication(
         pantsSize,
         shirtSize,
         desiredRole,
+        instagram,
         salaryExpectation,
         workPreference,
         availability,
@@ -886,6 +892,7 @@ export async function submitApplication(
         pantsSize,
         shirtSize,
         desiredRole,
+        instagram,
         salaryExpectation,
         workPreference,
         availability,
@@ -922,6 +929,7 @@ export async function submitApplication(
     pantsSize,
     shirtSize,
     desiredRole,
+    instagram,
     salaryExpectation,
     workPreference,
     availability,

@@ -87,6 +87,8 @@ export const applicationInputSchema = z.object({
   pantsSize: z.string().optional().nullable(),
   shirtSize: z.string().optional().nullable(),
   desiredRole: z.string().optional().nullable(),
+  /** Instagram como o candidato digitou; normalizado em submitApplication. */
+  instagram: z.string().max(200).optional().nullable(),
   salaryExpectation: z.string().optional().nullable(),
   workPreference: z.string().optional().nullable(),
   availability: z.string().optional().nullable(),

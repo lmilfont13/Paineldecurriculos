@@ -1,5 +1,6 @@
 "use server";
 
+import { parseInstagram } from "@/server/models/instagram.model";
 import { signInPath } from "@/server/models/candidate.model";
 import { cepDigits } from "@/server/models/address.model";
 import { parseAdmissionInput, type AdmissionData } from "@/server/models/admission.model";
@@ -152,6 +153,13 @@ export async function updateProfileAction(
   const desiredRole = formData.has("desiredRole")
     ? String(formData.get("desiredRole") ?? "").trim() || null
     : undefined;
+  // Instagram: @, usuário ou link → só o usuário; vazio apaga.
+  let instagram: string | null | undefined = undefined;
+  if (formData.has("instagram")) {
+    const ig = parseInstagram(String(formData.get("instagram") ?? ""));
+    if ("error" in ig) return { error: ig.error };
+    instagram = ig.handle;
+  }
   const salaryExpectation = formData.has("salaryExpectation")
     ? String(formData.get("salaryExpectation") ?? "").trim() || null
     : undefined;
@@ -186,6 +194,7 @@ export async function updateProfileAction(
     ...(state !== undefined ? { state } : {}),
     ...(desiredRole !== undefined ? { desiredRole } : {}),
     ...(salaryExpectation !== undefined ? { salaryExpectation } : {}),
+    ...(instagram !== undefined ? { instagram } : {}),
     ...(workPreference !== undefined ? { workPreference } : {}),
     ...(availability !== undefined ? { availability } : {}),
     ...(hasCnh !== undefined ? { hasCnh } : {}),

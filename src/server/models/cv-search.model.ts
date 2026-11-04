@@ -25,6 +25,8 @@ export type CandidateCvCard = {
     aiMinScore: number;
   };
   salaryExpectation?: string | null;
+  /** Usuário do Instagram (sem @). */
+  instagram?: string | null;
   education?: string | null;
   languages?: string | null;
   skills?: string[];

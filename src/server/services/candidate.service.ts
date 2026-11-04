@@ -69,6 +69,7 @@ export const getSessionCandidate = cache(
       shirtSize: candidate.shirtSize,
       desiredRole: candidate.desiredRole,
       salaryExpectation: candidate.salaryExpectation,
+      instagram: candidate.instagram,
       workPreference: candidate.workPreference,
       availability: candidate.availability,
       hasCnh: candidate.hasCnh,

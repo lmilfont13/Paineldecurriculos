@@ -27,6 +27,7 @@ export type CandidateProfile = Pick<
   | "shirtSize"
   | "desiredRole"
   | "salaryExpectation"
+  | "instagram"
   | "workPreference"
   | "availability"
   | "hasCnh"

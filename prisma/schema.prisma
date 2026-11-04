@@ -172,6 +172,8 @@ model Candidate {
   shirtSize         String?
   desiredRole       String?
   salaryExpectation String?
+  /// Usuário do Instagram (sem @), opcional. Nunca vai para a IA.
+  instagram         String?
   workPreference    String? // "REMOTE" | "HYBRID" | "ONSITE" | "ANY"
   availability      String? // "IMMEDIATE" | "15_DAYS" | "30_DAYS" | "NEGOTIABLE"
   hasCnh            String? // "NONE" | "A" | "B" | "AB" | "C_D_E"
@@ -215,6 +217,8 @@ model Application {
   shirtSize         String?
   desiredRole       String?
   salaryExpectation String?
+  /// Usuário do Instagram (sem @), opcional. Nunca vai para a IA.
+  instagram         String?
   workPreference    String?
   availability      String?
   hasCnh            String?

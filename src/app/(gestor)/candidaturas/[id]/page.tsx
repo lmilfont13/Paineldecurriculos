@@ -50,6 +50,8 @@ import {
   type AppStatusKey,
 } from "@/server/models/application.model";
 import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
+import { instagramUrl } from "@/server/models/instagram.model";
+import { ExternalLink } from "lucide-react";
 import {
   interviewSummary,
   isPastInterview,
@@ -502,6 +504,23 @@ export default async function CandidaturaDetailPage({
                   <dd className="mt-1 break-words text-[13px] leading-5 text-[#0a0a0a]">{value}</dd>
                 </div>
               ))}
+              {app.instagram && (
+                <div>
+                  <dt className="text-[11px] font-medium text-[#71717a]">Instagram</dt>
+                  <dd className="mt-1 text-[13px] leading-5">
+                    <a
+                      href={instagramUrl(app.instagram)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                      style={{ color: "var(--brand-primary)" }}
+                    >
+                      @{app.instagram}
+                      <ExternalLink className="size-3" aria-hidden />
+                    </a>
+                  </dd>
+                </div>
+              )}
             </dl>
             <AnswersEditor
               applicationId={app.id}

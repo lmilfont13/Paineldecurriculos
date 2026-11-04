@@ -606,6 +606,7 @@ export function createApplication(data: {
   pantsSize?: string | null;
   shirtSize?: string | null;
   desiredRole?: string | null;
+  instagram?: string | null;
   salaryExpectation?: string | null;
   workPreference?: string | null;
   availability?: string | null;
@@ -709,6 +710,7 @@ export function completePreRegisteredApplication(
     pantsSize?: string | null;
     shirtSize?: string | null;
     desiredRole?: string | null;
+    instagram?: string | null;
     salaryExpectation?: string | null;
     workPreference?: string | null;
     availability?: string | null;

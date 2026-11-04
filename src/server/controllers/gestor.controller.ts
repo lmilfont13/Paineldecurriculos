@@ -136,6 +136,7 @@ export async function getBuscarCvsData() {
         aiMinScore: app.job.aiMinScore,
       },
       salaryExpectation: effectiveSalary,
+      instagram: app.instagram ?? null,
       education,
       languages,
       skills: extractCandidateSkills(app.resumeText, app.aiProfile),

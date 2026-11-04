@@ -42,6 +42,7 @@ export function updateCandidate(
     shirtSize: string | null;
     desiredRole: string | null;
     salaryExpectation: string | null;
+    instagram: string | null;
     workPreference: string | null;
     availability: string | null;
     hasCnh: string | null;

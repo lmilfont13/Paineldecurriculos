@@ -174,6 +174,18 @@ export function ProfileForm({
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
+                Instagram (opcional)
+              </span>
+              <input
+                name="instagram"
+                defaultValue={candidate.instagram ? `@${candidate.instagram}` : ""}
+                placeholder="@seu.usuario"
+                autoComplete="off"
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0a0a0a]">
                 Pretensão salarial
               </span>
               <input

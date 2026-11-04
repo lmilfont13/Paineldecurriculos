@@ -24,7 +24,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ slug: 
   if (!data) notFound();
   const { company, contactEmail } = data;
   const sections = privacyNotice(company.name, contactEmail);
-  const [year, month, day] = CONSENT_VERSION.split("-");
+  const [year, month, day] = CONSENT_VERSION.slice(0, 10).split("-");
 
   return (
     <>
