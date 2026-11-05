@@ -37,6 +37,7 @@ export default async function GestorLayout({
     >
       <GestorSidebar
         companyName={company.name}
+        companySlug={company.slug}
         companyInitials={companyInitials}
         logoUrl={company.logoUrl}
         pendingCount={pendingCount}
@@ -49,6 +50,7 @@ export default async function GestorLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <GestorTopbar
           companyName={company.name}
+        companySlug={company.slug}
           companyInitials={companyInitials}
           logoUrl={company.logoUrl}
           logoutAction={logoutAction}

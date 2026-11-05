@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
+import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -85,6 +86,7 @@ function PendingBadge({ count }: { count: number }) {
 
 export function GestorSidebar({
   companyName,
+  companySlug = "",
   companyInitials,
   logoUrl,
   pendingCount,
@@ -95,6 +97,7 @@ export function GestorSidebar({
   logoutAction,
 }: {
   companyName: string;
+  companySlug?: string;
   companyInitials: string;
   logoUrl: string | null;
   pendingCount: number;
@@ -174,6 +177,7 @@ export function GestorSidebar({
       </nav>
 
       <div className="mt-auto">
+        {companySlug && <OnlineCounterBadge slug={companySlug} variant="sidebar" />}
         <GestorRadioPlayer initialStation={radioStation} canManage={canManageRadio} />
       </div>
       <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
@@ -198,11 +202,13 @@ export function GestorSidebar({
 
 export function GestorTopbar({
   companyName,
+  companySlug = "",
   companyInitials,
   logoUrl,
   logoutAction,
 }: {
   companyName: string;
+  companySlug?: string;
   companyInitials: string;
   logoUrl: string | null;
   logoutAction: () => Promise<void>;

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getTenant } from "@/server/controllers/public.controller";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
+import { PublicPresenceTracker } from "@/components/gestor/online-presence";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
 
 export async function generateMetadata({
@@ -45,6 +46,7 @@ export default async function TenantLayout({
       style={brandCssVars(company) as React.CSSProperties}
     >
       <AttributionTracker />
+      <PublicPresenceTracker slug={company.slug} />
       {children}
     </div>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
+import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 
 /** Sidebar do console admin (frames A1/A5 do Figma) — sempre escura/neutra. */
 export function AdminSidebar({
@@ -74,6 +75,7 @@ export function AdminSidebar({
       </nav>
 
       <div className="mt-auto">
+        <OnlineCounterBadge slug="__admin__" variant="admin" />
         <GestorRadioPlayer initialStation={radioStation} canManage={true} />
       </div>
       <div className="flex items-center gap-2.5 p-3">
