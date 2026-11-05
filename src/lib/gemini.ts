@@ -5,9 +5,19 @@ import { findCompanyById } from "@/server/repositories/company.repository";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "qwen/qwen3.8-27b";
+const GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const CLAUDE_DEFAULT_MODEL = "claude-haiku-5-5";
+
+const GEMINI_ENDPOINT =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+export type VisionAttachment = {
+  base64: string;
+  /** "image/jpeg" | "image/png" | "image/webp" | "application/pdf" */
+  mime: string;
+};
 
 type GenerateParams = {
   system: string;
@@ -29,7 +39,23 @@ type GenerateParams = {
   imageBase64?: string;
   /** MIME type da imagem (ex.: "image/jpeg"). Obrigatório se imageBase64 vier. */
   imageMime?: string;
+  /**
+   * Múltiplas imagens (ex.: fatias de um print longo ou páginas escaneadas de
+   * PDF) ou documento PDF em base64 para leitura visual (OCR).
+   */
+  attachments?: VisionAttachment[];
 };
+
+function resolveAttachments(params: GenerateParams): VisionAttachment[] {
+  const list: VisionAttachment[] = [];
+  if (params.imageBase64 && params.imageMime) {
+    list.push({ base64: params.imageBase64, mime: params.imageMime });
+  }
+  if (params.attachments?.length) {
+    list.push(...params.attachments);
+  }
+  return list;
+}
 
 type Choice = { provider: "anthropic" | "groq"; model: string };
 
@@ -58,16 +84,27 @@ export async function aiModelId(companyId?: string): Promise<string> {
 }
 
 async function callGroq(key: string, model: string, params: GenerateParams): Promise<Response> {
+  const attachments = resolveAttachments(params);
+  const imageAttachments = attachments.filter((a) => a.mime.startsWith("image/")).slice(0, 5);
+
+  // Modelos puramente de texto na Groq (como qwen) recusam image_url: quando há
+  // visão, usa automaticamente o modelo multimodal da Groq.
+  const effectiveModel =
+    imageAttachments.length > 0 && !/llama-4-scout|vision/i.test(model)
+      ? GROQ_VISION_MODEL
+      : model;
+
   // Groq (OpenAI-compatible): visão via content array com image_url (base64 data URI).
-  const userContent: unknown = params.imageBase64 && params.imageMime
-    ? [
-        {
-          type: "image_url",
-          image_url: { url: `data:${params.imageMime};base64,${params.imageBase64}` },
-        },
-        { type: "text", text: params.prompt },
-      ]
-    : params.prompt;
+  const userContent: unknown =
+    imageAttachments.length > 0
+      ? [
+          ...imageAttachments.map((att) => ({
+            type: "image_url",
+            image_url: { url: `data:${att.mime};base64,${att.base64}` },
+          })),
+          { type: "text", text: params.prompt },
+        ]
+      : params.prompt;
 
   return fetch(GROQ_ENDPOINT, {
     method: "POST",
@@ -76,7 +113,7 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model,
+      model: effectiveModel,
       messages: [
         { role: "system", content: params.system },
         { role: "user", content: userContent },
@@ -89,8 +126,23 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
 }
 
 async function generateWithGroq(model: string, params: GenerateParams): Promise<string> {
+  const attachments = resolveAttachments(params);
+  const hasOnlyPdf =
+    attachments.length > 0 && attachments.every((a) => a.mime === "application/pdf");
+
+  // Groq não aceita PDF bruto via base64: se for documento PDF puro e houver
+  // chave do Gemini, delega ao Gemini 2.5 Flash que lê PDF nativamente.
+  if (hasOnlyPdf && readEnv("GEMINI_API_KEY")) {
+    return generateWithGemini(params);
+  }
+
   const key = readEnv("GROQ_API_KEY");
-  if (!key) throw new Error("GROQ_API_KEY não configurada");
+  if (!key) {
+    if (attachments.length > 0 && readEnv("GEMINI_API_KEY")) {
+      return generateWithGemini(params);
+    }
+    throw new Error("GROQ_API_KEY não configurada");
+  }
 
   // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
   // Somam menos que o maxDuration (60s) das páginas que chamam a IA.
@@ -105,6 +157,10 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
 
   if (!res.ok) {
     const body = await res.text();
+    if (attachments.length > 0 && readEnv("GEMINI_API_KEY")) {
+      console.error("[ia] Groq visão falhou, usando Gemini como reserva:", body.slice(0, 200));
+      return generateWithGemini(params);
+    }
     throw new Error(`Groq ${res.status}: ${body.slice(0, 300)}`);
   }
 
@@ -112,6 +168,54 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
     choices?: { message?: { content?: string } }[];
   };
   return data.choices?.[0]?.message?.content ?? "";
+}
+
+/**
+ * Reserva multimodal com Google Gemini (gemini-2.5-flash) para leitura visual
+ * de imagens e PDFs escaneados quando os outros provedores falharem.
+ */
+async function generateWithGemini(params: GenerateParams): Promise<string> {
+  const key = readEnv("GEMINI_API_KEY");
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+
+  const attachments = resolveAttachments(params);
+  const parts: unknown[] = [
+    ...attachments.map((att) => ({
+      inline_data: {
+        mime_type: att.mime,
+        data: att.base64,
+      },
+    })),
+    { text: params.prompt },
+  ];
+
+  const res = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(key)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: params.system }] },
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: params.maxTokens ?? 1000,
+        ...(params.json ? { responseMimeType: "application/json" } : {}),
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  return (
+    data.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text ?? "")
+      .join("") ?? ""
+  );
 }
 
 /**
@@ -134,20 +238,34 @@ async function generateWithClaude(model: string, params: GenerateParams): Promis
     ? `${params.system}\n\nResponda somente com o JSON válido, sem texto antes ou depois.`
     : params.system;
 
-  // Conteúdo do usuário: texto simples ou [imagem + texto] quando há visão.
-  const userContent: unknown = params.imageBase64 && params.imageMime
-    ? [
-        {
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: params.imageMime,
-            data: params.imageBase64,
-          },
-        },
-        { type: "text", text: params.prompt },
-      ]
-    : params.prompt;
+  const attachments = resolveAttachments(params);
+
+  // Conteúdo do usuário: texto simples ou [imagens/documentos + texto] quando há visão.
+  const userContent: unknown =
+    attachments.length > 0
+      ? [
+          ...attachments.map((att) =>
+            att.mime === "application/pdf"
+              ? {
+                  type: "document",
+                  source: {
+                    type: "base64",
+                    media_type: "application/pdf",
+                    data: att.base64,
+                  },
+                }
+              : {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: att.mime,
+                    data: att.base64,
+                  },
+                }
+          ),
+          { type: "text", text: params.prompt },
+        ]
+      : params.prompt;
 
   const call = (withTemperature: boolean) =>
     fetch(CLAUDE_ENDPOINT, {
@@ -219,7 +337,7 @@ export async function generateWithModelInfo(
   try {
     return { text: await generateWithClaude(choice.model, params), modelUsed: `anthropic:${choice.model}` };
   } catch (error) {
-    if (!readEnv("GROQ_API_KEY")) throw error;
+    if (!readEnv("GROQ_API_KEY") && !readEnv("GEMINI_API_KEY")) throw error;
     console.error("[ia] Claude falhou, usando a Groq como reserva:", error);
     return { text: await generateWithGroq(GROQ_MODEL, params), modelUsed: `groq:${GROQ_MODEL}` };
   }

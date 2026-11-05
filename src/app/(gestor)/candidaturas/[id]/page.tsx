@@ -327,7 +327,7 @@ export default async function CandidaturaDetailPage({
               </div>
             )}
 
-            {(app.aiState === "FAILED" || app.aiState === "NO_RESUME") && (
+            {(app.aiState === "FAILED" || app.aiState === "NO_RESUME" || app.aiState === "DONE") && (
               <div className="mt-4">
                 <ReanalyzeButton applicationId={app.id} />
               </div>

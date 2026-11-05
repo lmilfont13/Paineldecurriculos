@@ -19,6 +19,7 @@ import {
   listApplicationsForCvSearch,
   listCompanyApplicantAges,
   listJobApplicantAges,
+  requestReanalysis,
 } from "@/server/services/application.service";
 import {
   calculateAge,
@@ -83,6 +84,21 @@ export async function getCandidaturasPageData(jobId?: string) {
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
+
+  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado que
+  // haviam ficado como NO_RESUME ou FAILED há mais de 2 minutos.
+  const stuck = applications
+    .filter(
+      (a) =>
+        a.resumeUrl &&
+        (a.aiState === "NO_RESUME" || a.aiState === "FAILED") &&
+        Date.now() - a.updatedAt.getTime() > 120_000
+    )
+    .slice(0, 3);
+  for (const app of stuck) {
+    await requestReanalysis(user.companyId, app.id).catch(() => {});
+    app.aiState = "WAITING";
+  }
 
   const ages = await listCompanyApplicantAges(user.companyId);
   return { applications, jobs: (await listCompanyJobs(user.companyId)).filter((j) => j.status === "OPEN"), companyName: company.name, ages };
@@ -169,6 +185,21 @@ export async function getVagaDetailData(jobId: string) {
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
+
+  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado da vaga
+  const stuck = applications
+    .filter(
+      (a) =>
+        a.resumeUrl &&
+        (a.aiState === "NO_RESUME" || a.aiState === "FAILED") &&
+        Date.now() - a.updatedAt.getTime() > 120_000
+    )
+    .slice(0, 3);
+  for (const app of stuck) {
+    await requestReanalysis(user.companyId, app.id).catch(() => {});
+    app.aiState = "WAITING";
+  }
+
   const ages = await listJobApplicantAges(user.companyId, jobId);
   const questions = await getJobQuestions(user.companyId, jobId);
   const standby = await getStandbyForJob(user.companyId, jobId);
@@ -188,6 +219,21 @@ export async function getCandidaturaDetail(id: string) {
   const { user } = await getGestorShell();
   const application = await getCompanyApplication(user.companyId, id);
   if (!application) return null;
+
+  // Se a candidatura tem currículo anexado mas ficou sem leitura do arquivo
+  // (ex.: PDF em imagem da Catho antes do OCR visual), dispara a análise ao abrir.
+  const needsVisualOcrRetry =
+    Boolean(application.resumeUrl) &&
+    (application.aiState === "NO_RESUME" ||
+      application.aiState === "FAILED" ||
+      (application.aiState === "DONE" && !application.resumeText?.trim())) &&
+    Date.now() - application.updatedAt.getTime() > 60_000;
+
+  if (needsVisualOcrRetry) {
+    await requestReanalysis(user.companyId, id).catch(() => {});
+    application.aiState = "WAITING";
+  }
+
   const [withPhoto] = await withPhotoUrls([application]);
   const otherApplications = await getOtherApplicationsOfPerson(
     user.companyId,

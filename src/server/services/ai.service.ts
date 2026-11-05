@@ -3,11 +3,16 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { extractText, getDocumentProxy } from "unpdf";
+import sharp from "sharp";
+import { extractImages, extractText, getDocumentProxy } from "unpdf";
 
 import { Prisma } from "@prisma/client";
 
-import { geminiGenerate, generateWithModelInfo } from "@/lib/gemini";
+import {
+  geminiGenerate,
+  generateWithModelInfo,
+  type VisionAttachment,
+} from "@/lib/gemini";
 import { parseCareer, type CareerProfile } from "@/server/models/career.model";
 import { parseContactJson } from "@/server/models/intake.model";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -66,25 +71,200 @@ function mimeFromPath(p: string): string {
   return "image/jpeg"; // .jpg / .jpeg
 }
 
+const MAX_OCR_SIDE = 1568;
+const MAX_OCR_SLICES = 5;
+
+const OCR_SYSTEM_PROMPT =
+  "Você é um leitor de documentos. Extraia TODO o texto visível nas imagens/páginas do currículo na ordem em que aparece, preservando a estrutura (seções, cargos, empresas, datas, formação e cursos). Não invente nada que não esteja escrito. Se não houver texto legível, responda com uma string vazia.";
+
+/**
+ * Normaliza uma imagem para leitura visual (OCR) e, quando ela é um print
+ * vertical muito comprido (ex.: print de tela inteira da Catho ou celular),
+ * fatia em até 5 blocos verticais com leve sobreposição. Assim o modelo de
+ * visão não encolhe a largura da imagem inteira até deixar as letras ilegíveis.
+ */
+async function sliceSharpImageForOcr(
+  createInstance: () => sharp.Sharp,
+  width: number,
+  height: number
+): Promise<VisionAttachment[]> {
+  if (height > width * 2.1 && height > 1800) {
+    const sliceHeight = Math.min(height, Math.max(1400, Math.round(width * 1.65)));
+    const overlap = 120;
+    const step = Math.max(400, sliceHeight - overlap);
+    const slices: VisionAttachment[] = [];
+
+    for (let top = 0; top < height && slices.length < MAX_OCR_SLICES; top += step) {
+      const h = Math.min(sliceHeight, height - top);
+      if (h < 120 && slices.length > 0) break;
+      const buf = await createInstance()
+        .extract({ left: 0, top, width, height: h })
+        .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      slices.push({ base64: buf.toString("base64"), mime: "image/jpeg" });
+      if (top + h >= height) break;
+    }
+    return slices;
+  }
+
+  const buf = await createInstance()
+    .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
+    .flatten({ background: "#ffffff" })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+  return [{ base64: buf.toString("base64"), mime: "image/jpeg" }];
+}
+
+async function prepareImageAttachments(
+  bytes: Uint8Array,
+  mime: string
+): Promise<VisionAttachment[]> {
+  try {
+    const buffer = Buffer.from(bytes);
+    const meta = await sharp(buffer).metadata();
+    if (meta.width && meta.height) {
+      return await sliceSharpImageForOcr(() => sharp(buffer), meta.width, meta.height);
+    }
+  } catch {
+    // Fallback se o buffer não puder ser processado pelo sharp
+  }
+  return [{ base64: Buffer.from(bytes).toString("base64"), mime }];
+}
+
+async function extractTextFromAttachments(
+  attachments: VisionAttachment[],
+  companyId?: string
+): Promise<string> {
+  if (attachments.length === 0) return "";
+  return geminiGenerate({
+    system: OCR_SYSTEM_PROMPT,
+    prompt: "Extraia o texto completo deste currículo.",
+    maxTokens: 4000,
+    companyId,
+    imageBase64: attachments[0].base64,
+    imageMime: attachments[0].mime,
+    attachments: attachments.slice(1),
+  });
+}
+
 /**
  * Extrai texto de um currículo em imagem usando a visão da IA. Manda a foto
- * para o modelo com um prompt de OCR e recebe o texto de volta.
+ * (ou fatias, se for um print comprido) para o modelo com um prompt de OCR.
  */
 async function extractTextFromImage(
   bytes: Uint8Array,
   mime: string,
   companyId?: string
 ): Promise<string> {
-  const base64 = Buffer.from(bytes).toString("base64");
-  return geminiGenerate({
-    system:
-      "Você é um leitor de documentos. Extraia TODO o texto visível na imagem, preservando a estrutura (seções, listas, datas). Não invente nada que não esteja escrito. Se a imagem não contiver texto legível, responda com uma string vazia.",
-    prompt: "Extraia o texto completo deste currículo.",
-    maxTokens: 4000,
-    companyId,
-    imageBase64: base64,
-    imageMime: mime,
-  });
+  const attachments = await prepareImageAttachments(bytes, mime);
+  return extractTextFromAttachments(attachments, companyId);
+}
+
+/**
+ * Extrai as imagens embutidas nas páginas de um PDF escaneado (ou print salvo
+ * como PDF, como currículos exportados em imagem da Catho) e converte em
+ * fatias JPEG nítidas para leitura por visão da IA.
+ */
+async function extractPdfImagesForOcr(
+  pdf: Awaited<ReturnType<typeof getDocumentProxy>>
+): Promise<VisionAttachment[]> {
+  const attachments: VisionAttachment[] = [];
+  const maxPages = Math.min(pdf.numPages ?? 1, 4);
+
+  for (let pageNum = 1; pageNum <= maxPages && attachments.length < MAX_OCR_SLICES; pageNum++) {
+    let images: {
+      data: Uint8Array | Uint8ClampedArray;
+      width: number;
+      height: number;
+      channels: number;
+    }[] = [];
+    try {
+      images = await extractImages(pdf, pageNum);
+    } catch {
+      continue;
+    }
+    if (!images.length) continue;
+
+    const valid = images.filter(
+      (img) =>
+        img.width >= 200 &&
+        img.height >= 200 &&
+        (img.channels === 1 || img.channels === 3 || img.channels === 4) &&
+        img.data.byteLength === img.width * img.height * img.channels
+    );
+    if (!valid.length) continue;
+
+    const sorted = [...valid].sort((a, b) => b.width * b.height - a.width * a.height);
+    const maxArea = sorted[0].width * sorted[0].height;
+    const relevant = sorted.filter((img) => img.width * img.height >= maxArea * 0.2);
+
+    for (const img of relevant) {
+      if (attachments.length >= MAX_OCR_SLICES) break;
+      try {
+        const rawBuf = Buffer.from(img.data.buffer, img.data.byteOffset, img.data.byteLength);
+        const channels = img.channels as 1 | 3 | 4;
+        const slices = await sliceSharpImageForOcr(
+          () => sharp(rawBuf, { raw: { width: img.width, height: img.height, channels } }),
+          img.width,
+          img.height
+        );
+        for (const s of slices) {
+          if (attachments.length < MAX_OCR_SLICES) attachments.push(s);
+        }
+      } catch (error) {
+        console.error("[ia] Falha ao preparar imagem do PDF para OCR:", error);
+      }
+    }
+  }
+
+  return attachments;
+}
+
+/**
+ * Lê o texto de um PDF: usa a camada de texto nativa quando disponível e, se o
+ * PDF for uma imagem escaneada / print sem texto selecionável (< 200 chars),
+ * aciona automaticamente a leitura visual (OCR) com IA.
+ */
+async function extractPdfTextWithVision(
+  bytes: Uint8Array,
+  pdf: Awaited<ReturnType<typeof getDocumentProxy>>,
+  companyId?: string,
+  onStep?: TriageStepReporter
+): Promise<string> {
+  const nativeText = (await extractText(pdf, { mergePages: true })).text ?? "";
+  if (nativeText.trim().length >= 200) {
+    return nativeText;
+  }
+
+  await onStep?.("PDF em imagem detectado: lendo o texto com visão da IA");
+
+  let ocrText = "";
+  const imageAttachments = await extractPdfImagesForOcr(pdf);
+  if (imageAttachments.length > 0) {
+    try {
+      ocrText = await extractTextFromAttachments(imageAttachments, companyId);
+    } catch (error) {
+      console.error("[ia] Falha no OCR das imagens do PDF:", error);
+    }
+  }
+
+  if (ocrText.trim().length < 40 && bytes.byteLength <= 5 * 1024 * 1024) {
+    try {
+      ocrText = await extractTextFromAttachments(
+        [{ base64: Buffer.from(bytes).toString("base64"), mime: "application/pdf" }],
+        companyId
+      );
+    } catch (error) {
+      console.error("[ia] Falha no OCR direto do documento PDF:", error);
+    }
+  }
+
+  if (ocrText.trim().length >= nativeText.trim().length) {
+    return [nativeText.trim(), ocrText.trim()].filter(Boolean).join("\n\n");
+  }
+  return nativeText;
 }
 
 /** Regra 3: prompt da IA — NÃO ALTERAR. */
@@ -181,7 +361,7 @@ export async function readResumeText(resumePath: string): Promise<string> {
     return extractTextFromImage(bytes, mimeFromPath(resumePath));
   }
   const pdf = await getDocumentProxy(bytes);
-  return (await extractText(pdf, { mergePages: true })).text;
+  return extractPdfTextWithVision(bytes, pdf);
 }
 
 /**
@@ -206,8 +386,8 @@ export async function loadApplicationMaterial(applicationId: string): Promise<st
   const application = await findApplicationById(applicationId);
   if (!application) return null;
   const answersText = buildAnswersText(application.answers);
-  let resumeText = "";
-  if (application.resumeUrl) {
+  let resumeText = application.resumeText ?? "";
+  if (!resumeText.trim() && application.resumeUrl) {
     const bytes = await loadResumeBytes(application.resumeUrl);
     if (isImageResumePath(application.resumeUrl)) {
       resumeText = await extractTextFromImage(
@@ -217,7 +397,7 @@ export async function loadApplicationMaterial(applicationId: string): Promise<st
       );
     } else {
       const pdf = await getDocumentProxy(bytes);
-      resumeText = (await extractText(pdf, { mergePages: true })).text;
+      resumeText = await extractPdfTextWithVision(bytes, pdf, application.company?.id);
     }
   }
   if (!hasMaterial(resumeText, answersText)) return null;
@@ -401,7 +581,12 @@ export async function analyzeApplication(
       } else {
         await onStep("Lendo o texto do PDF");
         const pdf = await getDocumentProxy(bytes);
-        resumeText = (await extractText(pdf, { mergePages: true })).text;
+        resumeText = await extractPdfTextWithVision(
+          bytes,
+          pdf,
+          application.company.id,
+          onStep
+        );
 
         // Foto: referência visual para o gestor — sempre tentada, mesmo em PDFs
         // com pouco texto extraído. captureResumePhoto retorna false sem lançar
