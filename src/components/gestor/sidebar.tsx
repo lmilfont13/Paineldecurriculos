@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GestorRadioPlayer } from "@/components/gestor/radio-player";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -168,7 +169,10 @@ export function GestorSidebar({
         })}
       </nav>
 
-      <div className="mx-3 mb-3 mt-auto flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
+      <div className="mt-auto">
+        <GestorRadioPlayer />
+      </div>
+      <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
           {userInitials}
         </span>
