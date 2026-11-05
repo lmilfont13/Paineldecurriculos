@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getTenant } from "@/server/controllers/public.controller";
+import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
 
 export async function generateMetadata({
@@ -43,6 +44,7 @@ export default async function TenantLayout({
       className="flex min-h-screen flex-col bg-[#faf8f6] text-[#1c1917]"
       style={brandCssVars(company) as React.CSSProperties}
     >
+      <AttributionTracker />
       {children}
     </div>
   );

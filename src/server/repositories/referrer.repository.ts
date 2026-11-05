@@ -97,7 +97,7 @@ export async function countApplicationsBySource(
   });
   const map: Record<string, number> = {};
   for (const r of rows) {
-    const key = r.source ?? "instagram";
+    const key = r.source ?? "direto";
     map[key] = (map[key] ?? 0) + r._count;
   }
   return map;
@@ -159,7 +159,7 @@ export async function countApplicationsBySourceCompany(companyId: string) {
   });
   const map: Record<string, number> = {};
   for (const r of rows) {
-    const key = r.source ?? "instagram";
+    const key = r.source ?? "direto";
     map[key] = (map[key] ?? 0) + r._count;
   }
   return map;

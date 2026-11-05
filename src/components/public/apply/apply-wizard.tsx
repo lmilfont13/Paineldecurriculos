@@ -262,6 +262,12 @@ export function ApplyWizard({
         formData.set("answers", JSON.stringify(mergedAnswers));
         formData.set("consent", String(consent));
         if (resumePath) formData.set("resumePath", resumePath);
+        try {
+          const clientSource = localStorage.getItem("__triagem_src");
+          const clientRef = localStorage.getItem("__triagem_ref");
+          if (clientSource) formData.set("clientSource", clientSource);
+          if (clientRef) formData.set("clientReferrer", clientRef);
+        } catch { /* localStorage indisponível */ }
 
         const result = await submitApplicationAction(formData);
         if (result.ok) {

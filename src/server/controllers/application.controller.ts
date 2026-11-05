@@ -449,8 +449,18 @@ export async function submitApplicationAction(
   // Atribuição: lê cookies gravados pelo proxy (first-touch)
   const cookieStore = await cookies();
   const headerStore = await headers();
-  const source = cookieStore.get(ATTRIBUTION_COOKIE)?.value ?? detectSourceFromHeaders(headerStore.get("referer"), headerStore.get("user-agent"));
-  const referrerCode = cookieStore.get(REFERRER_COOKIE)?.value ?? null;
+  const clientSource = String(formData.get("clientSource") ?? "").trim().toLowerCase() || null;
+  const cookieSource = cookieStore.get(ATTRIBUTION_COOKIE)?.value ?? null;
+  const headerSource = detectSourceFromHeaders(headerStore.get("referer"), headerStore.get("user-agent"));
+  const source =
+    (cookieSource && cookieSource !== "direto" ? cookieSource : null) ??
+    (clientSource && clientSource !== "direto" ? clientSource : null) ??
+    headerSource ??
+    cookieSource ??
+    clientSource ??
+    "direto";
+  const clientReferrer = String(formData.get("clientReferrer") ?? "").trim() || null;
+  const referrerCode = cookieStore.get(REFERRER_COOKIE)?.value ?? clientReferrer ?? null;
 
   const resumePath = String(formData.get("resumePath") ?? "").trim();
   return submitApplication(
