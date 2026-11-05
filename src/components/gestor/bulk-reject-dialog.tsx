@@ -114,7 +114,7 @@ export function BulkRejectDialog({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Reprovar quem ficou na triagem"
+      aria-label="Mover quem ficou na triagem para o Banco de dados"
       onClick={() => !pending && !done && onClose()}
     >
       <div
@@ -125,15 +125,15 @@ export function BulkRejectDialog({
           <>
             <h2 className="text-lg font-semibold text-[#0a0a0a]">Pronto</h2>
             <p className="mt-2 text-sm leading-6 text-[#57534e]">
-              {done.rejected} candidato{done.rejected === 1 ? " foi reprovado" : "s foram reprovados"} e
+              {done.rejected} candidato{done.rejected === 1 ? " foi movido para o banco de dados" : "s foram movidos para o banco de dados"} e
               {done.message?.ok
                 ? ` ${done.message.emailed === 1 ? "está recebendo" : "estão recebendo"} a mensagem por e-mail (${done.message.emailed}) e na área do candidato (${done.message.notified}).`
                 : " não houve envio de mensagem."}{" "}
-              Todos continuam no banco de talentos.
+              Todos continuam disponíveis no banco de dados.
             </p>
             {done.message?.ok && done.message.noChannel > 0 && (
               <p className="mt-2 text-[13px] text-[#a16207]">
-                {done.message.noChannel} não têm e-mail válido nem conta no site: foram reprovados, mas não
+                {done.message.noChannel} não têm e-mail válido nem conta no site: foram guardados no banco de dados, mas não
                 receberam a mensagem.
               </p>
             )}
@@ -154,14 +154,14 @@ export function BulkRejectDialog({
         ) : (
           <>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a1a1aa]">
-              Reprovar em massa
+              Banco de dados em massa
             </p>
             <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">
-              Reprovar quem ficou na triagem
+              Mover quem ficou na triagem para o Banco de dados
             </h2>
             <p className="mt-1 text-[13px] leading-5 text-[#71717a]">
-              Eles saem do funil desta vaga e recebem a mensagem abaixo — uma só, por e-mail e na área do
-              candidato. O cadastro continua no banco de talentos para as próximas vagas.
+              Eles saem do funil desta vaga e ficam guardados no Banco de dados da empresa, recebendo a mensagem abaixo — uma só, por e-mail e na área do
+              candidato.
             </p>
 
             {/* Quem será reprovado */}
@@ -273,7 +273,7 @@ export function BulkRejectDialog({
                 className="mt-0.5 size-4 accent-[#0a0a0a]"
               />
               <span>
-                Confirmo reprovar <strong>{count}</strong> candidato{count === 1 ? "" : "s"} e enviar a mensagem. A
+                Confirmo mover <strong>{count}</strong> candidato{count === 1 ? "" : "s"} para o Banco de dados e enviar a mensagem. A
                 etapa dá para mudar depois; a mensagem enviada, não.
               </span>
             </label>
@@ -299,7 +299,7 @@ export function BulkRejectDialog({
                 disabled={!canSend}
                 className="h-10 rounded-xl bg-[#c23b3b] px-5 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {pending ? "Reprovando e enviando…" : `Reprovar e enviar para ${count}`}
+                {pending ? "Movendo e enviando…" : `Mover p/ Banco de dados (${count})`}
               </button>
             </div>
           </>

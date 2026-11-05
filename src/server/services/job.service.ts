@@ -16,6 +16,7 @@ import {
   createJob,
   deleteJob,
   findJobById,
+  countJobsCreatedSince,
   findJobsByCompanyId,
   findOpenJobsByCompanyId,
   findPublicOpenJobsForSitemap,
@@ -154,4 +155,8 @@ export async function listSitemapJobs(): Promise<
 > {
   const jobs = await findPublicOpenJobsForSitemap();
   return jobs.map((j) => ({ slug: j.company.slug, jobId: j.id, updatedAt: j.updatedAt }));
+}
+
+export function countCompanyJobsSince(companyId: string, since: Date): Promise<number> {
+  return countJobsCreatedSince(companyId, since);
 }

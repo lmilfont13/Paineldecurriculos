@@ -148,7 +148,7 @@ export function ShortlistPanel({
           </ol>
           <p className="mt-3 text-[11px] text-[#a1a1aa]">
             A IA leu {result.analyzed} de {result.total} candidatos (os de maior nota
-            primeiro; reprovados ficam de fora). Cada análise pode dar um resultado um pouco diferente.
+            primeiro; candidatos no banco de dados ficam de fora). Cada análise pode dar um resultado um pouco diferente.
           </p>
         </div>
       )}

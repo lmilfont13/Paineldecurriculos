@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
 const runs: Record<string, Record<string, unknown>[]> = {};
 const app = {
@@ -35,6 +36,9 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 const captureResumePhoto = vi.fn(async () => false);
 vi.mock("@/server/services/resume-photo.service", () => ({
   captureResumePhoto: (...a: unknown[]) => captureResumePhoto(...(a as [])),
+}));
+vi.mock("@/server/repositories/talent.repository", () => ({
+  updateCandidateTenureAnalysis: vi.fn(),
 }));
 
 import { runTriageWithTracking } from "@/server/services/ai.service";

@@ -48,7 +48,7 @@ const TABS: { key: StageKey; label: string }[] = [
   { key: "INTERVIEW", label: "Entrevista" },
   { key: "STANDBY", label: "Stand-by" },
   { key: "APPROVED", label: "Aprovados" },
-  { key: "REJECTED", label: "Reprovados" },
+  { key: "REJECTED", label: "Banco de dados" },
   { key: "ALL", label: "Todos" },
 ];
 
@@ -85,7 +85,7 @@ const BULK_LABELS: Record<AppStatusKey, string> = {
   INTERVIEW: "Chamar p/ entrevista",
   STANDBY: "Colocar em stand-by",
   APPROVED: "Aprovar",
-  REJECTED: "Reprovar",
+  REJECTED: "Banco de dados",
 };
 
 const PAGE = 40;
@@ -1047,7 +1047,7 @@ export function CandidaturasTable({
                   (confirm === "REJECTED" ? "bg-[#c23b3b]" : "bg-[#0a0a0a]")
                 }
               >
-                {confirm === "REJECTED" ? "Reprovar" : "Confirmar"}
+                {confirm === "REJECTED" ? "Mover p/ Banco de dados" : "Confirmar"}
               </button>
             </div>
           </div>

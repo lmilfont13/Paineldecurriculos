@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getTenant } from "@/server/controllers/public.controller";
+import { getTenant, getPublicSession } from "@/server/controllers/public.controller";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
@@ -39,6 +39,7 @@ export default async function TenantLayout({
   const { slug } = await params;
   const company = await getTenant(slug);
   if (!company) notFound();
+  const candidate = await getPublicSession();
 
   return (
     <div
@@ -46,7 +47,7 @@ export default async function TenantLayout({
       style={brandCssVars(company) as React.CSSProperties}
     >
       <AttributionTracker />
-      <PublicPresenceTracker slug={company.slug} />
+      <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
       {children}
     </div>
   );

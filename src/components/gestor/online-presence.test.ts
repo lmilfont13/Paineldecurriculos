@@ -38,3 +38,4 @@ describe("categorizePresence", () => {
     expect(res.categoryLabel).toBe("Equipe no Painel");
   });
 });
+

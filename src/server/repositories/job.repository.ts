@@ -28,6 +28,12 @@ export function countJobsByCompanyId(companyId: string, onlyOpen = false) {
   });
 }
 
+export function countJobsCreatedSince(companyId: string, since: Date) {
+  return prisma.job.count({
+    where: { companyId, isTalentPool: false, createdAt: { gte: since } },
+  });
+}
+
 export function createJob(data: {
   companyId: string;
   code: string | null;

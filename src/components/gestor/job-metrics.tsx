@@ -26,7 +26,7 @@ const FUNNEL_LABELS: Record<string, string> = {
   INTERVIEW: "Entrevista",
   STANDBY: "Stand-by",
   APPROVED: "Aprovado",
-  REJECTED: "Reprovado",
+  REJECTED: "Banco de dados",
 };
 const FUNNEL_COLORS: Record<string, string> = {
   PENDING: "#b07818",

@@ -123,7 +123,7 @@ export function PortfolioReport({
         </View>
         <View style={s.kpiRow}>
           <Kpi value={String(t.last7)} label="Novos em 7 dias" note={`${trend >= 0 ? "+" : "-"}${Math.abs(trend)} frente aos 7 anteriores`} />
-          <Kpi value={String(t.active)} label="Ativos" note="candidaturas não reprovadas" />
+          <Kpi value={String(t.active)} label="Ativos" note="candidaturas ativas no processo" />
         </View>
 
         <View style={{ flexDirection: "row", gap: 24, marginTop: 24, alignItems: "center" }}>

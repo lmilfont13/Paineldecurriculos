@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, Radio, Sparkles, User, Users, X } from "lucide-react";
+import { Briefcase, CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, Radio, Sparkles, User, Users, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,6 +10,7 @@ export type PresencePayload = {
   role: "candidato" | "equipe";
   path?: string;
   name?: string;
+  isRegistered?: boolean;
   timestamp?: number;
 };
 
@@ -109,7 +110,13 @@ function getTabPresenceKey(): string {
  * Rastreia visitantes nas páginas públicas da empresa (vagas, formulário de candidatura, perfil, etc.)
  * em tempo real via Supabase Realtime Presence, atualizando sempre que a rota mudar.
  */
-export function PublicPresenceTracker({ slug }: { slug: string }) {
+export function PublicPresenceTracker({
+  slug,
+  candidateName,
+}: {
+  slug: string;
+  candidateName?: string | null;
+}) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -131,6 +138,8 @@ export function PublicPresenceTracker({ slug }: { slug: string }) {
         await channel.track({
           role: "candidato",
           path: pathname,
+          name: candidateName || undefined,
+          isRegistered: Boolean(candidateName),
           timestamp: Date.now(),
         } satisfies PresencePayload);
       }
@@ -139,7 +148,7 @@ export function PublicPresenceTracker({ slug }: { slug: string }) {
     return () => {
       void channel.unsubscribe();
     };
-  }, [slug, pathname]);
+  }, [slug, pathname, candidateName]);
 
   return null;
 }
@@ -148,6 +157,8 @@ type OnlineSession = {
   key: string;
   role: "candidato" | "equipe";
   path: string;
+  name?: string;
+  isRegistered?: boolean;
   category: ScreenCategory;
   categoryLabel: string;
   screenTitle: string;
@@ -160,9 +171,15 @@ type OnlineSession = {
 export function OnlineCounterBadge({
   slug,
   variant = "sidebar",
+  jobsToday = 0,
+  appsToday = 0,
+  userName,
 }: {
   slug: string;
   variant?: "sidebar" | "topbar" | "admin";
+  jobsToday?: number;
+  appsToday?: number;
+  userName?: string;
 }) {
   const [sessions, setSessions] = useState<OnlineSession[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -207,6 +224,8 @@ export function OnlineCounterBadge({
           key,
           role: first.role,
           path: first.path || "/",
+          name: first.name,
+          isRegistered: first.isRegistered,
           category: info.category,
           categoryLabel: info.categoryLabel,
           screenTitle: info.screenTitle,
@@ -222,6 +241,8 @@ export function OnlineCounterBadge({
           await channel.track({
             role: "equipe",
             path: window.location.pathname,
+            name: userName || undefined,
+            isRegistered: true,
             timestamp: Date.now(),
           } satisfies PresencePayload);
         }
@@ -230,7 +251,7 @@ export function OnlineCounterBadge({
     return () => {
       void channel.unsubscribe();
     };
-  }, [slug]);
+  }, [slug, userName]);
 
   const candidates = sessions.filter((s) => s.role === "candidato");
   const team = sessions.filter((s) => s.role === "equipe");
@@ -320,6 +341,27 @@ export function OnlineCounterBadge({
             </button>
           </div>
 
+          {/* Vagas cadastradas hoje até o momento */}
+          <div className="mt-2.5 rounded-xl border border-[#e7e5e4] bg-[#fafaf9] p-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Briefcase className="size-3 text-[#b07818] shrink-0" />
+                <span className="truncate text-[11px] font-medium text-[#57534e]">Vagas hoje:</span>
+              </div>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-[#0a0a0a] shadow-xs">
+                {jobsToday} {jobsToday === 1 ? "vaga" : "vagas"}
+              </span>
+            </div>
+            {appsToday > 0 && (
+              <div className="mt-1.5 flex items-center justify-between border-t border-[#e7e5e4]/60 pt-1.5">
+                <span className="text-[11px] font-medium text-emerald-800">Candidaturas hoje:</span>
+                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-900 border border-emerald-200">
+                  {appsToday}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Cards de Resumo Rápido */}
           <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-center">
             <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-2">
@@ -381,11 +423,21 @@ export function OnlineCounterBadge({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate text-[11px] font-bold text-[#0a0a0a]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[11px] font-bold text-[#0a0a0a]">
+                          {s.name ? s.name : isCand ? "Visitante (sem login)" : "Membro da equipe"}
+                        </span>
+                        {s.isRegistered && (
+                          <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800">
+                            Cadastrado
+                          </span>
+                        )}
+                      </div>
+                      <span className="block truncate text-[10px] font-medium text-[#57534e]">
                         {s.screenTitle}
                       </span>
-                      <span className="block truncate text-[10px] text-[#71717a]">
-                        {s.categoryLabel} · <span className="font-mono text-[9px] text-[#a1a1aa]">{s.path}</span>
+                      <span className="block truncate text-[9px] text-[#a1a1aa]">
+                        {s.categoryLabel}
                       </span>
                     </div>
                   </div>

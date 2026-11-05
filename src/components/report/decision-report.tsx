@@ -146,7 +146,7 @@ export function DecisionReport({
   const stageColors: Record<string, string> = { PENDING: "#e0a526", SHORTLISTED: "#5b8bd0", INTERVIEW: brand, APPROVED: C.good, REJECTED: "#d6d3d1" };
 
   const kpis: [string, string, string][] = [
-    [String(data.totals.active), "Candidatos ativos", `${data.totals.total - data.totals.active} reprovado(s)`],
+    [String(data.totals.active), "Candidatos ativos", `${data.totals.total - data.totals.active} no banco de dados`],
     [`${num(data.totals.meetsPct, 0)}%`, "Atendem o mínimo", `${data.totals.meetsMinimum} de ${data.totals.analyzed} · corte ${data.job.aiMinScore}`],
     [st ? num(st.mean) : "—", "Nota média", st ? `mediana ${num(st.median)}` : "sem análises"],
     [leader ? num(leader.index) : "—", "Melhor índice", data.margin !== null ? `${num(data.margin)} pt sobre o 2º` : "sem comparação"],

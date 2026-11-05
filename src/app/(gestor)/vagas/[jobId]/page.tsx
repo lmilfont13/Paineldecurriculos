@@ -40,7 +40,7 @@ const STAGES: { key: AppStatusKey; label: string; accent: string }[] = [
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818" },
   { key: "STANDBY", label: "Stand-by", accent: "#0e7a6b" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d" },
-  { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa" },
+  { key: "REJECTED", label: "Banco de dados", accent: "#a1a1aa" },
 ];
 
 const statusStyles: Record<string, string> = {

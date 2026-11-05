@@ -18,7 +18,7 @@ const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818", hint: "Em conversa" },
   { key: "STANDBY", label: "Stand-by", accent: "#0e7a6b", hint: "Guardados p/ depois" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d", hint: "Prontos para avançar" },
-  { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa", hint: "Fora do processo" },
+  { key: "REJECTED", label: "BANCO DE DADOS", accent: "#a1a1aa", hint: "Disponível no banco" },
 ];
 type PipelinePerson = { id:string; name:string; status:AppStatusKey; aiScore:number|null; aiState:AIState|null; createdAt:string; photoUrl?:string|null; age?:number|null };
 
@@ -69,12 +69,12 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
     setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"SHORTLISTED"}:p));
     startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast(`${updated} candidato${updated===1?"":"s"} passou${updated===1?"":"ram"} da triagem.`);}catch{setPeople(previous);setToast("Não foi possível passar os candidatos. Tente novamente.");}});
   }
-  /** Quem ainda está na triagem (respeita o filtro de idade): reprovar todos de uma vez, com mensagem. */
+  /** Quem ainda está na triagem (respeita o filtro de idade): mover para banco de dados de uma vez, com mensagem. */
   const stillPending=visible.filter(p=>p.status==="PENDING");
   function onBulkRejected(ids:string[]){
     if(ids.length===0)return;
     setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"REJECTED"}:p));
-    setToast(`${ids.length} candidato${ids.length===1?"":"s"} reprovado${ids.length===1?"":"s"} com a mensagem enviada.`);
+    setToast(`${ids.length} candidato${ids.length===1?"":"s"} movido${ids.length===1?"":"s"} para o banco de dados com a mensagem enviada.`);
   }
   function askMove(id:string,stage:AppStatusKey){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
@@ -86,7 +86,7 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
 
   return <>
     <div className="mt-4 rounded-2xl border border-[#e4e4e7] bg-[#f7f6f4] p-2">
-      <div className="mb-2 flex items-center justify-between px-2 py-1.5"><p className="text-[11px] text-[#8a8781]">Arraste um candidato para a próxima etapa.</p><div className="flex flex-wrap items-center gap-2">{ready.length>0&&<button type="button" disabled={pending} onClick={passAllReady} className="h-8 rounded-lg px-3 text-[11px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50" style={{backgroundColor:"var(--brand-primary)",color:"var(--brand-foreground)"}}>Passar quem atende o mínimo ({ready.length})</button>}{stillPending.length>0&&<button type="button" disabled={pending} onClick={()=>setRejectOpen(true)} className="h-8 rounded-lg border border-[#e8c4c0] bg-white px-3 text-[11px] font-semibold text-[#c23b3b] transition hover:bg-[#fbeae8] disabled:opacity-50">Reprovar quem ficou na triagem ({stillPending.length})</button>}</div><span className="hidden text-[10px] font-medium text-[#aaa39c] sm:block">{pending?"Salvando movimento…":"Drag & drop ativo"}</span></div>
+      <div className="mb-2 flex items-center justify-between px-2 py-1.5"><p className="text-[11px] text-[#8a8781]">Arraste um candidato para a próxima etapa.</p><div className="flex flex-wrap items-center gap-2">{ready.length>0&&<button type="button" disabled={pending} onClick={passAllReady} className="h-8 rounded-lg px-3 text-[11px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50" style={{backgroundColor:"var(--brand-primary)",color:"var(--brand-foreground)"}}>Passar quem atende o mínimo ({ready.length})</button>}{stillPending.length>0&&<button type="button" disabled={pending} onClick={()=>setRejectOpen(true)} className="h-8 rounded-lg border border-[#e8c4c0] bg-white px-3 text-[11px] font-semibold text-[#c23b3b] transition hover:bg-[#fbeae8] disabled:opacity-50">Mover da triagem para Banco de dados ({stillPending.length})</button>}</div><span className="hidden text-[10px] font-medium text-[#aaa39c] sm:block">{pending?"Salvando movimento…":"Drag & drop ativo"}</span></div>
       <div className="mb-2 px-2">
         <button type="button" onClick={()=>setAgeOpen(o=>!o)} className="text-[11px] font-medium text-[#8a8781] hover:text-[#0a0a0a]" aria-expanded={ageOpen}>{ageFiltering?`Idade: ${range.min??"…"} a ${range.max??"…"} anos${hiddenByAge>0?` · ${hiddenByAge} oculto${hiddenByAge===1?"":"s"}`:""}`:"Filtrar por idade"} {ageOpen?"▴":"▾"}</button>
         {ageOpen&&<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-white px-3 py-2 text-[12px] text-[#57534e]">

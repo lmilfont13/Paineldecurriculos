@@ -24,7 +24,7 @@ export const STAGE_LABEL: Record<string, string> = {
   INTERVIEW: "Entrevista",
   STANDBY: "Stand-by",
   APPROVED: "Aprovados",
-  REJECTED: "Reprovados",
+  REJECTED: "Banco de dados",
 };
 
 export const s = StyleSheet.create({

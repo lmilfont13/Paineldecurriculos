@@ -148,6 +148,11 @@ export function countPendingApplications(companyId: string): Promise<number> {
   return countApplicationsByCompany(companyId, { status: "PENDING", onlyOpenJobs: true });
 }
 
+/** Candidaturas criadas desde uma data (ex: hoje). */
+export function countCompanyApplicationsSince(companyId: string, since: Date): Promise<number> {
+  return countApplicationsByCompany(companyId, { since });
+}
+
 /** Lista de candidaturas do tenant (E3), com filtro opcional por vaga. */
 export async function listCompanyApplications(
   companyId: string,

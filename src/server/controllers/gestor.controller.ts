@@ -14,6 +14,7 @@ import type {
 } from "@/server/models/dashboard.model";
 import {
   countPendingApplications,
+  countCompanyApplicationsSince,
   getCompanyApplication,
   getOtherApplicationsOfPerson,
   getQueueSiblings,
@@ -41,7 +42,7 @@ import {
   listApplicationFormFields,
 } from "@/server/services/form.service";
 import { getDashboard } from "@/server/services/dashboard.service";
-import { getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
+import { countCompanyJobsSince, getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
 import { appUrl } from "@/lib/env";
 import { effectiveAge } from "@/server/models/age.model";
 
@@ -55,7 +56,11 @@ export const getGestorShell = cache(async () => {
   if (!company) throw new Error("Empresa da sessão não encontrada");
   const radioStation = await getActiveRadioStation(user.companyId);
   const canManageRadio = await isPrimaryCompanyAdmin(user.companyId, user.id);
-  return { user, company, pendingCount, radioStation, canManageRadio };
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const jobsToday = await countCompanyJobsSince(user.companyId, startOfToday);
+  const appsToday = await countCompanyApplicationsSince(user.companyId, startOfToday);
+  return { user, company, pendingCount, radioStation, canManageRadio, jobsToday, appsToday };
 });
 
 export async function getVagasPageData() {

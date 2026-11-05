@@ -27,7 +27,7 @@ const STAGE_COPY: Record<AppStatusKey, string> = {
   INTERVIEW: "Em entrevista. O candidato já foi avisado por e-mail.",
   STANDBY: "Guardado em stand-by no funil para próximas oportunidades.",
   APPROVED: "Aprovado. O candidato já foi avisado por e-mail.",
-  REJECTED: "Processo encerrado. O candidato já foi avisado por e-mail.",
+  REJECTED: "Disponível no banco de dados da empresa.",
 };
 
 export type ScheduledInterview = {
@@ -60,10 +60,10 @@ function ConfirmReject({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold text-[#0a0a0a]">
-          Reprovar {candidateName}?
+          Mover {candidateName} para o Banco de Dados?
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[#71717a]">
-          O candidato receberá um e-mail informando o fim do processo. Esta ação
+          O candidato será guardado no banco de dados da empresa. Esta ação
           não pode ser desfeita.
         </p>
         <div className="mt-6 flex justify-end gap-3">
@@ -79,7 +79,7 @@ function ConfirmReject({
             onClick={onConfirm}
             className="h-10 rounded-2xl bg-[#c23b3b] px-5 text-[13px] font-medium text-white hover:opacity-90"
           >
-            Reprovar
+            Mover para Banco de Dados
           </button>
         </div>
       </div>

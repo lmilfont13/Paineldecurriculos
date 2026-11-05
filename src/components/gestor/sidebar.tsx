@@ -94,6 +94,8 @@ export function GestorSidebar({
   userInitials,
   radioStation,
   canManageRadio = false,
+  jobsToday = 0,
+  appsToday = 0,
   logoutAction,
 }: {
   companyName: string;
@@ -105,6 +107,8 @@ export function GestorSidebar({
   userInitials: string;
   radioStation?: RadioStation | null;
   canManageRadio?: boolean;
+  jobsToday?: number;
+  appsToday?: number;
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -177,7 +181,15 @@ export function GestorSidebar({
       </nav>
 
       <div className="mt-auto">
-        {companySlug && <OnlineCounterBadge slug={companySlug} variant="sidebar" />}
+        {companySlug && (
+          <OnlineCounterBadge
+            slug={companySlug}
+            variant="sidebar"
+            jobsToday={jobsToday}
+            appsToday={appsToday}
+            userName={userName}
+          />
+        )}
         <GestorRadioPlayer initialStation={radioStation} canManage={canManageRadio} />
       </div>
       <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">

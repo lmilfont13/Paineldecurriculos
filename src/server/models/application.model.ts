@@ -177,7 +177,7 @@ export const appStatusLabels = {
   INTERVIEW: "Entrevista",
   STANDBY: "Stand-by",
   APPROVED: "Aprovado",
-  REJECTED: "Reprovado",
+  REJECTED: "Banco de dados",
 } as const;
 
 export type AppStatusKey = keyof typeof appStatusLabels;

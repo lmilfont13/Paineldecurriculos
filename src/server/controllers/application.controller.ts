@@ -357,7 +357,7 @@ export async function setApplicationStatusAction(
     INTERVIEW: "Entrevista",
     STANDBY: "Stand-by",
     APPROVED: "Aprovado",
-    REJECTED: "Reprovado",
+    REJECTED: "Banco de dados",
   };
   if (updated) {
     // Auditoria é importante, mas nunca deve aumentar o tempo percebido
