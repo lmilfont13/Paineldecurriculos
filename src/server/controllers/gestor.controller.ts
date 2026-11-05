@@ -31,6 +31,8 @@ import {
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
 import { getStandbyForJob } from "@/server/services/talent.service";
 import { getCompanyById } from "@/server/services/company.service";
+import { getActiveRadioStation } from "@/server/services/message-template.service";
+import { isPrimaryCompanyAdmin } from "@/server/services/user.service";
 import {
   getJobQuestions,
   listApplicationFormFields,
@@ -48,13 +50,15 @@ export const getGestorShell = cache(async () => {
   const company = await getCompanyById(user.companyId);
   const pendingCount = await countPendingApplications(user.companyId);
   if (!company) throw new Error("Empresa da sessão não encontrada");
-  return { user, company, pendingCount };
+  const radioStation = await getActiveRadioStation(user.companyId);
+  const canManageRadio = await isPrimaryCompanyAdmin(user.companyId, user.id);
+  return { user, company, pendingCount, radioStation, canManageRadio };
 });
 
 export async function getVagasPageData() {
   const { user, company } = await getGestorShell();
-  const jobs = await listCompanyJobs(user.companyId);
-  return { companySlug: company.slug, jobs };
+
+  return { companySlug: company.slug, jobs: await listCompanyJobs(user.companyId) };
 }
 
 /** Configurações · a vitrine da empresa, como o dono edita. */
@@ -79,16 +83,16 @@ export async function getCandidaturasPageData(jobId?: string) {
   const applications = await withPhotoUrls(
     await listCompanyApplications(user.companyId, jobId)
   );
-  const jobs = await listCompanyJobs(user.companyId);
+
   const ages = await listCompanyApplicantAges(user.companyId);
-  return { applications, jobs, companyName: company.name, ages };
+  return { applications, jobs: (await listCompanyJobs(user.companyId)).filter((j) => j.status === "OPEN"), companyName: company.name, ages };
 }
 
 /** Busca avançada de CVs (nível Michelin): base aberta de currículos com busca facetada. */
 export async function getBuscarCvsData() {
   const { user } = await getGestorShell();
   const rawApps = await listApplicationsForCvSearch(user.companyId);
-  const jobs = await listCompanyJobs(user.companyId);
+
 
   const candidates: CandidateCvCard[] = rawApps.map((app) => {
     // Procura respostas relevantes nas perguntas customizadas
@@ -154,7 +158,7 @@ export async function getBuscarCvsData() {
     };
   });
 
-  return { candidates, jobs };
+  return { candidates, jobs: await listCompanyJobs(user.companyId) };
 }
 
 /** Hub da vaga: o processo inteiro em um lugar (funil, sinais, critérios). */

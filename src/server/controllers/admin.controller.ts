@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { requireAdmin } from "@/server/controllers/guards";
+import { getActiveRadioStation } from "@/server/services/message-template.service";
 import {
   countCompaniesForAdmin,
   getCompanyForAdmin,
@@ -13,7 +14,8 @@ import {
 export const getAdminShell = cache(async () => {
   const user = await requireAdmin();
   const companyCount = await countCompaniesForAdmin();
-  return { user, companyCount };
+  const radioStation = await getActiveRadioStation(null);
+  return { user, companyCount, radioStation };
 });
 
 export async function getEmpresasPageData() {

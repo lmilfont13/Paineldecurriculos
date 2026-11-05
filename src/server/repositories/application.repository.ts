@@ -249,14 +249,16 @@ export function countApplicationsByJobId(jobId: string) {
 
 export function countApplicationsByCompany(
   companyId: string,
-  filters?: { since?: Date; status?: AppStatus }
+  filters?: { since?: Date; status?: AppStatus; onlyOpenJobs?: boolean }
 ) {
   return prisma.application.count({
     where: {
       companyId,
       isDemo: false,
       ...(filters?.since ? { createdAt: { gte: filters.since } } : {}),
+      ...(filters?.since ? { createdAt: { gte: filters.since } } : {}),
       ...(filters?.status ? { status: filters.status } : {}),
+      job: { isTalentPool: false, ...(filters?.onlyOpenJobs ? { status: "OPEN" } : {}) },
     },
   });
 }
@@ -277,12 +279,13 @@ export async function countPendingGroupedByJob(companyId: string) {
  */
 export function findApplicationsByCompany(
   companyId: string,
-  options: { includeDemo?: boolean } = {}
+  options: { includeDemo?: boolean; onlyOpenJobs?: boolean } = {}
 ) {
   return prisma.application.findMany({
     where: {
       companyId,
       ...(options.includeDemo === false ? { isDemo: false } : {}),
+      job: { isTalentPool: false, ...(options.onlyOpenJobs ? { status: "OPEN" } : {}) },
     },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     include: { job: { select: { id: true, title: true, code: true, aiMinScore: true } } },

@@ -6,7 +6,7 @@ import {
   COOKIE_MAX_AGE,
   REFERRER_COOKIE,
   extractAttribution,
-  isGoogleReferer,
+  detectSourceFromHeaders,
 } from "@/server/models/attribution.model";
 
 /** Prefixos que exigem sessão (gestor e admin). O papel é checado nos guards. */
@@ -39,7 +39,7 @@ function captureAttribution(
 
   // Google via Referer header (se não veio por ?origem=)
   const effectiveSource =
-    source ?? (isGoogleReferer(request.headers.get("referer")) ? "google" : null);
+    source ?? detectSourceFromHeaders(request.headers.get("referer"), request.headers.get("user-agent"), request.nextUrl);
 
   // First-touch: só grava se não existir ainda
   if (effectiveSource && !request.cookies.get(ATTRIBUTION_COOKIE)) {

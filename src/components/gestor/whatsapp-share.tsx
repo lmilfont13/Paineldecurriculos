@@ -16,7 +16,7 @@ export function WhatsAppShare({
   const [, startTransition] = useTransition();
 
   const waText = encodeURIComponent(
-    `Nova vaga: *${jobTitle}*\nCandidature-se agora: ${url}`
+    `Nova vaga: *${jobTitle}*\nCandidature-se agora: ${url}${url.includes("?") ? "&" : "?"}origem=whatsapp`
   );
   const waHref = `https://api.whatsapp.com/send?text=${waText}`;
 

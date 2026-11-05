@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GestorRadioPlayer } from "@/components/gestor/radio-player";
+import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -90,6 +90,8 @@ export function GestorSidebar({
   pendingCount,
   userName,
   userInitials,
+  radioStation,
+  canManageRadio = false,
   logoutAction,
 }: {
   companyName: string;
@@ -98,6 +100,8 @@ export function GestorSidebar({
   pendingCount: number;
   userName: string;
   userInitials: string;
+  radioStation?: RadioStation | null;
+  canManageRadio?: boolean;
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -170,7 +174,7 @@ export function GestorSidebar({
       </nav>
 
       <div className="mt-auto">
-        <GestorRadioPlayer />
+        <GestorRadioPlayer initialStation={radioStation} canManage={canManageRadio} />
       </div>
       <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">

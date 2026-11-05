@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
 
 /** Sidebar do console admin (frames A1/A5 do Figma) — sempre escura/neutra. */
 export function AdminSidebar({
   companyCount,
   adminEmail,
   adminName,
+  radioStation,
   logoutAction,
 }: {
   companyCount: number;
   adminEmail: string;
   adminName: string;
+  radioStation?: RadioStation | null;
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -70,7 +73,10 @@ export function AdminSidebar({
         ))}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2.5 p-3">
+      <div className="mt-auto">
+        <GestorRadioPlayer initialStation={radioStation} canManage={true} />
+      </div>
+      <div className="flex items-center gap-2.5 p-3">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#37322e] text-[10px] font-bold text-white">
           {adminName.slice(0, 2).toUpperCase()}
         </span>

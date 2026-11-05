@@ -8,7 +8,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, companyCount } = await getAdminShell();
+  const { user, companyCount, radioStation } = await getAdminShell();
 
   return (
     <div className="flex min-h-screen bg-[#fafaf9]">
@@ -16,6 +16,7 @@ export default async function AdminLayout({
         companyCount={companyCount}
         adminName={user.name ?? "Admin"}
         adminEmail={user.email}
+        radioStation={radioStation}
         logoutAction={logoutAction}
       />
       <div className="flex min-w-0 flex-1 flex-col">

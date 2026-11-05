@@ -142,7 +142,7 @@ function emailBrand(company: {
 
 /** Contagem de candidaturas pendentes (badge da sidebar do gestor). */
 export function countPendingApplications(companyId: string): Promise<number> {
-  return countApplicationsByCompany(companyId, { status: "PENDING" });
+  return countApplicationsByCompany(companyId, { status: "PENDING", onlyOpenJobs: true });
 }
 
 /** Lista de candidaturas do tenant (E3), com filtro opcional por vaga. */
@@ -150,7 +150,10 @@ export async function listCompanyApplications(
   companyId: string,
   jobId?: string
 ) {
-  const applications = await findApplicationsByCompany(companyId);
+  const applications = await findApplicationsByCompany(companyId, {
+    includeDemo: false,
+    onlyOpenJobs: !jobId,
+  });
   return jobId
     ? applications.filter((a) => a.job.id === jobId)
     : applications;

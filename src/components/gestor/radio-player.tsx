@@ -6,11 +6,14 @@ import {
   Play,
   Radio,
   Search,
+  Settings2,
   Volume2,
   VolumeX,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+import { saveRadioStationAction } from "@/server/controllers/settings.controller";
 
 export interface RadioStation {
   id: string;
@@ -60,26 +63,50 @@ interface RadioBrowserResult {
   url_resolved: string;
 }
 
-const STORAGE_KEY_STATION = "triagem:radio:station";
 const STORAGE_KEY_VOLUME = "triagem:radio:volume";
 
-export function GestorRadioPlayer() {
+export function GestorRadioPlayer({
+  initialStation,
+  canManage = false,
+}: {
+  initialStation?: RadioStation | null;
+  canManage?: boolean;
+}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [stations, setStations] = useState<RadioStation[]>(CURATED_STATIONS);
-  const [current, setCurrent] = useState<RadioStation>(CURATED_STATIONS[0]);
+  const defaultStation = initialStation ?? CURATED_STATIONS[0];
+  const [stations, setStations] = useState<RadioStation[]>(() =>
+    initialStation && !CURATED_STATIONS.some((s) => s.url === initialStation.url)
+      ? [initialStation, ...CURATED_STATIONS]
+      : CURATED_STATIONS,
+  );
+  const [current, setCurrent] = useState<RadioStation>(defaultStation);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.5);
   const [muted, setMuted] = useState(false);
 
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<RadioStation[]>([]);
 
-  // Restaura última estação e volume salvos
+  // Sincroniza quando o admin atualiza a estação no servidor
+  useEffect(() => {
+    if (initialStation && initialStation.url !== current.url) {
+      setCurrent(initialStation);
+      setStations((prev) =>
+        prev.some((s) => s.url === initialStation.url)
+          ? prev
+          : [initialStation, ...prev],
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStation?.url]);
+
+  // Restaura apenas o volume local de quem está ouvindo
   useEffect(() => {
     try {
       const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
@@ -87,16 +114,6 @@ export function GestorRadioPlayer() {
         const parsed = parseFloat(savedVol);
         if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
           setVolume(parsed);
-        }
-      }
-      const savedStation = localStorage.getItem(STORAGE_KEY_STATION);
-      if (savedStation) {
-        const parsed = JSON.parse(savedStation) as RadioStation;
-        if (parsed?.url && parsed?.name) {
-          setCurrent(parsed);
-          setStations((prev) =>
-            prev.some((s) => s.url === parsed.url) ? prev : [parsed, ...prev],
-          );
         }
       }
     } catch {
@@ -138,17 +155,19 @@ export function GestorRadioPlayer() {
     }
   };
 
-  const selectStation = async (station: RadioStation) => {
+  const selectStationAsAdmin = async (station: RadioStation) => {
+    if (!canManage) return;
     setCurrent(station);
     setError(null);
     setStations((prev) =>
       prev.some((s) => s.url === station.url) ? prev : [station, ...prev],
     );
-    try {
-      localStorage.setItem(STORAGE_KEY_STATION, JSON.stringify(station));
-    } catch {
-      // Ignora erro de localStorage
-    }
+
+    // Salva no servidor para que todos os usuários escutem esta estação
+    setSaving(true);
+    saveRadioStationAction(station)
+      .catch(() => {})
+      .finally(() => setSaving(false));
 
     const audio = audioRef.current;
     if (!audio) return;
@@ -178,6 +197,7 @@ export function GestorRadioPlayer() {
 
   const searchRadioBrowser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) return;
     const trimmed = query.trim();
     if (!trimmed) return;
 
@@ -227,12 +247,12 @@ export function GestorRadioPlayer() {
           if (playing) {
             setPlaying(false);
             setLoading(false);
-            setError("Stream offline. Tente outra rádio.");
+            setError("Stream offline.");
           }
         }}
       />
 
-      {/* Cabeçalho + Play/Pause */}
+      {/* Player para todos: Play/Pause + Nome da Rádio + Volume */}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -240,8 +260,8 @@ export function GestorRadioPlayer() {
           aria-label={playing ? "Pausar rádio" : "Tocar rádio"}
           className="flex size-8 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-90"
           style={{
-            backgroundColor: playing ? "var(--brand-primary)" : "#1c1917",
-            color: playing ? "var(--brand-foreground)" : "#ffffff",
+            backgroundColor: playing ? "var(--brand-primary, #1c1917)" : "#1c1917",
+            color: playing ? "var(--brand-foreground, #ffffff)" : "#ffffff",
           }}
         >
           {loading ? (
@@ -257,45 +277,22 @@ export function GestorRadioPlayer() {
           <div className="flex items-center gap-1.5">
             <Radio
               className="size-3 shrink-0 text-[#71717a]"
-              style={playing ? { color: "var(--brand-primary)" } : undefined}
+              style={playing ? { color: "var(--brand-primary, #1c1917)" } : undefined}
             />
             <span className="truncate text-[11px] font-semibold text-[#0a0a0a]">
               {current.name}
             </span>
           </div>
           <p className="truncate text-[10px] text-[#71717a]">
-            {playing ? `Tocando • ${current.genre}` : current.genre}
+            {saving
+              ? "Salvando rádio p/ equipe..."
+              : playing
+                ? `Tocando • ${current.genre}`
+                : current.genre}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setSearchOpen((prev) => !prev)}
-          title="Buscar mais rádios (Radio Browser API)"
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-        >
-          {searchOpen ? <X className="size-3.5" /> : <Search className="size-3.5" />}
-        </button>
-      </div>
-
-      {/* Seletor rápido de estação + Volume */}
-      <div className="mt-2 flex items-center gap-2">
-        <select
-          aria-label="Selecionar estação de rádio"
-          value={current.url}
-          onChange={(e) => {
-            const found = stations.find((s) => s.url === e.target.value);
-            if (found) selectStation(found);
-          }}
-          className="h-7 min-w-0 flex-1 truncate rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-1.5 text-[11px] text-[#0a0a0a] outline-none focus:border-[#a1a1aa]"
-        >
-          {stations.map((s) => (
-            <option key={s.url} value={s.url}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
+        {/* Controle de volume compacto */}
         <button
           type="button"
           onClick={() => setMuted((m) => !m)}
@@ -317,39 +314,79 @@ export function GestorRadioPlayer() {
           aria-label="Volume da rádio"
           value={muted ? 0 : volume}
           onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-          className="h-1 w-14 cursor-pointer accent-[#1c1917]"
+          className="h-1 w-11 cursor-pointer accent-[#1c1917]"
         />
+
+        {/* Botão de configuração: exclusivo para o Admin */}
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setConfigOpen((prev) => !prev)}
+            title="Definir estação da rádio (exclusivo Admin)"
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+          >
+            {configOpen ? (
+              <X className="size-3.5" />
+            ) : (
+              <Settings2 className="size-3.5" />
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Busca via Radio Browser API */}
-      {searchOpen && (
-        <div className="mt-2 border-t border-[#e7e5e4] pt-2">
+      {/* Painel exclusivo do Admin para trocar a estação de todos */}
+      {canManage && configOpen && (
+        <div className="mt-2 space-y-2 border-t border-[#e7e5e4] pt-2">
+          <div>
+            <p className="mb-1 text-[10px] font-medium text-[#71717a]">
+              Estação da equipe (Admin)
+            </p>
+            <select
+              aria-label="Selecionar estação de rádio para todos"
+              value={current.url}
+              onChange={(e) => {
+                const found = stations.find((s) => s.url === e.target.value);
+                if (found) selectStationAsAdmin(found);
+              }}
+              className="h-7 w-full truncate rounded-md border border-[#e4e4e7] bg-[#fafaf9] px-1.5 text-[11px] text-[#0a0a0a] outline-none focus:border-[#a1a1aa]"
+            >
+              {stations.map((s) => (
+                <option key={s.url} value={s.url}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <form onSubmit={searchRadioBrowser} className="flex gap-1">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ex: Jovem Pan, Jazz, MPB..."
-              className="h-7 min-w-0 flex-1 rounded-md border border-[#e4e4e7] px-2 text-[11px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#71717a] focus:outline-none"
-            />
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[#a1a1aa]" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar outra rádio FM/Web..."
+                className="h-7 w-full rounded-md border border-[#e4e4e7] pl-6 pr-2 text-[11px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#71717a] focus:outline-none"
+              />
+            </div>
             <button
               type="submit"
               disabled={searching}
               className="rounded-md bg-[#1c1917] px-2 text-[11px] font-medium text-white hover:bg-[#292524] disabled:opacity-50"
             >
-              {searching ? "..." : "Ir"}
+              {searching ? "..." : "Buscar"}
             </button>
           </form>
 
           {searchResults.length > 0 && (
-            <ul className="mt-1.5 max-h-28 space-y-0.5 overflow-y-auto">
+            <ul className="max-h-28 space-y-0.5 overflow-y-auto">
               {searchResults.map((station) => (
                 <li key={station.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      selectStation(station);
-                      setSearchOpen(false);
+                      selectStationAsAdmin(station);
+                      setConfigOpen(false);
                     }}
                     className="flex w-full items-center justify-between rounded px-1.5 py-1 text-left text-[11px] text-[#0a0a0a] hover:bg-[#f4f4f5]"
                   >
@@ -371,4 +408,3 @@ export function GestorRadioPlayer() {
     </div>
   );
 }
-

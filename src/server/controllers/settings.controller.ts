@@ -1,6 +1,9 @@
 "use server";
 
 import { runModelTrial, type ModelTrialResult } from "@/server/services/model-trial.service";
+import { getSessionUser, isAdmin, isManager } from "@/server/services/auth.service";
+import { isPrimaryCompanyAdmin } from "@/server/services/user.service";
+import { setActiveRadioStation, type RadioStationConfig } from "@/server/services/message-template.service";
 import { revalidatePath } from "next/cache";
 
 import { AI_MODEL_OPTIONS, parseAiModelChoice } from "@/server/models/ai-model.model";
@@ -186,4 +189,21 @@ export async function updateAiModelAction(
 export async function runModelTrialAction(candidateModel: string): Promise<ModelTrialResult> {
   const user = await requireManager();
   return runModelTrial(user.companyId, String(candidateModel ?? ""));
+}
+
+/** Define a rádio ativa: permitido apenas para o Admin da plataforma ou Admin principal da empresa. */
+export async function saveRadioStationAction(station: RadioStationConfig): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  if (isAdmin(user)) {
+    const res = await setActiveRadioStation(null, station);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  if (isManager(user) && (await isPrimaryCompanyAdmin(user.companyId, user.id))) {
+    const res = await setActiveRadioStation(user.companyId, station);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  return { ok: false };
 }

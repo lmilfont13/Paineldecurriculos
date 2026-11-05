@@ -1,7 +1,7 @@
 "use server";
 
 import type { AppStatus } from "@prisma/client";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { runInBackground } from "@/lib/background";
@@ -13,7 +13,7 @@ import {
 } from "@/server/models/application.model";
 import {
   ATTRIBUTION_COOKIE,
-  REFERRER_COOKIE,
+  REFERRER_COOKIE, detectSourceFromHeaders,
 } from "@/server/models/attribution.model";
 import { interviewSchema } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
@@ -448,7 +448,8 @@ export async function submitApplicationAction(
 
   // Atribuição: lê cookies gravados pelo proxy (first-touch)
   const cookieStore = await cookies();
-  const source = cookieStore.get(ATTRIBUTION_COOKIE)?.value ?? null;
+  const headerStore = await headers();
+  const source = cookieStore.get(ATTRIBUTION_COOKIE)?.value ?? detectSourceFromHeaders(headerStore.get("referer"), headerStore.get("user-agent"));
   const referrerCode = cookieStore.get(REFERRER_COOKIE)?.value ?? null;
 
   const resumePath = String(formData.get("resumePath") ?? "").trim();

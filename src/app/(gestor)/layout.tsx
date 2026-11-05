@@ -26,7 +26,7 @@ export default async function GestorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, company, pendingCount } = await getGestorShell();
+  const { user, company, pendingCount, radioStation, canManageRadio } = await getGestorShell();
   const userName = user.name ?? user.email;
   const companyInitials = personInitials(company.name);
 
@@ -42,6 +42,8 @@ export default async function GestorLayout({
         pendingCount={pendingCount}
         userName={userName}
         userInitials={personInitials(userName)}
+        radioStation={radioStation}
+        canManageRadio={canManageRadio}
         logoutAction={logoutAction}
       />
       <div className="flex min-w-0 flex-1 flex-col">

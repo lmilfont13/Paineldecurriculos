@@ -13,6 +13,12 @@ export function listCompanyUsers(companyId: string) {
   return findUsersByCompany(companyId);
 }
 
+/** O primeiro usuário criado na empresa é o administrador principal dela. */
+export async function isPrimaryCompanyAdmin(companyId: string, userId: string): Promise<boolean> {
+  const users = await findUsersByCompany(companyId);
+  return users[0]?.id === userId;
+}
+
 export async function inviteManager(
   companyId: string,
   data: { name: string; email: string }
