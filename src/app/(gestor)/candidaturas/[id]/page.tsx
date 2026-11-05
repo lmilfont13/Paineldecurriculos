@@ -35,6 +35,8 @@ import { readCareer } from "@/server/models/career.model";
 import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
 import { suggestTalentPool } from "@/server/models/talent.model";
 import { readChecklist } from "@/server/models/ai.model";
+import { readTenure } from "@/server/models/tenure.model";
+import { TenureCard } from "@/components/gestor/tenure-card";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
 import {
   listInterviewEvaluationsAction,
@@ -133,6 +135,7 @@ export default async function CandidaturaDetailPage({
   ];
   const analyzing = app.aiState === "WAITING" || app.aiState === "PROCESSING";
   const checklist = readChecklist(app.aiChecklist);
+  const tenure = readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist, app.resumeText);
 
   const interview = app.interviewAt
     ? {
@@ -408,6 +411,8 @@ export default async function CandidaturaDetailPage({
                 </div>
               </div>
             )}
+
+            <TenureCard tenure={tenure} />
           </section>
 
           <CareerCard

@@ -31,6 +31,10 @@ export type CandidaturaRow = {
   aiLevel?: string | null;
   /** Idade, só para o gestor conferir (nunca entra na nota nem vai para a IA). */
   age?: number | null;
+  /** Estabilidade e tempo médio nas empresas (análise de durabilidade). */
+  tenureStability?: "ALTA" | "MEDIA" | "BAIXA" | "INSUFICIENTE" | null;
+  tenureAvg?: string | null;
+  tenureRisk?: "BAIXO" | "MEDIO" | "ALTO" | "NEUTRO" | null;
 };
 
 export type StageKey = AppStatusKey | "ALL";

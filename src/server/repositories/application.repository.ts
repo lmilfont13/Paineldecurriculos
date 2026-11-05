@@ -555,6 +555,7 @@ export function updateApplicationAi(
     aiReasoning?: string | null;
     aiModel?: string | null;
     aiChecklist?: Prisma.InputJsonValue | typeof Prisma.DbNull;
+    aiTenure?: Prisma.InputJsonValue | typeof Prisma.DbNull;
     aiProfile?: string | null;
     aiArea?: string | null;
     aiLevel?: string | null;
@@ -573,6 +574,8 @@ export function updateApplicationAi(
     resumeText: removeNulChars(data.resumeText),
     aiChecklist:
       data.aiChecklist === Prisma.DbNull ? data.aiChecklist : removeNulChars(data.aiChecklist),
+    aiTenure:
+      data.aiTenure === Prisma.DbNull ? data.aiTenure : removeNulChars(data.aiTenure),
   };
   return prisma.application.update({ where: { id }, data: clean });
 }

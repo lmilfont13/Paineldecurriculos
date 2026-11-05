@@ -700,6 +700,20 @@ export function CandidaturasTable({
                     {row.aiLevel && (
                       <span className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + levelClass}>{row.aiLevel}</span>
                     )}
+                    {row.tenureAvg && (
+                      <span
+                        className={`mt-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          row.tenureStability === "ALTA"
+                            ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                            : row.tenureStability === "BAIXA"
+                              ? "bg-[#fbeae8] text-[#c23b3b]"
+                              : "bg-[#f4f4f5] text-[#52525b]"
+                        }`}
+                        title={`Tempo médio de permanência: ${row.tenureAvg} por empresa`}
+                      >
+                        {row.tenureStability === "BAIXA" ? "⚠ Rotatividade: " : "Média: "}{row.tenureAvg}/empresa
+                      </span>
+                    )}
                     {row.infoState && (
                       <span
                         className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + (row.infoState === "ANSWERED" ? "bg-[#e4f6ec] text-[#1f7a4d]" : "bg-[#fff7e6] text-[#a16207]")}
@@ -833,6 +847,20 @@ export function CandidaturasTable({
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {jobLabel(row.jobTitle, row.jobCode)}
                     {row.age != null && <span title="Só para sua conferência: não entra na nota nem vai para a IA">{" · "}{row.age} anos</span>}
+                    {row.tenureAvg && (
+                      <span
+                        className={`ml-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium ${
+                          row.tenureStability === "ALTA"
+                            ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                            : row.tenureStability === "BAIXA"
+                              ? "bg-[#fbeae8] text-[#c23b3b]"
+                              : "bg-[#f4f4f5] text-[#52525b]"
+                        }`}
+                        title={`Média nas empresas: ${row.tenureAvg}`}
+                      >
+                        {row.tenureStability === "BAIXA" ? "⚠ " : ""}{row.tenureAvg}/empresa
+                      </span>
+                    )}
                     {waiting && (
                       <span className="font-medium text-[#b07818] md:hidden">
                         {" · "}

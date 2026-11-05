@@ -1,5 +1,6 @@
 import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
 import { readChecklist } from "@/server/models/ai.model";
+import { readTenure } from "@/server/models/tenure.model";
 import { criteriaCoverage, decisionIndex } from "@/server/models/report.model";
 import { infoRequestState } from "@/server/models/candidate-list.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -51,6 +52,9 @@ export default async function CandidaturasPage({
     aiProfile: app.aiProfile,
     aiLevel: app.aiLevel,
     age: ages[app.id] ?? null,
+    tenureStability: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.estabilidade ?? null,
+    tenureAvg: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.tempoMedioFormatado ?? null,
+    tenureRisk: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.classificacaoRisco ?? null,
   }));
 
   const hasOpenJobs = jobs.some((j) => j.status === "OPEN");

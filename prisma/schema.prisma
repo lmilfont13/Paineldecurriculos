@@ -240,6 +240,8 @@ model Application {
   /// Checklist por critério da vaga: [{ criterion, met: "sim"|"parcial"|"não", evidence }].
   /// Só explica a nota; não entra no cálculo (o prompt da nota é imutável, regra 3).
   aiChecklist   Json?
+  /// Análise de permanência nas empresas (tempo médio, histórico e risco de rotatividade).
+  aiTenure      Json?
   /// Candidatura da sala de simulação: fora de métricas, painel e Inteligência.
   isDemo        Boolean   @default(false)
   /// Cadastro rápido feito pelo gestor (só e-mail): o candidato completa depois.

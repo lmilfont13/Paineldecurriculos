@@ -113,6 +113,12 @@ export function parseChecklist(raw: string, criteria: string[]): ChecklistItem[]
 
 /** Valida o JSON salvo no banco antes de mostrar na tela. */
 export function readChecklist(value: unknown): ChecklistItem[] {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>;
+    if (Array.isArray(obj.criteria)) {
+      return readChecklist(obj.criteria);
+    }
+  }
   if (!Array.isArray(value)) return [];
   return value
     .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
@@ -122,6 +128,15 @@ export function readChecklist(value: unknown): ChecklistItem[] {
       evidence: String(v.evidence ?? ""),
     }))
     .filter((v) => v.criterion);
+}
+
+export function parseTenureFromJson(raw: string): unknown | null {
+  try {
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as Record<string, unknown>;
+    return parsed.tenure ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const PROFILE_LEVELS = ["Operacional", "Júnior", "Pleno", "Sênior", "Liderança"] as const;

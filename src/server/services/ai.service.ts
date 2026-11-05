@@ -22,10 +22,16 @@ import {
   hasMaterial,
   parseChecklist,
   parseSegment,
+  parseTenureFromJson,
   type ProfileSegment,
   type ChecklistItem,
   parseScoreResponse,
 } from "@/server/models/ai.model";
+import {
+  extractHeuristicTenure,
+  parseTenureAnalysis,
+  type TenureAnalysis,
+} from "@/server/models/tenure.model";
 import {
   createAgentRun,
   findApplicationById,
@@ -367,8 +373,9 @@ const MAX_RESUME_CHARS = 12000;
 export type TriageStepReporter = (label: string) => Promise<void>;
 
 /**
- * Prompt do checklist por critério. Separado do AI_PROMPT (regra 3): o
- * checklist só explica a nota ao gestor e não entra no cálculo dela.
+ * Prompt do checklist por critério e análise de permanência nas empresas.
+ * Separado do AI_PROMPT (regra 3): o checklist e a durabilidade apenas explicam
+ * a nota e o perfil ao gestor e não entram no cálculo dela.
  */
 const CHECKLIST_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Para cada critério da vaga, diga se o material do candidato mostra evidência.
@@ -376,36 +383,66 @@ Classifique também o perfil profissional pelo que o material mostra, sem dados 
 - area: UMA PALAVRA só, a área mais ampla (ex.: "Logística", "Administrativo", "Vendas", "Atendimento", "Saúde", "Beleza", "Indústria", "TI"). Nunca combine duas áreas com "e".
 - role: função principal em até 4 palavras, sempre no MASCULINO SINGULAR (ex.: "Promotor de vendas", "Motorista e entregador", "Consultor comercial", "Vendedor"). Nunca use feminino (promotora, vendedora, consultora).
 - level: um de "Operacional", "Júnior", "Pleno", "Sênior", "Liderança"
-Retorne JSON: { "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ], "profile": { "area": "...", "role": "...", "level": "..." } }`;
+Analise também a durabilidade e o tempo de permanência em cada empresa onde houver histórico ou datas/períodos no material:
+- empresas: lista de até 6 empresas descritas, cada uma com:
+  - empresa: nome da empresa ou local
+  - cargo: função desempenhada
+  - periodo: texto do período (ex.: "Jan/2021 a Mar/2023", "2019 - 2021", "2023 - Atual")
+  - meses: duração estimada em meses inteiros (ex.: 26 para 2 anos e 2 meses; se for até o momento atual use a data atual)
+- tempoMedioMeses: média de meses nas empresas com período
+- resumo: 1 frase concisa resumindo a estabilidade profissional do candidato (se costuma ter boa permanência ou se apresenta histórico de rotatividade rápida com passagens curtas).
+
+Retorne JSON: {
+  "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ],
+  "profile": { "area": "...", "role": "...", "level": "..." },
+  "tenure": {
+    "tempoMedioMeses": 18,
+    "resumo": "...",
+    "empresas": [
+      { "empresa": "...", "cargo": "...", "periodo": "...", "meses": 14 }
+    ]
+  }
+}`;
 
 /**
- * Checklist por critério + perfil resumido. Uma chamada só, separada do
- * AI_PROMPT (regra 3): explica a nota e sugere a pasta do banco de talentos,
+ * Checklist por critério + perfil resumido + análise de permanência por empresa.
+ * Uma chamada só, separada do AI_PROMPT (regra 3): explica a nota e orienta o gestor,
  * mas não entra no cálculo da nota.
  */
 async function buildChecklist(
   criteria: string[],
   material: string,
   companyId?: string
-): Promise<{ checklist: ChecklistItem[] | null; segment: ProfileSegment }> {
+): Promise<{
+  checklist: ChecklistItem[] | null;
+  segment: ProfileSegment;
+  tenure: TenureAnalysis | null;
+}> {
   try {
     const raw = await geminiGenerate({
       system: CHECKLIST_PROMPT,
       prompt: `Critérios da vaga:\n${
         criteria.length > 0 ? criteria.map((c) => `- ${c}`).join("\n") : "(sem critérios: devolva a lista vazia)"
       }\n\nMaterial do candidato:\n${material}`,
-      maxTokens: 700,
+      maxTokens: 1100,
       json: true,
       companyId,
     });
+    const parsedTenure = parseTenureAnalysis(parseTenureFromJson(raw)) ?? extractHeuristicTenure(material);
     return {
       checklist: criteria.length > 0 ? parseChecklist(raw, criteria) : null,
       segment: parseSegment(raw),
+      tenure: parsedTenure,
     };
   } catch (error) {
     // Complementar: se falhar, a nota continua valendo.
-    console.error("[ia] Falha no checklist por critério:", error);
-    return { checklist: null, segment: { area: null, role: null, level: null } };
+    console.error("[ia] Falha no checklist por critério e permanência:", error);
+    const fallbackTenure = extractHeuristicTenure(material);
+    return {
+      checklist: null,
+      segment: { area: null, role: null, level: null },
+      tenure: fallbackTenure,
+    };
   }
 }
 
@@ -709,13 +746,14 @@ export async function analyzeApplication(
     await onStep(
       criteriaList.length > 0 ? "Conferindo critério por critério" : "Resumindo o perfil"
     );
-    const { checklist, segment } = await buildChecklist(criteriaList, material, application.company.id);
+    const { checklist, segment, tenure } = await buildChecklist(criteriaList, material, application.company.id);
 
     await updateApplicationAi(applicationId, {
       aiScore: score,
       aiReasoning: reasoning,
       aiModel: modelUsed,
       aiChecklist: checklist ?? Prisma.DbNull,
+      aiTenure: tenure ? (tenure as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
       aiProfile: segment.role,
       aiArea: segment.area,
       aiLevel: segment.level,
