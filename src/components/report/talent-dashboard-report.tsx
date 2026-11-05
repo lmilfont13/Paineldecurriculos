@@ -1,26 +1,243 @@
 // Relatório Executivo em PDF: Dashboard Completo de Talentos & Capital Humano (nível Michelin).
-import { Circle, Document, G, Page, Rect, Svg, Text, View } from "@react-pdf/renderer";
+// Formato compacto, denso e sofisticado em 2 páginas executivas (sem capa desperdiçada).
+import { Document, G, Line, Page, Path, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 
-import { HBars } from "@/components/report/portfolio-charts";
-import { C, Donut, SvgText, cut, num, s } from "@/components/report/report-kit";
+import { C, SvgText, cut, num } from "@/components/report/report-kit";
 import type { TalentDashboardData } from "@/server/models/talent-dashboard.model";
 
-function Kpi({ value, label, note }: { value: string; label: string; note: string }) {
+const ds = StyleSheet.create({
+  page: {
+    paddingTop: 32,
+    paddingBottom: 40,
+    paddingHorizontal: 40,
+    fontFamily: "Helvetica",
+    fontSize: 8.5,
+    color: C.text,
+  },
+  headerStrip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    paddingBottom: 10,
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#0f172a",
+    marginBottom: 12,
+  },
+  companyEyebrow: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  mainTitle: {
+    fontFamily: "Times-Bold",
+    fontSize: 18,
+    color: "#0f172a",
+    letterSpacing: -0.2,
+  },
+  subTitle: {
+    fontSize: 8,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  metaRight: {
+    alignItems: "flex-end",
+    gap: 3,
+  },
+  dateBadge: {
+    fontSize: 7.5,
+    color: "#64748b",
+  },
+  countBadge: {
+    backgroundColor: "#0f172a",
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+  },
+  countBadgeText: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+    letterSpacing: 0.3,
+  },
+  kpiRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  kpiCard: {
+    flex: 1,
+    borderWidth: 0.75,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: "#f8fafc",
+  },
+  kpiValue: {
+    fontFamily: "Times-Bold",
+    fontSize: 16,
+    color: "#0f172a",
+  },
+  kpiLabel: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#334155",
+    marginTop: 2,
+  },
+  kpiSub: {
+    fontSize: 6.8,
+    color: "#64748b",
+    marginTop: 1.5,
+  },
+  sectionTitle: {
+    fontSize: 7.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#64748b",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  cardBox: {
+    borderWidth: 0.75,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: "#ffffff",
+  },
+  cardBoxTitle: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9.5,
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 18,
+    left: 40,
+    right: 40,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 7,
+    color: "#94a3b8",
+    borderTopWidth: 0.5,
+    borderTopColor: "#e2e8f0",
+    paddingTop: 6,
+  },
+  th: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4.5,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#f1f5f9",
+  },
+});
+
+function polar(cx: number, cy: number, r: number, a: number): [number, number] {
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+
+function arcPath(cx: number, cy: number, r: number, ir: number, a0: number, a1: number): string {
+  const end = Math.min(a1, a0 + Math.PI * 2 - 0.0001);
+  const [x0, y0] = polar(cx, cy, r, a0);
+  const [x1, y1] = polar(cx, cy, r, end);
+  const [x2, y2] = polar(cx, cy, ir, end);
+  const [x3, y3] = polar(cx, cy, ir, a0);
+  const large = end - a0 > Math.PI ? 1 : 0;
+  return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} L ${x2} ${y2} A ${ir} ${ir} 0 ${large} 0 ${x3} ${y3} Z`;
+}
+
+/** Gráfico Donut compacto para visualização de gênero. */
+function MiniDonut({
+  data,
+  size = 72,
+}: {
+  data: { label: string; value: number; color: string }[];
+  size?: number;
+}) {
+  const total = data.reduce((a, d) => a + d.value, 0);
+  const cx = size / 2;
+  const r = size / 2 - 2;
+  let angle = -Math.PI / 2;
+
   return (
-    <View style={s.kpi}>
-      <Text style={s.kpiValue}>{value}</Text>
-      <Text style={s.kpiLabel}>{label}</Text>
-      <Text style={s.kpiNote}>{note}</Text>
-    </View>
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {total === 0 ? (
+        <Rect x={0} y={0} width={size} height={size} rx={size / 2} fill="#e2e8f0" />
+      ) : (
+        data
+          .filter((d) => d.value > 0)
+          .map((d) => {
+            const a1 = angle + (d.value / total) * Math.PI * 2;
+            const path = arcPath(cx, cx, r, r * 0.62, angle, a1);
+            angle = a1;
+            return <Path key={d.label} d={path} fill={d.color} />;
+          })
+      )}
+      <SvgText x={cx} y={cx + 1} textAnchor="middle" fontSize={12} fill="#0f172a">
+        {String(total)}
+      </SvgText>
+      <SvgText x={cx} y={cx + 8} textAnchor="middle" fontSize={5} fill="#64748b">
+        total
+      </SvgText>
+    </Svg>
   );
 }
 
-function SectionHeader({ eyebrow, title, brand }: { eyebrow: string; title: string; brand: string }) {
+/** Barras horizontais compactas e refinadas. */
+function DenseBars({
+  rows,
+  total,
+  color,
+  width = 240,
+  labelW = 95,
+  rowH = 15,
+}: {
+  rows: { label: string; value: number }[];
+  total: number;
+  color: string;
+  width?: number;
+  labelW?: number;
+  rowH?: number;
+}) {
+  const valueW = 48;
+  const plotW = width - labelW - valueW;
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  const H = rows.length * rowH;
+
   return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={[s.eyebrow, { color: brand }]}>{eyebrow}</Text>
-      <Text style={s.h1}>{title}</Text>
-    </View>
+    <Svg width={width} height={H} viewBox={`0 0 ${width} ${H}`}>
+      {rows.map((r, i) => {
+        const y = i * rowH;
+        const w = (r.value / max) * plotW;
+        const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
+        return (
+          <G key={r.label}>
+            <SvgText x={0} y={y + 10} fontSize={7} fill="#334155">
+              {cut(r.label, Math.floor(labelW / 4.4))}
+            </SvgText>
+            <Rect
+              x={labelW}
+              y={y + 3}
+              width={r.value > 0 ? Math.max(w, 2) : 0}
+              height={7.5}
+              rx={1.5}
+              fill={color}
+            />
+            <SvgText x={labelW + w + 4} y={y + 9.5} fontSize={6.8} fill="#64748b">
+              {`${r.value} (${pct}%)`}
+            </SvgText>
+          </G>
+        );
+      })}
+    </Svg>
   );
 }
 
@@ -48,30 +265,14 @@ export function TalentDashboardReport({
       : []),
   ];
 
-  const ageBarRows = data.age.brackets.map((b) => ({
-    label: b.label,
-    value: b.count,
-  }));
+  const ageRows = data.age.brackets
+    .filter((b) => b.count > 0 || b.label !== "Não informada")
+    .map((b) => ({ label: b.label, value: b.count }));
 
-  const roleRows = data.roles.map((r) => ({
-    label: r.label,
-    value: r.count,
-  }));
-
-  const companyRows = data.companies.topCompanies.map((c) => ({
-    label: c.label,
-    value: c.count,
-  }));
-
-  const levelRows = data.levels.map((l) => ({
-    label: l.label,
-    value: l.count,
-  }));
-
-  const areaRows = data.areas.map((a) => ({
-    label: a.label,
-    value: a.count,
-  }));
+  const roleRows = data.roles.slice(0, 6).map((r) => ({ label: r.label, value: r.count }));
+  const companyRows = data.companies.topCompanies.slice(0, 6).map((c) => ({ label: c.label, value: c.count }));
+  const levelRows = data.levels.slice(0, 5).map((l) => ({ label: l.label, value: l.count }));
+  const areaRows = data.areas.slice(0, 5).map((a) => ({ label: a.label, value: a.count }));
 
   return (
     <Document
@@ -79,374 +280,284 @@ export function TalentDashboardReport({
       author={company}
       subject="Panorama Demográfico e Inteligência de Mercado"
     >
-      {/* ─── PÁGINA 1: CAPA EXECUTIVA MICHELIN ─── */}
-      <Page size="A4" style={{ fontFamily: "Helvetica" }}>
-        <View style={{ height: 460, backgroundColor: brand, paddingHorizontal: 54, paddingTop: 64 }}>
-          <Svg width={595} height={460} viewBox="0 0 595 460" style={{ position: "absolute", right: 0, top: 0 }}>
-            <Circle cx={520} cy={60} r={160} fill="#ffffff" opacity={0.07} />
-            <Circle cx={430} cy={170} r={90} fill="#ffffff" opacity={0.05} />
-            <Circle cx={340} cy={90} r={50} fill="#ffffff" opacity={0.04} />
-          </Svg>
-          <Text
-            style={{
-              fontSize: 9.5,
-              letterSpacing: 2.8,
-              color: "#ffffff",
-              opacity: 0.85,
-              textTransform: "uppercase",
-              fontFamily: "Helvetica-Bold",
-            }}
-          >
-            {company} · Talent Intelligence
-          </Text>
-          <Text style={{ fontFamily: "Times-Bold", fontSize: 40, color: "#ffffff", marginTop: 140, lineHeight: 1.08 }}>
-            Dashboard Executivo{"\n"}de Talentos & CVs
-          </Text>
-          <Text style={{ fontFamily: "Times-Roman", fontSize: 17, color: "#ffffff", opacity: 0.9, marginTop: 18 }}>
-            Panorama demográfico, mercado de trabalho, cargos e histórico de permanência
-          </Text>
-        </View>
-
-        <View style={{ paddingHorizontal: 54, paddingTop: 36 }}>
-          <View style={{ flexDirection: "row", gap: 36 }}>
-            <View>
-              <Text style={s.eyebrow}>Emitido em</Text>
-              <Text style={{ fontSize: 11, color: C.ink, marginTop: 4, fontFamily: "Helvetica-Bold" }}>
-                {dateFormatted}
-              </Text>
-            </View>
-            <View>
-              <Text style={s.eyebrow}>Total de Candidatos</Text>
-              <Text style={{ fontSize: 11, color: C.ink, marginTop: 4, fontFamily: "Helvetica-Bold" }}>
-                {data.totals.candidates} talentos mapeados
-              </Text>
-            </View>
-            <View>
-              <Text style={s.eyebrow}>Aderência Alta (80%+)</Text>
-              <Text style={{ fontSize: 11, color: C.ink, marginTop: 4, fontFamily: "Helvetica-Bold" }}>
-                {data.totals.topMatchesCount} ({data.totals.topMatchesPct}%)
-              </Text>
-            </View>
-            <View>
-              <Text style={s.eyebrow}>Tempo Médio de Empresa</Text>
-              <Text style={{ fontSize: 11, color: C.ink, marginTop: 4, fontFamily: "Helvetica-Bold" }}>
-                {data.companies.avgTenureFormatted}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[s.rule, { marginVertical: 24 }]} />
-
-          <Text style={s.small}>
-            Documento analítico executivo confidencial gerado pelo Sistema de Triagem e Inteligência de Recrutamento da{" "}
-            {company}. As informações e métricas consolidadas respeitam a LGPD e visam orientar o planejamento estratégico de
-            atração, retenção e contratações da empresa.
-          </Text>
-        </View>
-      </Page>
-
-      {/* ─── PÁGINA 2: DEMOGRAFIA, GÊNERO & IDADE ─── */}
-      <Page size="A4" style={s.page}>
-        <SectionHeader
-          eyebrow="Panorama Demográfico"
-          title="Distribuição por Gênero, Faixa Etária e Perfil"
-          brand={brand}
-        />
-
-        <Text style={s.lead}>
-          Composição demográfica da base de {data.totals.candidates} candidatos da {company}. Métricas calculadas a partir
-          dos currículos, documentos e dados autodeclarados no processo seletivo.
-        </Text>
-
-        {/* Linha de KPIs Demográficos */}
-        <View style={s.kpiRow}>
-          <Kpi
-            value={`${data.gender.female.pct}%`}
-            label="Mulheres (Feminino)"
-            note={`${data.gender.female.count} candidatas`}
-          />
-          <Kpi
-            value={`${data.gender.male.pct}%`}
-            label="Homens (Masculino)"
-            note={`${data.gender.male.count} candidatos`}
-          />
-          <Kpi
-            value={data.age.mean ? `${data.age.mean} anos` : "—"}
-            label="Idade Média"
-            note={data.age.median ? `Mediana: ${data.age.median} anos` : "Base com datas"}
-          />
-          <Kpi
-            value={data.totals.avgScore !== null ? `${data.totals.avgScore}/100` : "—"}
-            label="Score Médio IA"
-            note={`${data.totals.analyzed} analisados`}
-          />
-        </View>
-
-        <View style={[s.rule, { marginVertical: 20 }]} />
-
-        {/* 2 Colunas: Donut de Gênero vs Barras de Idade */}
-        <View style={{ flexDirection: "row", gap: 32 }}>
-          {/* Coluna Gênero */}
-          <View style={{ width: 195 }}>
-            <Text style={s.h2}>Divisão por Gênero</Text>
-            <Text style={[s.small, { marginBottom: 12 }]}>
-              Identificação por pré-classificação nominativa e dados contextuais do currículo.
+      {/* ═══════════════════════════════════════════════════════════════
+          PÁGINA 1: DASHBOARD ANALÍTICO (DEMOGRAFIA, MERCADO & CARGOS)
+          ═══════════════════════════════════════════════════════════════ */}
+      <Page size="A4" style={ds.page}>
+        {/* Cabeçalho Executivo Compacto */}
+        <View style={ds.headerStrip}>
+          <View>
+            <Text style={[ds.companyEyebrow, { color: brand }]}>{company} · TALENT INTELLIGENCE</Text>
+            <Text style={ds.mainTitle}>Dashboard Executivo de Talentos & CVs</Text>
+            <Text style={ds.subTitle}>
+              Panorama demográfico, mercado de trabalho, cargos e histórico de permanência
             </Text>
-
-            <View style={{ alignItems: "center", marginVertical: 10 }}>
-              <Donut data={genderDonutData} size={126} />
+          </View>
+          <View style={ds.metaRight}>
+            <View style={[ds.countBadge, { backgroundColor: brand }]}>
+              <Text style={ds.countBadgeText}>{data.totals.candidates} TALENTOS</Text>
             </View>
+            <Text style={ds.dateBadge}>{dateFormatted}</Text>
+          </View>
+        </View>
 
-            <View style={{ marginTop: 8, gap: 6 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: "#be185d" }} />
-                  <Text style={{ fontSize: 8.5, color: C.ink }}>Feminino</Text>
-                </View>
-                <Text style={{ fontSize: 8.5, fontFamily: "Helvetica-Bold", color: C.ink }}>
-                  {data.gender.female.count} ({data.gender.female.pct}%)
-                </Text>
-              </View>
+        {/* Linha de 4 KPIs Executivos */}
+        <View style={ds.kpiRow}>
+          <View style={ds.kpiCard}>
+            <Text style={ds.kpiValue}>{data.totals.candidates}</Text>
+            <Text style={ds.kpiLabel}>Base Mapeada</Text>
+            <Text style={ds.kpiSub}>
+              {data.totals.withPdf} com PDF · {data.totals.withPhoto} fotos
+            </Text>
+          </View>
+          <View style={ds.kpiCard}>
+            <Text style={[ds.kpiValue, { color: "#be185d" }]}>
+              {data.gender.female.pct}% <Text style={{ fontSize: 11, color: "#1d4ed8" }}>/ {data.gender.male.pct}%</Text>
+            </Text>
+            <Text style={ds.kpiLabel}>Divisão Mulheres / Homens</Text>
+            <Text style={ds.kpiSub}>
+              {data.gender.female.count} F · {data.gender.male.count} M
+            </Text>
+          </View>
+          <View style={ds.kpiCard}>
+            <Text style={ds.kpiValue}>
+              {data.age.mean ? `${data.age.mean} anos` : "—"}
+            </Text>
+            <Text style={ds.kpiLabel}>Idade Média</Text>
+            <Text style={ds.kpiSub}>
+              Mediana: {data.age.median ?? "—"}a · {data.age.min ?? "—"} a {data.age.max ?? "—"}a
+            </Text>
+          </View>
+          <View style={ds.kpiCard}>
+            <Text style={[ds.kpiValue, { color: "#15803d" }]}>
+              {data.totals.topMatchesCount} <Text style={{ fontSize: 10, color: "#64748b" }}>({data.totals.topMatchesPct}%)</Text>
+            </Text>
+            <Text style={ds.kpiLabel}>Top Match (80%+)</Text>
+            <Text style={ds.kpiSub}>
+              Score Médio {data.totals.avgScore ?? "—"}/100
+            </Text>
+          </View>
+        </View>
 
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: "#1d4ed8" }} />
-                  <Text style={{ fontSize: 8.5, color: C.ink }}>Masculino</Text>
-                </View>
-                <Text style={{ fontSize: 8.5, fontFamily: "Helvetica-Bold", color: C.ink }}>
-                  {data.gender.male.count} ({data.gender.male.pct}%)
-                </Text>
-              </View>
-
-              {data.gender.unspecified.count > 0 && (
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: "#94a3b8" }} />
-                    <Text style={{ fontSize: 8.5, color: C.muted }}>Não informado</Text>
+        {/* BLOCO 1: DEMOGRAFIA (GÊNERO & IDADE) */}
+        <View style={{ marginBottom: 12 }}>
+          <Text style={ds.sectionTitle}>1. Panorama Demográfico & Diversidade</Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {/* Box Gênero */}
+            <View style={[ds.cardBox, { width: 220 }]}>
+              <Text style={ds.cardBoxTitle}>Distribuição por Gênero</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <MiniDonut data={genderDonutData} size={72} />
+                <View style={{ gap: 5, flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: "#be185d" }} />
+                      <Text style={{ fontSize: 7.5, color: "#0f172a" }}>Feminino</Text>
+                    </View>
+                    <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#0f172a" }}>
+                      {data.gender.female.count} ({data.gender.female.pct}%)
+                    </Text>
                   </View>
-                  <Text style={{ fontSize: 8.5, color: C.muted }}>
-                    {data.gender.unspecified.count} ({data.gender.unspecified.pct}%)
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
 
-          {/* Coluna Faixas Etárias */}
-          <View style={{ flex: 1 }}>
-            <Text style={s.h2}>Distribuição por Faixas Etárias</Text>
-            <Text style={[s.small, { marginBottom: 12 }]}>
-              Concentração geracional dos candidatos com data de nascimento ou idade identificada.
-            </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: "#1d4ed8" }} />
+                      <Text style={{ fontSize: 7.5, color: "#0f172a" }}>Masculino</Text>
+                    </View>
+                    <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#0f172a" }}>
+                      {data.gender.male.count} ({data.gender.male.pct}%)
+                    </Text>
+                  </View>
 
-            <HBars rows={ageBarRows} total={data.totals.candidates} color="#6366f1" width={270} labelW={80} />
-
-            <View style={{ marginTop: 14, padding: 8, backgroundColor: C.tint, borderRadius: 6, borderWidth: 0.5, borderColor: C.rule }}>
-              <Text style={{ fontSize: 8, color: C.text, lineHeight: 1.4 }}>
-                <Text style={{ fontFamily: "Helvetica-Bold" }}>Faixa mais expressiva:</Text>{" "}
-                {data.age.brackets[2]?.label || "25 a 34 anos"} com {data.age.brackets[2]?.count || 0} candidatos (
-                {data.age.brackets[2]?.pct || 0}%). Menor idade registrada: {data.age.min ?? "—"} anos; maior idade:{" "}
-                {data.age.max ?? "—"} anos.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Qualidade e Completude */}
-        <View style={{ marginTop: 24, padding: 12, backgroundColor: C.tint, borderRadius: 6, borderWidth: 0.75, borderColor: C.rule }}>
-          <Text style={[s.eyebrow, { marginBottom: 6 }]}>Qualidade e Completude Cadastral</Text>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 8.5, color: C.text }}>
-              • Com foto extraída: <Text style={{ fontFamily: "Helvetica-Bold" }}>{data.totals.withPhoto} ({data.totals.withPhotoPct}%)</Text>
-            </Text>
-            <Text style={{ fontSize: 8.5, color: C.text }}>
-              • Com PDF anexado: <Text style={{ fontFamily: "Helvetica-Bold" }}>{data.totals.withPdf} ({data.totals.withPdfPct}%)</Text>
-            </Text>
-            <Text style={{ fontSize: 8.5, color: C.text }}>
-              • Triados pela IA: <Text style={{ fontFamily: "Helvetica-Bold" }}>{data.totals.analyzed} ({data.totals.analyzedPct}%)</Text>
-            </Text>
-          </View>
-        </View>
-
-        {/* Rodapé */}
-        <View style={s.footer} fixed>
-          <Text>{footerText}</Text>
-          <Text render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}`} />
-        </View>
-      </Page>
-
-      {/* ─── PÁGINA 3: INTELIGÊNCIA DE MERCADO (CARGOS, EMPRESAS & SENIORIDADE) ─── */}
-      <Page size="A4" style={s.page}>
-        <SectionHeader
-          eyebrow="Inteligência de Mercado"
-          title="Cargos Mais Vistos, Empresas e Experiências"
-          brand={brand}
-        />
-
-        <Text style={s.lead}>
-          Mapeamento das competências de mercado, histórico de passagem pelas empresas e níveis de senioridade
-          dos candidatos disponíveis no radar da {company}.
-        </Text>
-
-        <View style={s.kpiRow}>
-          <Kpi
-            value={String(data.roles.length)}
-            label="Cargos Mapeados"
-            note={`Mais frequente: ${cut(data.roles[0]?.label || "—", 16)}`}
-          />
-          <Kpi
-            value={String(data.companies.totalCompaniesRecorded)}
-            label="Empresas no Histórico"
-            note={`Top: ${cut(data.companies.topCompanies[0]?.label || "—", 16)}`}
-          />
-          <Kpi
-            value={data.levels[0]?.label || "Pleno"}
-            label="Senioridade Predominante"
-            note={`${data.levels[0]?.count || 0} candidatos (${data.levels[0]?.pct || 0}%)`}
-          />
-          <Kpi
-            value={data.companies.avgTenureFormatted}
-            label="Tempo Médio em Empresas"
-            note="Durabilidade e estabilidade"
-          />
-        </View>
-
-        <View style={[s.rule, { marginVertical: 20 }]} />
-
-        {/* 2 Colunas: Top Cargos vs Top Empresas */}
-        <View style={{ flexDirection: "row", gap: 28 }}>
-          {/* Top Cargos */}
-          <View style={{ flex: 1 }}>
-            <Text style={s.h2}>Top Cargos Mais Frequentes</Text>
-            <Text style={[s.small, { marginBottom: 10 }]}>Funções e perfis profissionais mais vistos nos currículos.</Text>
-            <HBars rows={roleRows.slice(0, 7)} total={data.totals.candidates} color={brand} width={235} labelW={110} />
-          </View>
-
-          {/* Top Empresas */}
-          <View style={{ flex: 1 }}>
-            <Text style={s.h2}>Empresas com Mais Passagens</Text>
-            <Text style={[s.small, { marginBottom: 10 }]}>Principais organizações onde os talentos já atuaram.</Text>
-            <HBars
-              rows={companyRows.length > 0 ? companyRows.slice(0, 7) : [{ label: "Sem registros", value: 0 }]}
-              total={data.totals.candidates}
-              color="#0d9488"
-              width={235}
-              labelW={110}
-            />
-          </View>
-        </View>
-
-        <View style={[s.rule, { marginVertical: 20 }]} />
-
-        {/* Níveis de Senioridade e Áreas */}
-        <View style={{ flexDirection: "row", gap: 28 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.h2}>Níveis de Senioridade</Text>
-            <HBars rows={levelRows} total={data.totals.candidates} color="#d97706" width={235} labelW={80} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={s.h2}>Áreas de Atuação Profissional</Text>
-            <HBars rows={areaRows} total={data.totals.candidates} color="#2563eb" width={235} labelW={80} />
-          </View>
-        </View>
-
-        {/* Rodapé */}
-        <View style={s.footer} fixed>
-          <Text>{footerText}</Text>
-          <Text render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}`} />
-        </View>
-      </Page>
-
-      {/* ─── PÁGINA 4: DOSSIÊ DOS PRINCIPAIS TALENTOS (TOP MATCHES) ─── */}
-      <Page size="A4" style={s.page}>
-        <SectionHeader
-          eyebrow="Radar de Excelência"
-          title="Ranking dos Principais Talentos da Base"
-          brand={brand}
-        />
-
-        <Text style={s.lead}>
-          Candidatos com maior nota de aderência pela IA e histórico consistente de mercado. Talentos prontos para alocação
-          imediata ou banco de sucessão interna na {company}.
-        </Text>
-
-        <View style={[s.rule, { marginTop: 12, marginBottom: 10 }]} />
-
-        {/* Cabeçalho da Tabela */}
-        <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: C.ink, paddingBottom: 6 }]}>
-          <Text style={[s.th, { width: 130 }]}>Candidato</Text>
-          <Text style={[s.th, { width: 120 }]}>Cargo / Perfil</Text>
-          <Text style={[s.th, { width: 70 }]}>Nível / Idade</Text>
-          <Text style={[s.th, { width: 85 }]}>Localização</Text>
-          <Text style={[s.th, { width: 50, textAlign: "right" }]}>Score IA</Text>
-        </View>
-
-        {/* Linhas da Tabela */}
-        {data.highlights.slice(0, 12).map((item, idx) => {
-          const scoreColor = (item.score ?? 0) >= 80 ? C.good : (item.score ?? 0) >= 60 ? "#d97706" : C.ink;
-          return (
-            <View key={item.id || idx} style={s.row}>
-              <View style={{ width: 130 }}>
-                <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: C.ink }}>
-                  {cut(item.name, 22)}
-                </Text>
-                <Text style={{ fontSize: 7.5, color: C.muted }}>
-                  {item.gender} {item.age ? `· ${item.age} anos` : ""}
-                </Text>
-              </View>
-
-              <View style={{ width: 120 }}>
-                <Text style={{ fontSize: 8.5, color: C.ink }}>{cut(item.role, 24)}</Text>
-                <Text style={{ fontSize: 7.5, color: C.muted }}>{item.area}</Text>
-              </View>
-
-              <View style={{ width: 70 }}>
-                <Text style={{ fontSize: 8.5, color: C.ink, fontFamily: "Helvetica-Bold" }}>{item.level}</Text>
-                <Text style={{ fontSize: 7.5, color: C.muted }}>
-                  {item.tenureFormatted !== "Não informado" ? item.tenureFormatted : "Sem data"}
-                </Text>
-              </View>
-
-              <View style={{ width: 85 }}>
-                <Text style={{ fontSize: 8, color: C.text }}>{cut(item.location, 18)}</Text>
-                {item.topCompany && (
-                  <Text style={{ fontSize: 7, color: C.muted }}>ex: {cut(item.topCompany, 15)}</Text>
-                )}
-              </View>
-
-              <View style={{ width: 50, alignItems: "flex-end" }}>
-                <View
-                  style={{
-                    backgroundColor: (item.score ?? 0) >= 80 ? "#e4f6ec" : "#f4f4f5",
-                    paddingVertical: 2,
-                    paddingHorizontal: 6,
-                    borderRadius: 4,
-                  }}
-                >
-                  <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: scoreColor }}>
-                    {item.score !== null ? `${item.score}%` : "—"}
-                  </Text>
+                  {data.gender.unspecified.count > 0 && (
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: "#94a3b8" }} />
+                        <Text style={{ fontSize: 7.5, color: "#64748b" }}>Outros</Text>
+                      </View>
+                      <Text style={{ fontSize: 7.5, color: "#64748b" }}>
+                        {data.gender.unspecified.count} ({data.gender.unspecified.pct}%)
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
-          );
-        })}
 
-        <View style={{ marginTop: 18, padding: 10, backgroundColor: C.tint, borderRadius: 6, borderWidth: 0.5, borderColor: C.rule }}>
-          <Text style={{ fontSize: 7.5, color: C.muted, lineHeight: 1.4 }}>
-            * As avaliações de aderência refletem a correspondência semântica e critérios estabelecidos nas vagas abertas. A
-            decisão de avanço, entrevista e contratação permanece integralmente com o gestor responsável (Regra 2 da Plataforma).
+            {/* Box Faixas Etárias */}
+            <View style={[ds.cardBox, { flex: 1 }]}>
+              <Text style={ds.cardBoxTitle}>Faixas Etárias Identificadas</Text>
+              <DenseBars rows={ageRows} total={data.totals.candidates} color="#6366f1" width={265} labelW={75} rowH={14} />
+            </View>
+          </View>
+        </View>
+
+        {/* BLOCO 2: MERCADO & EXPERIÊNCIAS */}
+        <View style={{ marginBottom: 12 }}>
+          <Text style={ds.sectionTitle}>2. Inteligência de Mercado & Histórico de Empresas</Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {/* Cargos Mais Vistos */}
+            <View style={[ds.cardBox, { flex: 1 }]}>
+              <Text style={ds.cardBoxTitle}>Cargos Mais Frequentes</Text>
+              <DenseBars
+                rows={roleRows}
+                total={data.totals.candidates}
+                color={brand}
+                width={245}
+                labelW={105}
+                rowH={14.5}
+              />
+            </View>
+
+            {/* Empresas Mais Frequentes */}
+            <View style={[ds.cardBox, { flex: 1 }]}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                <Text style={ds.cardBoxTitle}>Empresas com Mais Passagens</Text>
+                <Text style={{ fontSize: 6.8, color: "#15803d", fontFamily: "Helvetica-Bold" }}>
+                  Média: {data.companies.avgTenureFormatted}
+                </Text>
+              </View>
+              <DenseBars
+                rows={companyRows.length > 0 ? companyRows : [{ label: "Sem registros explícitos", value: 0 }]}
+                total={data.totals.candidates}
+                color="#0d9488"
+                width={245}
+                labelW={105}
+                rowH={14.5}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* BLOCO 3: SENIORIDADE & ÁREAS */}
+        <View style={{ marginBottom: 10 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {/* Senioridade */}
+            <View style={[ds.cardBox, { flex: 1 }]}>
+              <Text style={ds.cardBoxTitle}>Níveis de Senioridade</Text>
+              <DenseBars rows={levelRows} total={data.totals.candidates} color="#d97706" width={245} labelW={80} rowH={13} />
+            </View>
+
+            {/* Áreas */}
+            <View style={[ds.cardBox, { flex: 1 }]}>
+              <Text style={ds.cardBoxTitle}>Áreas Profissionais</Text>
+              <DenseBars rows={areaRows} total={data.totals.candidates} color="#2563eb" width={245} labelW={80} rowH={13} />
+            </View>
+          </View>
+        </View>
+
+        {/* Rodapé Página 1 */}
+        <View style={ds.footer} fixed>
+          <Text>{footerText}</Text>
+          <Text render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `Página ${pageNumber} de ${totalPages}`} />
+        </View>
+      </Page>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          PÁGINA 2: DOSSIÊ DOS PRINCIPAIS TALENTOS (TOP MATCHES)
+          ═══════════════════════════════════════════════════════════════ */}
+      <Page size="A4" style={ds.page}>
+        {/* Cabeçalho da Página 2 */}
+        <View style={ds.headerStrip}>
+          <View>
+            <Text style={[ds.companyEyebrow, { color: brand }]}>RADAR DE EXCELÊNCIA · TOP CANDIDATOS</Text>
+            <Text style={ds.mainTitle}>Ranking dos Principais Talentos da Base</Text>
+            <Text style={ds.subTitle}>
+              Candidatos com maior nota de aderência pela IA e histórico comprovado de mercado
+            </Text>
+          </View>
+          <View style={ds.metaRight}>
+            <View style={[ds.countBadge, { backgroundColor: "#15803d" }]}>
+              <Text style={ds.countBadgeText}>{data.totals.topMatchesCount} TOP MATCHES</Text>
+            </View>
+            <Text style={ds.dateBadge}>{company}</Text>
+          </View>
+        </View>
+
+        {/* Tabela de Top Candidatos */}
+        <View style={ds.cardBox}>
+          {/* Cabeçalho da Tabela */}
+          <View style={[ds.tableRow, { borderBottomWidth: 1.2, borderBottomColor: "#0f172a", paddingBottom: 5 }]}>
+            <Text style={[ds.th, { width: 22 }]}>#</Text>
+            <Text style={[ds.th, { width: 145 }]}>Candidato</Text>
+            <Text style={[ds.th, { width: 125 }]}>Cargo / Perfil</Text>
+            <Text style={[ds.th, { width: 68 }]}>Nível / Idade</Text>
+            <Text style={[ds.th, { width: 85 }]}>Localização</Text>
+            <Text style={[ds.th, { width: 45, textAlign: "right" }]}>Score IA</Text>
+          </View>
+
+          {/* Linhas da Tabela (até 14 talentos nobres) */}
+          {data.highlights.slice(0, 14).map((item, idx) => {
+            const isTop = (item.score ?? 0) >= 80;
+            const scoreColor = isTop ? "#15803d" : (item.score ?? 0) >= 60 ? "#d97706" : "#64748b";
+            const scoreBg = isTop ? "#ecfdf5" : (item.score ?? 0) >= 60 ? "#fffbeb" : "#f1f5f9";
+
+            return (
+              <View key={item.id || idx} style={ds.tableRow}>
+                <Text style={{ width: 22, fontFamily: "Times-Bold", fontSize: 10, color: isTop ? brand : "#94a3b8" }}>
+                  {idx + 1}
+                </Text>
+
+                <View style={{ width: 145, paddingRight: 6 }}>
+                  <Text style={{ fontSize: 8.5, fontFamily: "Helvetica-Bold", color: "#0f172a" }}>
+                    {cut(item.name, 26)}
+                  </Text>
+                  <Text style={{ fontSize: 6.8, color: "#64748b" }}>
+                    {item.gender} {item.age ? `· ${item.age} anos` : ""} {item.topCompany ? `· ex: ${cut(item.topCompany, 14)}` : ""}
+                  </Text>
+                </View>
+
+                <View style={{ width: 125, paddingRight: 4 }}>
+                  <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: "#1e293b" }}>
+                    {cut(item.role, 24)}
+                  </Text>
+                  <Text style={{ fontSize: 6.8, color: "#64748b" }}>
+                    {item.area} {item.skills.length > 0 ? `(${item.skills[0]})` : ""}
+                  </Text>
+                </View>
+
+                <View style={{ width: 68 }}>
+                  <Text style={{ fontSize: 7.8, fontFamily: "Helvetica-Bold", color: "#334155" }}>
+                    {item.level}
+                  </Text>
+                  <Text style={{ fontSize: 6.8, color: "#64748b" }}>
+                    {item.tenureFormatted !== "Não informado" ? item.tenureFormatted : "Sem data"}
+                  </Text>
+                </View>
+
+                <View style={{ width: 85 }}>
+                  <Text style={{ fontSize: 7.5, color: "#334155" }}>
+                    {cut(item.location, 20)}
+                  </Text>
+                </View>
+
+                <View style={{ width: 45, alignItems: "flex-end" }}>
+                  <View style={{ backgroundColor: scoreBg, paddingVertical: 1.5, paddingHorizontal: 5, borderRadius: 3 }}>
+                    <Text style={{ fontSize: 8.5, fontFamily: "Helvetica-Bold", color: scoreColor }}>
+                      {item.score !== null ? `${item.score}%` : "—"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Nota Metodológica Executiva */}
+        <View style={{ marginTop: 12, padding: 8, backgroundColor: "#f8fafc", borderRadius: 5, borderWidth: 0.5, borderColor: "#e2e8f0" }}>
+          <Text style={{ fontSize: 6.8, color: "#64748b", lineHeight: 1.4 }}>
+            * Metodologia: Scores e perfis apurados por correspondência semântica nos currículos pelo motor de Inteligência Artificial.
+            Conforme as diretrizes da plataforma, a IA opera estritamente como apoio consultivo; o avanço de etapas e a contratação
+            permanecem sob decisão soberana e manual do gestor.
           </Text>
         </View>
 
-        {/* Rodapé */}
-        <View style={s.footer} fixed>
+        {/* Rodapé Página 2 */}
+        <View style={ds.footer} fixed>
           <Text>{footerText}</Text>
-          <Text render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}`} />
+          <Text render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `Página ${pageNumber} de ${totalPages}`} />
         </View>
       </Page>
     </Document>
   );
 }
-
