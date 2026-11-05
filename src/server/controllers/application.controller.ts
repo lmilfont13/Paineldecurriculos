@@ -62,6 +62,7 @@ import {
   scheduleInterview,
   sendManagerMessage,
   setApplicationStatus,
+  importStandbyToJob,
   submitApplication,
   type CandidateSummary,
 } from "@/server/services/application.service";
@@ -343,10 +344,13 @@ export async function moveApplicationAction(
 /** Mudança de status pelo gestor (E4) — decisão sempre manual (regra 2). */
 export async function setApplicationStatusAction(
   applicationId: string,
-  status: AppStatus
+  status: AppStatus,
+  standbyReason?: string
 ): Promise<void> {
   const user = await requireManager();
-  const updated = await setApplicationStatus(user.companyId, applicationId, status);
+  const updated = await setApplicationStatus(user.companyId, applicationId, status, {
+    standbyReason,
+  });
   const statusLabels = {
     PENDING: "Triagem",
     SHORTLISTED: "Passou da triagem",
@@ -373,6 +377,7 @@ export async function setApplicationStatusAction(
           metadata: {
             jobTitle: app?.job.title,
             novoStatus: statusLabels[status],
+            standbyReason: standbyReason || null,
           },
         });
       } catch { /* auditoria nunca bloqueia a ação principal */ }
@@ -382,6 +387,27 @@ export async function setApplicationStatusAction(
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
   if (updated) revalidatePath(`/vagas/${updated.jobId}`);
+}
+
+/** Resgata um candidato do Stand-by para uma vaga aberta específica. */
+export async function importStandbyToJobAction(
+  sourceApplicationId: string,
+  targetJobId: string
+): Promise<{ ok: boolean; applicationId?: string; message: string }> {
+  const user = await requireManager();
+  const result = await importStandbyToJob(user.companyId, sourceApplicationId, targetJobId);
+  if (!result.ok) {
+    return { ok: false, message: result.error };
+  }
+  revalidatePath(`/vagas/${targetJobId}`);
+  revalidatePath("/candidaturas");
+  return {
+    ok: true,
+    applicationId: result.applicationId,
+    message: result.alreadyExisted
+      ? "Candidato já estava inscrito nesta vaga."
+      : "Candidato resgatado com sucesso para esta vaga!",
+  };
 }
 
 export async function submitApplicationAction(

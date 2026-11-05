@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DecisionBlock } from "@/components/gestor/decision-block";
+import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
+import { extractStandbyReason } from "@/server/models/standby.model";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { InfoRequestBox } from "@/components/gestor/info-request-box";
@@ -151,7 +153,14 @@ export default async function CandidaturaDetailPage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-[1080px]">
+    <CandidateDetailSplitView
+      applicationId={app.id}
+      candidateName={app.name}
+      jobId={app.job.id}
+      jobTitle={jobLabel(app.job.title, app.job.code)}
+      hasResume={Boolean(app.resumeUrl)}
+      queue={app.queue}
+    >
       <LiveRefresh active={analyzing} applicationIds={[app.id]} />
 
       <div className="mb-5 flex items-center justify-between gap-4">
@@ -215,6 +224,14 @@ export default async function CandidaturaDetailPage({
                       {" · "}
                       <span className="font-medium text-[#b07818]">
                         esperando resposta {formatWaiting(app.createdAt)}
+                      </span>
+                    </>
+                  )}
+                  {app.status === "STANDBY" && (
+                    <>
+                      {" · "}
+                      <span className="font-medium text-[#0e7a6b]">
+                        em stand-by{extractStandbyReason(app.managerNotes) ? ` (${extractStandbyReason(app.managerNotes)})` : ""}
                       </span>
                     </>
                   )}
@@ -554,6 +571,7 @@ export default async function CandidaturaDetailPage({
             hasEmail={app.email.includes("@")}
             hasAccount={Boolean(app.candidateId)}
             interview={interview}
+            queue={app.queue}
           />
 
           {(app.preRegistered || !app.resumeUrl) && intake && (
@@ -627,6 +645,6 @@ export default async function CandidaturaDetailPage({
           </div>
         </aside>
       </div>
-    </div>
+    </CandidateDetailSplitView>
   );
 }

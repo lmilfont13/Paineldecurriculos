@@ -15,6 +15,7 @@ import {
   countPendingApplications,
   getCompanyApplication,
   getOtherApplicationsOfPerson,
+  getQueueSiblings,
   listCompanyApplications,
   listApplicationsForCvSearch,
   listCompanyApplicantAges,
@@ -245,11 +246,13 @@ export async function getCandidaturaDetail(id: string) {
     application.email,
     id
   );
+  const queue = await getQueueSiblings(user.companyId, id, application.jobId);
   return {
     ...withPhoto,
     name: titleCasePt(withPhoto.name),
     otherApplications,
     age: effectiveAge(application.birthDate, application.resumeText),
+    queue,
   };
 }
 

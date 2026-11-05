@@ -904,3 +904,123 @@ export function findRecentAnalyzedApplications(companyId: string, limit: number)
     },
   });
 }
+
+
+/** Fila de candidatos da mesma vaga (modo fila: anterior, próximo e próximo pendente). */
+export function findJobQueueSiblings(companyId: string, jobId: string) {
+  return prisma.application.findMany({
+    where: { companyId, jobId, isDemo: false },
+    orderBy: [{ createdAt: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiScore: true,
+      createdAt: true,
+    },
+  });
+}
+
+/**
+ * Resgata/importa um candidato de Stand-by ou Banco de Talentos para uma vaga aberta
+ * da mesma empresa (regra 1: companyId validado; regra 2: decisão manual do gestor).
+ */
+export async function cloneStandbyApplicationToJob(
+  companyId: string,
+  sourceApplicationId: string,
+  targetJobId: string
+): Promise<
+  | { ok: true; applicationId: string; alreadyExisted: boolean }
+  | { ok: false; error: string }
+> {
+  const source = await prisma.application.findFirst({
+    where: { id: sourceApplicationId, companyId },
+  });
+  if (!source) {
+    return { ok: false, error: "Candidato de origem não encontrado." };
+  }
+
+  const targetJob = await prisma.job.findFirst({
+    where: { id: targetJobId, companyId },
+    select: { id: true, title: true },
+  });
+  if (!targetJob) {
+    return { ok: false, error: "Vaga de destino não encontrada." };
+  }
+
+  const existing = await prisma.application.findFirst({
+    where: {
+      companyId,
+      jobId: targetJobId,
+      OR: [
+        ...(source.candidateId ? [{ candidateId: source.candidateId }] : []),
+        { email: { equals: source.email, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    return { ok: true, applicationId: existing.id, alreadyExisted: true };
+  }
+
+  const created = await prisma.application.create({
+    data: {
+      jobId: targetJobId,
+      companyId,
+      candidateId: source.candidateId,
+      name: source.name,
+      email: source.email,
+      phone: source.phone,
+      resumeUrl: source.resumeUrl,
+      resumeText: source.resumeText,
+      photoPath: source.photoPath,
+      birthDate: source.birthDate,
+      city: source.city,
+      state: source.state,
+      neighborhood: source.neighborhood,
+      zipCode: source.zipCode,
+      street: source.street,
+      streetNumber: source.streetNumber,
+      complement: source.complement,
+      rg: source.rg,
+      cpf: source.cpf,
+      bootSize: source.bootSize,
+      hasBankAccount: source.hasBankAccount,
+      bankNames: source.bankNames,
+      bankAccountType: source.bankAccountType,
+      pantsSize: source.pantsSize,
+      shirtSize: source.shirtSize,
+      desiredRole: source.desiredRole,
+      salaryExpectation: source.salaryExpectation,
+      instagram: source.instagram,
+      workPreference: source.workPreference,
+      availability: source.availability,
+      hasCnh: source.hasCnh,
+      isPcd: source.isPcd,
+      pcdDetails: source.pcdDetails,
+      aiProfile: source.aiProfile,
+      aiArea: source.aiArea,
+      aiLevel: source.aiLevel,
+      source: "standby",
+      status: "SHORTLISTED",
+      aiState: "WAITING",
+      consentAt: source.consentAt,
+      consentVersion: source.consentVersion,
+      managerNotes: source.managerNotes
+        ? `[Resgatado do Stand-by]\n${source.managerNotes}`
+        : "[Resgatado do Stand-by]",
+    },
+  });
+
+  await prisma.statusEvent.create({
+    data: {
+      applicationId: created.id,
+      from: null,
+      to: "SHORTLISTED",
+      actor: "gestor",
+    },
+  });
+
+  return { ok: true, applicationId: created.id, alreadyExisted: false };
+}

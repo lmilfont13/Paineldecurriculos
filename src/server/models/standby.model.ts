@@ -81,3 +81,38 @@ export function whatsappInvite(params: {
 
 /** Na análise de perfil, quantas vagas abertas comparar. */
 export const CAREER_JOBS_LIMIT = 3;
+
+/** Motivos rápidos para guardar um candidato em Stand-by com 1 clique. */
+export const STANDBY_REASONS = [
+  "Bom perfil p/ próxima vaga",
+  "Ficou em 2º lugar",
+  "Disponibilidade futura",
+  "Mora longe desta unidade",
+  "Perfil melhor p/ outra função",
+  "Vaga já preenchida",
+] as const;
+
+const STANDBY_TAG_REGEX = /^\[Stand-by:\s*([^\]]+)\]\s*/i;
+
+/** Extrai o motivo de Stand-by gravado no início das notas internas, se houver. */
+export function extractStandbyReason(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  const match = notes.trim().match(STANDBY_TAG_REGEX);
+  return match?.[1]?.trim() || null;
+}
+
+/** Insere ou atualiza a tag `[Stand-by: ...]` nas notas internas preservando o restante. */
+export function formatNotesWithStandbyReason(
+  existingNotes: string | null | undefined,
+  reason: string | null | undefined
+): string {
+  const cleanReason = String(reason ?? "")
+    .replace(/[\[\]\r\n]+/g, " ")
+    .trim()
+    .slice(0, 80);
+  const current = String(existingNotes ?? "").trim();
+  if (!cleanReason) return current;
+  const stripped = current.replace(STANDBY_TAG_REGEX, "").trim();
+  return stripped ? `[Stand-by: ${cleanReason}]\n${stripped}` : `[Stand-by: ${cleanReason}]`;
+}
+

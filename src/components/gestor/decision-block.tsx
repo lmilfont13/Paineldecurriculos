@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
+import { ArrowRight, BookmarkCheck, Zap } from "lucide-react";
 
 import { InterviewDialog } from "@/components/gestor/interview-dialog";
 import { Toast } from "@/components/gestor/toast";
@@ -9,6 +11,7 @@ import {
   appStatusLabels,
   type AppStatusKey,
 } from "@/server/models/application.model";
+import { STANDBY_REASONS } from "@/server/models/standby.model";
 
 /** Próximo passo do funil — o processo é direcional, não uma escolha livre. */
 const NEXT: Partial<Record<AppStatusKey, { to: AppStatusKey; label: string }>> = {
@@ -84,6 +87,116 @@ function ConfirmReject({
   );
 }
 
+/** Diálogo de motivo rápido para colocar em Stand-by (1 clique). */
+function StandbyReasonModal({
+  candidateName,
+  onConfirm,
+  onCancel,
+}: {
+  candidateName: string;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  const [selectedReason, setSelectedReason] = useState<string>("");
+  const [customReason, setCustomReason] = useState<string>("");
+
+  function handleSave() {
+    const finalReason = (customReason.trim() || selectedReason).trim();
+    onConfirm(finalReason);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-[460px] rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-[#e6f4f1] text-[#0e7a6b]">
+            <BookmarkCheck className="size-4" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-[#0a0a0a]">
+              Colocar {candidateName.split(" ")[0]} em Stand-by
+            </h2>
+            <p className="text-xs text-[#71717a]">
+              Selecione o motivo para lembrar no futuro ou use 1 clique:
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {STANDBY_REASONS.map((r) => {
+            const isSelected = selectedReason === r && !customReason.trim();
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => {
+                  setSelectedReason(r);
+                  setCustomReason("");
+                }}
+                className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                  isSelected
+                    ? "border-[#0e7a6b] bg-[#e6f4f1] text-[#0e7a6b]"
+                    : "border-[#e4e4e7] bg-[#fafaf9] text-[#52525b] hover:border-[#0e7a6b]/50 hover:bg-white"
+                }`}
+              >
+                {r}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-[11px] font-medium text-[#71717a]">
+            Ou escreva uma observação personalizada:
+          </label>
+          <input
+            type="text"
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+            placeholder="Ex.: Gostei muito, mas mudará de cidade no próximo mês"
+            maxLength={100}
+            className="mt-1 h-9 w-full rounded-xl border border-[#e4e4e7] px-3 text-xs text-[#0a0a0a] focus:border-[#0e7a6b] focus:outline-none"
+          />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-4">
+          <button
+            type="button"
+            onClick={() => onConfirm("")}
+            className="text-xs text-[#71717a] hover:text-[#0a0a0a] hover:underline"
+          >
+            Guardar sem motivo
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-9 rounded-xl border border-[#e4e4e7] px-4 text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="h-9 rounded-xl bg-[#0e7a6b] px-4 text-xs font-semibold text-white hover:opacity-90"
+            >
+              Confirmar Stand-by
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Decisão do gestor (E4) — um lugar só. Avanço no funil como ação primária,
  * reprovação separada por peso, e a correção de etapa escondida atrás de um
@@ -99,6 +212,7 @@ export function DecisionBlock({
   hasEmail,
   hasAccount,
   interview,
+  queue,
 }: {
   applicationId: string;
   status: AppStatusKey;
@@ -108,20 +222,29 @@ export function DecisionBlock({
   hasEmail?: boolean;
   hasAccount?: boolean;
   interview?: ScheduledInterview | null;
+  queue?: {
+    prevId: string | null;
+    nextId: string | null;
+    nextPendingId: string | null;
+  };
 }) {
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [standbyModal, setStandbyModal] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [lastMoved, setLastMoved] = useState<AppStatusKey | null>(null);
 
   const next = NEXT[status];
   const closed = status === "APPROVED" || status === "REJECTED";
 
-  function apply(to: AppStatusKey) {
+  function apply(to: AppStatusKey, standbyReason?: string) {
     startTransition(async () => {
-      await setApplicationStatusAction(applicationId, to);
-      setToast(`Movido para "${appStatusLabels[to]}".`);
+      await setApplicationStatusAction(applicationId, to, standbyReason);
+      setLastMoved(to);
+      const reasonTag = standbyReason ? ` (${standbyReason})` : "";
+      setToast(`Movido para "${appStatusLabels[to]}"${reasonTag}.`);
     });
   }
 
@@ -136,6 +259,17 @@ export function DecisionBlock({
             apply("REJECTED");
           }}
           onCancel={() => setConfirming(false)}
+        />
+      )}
+
+      {standbyModal && (
+        <StandbyReasonModal
+          candidateName={candidateName}
+          onConfirm={(reason) => {
+            setStandbyModal(false);
+            apply("STANDBY", reason);
+          }}
+          onCancel={() => setStandbyModal(false)}
         />
       )}
 
@@ -258,8 +392,9 @@ export function DecisionBlock({
           <button
             type="button"
             disabled={pending}
-            onClick={() => apply("STANDBY")}
+            onClick={() => setStandbyModal(true)}
             className="h-10 rounded-2xl border border-[#b7e4dc] bg-[#f2fbf9] px-5 text-[13px] font-medium text-[#0e7a6b] hover:bg-[#e6f7f3] disabled:opacity-50"
+            title="Guarda em stand-by com seleção rápida de motivo"
           >
             Colocar em stand-by
           </button>
@@ -312,6 +447,23 @@ export function DecisionBlock({
           </span>
         )}
       </div>
+
+      {(queue?.nextPendingId || queue?.nextId) && (
+        <div className="mt-5 flex items-center justify-between rounded-xl bg-[#fafaf9] p-3 text-xs">
+          <span className="text-[#71717a]">
+            {lastMoved ? "Decisão registrada. Deseja avançar?" : "Continuar fila desta vaga:"}
+          </span>
+          <Link
+            href={`/candidaturas/${queue.nextPendingId || queue.nextId}`}
+            className="inline-flex items-center gap-1 font-semibold text-[#0a0a0a] hover:underline"
+            style={{ color: "var(--brand-primary)" }}
+          >
+            {queue.nextPendingId && <Zap className="size-3 text-[#b07818]" />}
+            <span>{queue.nextPendingId ? "Próximo a triar" : "Próximo candidato"}</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

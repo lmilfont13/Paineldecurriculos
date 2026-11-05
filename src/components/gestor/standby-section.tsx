@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { FolderOpen, Loader2, MessageCircle, RefreshCw } from "lucide-react";
+import { Check, FolderOpen, Loader2, MessageCircle, RefreshCw, UserPlus } from "lucide-react";
 
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { MatchScore } from "@/components/gestor/talent-pool-card";
 import { analyzeStandbyForJobAction } from "@/server/controllers/talent.controller";
+import { importStandbyToJobAction } from "@/server/controllers/application.controller";
 import { whatsappInvite } from "@/server/models/standby.model";
 
 export type StandbyPerson = {
@@ -49,6 +50,25 @@ export function StandbySection({
 }) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [importingId, setImportingId] = useState<string | null>(null);
+  const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
+
+  async function handleImport(personId: string) {
+    setImportingId(personId);
+    try {
+      const res = await importStandbyToJobAction(personId, jobId);
+      if (res.ok) {
+        setImportedIds((prev) => new Set([...prev, personId]));
+        setMessage(res.message);
+      } else {
+        setMessage(res.message);
+      }
+    } catch {
+      setMessage("Não foi possível resgatar o candidato.");
+    } finally {
+      setImportingId(null);
+    }
+  }
 
   function analyze() {
     setMessage(null);
@@ -124,6 +144,26 @@ export function StandbySection({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <MatchScore match={{ score: p.score, state: p.state, minScore }} />
+                  {importedIds.has(p.id) ? (
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-[#e4f6ec] px-2.5 py-1 text-[11px] font-medium text-[#1f7a4d]">
+                      <Check className="size-3.5" /> No funil
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={importingId === p.id}
+                      onClick={() => handleImport(p.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#0e7a6b]/30 bg-[#e6f4f1] px-2.5 py-1 text-[11px] font-medium text-[#0e7a6b] transition hover:bg-[#d5ede8] disabled:opacity-50"
+                      title="Importa o candidato para esta vaga na etapa 'Passou da triagem'"
+                    >
+                      {importingId === p.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <UserPlus className="size-3.5" />
+                      )}
+                      <span>Resgatar p/ vaga</span>
+                    </button>
+                  )}
                   {invite && (
                     <a
                       href={invite}

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { pickByRelevance, relevance, whatsappInvite, whatsappNumber } from "@/server/models/standby.model";
+import {
+  extractStandbyReason,
+  formatNotesWithStandbyReason,
+  pickByRelevance,
+  relevance,
+  STANDBY_REASONS,
+  whatsappInvite,
+  whatsappNumber,
+} from "@/server/models/standby.model";
 
 const promotor = {
   title: "Promotor(a) de Vendas – Laticínios e Frios",
@@ -54,5 +62,31 @@ describe("convite pelo WhatsApp", () => {
     expect(text).toContain("Oi, Juliana!");
     expect(text).toContain("Recepcionista");
     expect(text).toContain("https://x.app/tarhget/vagas/1");
+  });
+});
+
+
+describe("motivos de stand-by", () => {
+  it("contém motivos rápidos para o gestor", () => {
+    expect(STANDBY_REASONS.length).toBeGreaterThanOrEqual(4);
+    expect(STANDBY_REASONS).toContain("Bom perfil p/ próxima vaga");
+  });
+
+  it("insere e extrai a tag de motivo nas notas", () => {
+    const formatted = formatNotesWithStandbyReason("Candidato pontual", "Bom perfil p/ próxima vaga");
+    expect(formatted).toBe("[Stand-by: Bom perfil p/ próxima vaga]\nCandidato pontual");
+    expect(extractStandbyReason(formatted)).toBe("Bom perfil p/ próxima vaga");
+  });
+
+  it("atualiza a tag preservando as notas originais", () => {
+    const initial = "[Stand-by: Ficou em 2º lugar]\nEntrevista foi ótima";
+    const updated = formatNotesWithStandbyReason(initial, "Mora longe desta unidade");
+    expect(updated).toBe("[Stand-by: Mora longe desta unidade]\nEntrevista foi ótima");
+    expect(extractStandbyReason(updated)).toBe("Mora longe desta unidade");
+  });
+
+  it("retorna null se não houver motivo nas notas", () => {
+    expect(extractStandbyReason("Apenas uma nota comum")).toBeNull();
+    expect(extractStandbyReason(null)).toBeNull();
   });
 });

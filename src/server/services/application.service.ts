@@ -46,6 +46,8 @@ import {
   searchApplicationIds,
   updateApplicationResumeText,
   findApplicationsForCvSearch,
+  findJobQueueSiblings,
+  cloneStandbyApplicationToJob,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -106,6 +108,7 @@ import {
   guessName,
   isValidEmail,
 } from "@/server/models/intake.model";
+import { formatNotesWithStandbyReason } from "@/server/models/standby.model";
 import {
   captureResumePhoto,
   removeResumePhotos,
@@ -198,11 +201,16 @@ export async function setApplicationStatus(
    * usado quando o gestor manda a própria mensagem no lugar (reprovação em
    * massa), para o candidato não receber duas.
    */
-  options: { communicate?: boolean } = {}
+  options: { communicate?: boolean; standbyReason?: string } = {}
 ) {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return null;
   const updated = await updateApplicationStatus(id, status);
+
+  if (options.standbyReason && status === "STANDBY") {
+    const updatedNotes = formatNotesWithStandbyReason(application.managerNotes, options.standbyReason);
+    await updateManagerNotes(id, updatedNotes);
+  }
 
   if (status !== application.status) {
     await createStatusEvent({
@@ -1400,3 +1408,60 @@ export async function getOtherApplicationsOfPerson(companyId: string, email: str
   if (!email.includes("@")) return [];
   return findOtherApplicationsByEmail(companyId, email, excludeId);
 }
+
+export type QueueSiblingInfo = {
+  currentPosition: number;
+  total: number;
+  prevId: string | null;
+  nextId: string | null;
+  nextPendingId: string | null;
+};
+
+/** Fila da vaga: anterior, próximo e próximo pendente para navegação rápida de triagem. */
+export async function getQueueSiblings(
+  companyId: string,
+  applicationId: string,
+  jobId: string
+): Promise<QueueSiblingInfo> {
+  const siblings = await findJobQueueSiblings(companyId, jobId);
+  const total = siblings.length;
+  const index = siblings.findIndex((s) => s.id === applicationId);
+  if (index === -1) {
+    return {
+      currentPosition: 1,
+      total,
+      prevId: null,
+      nextId: null,
+      nextPendingId: null,
+    };
+  }
+  const prevId = index > 0 ? siblings[index - 1].id : null;
+  const nextId = index < total - 1 ? siblings[index + 1].id : null;
+  const pendingAfter = siblings.slice(index + 1).find((s) => s.status === "PENDING");
+  const pendingBefore = !pendingAfter ? siblings.slice(0, index).find((s) => s.status === "PENDING") : null;
+  const nextPendingId = (pendingAfter || pendingBefore)?.id ?? null;
+
+  return {
+    currentPosition: index + 1,
+    total,
+    prevId,
+    nextId,
+    nextPendingId,
+  };
+}
+
+/** Resgata/importa um candidato de Stand-by ou Banco de Talentos para uma vaga aberta. */
+export async function importStandbyToJob(
+  companyId: string,
+  sourceApplicationId: string,
+  targetJobId: string
+) {
+  const result = await cloneStandbyApplicationToJob(companyId, sourceApplicationId, targetJobId);
+  if (result.ok && !result.alreadyExisted) {
+    runInBackground("triagem de candidato resgatado", async () => {
+      await runTriageWithTracking(result.applicationId, { eventName: "standby/rescued" });
+    });
+  }
+  return result;
+}
+

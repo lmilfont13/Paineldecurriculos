@@ -114,7 +114,7 @@ export async function findStandbyPool(companyId: string) {
   const items = await prisma.talentFolderItem.findMany({
     where: { folder: { companyId } },
     select: {
-      folder: { select: { name: true } },
+      folder: { select: { id: true, name: true } },
       application: {
         select: {
           id: true,
@@ -125,18 +125,59 @@ export async function findStandbyPool(companyId: string) {
           aiProfile: true,
           aiArea: true,
           aiLevel: true,
+          aiScore: true,
+          photoPath: true,
+          managerNotes: true,
+          job: { select: { title: true } },
         },
       },
     },
   });
+  const standbyApps = await prisma.application.findMany({
+    where: { companyId, status: "STANDBY", isDemo: false },
+    select: {
+      id: true,
+      candidateId: true,
+      name: true,
+      phone: true,
+      jobId: true,
+      aiProfile: true,
+      aiArea: true,
+      aiLevel: true,
+      aiScore: true,
+      photoPath: true,
+      managerNotes: true,
+      job: { select: { title: true } },
+    },
+  });
   const byApp = new Map<
     string,
-    (typeof items)[number]["application"] & { folderNames: string[] }
+    (typeof items)[number]["application"] & {
+      folderNames: string[];
+      folders: { id: string; name: string }[];
+    }
   >();
   for (const item of items) {
     const current = byApp.get(item.application.id);
-    if (current) current.folderNames.push(item.folder.name);
-    else byApp.set(item.application.id, { ...item.application, folderNames: [item.folder.name] });
+    if (current) {
+      current.folderNames.push(item.folder.name);
+      current.folders.push(item.folder);
+    } else {
+      byApp.set(item.application.id, {
+        ...item.application,
+        folderNames: [item.folder.name],
+        folders: [item.folder],
+      });
+    }
+  }
+  for (const app of standbyApps) {
+    if (!byApp.has(app.id)) {
+      byApp.set(app.id, {
+        ...app,
+        folderNames: ["Stand-by"],
+        folders: [],
+      });
+    }
   }
   return [...byApp.values()];
 }
