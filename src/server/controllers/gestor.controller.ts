@@ -86,13 +86,15 @@ export async function getCandidaturasPageData(jobId?: string) {
   );
 
   // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado que
-  // haviam ficado como NO_RESUME ou FAILED há mais de 2 minutos.
+  // haviam ficado como NO_RESUME, FAILED ou com leitura inválida.
   const stuck = applications
     .filter(
       (a) =>
         a.resumeUrl &&
-        (a.aiState === "NO_RESUME" || a.aiState === "FAILED") &&
-        Date.now() - a.updatedAt.getTime() > 120_000
+        (a.aiState === "NO_RESUME" ||
+          a.aiState === "FAILED" ||
+          Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
+        Date.now() - a.updatedAt.getTime() > 30_000
     )
     .slice(0, 3);
   for (const app of stuck) {
@@ -191,8 +193,10 @@ export async function getVagaDetailData(jobId: string) {
     .filter(
       (a) =>
         a.resumeUrl &&
-        (a.aiState === "NO_RESUME" || a.aiState === "FAILED") &&
-        Date.now() - a.updatedAt.getTime() > 120_000
+        (a.aiState === "NO_RESUME" ||
+          a.aiState === "FAILED" ||
+          Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
+        Date.now() - a.updatedAt.getTime() > 30_000
     )
     .slice(0, 3);
   for (const app of stuck) {
@@ -226,8 +230,9 @@ export async function getCandidaturaDetail(id: string) {
     Boolean(application.resumeUrl) &&
     (application.aiState === "NO_RESUME" ||
       application.aiState === "FAILED" ||
-      (application.aiState === "DONE" && !application.resumeText?.trim())) &&
-    Date.now() - application.updatedAt.getTime() > 60_000;
+      (application.aiState === "DONE" && !application.resumeText?.trim()) ||
+      Boolean(application.aiReasoning?.includes("Engenheiro de Software"))) &&
+    Date.now() - application.updatedAt.getTime() > 20_000;
 
   if (needsVisualOcrRetry) {
     await requestReanalysis(user.companyId, id).catch(() => {});

@@ -71,16 +71,22 @@ function mimeFromPath(p: string): string {
   return "image/jpeg"; // .jpg / .jpeg
 }
 
-const MAX_OCR_SIDE = 1568;
-const MAX_OCR_SLICES = 5;
+const MAX_OCR_SIDE = 1480;
+const MAX_OCR_SLICES = 4;
 
 const OCR_SYSTEM_PROMPT =
-  "Você é um leitor de documentos. Extraia TODO o texto visível nas imagens/páginas do currículo na ordem em que aparece, preservando a estrutura (seções, cargos, empresas, datas, formação e cursos). Não invente nada que não esteja escrito. Se não houver texto legível, responda com uma string vazia.";
+  "Você é um leitor óptico de documentos (OCR). Transcreva FIELMENTE todo o texto visível nas imagens do currículo na ordem em que aparece, preservando seções, cargos, empresas, datas, formação e cursos. PROIBIDO inventar, completar ou criar exemplos fictícios. Se não houver texto legível na imagem, responda apenas com a palavra VAZIO.";
+
+function cleanOcrOutput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed || /^vazio\.?$/i.test(trimmed)) return "";
+  return trimmed;
+}
 
 /**
  * Normaliza uma imagem para leitura visual (OCR) e, quando ela é um print
  * vertical muito comprido (ex.: print de tela inteira da Catho ou celular),
- * fatia em até 5 blocos verticais com leve sobreposição. Assim o modelo de
+ * fatia em até 4 blocos verticais com leve sobreposição. Assim o modelo de
  * visão não encolhe a largura da imagem inteira até deixar as letras ilegíveis.
  */
 async function sliceSharpImageForOcr(
@@ -89,8 +95,8 @@ async function sliceSharpImageForOcr(
   height: number
 ): Promise<VisionAttachment[]> {
   if (height > width * 2.1 && height > 1800) {
-    const sliceHeight = Math.min(height, Math.max(1400, Math.round(width * 1.65)));
-    const overlap = 120;
+    const sliceHeight = Math.min(height, Math.ceil(height / Math.min(MAX_OCR_SLICES, Math.ceil(height / (width * 1.6)))) + 90);
+    const overlap = 100;
     const step = Math.max(400, sliceHeight - overlap);
     const slices: VisionAttachment[] = [];
 
@@ -101,7 +107,7 @@ async function sliceSharpImageForOcr(
         .extract({ left: 0, top, width, height: h })
         .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
         .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 85 })
+        .jpeg({ quality: 84 })
         .toBuffer();
       slices.push({ base64: buf.toString("base64"), mime: "image/jpeg" });
       if (top + h >= height) break;
@@ -112,7 +118,7 @@ async function sliceSharpImageForOcr(
   const buf = await createInstance()
     .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
     .flatten({ background: "#ffffff" })
-    .jpeg({ quality: 85 })
+    .jpeg({ quality: 84 })
     .toBuffer();
   return [{ base64: buf.toString("base64"), mime: "image/jpeg" }];
 }
@@ -133,20 +139,36 @@ async function prepareImageAttachments(
   return [{ base64: Buffer.from(bytes).toString("base64"), mime }];
 }
 
+/**
+ * Envia as imagens em lotes de até 2 por chamada (respeitando o limite de 3
+ * imagens por requisição do modelo qwen/qwen3.8-27b na Groq e evitando corte
+ * de tokens em currículos longos como os da Catho).
+ */
 async function extractTextFromAttachments(
   attachments: VisionAttachment[],
   companyId?: string
 ): Promise<string> {
   if (attachments.length === 0) return "";
-  return geminiGenerate({
-    system: OCR_SYSTEM_PROMPT,
-    prompt: "Extraia o texto completo deste currículo.",
-    maxTokens: 4000,
-    companyId,
-    imageBase64: attachments[0].base64,
-    imageMime: attachments[0].mime,
-    attachments: attachments.slice(1),
-  });
+
+  const parts: string[] = [];
+  const batchSize = 2;
+
+  for (let i = 0; i < attachments.length; i += batchSize) {
+    const batch = attachments.slice(i, i + batchSize);
+    const raw = await geminiGenerate({
+      system: OCR_SYSTEM_PROMPT,
+      prompt: "Transcreva fielmente todo o texto visível neste currículo.",
+      maxTokens: 3500,
+      companyId,
+      imageBase64: batch[0].base64,
+      imageMime: batch[0].mime,
+      attachments: batch.slice(1),
+    });
+    const cleaned = cleanOcrOutput(raw);
+    if (cleaned) parts.push(cleaned);
+  }
+
+  return parts.join("\n\n");
 }
 
 /**
@@ -163,11 +185,60 @@ async function extractTextFromImage(
 }
 
 /**
+ * Procura streams JPEG brutos (FF D8 FF ... FF D9) diretamente nos bytes do
+ * PDF como plano B caso o operador do PDF.js não exponha a imagem via unpdf.
+ */
+async function extractRawJpegsFromPdfBytes(bytes: Uint8Array): Promise<VisionAttachment[]> {
+  const attachments: VisionAttachment[] = [];
+  const len = bytes.length;
+  let pos = 0;
+
+  while (pos < len - 10 && attachments.length < MAX_OCR_SLICES) {
+    // Procura assinatura JPEG: 0xFF 0xD8 0xFF
+    if (bytes[pos] === 0xff && bytes[pos + 1] === 0xd8 && bytes[pos + 2] === 0xff) {
+      // Procura fim do stream JPEG antes de "endstream"
+      let end = -1;
+      for (let j = pos + 4; j < len - 1; j++) {
+        if (bytes[j] === 0xff && bytes[j + 1] === 0xd9) {
+          end = j + 2;
+          // Continua se for apenas thumbnail EXIF interno antes do fim real
+          if (end - pos > 4096) break;
+        }
+      }
+      if (end > pos + 2048) {
+        try {
+          const candidate = Buffer.from(bytes.subarray(pos, end));
+          const meta = await sharp(candidate).metadata();
+          if (meta.width && meta.height && meta.width >= 200 && meta.height >= 200) {
+            const slices = await sliceSharpImageForOcr(
+              () => sharp(candidate),
+              meta.width,
+              meta.height
+            );
+            for (const s of slices) {
+              if (attachments.length < MAX_OCR_SLICES) attachments.push(s);
+            }
+            pos = end;
+            continue;
+          }
+        } catch {
+          // Não era um JPEG completo/válido
+        }
+      }
+    }
+    pos++;
+  }
+
+  return attachments;
+}
+
+/**
  * Extrai as imagens embutidas nas páginas de um PDF escaneado (ou print salvo
  * como PDF, como currículos exportados em imagem da Catho) e converte em
  * fatias JPEG nítidas para leitura por visão da IA.
  */
 async function extractPdfImagesForOcr(
+  bytes: Uint8Array,
   pdf: Awaited<ReturnType<typeof getDocumentProxy>>
 ): Promise<VisionAttachment[]> {
   const attachments: VisionAttachment[] = [];
@@ -192,7 +263,7 @@ async function extractPdfImagesForOcr(
         img.width >= 200 &&
         img.height >= 200 &&
         (img.channels === 1 || img.channels === 3 || img.channels === 4) &&
-        img.data.byteLength === img.width * img.height * img.channels
+        img.data.length === img.width * img.height * img.channels
     );
     if (!valid.length) continue;
 
@@ -203,7 +274,7 @@ async function extractPdfImagesForOcr(
     for (const img of relevant) {
       if (attachments.length >= MAX_OCR_SLICES) break;
       try {
-        const rawBuf = Buffer.from(img.data.buffer, img.data.byteOffset, img.data.byteLength);
+        const rawBuf = Buffer.from(img.data);
         const channels = img.channels as 1 | 3 | 4;
         const slices = await sliceSharpImageForOcr(
           () => sharp(rawBuf, { raw: { width: img.width, height: img.height, channels } }),
@@ -217,6 +288,10 @@ async function extractPdfImagesForOcr(
         console.error("[ia] Falha ao preparar imagem do PDF para OCR:", error);
       }
     }
+  }
+
+  if (attachments.length === 0) {
+    return extractRawJpegsFromPdfBytes(bytes);
   }
 
   return attachments;
@@ -241,23 +316,12 @@ async function extractPdfTextWithVision(
   await onStep?.("PDF em imagem detectado: lendo o texto com visão da IA");
 
   let ocrText = "";
-  const imageAttachments = await extractPdfImagesForOcr(pdf);
+  const imageAttachments = await extractPdfImagesForOcr(bytes, pdf);
   if (imageAttachments.length > 0) {
     try {
       ocrText = await extractTextFromAttachments(imageAttachments, companyId);
     } catch (error) {
       console.error("[ia] Falha no OCR das imagens do PDF:", error);
-    }
-  }
-
-  if (ocrText.trim().length < 40 && bytes.byteLength <= 5 * 1024 * 1024) {
-    try {
-      ocrText = await extractTextFromAttachments(
-        [{ base64: Buffer.from(bytes).toString("base64"), mime: "application/pdf" }],
-        companyId
-      );
-    } catch (error) {
-      console.error("[ia] Falha no OCR direto do documento PDF:", error);
     }
   }
 

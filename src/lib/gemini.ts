@@ -5,7 +5,6 @@ import { findCompanyById } from "@/server/repositories/company.repository";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "qwen/qwen3.8-27b";
-const GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const CLAUDE_DEFAULT_MODEL = "claude-haiku-5-5";
@@ -85,14 +84,8 @@ export async function aiModelId(companyId?: string): Promise<string> {
 
 async function callGroq(key: string, model: string, params: GenerateParams): Promise<Response> {
   const attachments = resolveAttachments(params);
-  const imageAttachments = attachments.filter((a) => a.mime.startsWith("image/")).slice(0, 5);
-
-  // Modelos puramente de texto na Groq (como qwen) recusam image_url: quando há
-  // visão, usa automaticamente o modelo multimodal da Groq.
-  const effectiveModel =
-    imageAttachments.length > 0 && !/llama-4-scout|vision/i.test(model)
-      ? GROQ_VISION_MODEL
-      : model;
+  // qwen/qwen3.8-27b na Groq aceita até 3 imagens por requisição via image_url.
+  const imageAttachments = attachments.filter((a) => a.mime.startsWith("image/")).slice(0, 3);
 
   // Groq (OpenAI-compatible): visão via content array com image_url (base64 data URI).
   const userContent: unknown =
@@ -113,7 +106,7 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: effectiveModel,
+      model,
       messages: [
         { role: "system", content: params.system },
         { role: "user", content: userContent },
@@ -127,13 +120,17 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
 
 async function generateWithGroq(model: string, params: GenerateParams): Promise<string> {
   const attachments = resolveAttachments(params);
-  const hasOnlyPdf =
-    attachments.length > 0 && attachments.every((a) => a.mime === "application/pdf");
+  const imageAttachments = attachments.filter((a) => a.mime.startsWith("image/"));
 
-  // Groq não aceita PDF bruto via base64: se for documento PDF puro e houver
-  // chave do Gemini, delega ao Gemini 2.5 Flash que lê PDF nativamente.
-  if (hasOnlyPdf && readEnv("GEMINI_API_KEY")) {
-    return generateWithGemini(params);
+  // NUNCA envie um prompt de OCR sem imagem para a Groq: se o anexo era um PDF
+  // bruto (sem imagens raster extraídas), a Groq não lê application/pdf.
+  // Sem essa trava, o modelo recebia só o texto "Extraia o texto completo deste
+  // currículo" sem imagem e inventava um currículo fictício.
+  if (attachments.length > 0 && imageAttachments.length === 0) {
+    if (readEnv("GEMINI_API_KEY")) {
+      return generateWithGemini(params);
+    }
+    throw new Error("Groq requer imagem (image/*) para leitura visual; PDF bruto não suportado.");
   }
 
   const key = readEnv("GROQ_API_KEY");
