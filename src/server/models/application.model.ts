@@ -175,6 +175,7 @@ export const appStatusLabels = {
   PENDING: "Triagem",
   SHORTLISTED: "Passou da triagem",
   INTERVIEW: "Entrevista",
+  STANDBY: "Stand-by",
   APPROVED: "Aprovado",
   REJECTED: "Reprovado",
 } as const;

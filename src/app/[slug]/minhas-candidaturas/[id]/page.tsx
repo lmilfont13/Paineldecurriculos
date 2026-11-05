@@ -26,6 +26,8 @@ function eventLabel(
   switch (to) {
     case "INTERVIEW":
       return { label: "Você avançou para a entrevista", tone: "good" };
+    case "STANDBY":
+      return { label: "Perfil guardado em stand-by", tone: "neutral" };
     case "PENDING":
       return { label: "Voltou para análise", tone: "neutral" };
     case "APPROVED":

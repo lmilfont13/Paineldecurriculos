@@ -83,6 +83,7 @@ export function countByStage(rows: CandidaturaRow[]): Record<StageKey, number> {
     PENDING: 0,
     SHORTLISTED: 0,
     INTERVIEW: 0,
+    STANDBY: 0,
     APPROVED: 0,
     REJECTED: 0,
     ALL: rows.length,

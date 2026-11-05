@@ -94,9 +94,9 @@ export async function getCandidaturasPageData(jobId?: string) {
         (a.aiState === "NO_RESUME" ||
           a.aiState === "FAILED" ||
           Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
-        Date.now() - a.updatedAt.getTime() > 30_000
+        Date.now() - a.updatedAt.getTime() > 15_000
     )
-    .slice(0, 3);
+    .slice(0, 2);
   for (const app of stuck) {
     await requestReanalysis(user.companyId, app.id).catch(() => {});
     app.aiState = "WAITING";
@@ -196,9 +196,9 @@ export async function getVagaDetailData(jobId: string) {
         (a.aiState === "NO_RESUME" ||
           a.aiState === "FAILED" ||
           Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
-        Date.now() - a.updatedAt.getTime() > 30_000
+        Date.now() - a.updatedAt.getTime() > 15_000
     )
-    .slice(0, 3);
+    .slice(0, 2);
   for (const app of stuck) {
     await requestReanalysis(user.companyId, app.id).catch(() => {});
     app.aiState = "WAITING";
@@ -232,7 +232,7 @@ export async function getCandidaturaDetail(id: string) {
       application.aiState === "FAILED" ||
       (application.aiState === "DONE" && !application.resumeText?.trim()) ||
       Boolean(application.aiReasoning?.includes("Engenheiro de Software"))) &&
-    Date.now() - application.updatedAt.getTime() > 20_000;
+    Date.now() - application.updatedAt.getTime() > 10_000;
 
   if (needsVisualOcrRetry) {
     await requestReanalysis(user.companyId, id).catch(() => {});

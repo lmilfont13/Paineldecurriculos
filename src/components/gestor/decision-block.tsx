@@ -14,6 +14,7 @@ import {
 const NEXT: Partial<Record<AppStatusKey, { to: AppStatusKey; label: string }>> = {
   PENDING: { to: "SHORTLISTED", label: "Passou da triagem" },
   SHORTLISTED: { to: "INTERVIEW", label: "Chamar para entrevista" },
+  STANDBY: { to: "INTERVIEW", label: "Chamar para entrevista" },
   INTERVIEW: { to: "APPROVED", label: "Aprovar" },
 };
 
@@ -21,6 +22,7 @@ const STAGE_COPY: Record<AppStatusKey, string> = {
   PENDING: "Ainda não decidido. O candidato está esperando um retorno seu.",
   SHORTLISTED: "Passou da primeira fase. Falta chamar para a entrevista.",
   INTERVIEW: "Em entrevista. O candidato já foi avisado por e-mail.",
+  STANDBY: "Guardado em stand-by no funil para próximas oportunidades.",
   APPROVED: "Aprovado. O candidato já foi avisado por e-mail.",
   REJECTED: "Processo encerrado. O candidato já foi avisado por e-mail.",
 };
@@ -250,6 +252,16 @@ export function DecisionBlock({
             className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a] disabled:opacity-50"
           >
             Avançar sem marcar
+          </button>
+        )}
+        {status !== "STANDBY" && status !== "APPROVED" && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => apply("STANDBY")}
+            className="h-10 rounded-2xl border border-[#b7e4dc] bg-[#f2fbf9] px-5 text-[13px] font-medium text-[#0e7a6b] hover:bg-[#e6f7f3] disabled:opacity-50"
+          >
+            Colocar em stand-by
           </button>
         )}
         {status !== "REJECTED" && (

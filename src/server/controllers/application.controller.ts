@@ -325,7 +325,7 @@ export async function moveApplicationAction(
   notice: { mode: "standard" | "silent" | "custom"; subject?: string; text?: string }
 ): Promise<MoveResult> {
   const user = await requireManager();
-  const allowed: AppStatus[] = ["PENDING", "SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"];
+  const allowed: AppStatus[] = ["PENDING", "SHORTLISTED", "INTERVIEW", "STANDBY", "APPROVED", "REJECTED"];
   if (!allowed.includes(status)) return { ok: false, error: "Etapa inválida." };
   const parsed: MoveNotice =
     notice?.mode === "custom"
@@ -351,6 +351,7 @@ export async function setApplicationStatusAction(
     PENDING: "Triagem",
     SHORTLISTED: "Passou da triagem",
     INTERVIEW: "Entrevista",
+    STANDBY: "Stand-by",
     APPROVED: "Aprovado",
     REJECTED: "Reprovado",
   };

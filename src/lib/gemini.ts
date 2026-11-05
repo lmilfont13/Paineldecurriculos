@@ -82,22 +82,40 @@ export async function aiModelId(companyId?: string): Promise<string> {
   return `${c.provider === "anthropic" ? "anthropic" : "groq"}:${c.model}`;
 }
 
-async function callGroq(key: string, model: string, params: GenerateParams): Promise<Response> {
+async function callGroq(
+  key: string,
+  model: string,
+  params: GenerateParams,
+  mergeSystemForVision = false
+): Promise<Response> {
   const attachments = resolveAttachments(params);
   // qwen/qwen3.8-27b na Groq aceita até 3 imagens por requisição via image_url.
   const imageAttachments = attachments.filter((a) => a.mime.startsWith("image/")).slice(0, 3);
 
-  // Groq (OpenAI-compatible): visão via content array com image_url (base64 data URI).
-  const userContent: unknown =
-    imageAttachments.length > 0
-      ? [
-          ...imageAttachments.map((att) => ({
-            type: "image_url",
-            image_url: { url: `data:${att.mime};base64,${att.base64}` },
-          })),
-          { type: "text", text: params.prompt },
-        ]
+  const hasVision = imageAttachments.length > 0;
+  const textPrompt =
+    hasVision && mergeSystemForVision && params.system
+      ? `${params.system}\n\n${params.prompt}`
       : params.prompt;
+
+  // Groq (OpenAI-compatible): visão via content array com image_url (base64 data URI).
+  const userContent: unknown = hasVision
+    ? [
+        ...imageAttachments.map((att) => ({
+          type: "image_url",
+          image_url: { url: `data:${att.mime};base64,${att.base64}` },
+        })),
+        { type: "text", text: textPrompt },
+      ]
+    : params.prompt;
+
+  const messages =
+    hasVision && mergeSystemForVision
+      ? [{ role: "user", content: userContent }]
+      : [
+          { role: "system", content: params.system },
+          { role: "user", content: userContent },
+        ];
 
   return fetch(GROQ_ENDPOINT, {
     method: "POST",
@@ -107,10 +125,7 @@ async function callGroq(key: string, model: string, params: GenerateParams): Pro
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: params.system },
-        { role: "user", content: userContent },
-      ],
+      messages,
       max_tokens: params.maxTokens ?? 300,
       temperature: 0.2,
       ...(params.json ? { response_format: { type: "json_object" } } : {}),
@@ -130,6 +145,9 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
     if (readEnv("GEMINI_API_KEY")) {
       return generateWithGemini(params);
     }
+    if (readEnv("ANTHROPIC_API_KEY")) {
+      return generateWithClaude(CLAUDE_DEFAULT_MODEL, params);
+    }
     throw new Error("Groq requer imagem (image/*) para leitura visual; PDF bruto não suportado.");
   }
 
@@ -138,13 +156,20 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
     if (attachments.length > 0 && readEnv("GEMINI_API_KEY")) {
       return generateWithGemini(params);
     }
+    if (attachments.length > 0 && readEnv("ANTHROPIC_API_KEY")) {
+      return generateWithClaude(CLAUDE_DEFAULT_MODEL, params);
+    }
     throw new Error("GROQ_API_KEY não configurada");
   }
 
   // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
   // Somam menos que o maxDuration (60s) das páginas que chamam a IA.
-  const delays = [12_000, 25_000];
+  const delays = imageAttachments.length > 0 ? [5_000, 10_000] : [12_000, 25_000];
   let res = await callGroq(key, model, params);
+
+  if (imageAttachments.length > 0 && (res.status === 400 || res.status === 422)) {
+    res = await callGroq(key, model, params, true);
+  }
 
   for (const delay of delays) {
     if (res.status !== 429) break;
@@ -154,9 +179,23 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
 
   if (!res.ok) {
     const body = await res.text();
-    if (attachments.length > 0 && readEnv("GEMINI_API_KEY")) {
-      console.error("[ia] Groq visão falhou, usando Gemini como reserva:", body.slice(0, 200));
-      return generateWithGemini(params);
+    if (attachments.length > 0) {
+      if (readEnv("GEMINI_API_KEY")) {
+        try {
+          console.error("[ia] Groq visão falhou, usando Gemini como reserva:", body.slice(0, 200));
+          return await generateWithGemini(params);
+        } catch (geminiErr) {
+          console.error("[ia] Gemini reserva também falhou:", geminiErr);
+        }
+      }
+      if (readEnv("ANTHROPIC_API_KEY")) {
+        try {
+          console.error("[ia] Groq visão falhou, usando Claude como reserva:", body.slice(0, 200));
+          return await generateWithClaude(CLAUDE_DEFAULT_MODEL, params);
+        } catch (claudeErr) {
+          console.error("[ia] Claude reserva também falhou:", claudeErr);
+        }
+      }
     }
     throw new Error(`Groq ${res.status}: ${body.slice(0, 300)}`);
   }

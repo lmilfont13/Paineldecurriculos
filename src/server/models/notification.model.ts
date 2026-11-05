@@ -38,7 +38,8 @@ export function stageNotification(
         body: `Muito obrigado por se candidatar à vaga de ${jobTitle} na ${companyName}. Seu currículo é bom, mas, neste momento, vamos seguir com outros perfis. Suas outras candidaturas continuam ativas: continue firme e acredite no seu potencial!`,
       };
     case "PENDING":
-      // Voltar para triagem é conserto de erro do gestor; não vira novidade.
+    case "STANDBY":
+      // Voltar para triagem ou guardar em stand-by não dispara aviso imediato.
       return null;
   }
 }
@@ -111,6 +112,8 @@ export function whatHappensNow(
       return interviewWhen
         ? `Sua conversa com a ${companyName} está marcada para ${interviewWhen}.`
         : `A ${companyName} vai combinar com você o horário da conversa. Se preferir, responda o e-mail que recebeu.`;
+    case "STANDBY":
+      return `Seu perfil ficou guardado em stand-by na ${companyName} e segue em avaliação para novas oportunidades.`;
     case "APPROVED":
       return `A ${companyName} entra em contato com os próximos passos da contratação.`;
     case "REJECTED":

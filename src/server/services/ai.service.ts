@@ -33,7 +33,6 @@ import {
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
 import { captureResumePhoto } from "@/server/services/resume-photo.service";
-import { autoCategorizeTalent } from "@/server/services/talent.service";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
 /**
@@ -71,54 +70,81 @@ function mimeFromPath(p: string): string {
   return "image/jpeg"; // .jpg / .jpeg
 }
 
-const MAX_OCR_SIDE = 1480;
-const MAX_OCR_SLICES = 4;
+const MAX_OCR_SIDE = 1600;
+const MAX_OCR_SLICES = 3;
 
 const OCR_SYSTEM_PROMPT =
-  "Você é um leitor óptico de documentos (OCR). Transcreva FIELMENTE todo o texto visível nas imagens do currículo na ordem em que aparece, preservando seções, cargos, empresas, datas, formação e cursos. PROIBIDO inventar, completar ou criar exemplos fictícios. Se não houver texto legível na imagem, responda apenas com a palavra VAZIO.";
+  "Você é um leitor óptico de documentos (OCR). Transcreva FIELMENTE todo o texto visível na imagem do currículo (se houver colunas lado a lado, leia da coluna da esquerda para a direita, de cima para baixo), preservando seções, cargos, empresas, datas, formação e cursos. PROIBIDO inventar, completar ou criar exemplos fictícios. Se não houver texto legível na imagem, responda apenas com a palavra VAZIO.";
 
 function cleanOcrOutput(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .trim();
   if (!trimmed || /^vazio\.?$/i.test(trimmed)) return "";
   return trimmed;
 }
 
 /**
  * Normaliza uma imagem para leitura visual (OCR) e, quando ela é um print
- * vertical muito comprido (ex.: print de tela inteira da Catho ou celular),
- * fatia em até 4 blocos verticais com leve sobreposição. Assim o modelo de
- * visão não encolhe a largura da imagem inteira até deixar as letras ilegíveis.
+ * vertical muito comprido (ex.: print de tela inteira da Catho de 720x5787),
+ * monta as fatias lado a lado em 2 ou 3 colunas numa ÚNICA imagem quadrada
+ * nítida. Isso mantém 100% da legibilidade das letras e envia apenas 1 imagem
+ * por página, respeitando o limite de 8.000 tokens/minuto da Groq.
  */
 async function sliceSharpImageForOcr(
   createInstance: () => sharp.Sharp,
   width: number,
   height: number
 ): Promise<VisionAttachment[]> {
-  if (height > width * 2.1 && height > 1800) {
-    const sliceHeight = Math.min(height, Math.ceil(height / Math.min(MAX_OCR_SLICES, Math.ceil(height / (width * 1.6)))) + 90);
-    const overlap = 100;
-    const step = Math.max(400, sliceHeight - overlap);
-    const slices: VisionAttachment[] = [];
+  if (height > width * 2.1 && height > 1600) {
+    try {
+      const cols = Math.min(3, Math.max(2, Math.round(Math.sqrt(height / width))));
+      const gap = 16;
+      const overlap = Math.min(90, Math.round(height * 0.02));
+      const colHeight = Math.ceil(height / cols) + overlap;
+      const step = Math.max(1, Math.floor((height - overlap) / cols));
+      const composites: sharp.OverlayOptions[] = [];
 
-    for (let top = 0; top < height && slices.length < MAX_OCR_SLICES; top += step) {
-      const h = Math.min(sliceHeight, height - top);
-      if (h < 120 && slices.length > 0) break;
-      const buf = await createInstance()
-        .extract({ left: 0, top, width, height: h })
-        .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 84 })
+      for (let c = 0; c < cols; c++) {
+        const top = Math.min(c * step, Math.max(0, height - 1));
+        const h = Math.min(colHeight, height - top);
+        if (h < 40) break;
+        const part = await createInstance()
+          .extract({ left: 0, top, width, height: h })
+          .flatten({ background: "#ffffff" })
+          .png()
+          .toBuffer();
+        composites.push({ input: part, left: c * (width + gap), top: 0 });
+      }
+
+      const totalW = cols * width + (cols - 1) * gap;
+      const stitched = await sharp({
+        create: {
+          width: totalW,
+          height: colHeight,
+          channels: 3,
+          background: { r: 242, g: 242, b: 242 },
+        },
+      })
+        .composite(composites)
+        .png()
         .toBuffer();
-      slices.push({ base64: buf.toString("base64"), mime: "image/jpeg" });
-      if (top + h >= height) break;
+
+      const buf = await sharp(stitched)
+        .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 86 })
+        .toBuffer();
+
+      return [{ base64: buf.toString("base64"), mime: "image/jpeg" }];
+    } catch (error) {
+      console.error("[ia] Falha ao montar colunas de imagem longa para OCR:", error);
     }
-    return slices;
   }
 
   const buf = await createInstance()
     .resize(MAX_OCR_SIDE, MAX_OCR_SIDE, { fit: "inside", withoutEnlargement: true })
     .flatten({ background: "#ffffff" })
-    .jpeg({ quality: 84 })
+    .jpeg({ quality: 85 })
     .toBuffer();
   return [{ base64: buf.toString("base64"), mime: "image/jpeg" }];
 }
@@ -140,9 +166,8 @@ async function prepareImageAttachments(
 }
 
 /**
- * Envia as imagens em lotes de até 2 por chamada (respeitando o limite de 3
- * imagens por requisição do modelo qwen/qwen3.8-27b na Groq e evitando corte
- * de tokens em currículos longos como os da Catho).
+ * Envia cada página/imagem individualmente com limite de tokens enxuto para
+ * caber na cota de 8.000 tokens/minuto da Groq junto com a nota e o checklist.
  */
 async function extractTextFromAttachments(
   attachments: VisionAttachment[],
@@ -151,21 +176,22 @@ async function extractTextFromAttachments(
   if (attachments.length === 0) return "";
 
   const parts: string[] = [];
-  const batchSize = 2;
 
-  for (let i = 0; i < attachments.length; i += batchSize) {
-    const batch = attachments.slice(i, i + batchSize);
-    const raw = await geminiGenerate({
-      system: OCR_SYSTEM_PROMPT,
-      prompt: "Transcreva fielmente todo o texto visível neste currículo.",
-      maxTokens: 3500,
-      companyId,
-      imageBase64: batch[0].base64,
-      imageMime: batch[0].mime,
-      attachments: batch.slice(1),
-    });
-    const cleaned = cleanOcrOutput(raw);
-    if (cleaned) parts.push(cleaned);
+  for (const att of attachments.slice(0, MAX_OCR_SLICES)) {
+    try {
+      const raw = await geminiGenerate({
+        system: OCR_SYSTEM_PROMPT,
+        prompt: "Transcreva fielmente todo o texto visível neste currículo.",
+        maxTokens: 1800,
+        companyId,
+        imageBase64: att.base64,
+        imageMime: att.mime,
+      });
+      const cleaned = cleanOcrOutput(raw);
+      if (cleaned) parts.push(cleaned);
+    } catch (error) {
+      console.error("[ia] Falha ao ler página em imagem no OCR:", error);
+    }
   }
 
   return parts.join("\n\n");
@@ -784,6 +810,7 @@ export async function runTriageWithTracking(
         try {
           const fresh = await findApplicationById(applicationId);
           if (fresh) {
+            const { autoCategorizeTalent } = await import("@/server/services/talent.service");
             await autoCategorizeTalent(fresh.company.id, applicationId, {
               area: fresh.aiArea,
               role: fresh.aiProfile,

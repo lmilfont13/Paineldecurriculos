@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "AppStatus" ADD VALUE IF NOT EXISTS 'STANDBY';
+

@@ -211,6 +211,15 @@ export async function setApplicationStatus(
       to: status,
       actor: "gestor",
     });
+    if (status === "STANDBY") {
+      runInBackground("categorizar stand-by no banco de talentos", async () => {
+        const { autoCategorizeTalent } = await import("@/server/services/talent.service");
+        await autoCategorizeTalent(companyId, id, {
+          area: application.aiArea ?? null,
+          role: application.aiProfile ?? "Banco de reserva",
+        });
+      });
+    }
   }
 
   if (status !== application.status && options.communicate !== false) {
@@ -254,8 +263,8 @@ export async function notifyApplicationStatusChange(
       companyName: application.company.name,
       jobTitle: application.job.title,
     }),
-    // Etapas internas (triagem, "passou da triagem") só viram novidade no portal; e-mail é para entrevista e resultado.
-    status !== "PENDING" && status !== "SHORTLISTED" && application.email.includes("@")
+    // Etapas internas (triagem, "passou da triagem", stand-by) só viram novidade no portal; e-mail é para entrevista e resultado.
+    status !== "PENDING" && status !== "SHORTLISTED" && status !== "STANDBY" && application.email.includes("@")
       ? sendStatusUpdateEmail({
           brand: emailBrand(application.company),
           to: application.email,

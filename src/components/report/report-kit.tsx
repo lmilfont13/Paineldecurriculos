@@ -22,6 +22,7 @@ export const STAGE_LABEL: Record<string, string> = {
   PENDING: "Em triagem",
   SHORTLISTED: "Passou da triagem",
   INTERVIEW: "Entrevista",
+  STANDBY: "Stand-by",
   APPROVED: "Aprovados",
   REJECTED: "Reprovados",
 };

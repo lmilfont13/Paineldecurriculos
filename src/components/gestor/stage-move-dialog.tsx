@@ -86,7 +86,9 @@ export function StageMoveDialog({
 
         {!hasMessage && (
           <p className="mt-2 rounded-xl border border-dashed border-[#e4e4e7] p-4 text-[13px] text-[#71717a]">
-            Nada é enviado: voltar para a triagem é um ajuste interno e não vira aviso para o candidato.
+            {to === "STANDBY"
+              ? "Guardar em stand-by é um controle interno do funil e não envia aviso imediato ao candidato (você também pode editar e enviar um recado depois)."
+              : "Nada é enviado: voltar para a triagem é um ajuste interno e não vira aviso para o candidato."}
           </p>
         )}
 

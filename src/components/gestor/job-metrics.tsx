@@ -19,11 +19,12 @@ type Metrics = {
   applicationsTimeline: Record<string, number>;
 };
 
-const FUNNEL_ORDER = ["PENDING", "SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"];
+const FUNNEL_ORDER = ["PENDING", "SHORTLISTED", "INTERVIEW", "STANDBY", "APPROVED", "REJECTED"];
 const FUNNEL_LABELS: Record<string, string> = {
   PENDING: "Triagem",
   SHORTLISTED: "Pré-selecionado",
   INTERVIEW: "Entrevista",
+  STANDBY: "Stand-by",
   APPROVED: "Aprovado",
   REJECTED: "Reprovado",
 };
@@ -31,6 +32,7 @@ const FUNNEL_COLORS: Record<string, string> = {
   PENDING: "#b07818",
   SHORTLISTED: "#2f5fa8",
   INTERVIEW: "#7c3aed",
+  STANDBY: "#0e7a6b",
   APPROVED: "#1f7a4d",
   REJECTED: "#a1a1aa",
 };
@@ -98,9 +100,9 @@ export function JobMetrics({ jobId }: { jobId: string }) {
   );
   const maxSource = sourceEntries[0]?.[1] ?? 0;
 
-  // Funil: mostrar só os que têm candidaturas
+  // Funil: mostrar etapas com candidaturas e sempre exibir Stand-by no funil
   const funnelEntries = FUNNEL_ORDER.filter(
-    (s) => (metrics.statusFunnel[s] ?? 0) > 0,
+    (s) => (metrics.statusFunnel[s] ?? 0) > 0 || s === "STANDBY",
   ).map((s) => ({ key: s, count: metrics.statusFunnel[s] ?? 0 }));
 
   // Timeline: últimos 7 dias com dados

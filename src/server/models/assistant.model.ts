@@ -44,6 +44,7 @@ const STATUS_PT: Record<string, string> = {
   PENDING: "em triagem",
   SHORTLISTED: "passou da triagem",
   INTERVIEW: "em entrevista",
+  STANDBY: "em stand-by",
   APPROVED: "aprovado",
 };
 

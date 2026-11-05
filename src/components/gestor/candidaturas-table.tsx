@@ -46,6 +46,7 @@ const TABS: { key: StageKey; label: string }[] = [
   { key: "PENDING", label: "Triagem" },
   { key: "SHORTLISTED", label: "Passou da triagem" },
   { key: "INTERVIEW", label: "Entrevista" },
+  { key: "STANDBY", label: "Stand-by" },
   { key: "APPROVED", label: "Aprovados" },
   { key: "REJECTED", label: "Reprovados" },
   { key: "ALL", label: "Todos" },
@@ -62,24 +63,27 @@ const statusPill: Record<AppStatusKey, string> = {
   PENDING: "bg-[#f1f0ed] text-[#71717a]",
   SHORTLISTED: "bg-[#eaf1fb] text-[#2f5fa8]",
   INTERVIEW: "bg-[#f7f0e1] text-[#b07818]",
+  STANDBY: "bg-[#e6f4f1] text-[#0e7a6b]",
   APPROVED: "bg-[#e4f6ec] text-[#1f7a4d]",
   REJECTED: "bg-[#fbeae8] text-[#c23b3b]",
 };
 
 /** Ações em massa por etapa — só o que faz sentido de onde o gestor está. */
 const BULK_BY_TAB: Record<StageKey, AppStatusKey[]> = {
-  PENDING: ["SHORTLISTED", "INTERVIEW", "REJECTED"],
-  SHORTLISTED: ["INTERVIEW", "REJECTED", "PENDING"],
-  INTERVIEW: ["APPROVED", "REJECTED"],
-  APPROVED: ["INTERVIEW"],
-  REJECTED: ["PENDING"],
-  ALL: ["SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED"],
+  PENDING: ["SHORTLISTED", "INTERVIEW", "STANDBY", "REJECTED"],
+  SHORTLISTED: ["INTERVIEW", "STANDBY", "REJECTED", "PENDING"],
+  INTERVIEW: ["APPROVED", "STANDBY", "REJECTED"],
+  STANDBY: ["SHORTLISTED", "INTERVIEW", "APPROVED", "REJECTED", "PENDING"],
+  APPROVED: ["INTERVIEW", "STANDBY"],
+  REJECTED: ["PENDING", "STANDBY"],
+  ALL: ["SHORTLISTED", "INTERVIEW", "STANDBY", "APPROVED", "REJECTED"],
 };
 
 const BULK_LABELS: Record<AppStatusKey, string> = {
   PENDING: "Voltar p/ triagem",
   SHORTLISTED: "Passou da triagem",
   INTERVIEW: "Chamar p/ entrevista",
+  STANDBY: "Colocar em stand-by",
   APPROVED: "Aprovar",
   REJECTED: "Reprovar",
 };

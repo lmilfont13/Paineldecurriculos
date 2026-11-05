@@ -38,6 +38,7 @@ const STAGES: { key: AppStatusKey; label: string; accent: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818" },
   { key: "SHORTLISTED", label: "Passou da triagem", accent: "#2f5fa8" },
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818" },
+  { key: "STANDBY", label: "Stand-by", accent: "#0e7a6b" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d" },
   { key: "REJECTED", label: "Reprovados", accent: "#a1a1aa" },
 ];
@@ -71,6 +72,7 @@ export default async function VagaHubPage({
   const byStage = (stage: AppStatusKey) =>
     applications.filter((a) => a.status === stage);
   const pending = byStage("PENDING");
+  const standbyStage = byStage("STANDBY");
   const oldestPending = [...pending].sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
   )[0];
@@ -78,7 +80,7 @@ export default async function VagaHubPage({
     (a) => a.aiScore !== null && a.aiScore >= job.aiMinScore
   ).length;
   const decided = applications.filter(
-    (a) => a.status === "APPROVED" || a.status === "REJECTED"
+    (a) => a.status === "APPROVED" || a.status === "REJECTED" || a.status === "STANDBY"
   ).length;
   const analyzing = applications.some(
     (a) => a.aiState === "WAITING" || a.aiState === "PROCESSING"
@@ -156,7 +158,7 @@ export default async function VagaHubPage({
 
 
       {/* Sinais vitais — o que responde "essa vaga está andando?" */}
-      <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-[#e4e4e7] bg-white p-5">
           <p className="text-3xl font-bold text-[#0a0a0a]">
             {applications.length}
@@ -205,6 +207,21 @@ export default async function VagaHubPage({
           </p>
           <p className="text-[11px] text-[#71717a]">
             corte da IA: {job.aiMinScore} pontos
+          </p>
+        </Link>
+        <Link
+          href={`/candidaturas?vaga=${job.id}&status=STANDBY`}
+          className="group rounded-xl border border-[#e4e4e7] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)]"
+        >
+          <p className="text-3xl font-bold text-[#0e7a6b]">{standbyStage.length}</p>
+          <p className="mt-1.5 flex items-center gap-1 text-sm font-medium text-[#0a0a0a]">
+            em stand-by
+            <span className="text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100">
+              ›
+            </span>
+          </p>
+          <p className="text-[11px] text-[#71717a]">
+            guardados neste funil
           </p>
         </Link>
       </div>
