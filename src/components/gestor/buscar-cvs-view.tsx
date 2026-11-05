@@ -390,6 +390,16 @@ export function BuscarCvsView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href="/buscar-cvs/relatorio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9.5 items-center gap-2 rounded-xl border border-amber-300 bg-linear-to-b from-amber-50 to-amber-100/70 px-4 text-xs font-bold text-amber-950 shadow-xs transition hover:from-amber-100 hover:to-amber-200/80 hover:border-amber-400 active:scale-98"
+              title="Baixar Dashboard Executivo Completo em PDF (Gênero, Idade, Cargos, Empresas e Experiências)"
+            >
+              <FileText className="size-3.5 text-amber-800" />
+              <span>Dashboard PDF</span>
+            </a>
             <button
               type="button"
               disabled={isExtractingPhotos}
