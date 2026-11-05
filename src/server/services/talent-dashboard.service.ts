@@ -57,7 +57,7 @@ export async function loadTalentDashboardReportData(
     company: {
       id: company.id,
       name: company.name,
-      brand: company.brand || "#7a1f3d",
+      brand: company.primaryColor || "#7a1f3d",
     },
   };
 }
