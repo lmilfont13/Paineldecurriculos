@@ -12,7 +12,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
           <span>Tempo de permanência nas empresas</span>
         </div>
         <p className="mt-1 text-[11px] text-[#a1a1aa]">
-          O currículo não detalha datas ou meses de entrada e saída nas experiências para o cálculo de tempo médio.
+          Sem histórico com datas de entrada e saída detectadas para este candidato. Se o currículo foi enviado anteriormente, use o botão &ldquo;Analisar de novo&rdquo; acima para a IA extrair as empresas e durações.
         </p>
       </div>
     );
@@ -144,3 +144,4 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
     </div>
   );
 }
+

@@ -88,6 +88,30 @@ export function classifyStability(
   };
 }
 
+const INVALID_COMPANY_PATTERNS = [
+  /telefone/i,
+  /celular/i,
+  /whatsapp/i,
+  /nascimento/i,
+  /data\s+de\s+nascimento/i,
+  /e-?mail/i,
+  /@/,
+  /\(?\d{2}\)?\s*9?\s*\d{4}[-\s]?\d{4}/, // telefones (85) 9 87530785
+  /curr[íi]culo/i,
+  /dados\s+pessoais/i,
+  /contato/i,
+  /endereço|endereco/i,
+  /cpf/i,
+  /rg\b/i,
+  /brasileir[oa]/i,
+  /solteir[oa]|casad[oa]/i,
+];
+
+function isLikelyPersonalData(text: string): boolean {
+  if (!text) return true;
+  return INVALID_COMPANY_PATTERNS.some((pat) => pat.test(text));
+}
+
 /** Valida e normaliza o objeto de análise de permanência retornado pela IA ou salvo no banco. */
 export function parseTenureAnalysis(raw: unknown): TenureAnalysis | null {
   if (!raw || typeof raw !== "object") return null;
@@ -106,7 +130,15 @@ export function parseTenureAnalysis(raw: unknown): TenureAnalysis | null {
 
     if (!empresa && !cargo && !periodo) continue;
 
-    const validMonths = Number.isFinite(meses) && meses > 0 ? Math.round(meses) : 0;
+    // Descarta se a IA ou fallback inseriu nome do candidato, telefone, nascimento ou dados pessoais
+    if (isLikelyPersonalData(empresa) || isLikelyPersonalData(periodo)) {
+      continue;
+    }
+
+    // Descarta durações irreais (ex: mais de 35 anos em uma única função)
+    const validMonths = Number.isFinite(meses) && meses > 0 && meses <= 420 ? Math.round(meses) : 0;
+    if (validMonths === 0 && !periodo) continue;
+
     empresas.push({
       empresa: empresa || "Empresa não informada",
       cargo: cargo || "Função não informada",
@@ -154,10 +186,11 @@ export function parseTenureAnalysis(raw: unknown): TenureAnalysis | null {
 }
 
 /**
- * Lê do banco: pode estar salvo em app.aiTenure ou dentro de app.aiChecklist
- * ou deduzido a partir de texto do currículo se ainda não houver análise.
+ * Lê do banco: salvo em app.aiTenure ou dentro de app.aiChecklist.
+ * NOTA: Nunca usamos fallback regex cego no texto para evitar inventar empresas
+ * a partir de cabeçalhos de contato ou datas de nascimento.
  */
-export function readTenure(value: unknown, resumeText?: string | null): TenureAnalysis | null {
+export function readTenure(value: unknown, _resumeText?: string | null): TenureAnalysis | null {
   if (value && typeof value === "object") {
     // Se estiver em formato direto
     if ("empresas" in value || "tempoMedioMeses" in value) {
@@ -171,92 +204,11 @@ export function readTenure(value: unknown, resumeText?: string | null): TenureAn
     }
   }
 
-  // Fallback heurístico inteligente em tempo de exibição caso o currículo ainda não tenha passado pela nova análise
-  if (resumeText && resumeText.trim().length > 30) {
-    return extractHeuristicTenure(resumeText);
-  }
-
   return null;
 }
 
-/** Extrai heurística rápida de anos e meses de permanência a partir do texto cru do currículo. */
-export function extractHeuristicTenure(text: string): TenureAnalysis | null {
-  if (!text) return null;
-
-  // Busca padrões como: "2019 a 2022", "01/2020 até 05/2021", "Março/2018 - Atual"
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const yearPattern = /\b(19\d\d|20\d\d)\b(?:\s*(?:a|à|-|ate|até|–)\s*(\b(?:19\d\d|20\d\d)\b|atual|o momento|presente))?/i;
-  const monthYearPattern = /\b(0?[1-9]|1[0-2])[\/\.](19\d\d|20\d\d)\b(?:\s*(?:a|à|-|ate|até|–)\s*(?:(0?[1-9]|1[0-2])[\/\.](19\d\d|20\d\d)\b|atual|o momento|presente))?/i;
-
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-
-  const matched: TenureCompany[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const myMatch = line.match(monthYearPattern);
-
-    if (myMatch) {
-      const startM = parseInt(myMatch[1], 10);
-      const startY = parseInt(myMatch[2], 10);
-      let endM = currentMonth;
-      let endY = currentYear;
-      const isCurrent = /atual|presente|momento/i.test(myMatch[0]);
-
-      if (!isCurrent && myMatch[3] && myMatch[4]) {
-        endM = parseInt(myMatch[3], 10);
-        endY = parseInt(myMatch[4], 10);
-      }
-
-      const totalMonths = Math.max(1, (endY - startY) * 12 + (endM - startM));
-      if (totalMonths > 0 && totalMonths < 480) {
-        const empresa = lines[i > 0 ? i - 1 : i].slice(0, 50).replace(/[•\-*]/g, "").trim() || "Experiência profissional";
-        matched.push({
-          empresa,
-          cargo: "Conforme currículo",
-          periodo: myMatch[0],
-          meses: totalMonths,
-          duracaoFormatada: formatDurationMonths(totalMonths),
-          atual: isCurrent,
-        });
-      }
-      continue;
-    }
-
-    const yMatch = line.match(yearPattern);
-    if (yMatch && yMatch[1]) {
-      const startY = parseInt(yMatch[1], 10);
-      let endY = startY + 1;
-      const isCurrent = /atual|presente|momento/i.test(yMatch[0]);
-      if (yMatch[2]) {
-        if (/atual|presente|momento/i.test(yMatch[2])) {
-          endY = currentYear;
-        } else {
-          endY = parseInt(yMatch[2], 10);
-        }
-      }
-      const totalMonths = Math.max(1, (endY - startY) * 12);
-      if (totalMonths > 0 && totalMonths < 480) {
-        const empresa = lines[i > 0 ? i - 1 : i].slice(0, 50).replace(/[•\-*]/g, "").trim() || "Experiência profissional";
-        matched.push({
-          empresa,
-          cargo: "Conforme currículo",
-          periodo: yMatch[0],
-          meses: totalMonths,
-          duracaoFormatada: formatDurationMonths(totalMonths),
-          atual: isCurrent,
-        });
-      }
-    }
-  }
-
-  // Limita até 6 experiências mais claras
-  const unique = matched.slice(0, 6);
-  if (unique.length === 0) return null;
-
-  return parseTenureAnalysis({
-    empresas: unique,
-    tempoMedioMeses: Math.round(unique.reduce((acc, u) => acc + u.meses, 0) / unique.length),
-  });
+/** Fallback regex desativado para garantir fidelidade total e evitar confusão com datas pessoais. */
+export function extractHeuristicTenure(_text: string): TenureAnalysis | null {
+  return null;
 }
+

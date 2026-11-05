@@ -28,7 +28,6 @@ import {
   parseScoreResponse,
 } from "@/server/models/ai.model";
 import {
-  extractHeuristicTenure,
   parseTenureAnalysis,
   type TenureAnalysis,
 } from "@/server/models/tenure.model";
@@ -39,6 +38,7 @@ import {
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
 import { captureResumePhoto } from "@/server/services/resume-photo.service";
+import { autoCategorizeTalent } from "@/server/services/talent.service";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
 /**
@@ -383,14 +383,14 @@ Classifique também o perfil profissional pelo que o material mostra, sem dados 
 - area: UMA PALAVRA só, a área mais ampla (ex.: "Logística", "Administrativo", "Vendas", "Atendimento", "Saúde", "Beleza", "Indústria", "TI"). Nunca combine duas áreas com "e".
 - role: função principal em até 4 palavras, sempre no MASCULINO SINGULAR (ex.: "Promotor de vendas", "Motorista e entregador", "Consultor comercial", "Vendedor"). Nunca use feminino (promotora, vendedora, consultora).
 - level: um de "Operacional", "Júnior", "Pleno", "Sênior", "Liderança"
-Analise também a durabilidade e o tempo de permanência em cada empresa onde houver histórico ou datas/períodos no material:
-- empresas: lista de até 6 empresas descritas, cada uma com:
-  - empresa: nome da empresa ou local
-  - cargo: função desempenhada
-  - periodo: texto do período (ex.: "Jan/2021 a Mar/2023", "2019 - 2021", "2023 - Atual")
-  - meses: duração estimada em meses inteiros (ex.: 26 para 2 anos e 2 meses; se for até o momento atual use a data atual)
-- tempoMedioMeses: média de meses nas empresas com período
-- resumo: 1 frase concisa resumindo a estabilidade profissional do candidato (se costuma ter boa permanência ou se apresenta histórico de rotatividade rápida com passagens curtas).
+Analise também a durabilidade e o tempo de permanência em cada empresa onde houver histórico de TRABALHO ou EMPREGO anterior no material:
+- empresas: lista de até 6 empresas onde o candidato trabalhou, cada uma com:
+  - empresa: nome da EMPRESA onde trabalhou (REGRA CRÍTICA: NUNCA coloque o nome do candidato, data de nascimento, telefone, endereço, cabeçalho ou dados pessoais aqui. Apenas a empresa real)
+  - cargo: função ou cargo desempenhado
+  - periodo: texto do período de trabalho (ex.: "Jan/2021 a Mar/2023", "2019 - 2021", "2023 - Atual"). NUNCA use data de nascimento nem ano de formação escolar/faculdade como período de trabalho.
+  - meses: duração estimada do emprego em meses inteiros (ex.: 26 para 2 anos e 2 meses). Se for nascimento ou formatura, NÃO inclua.
+- tempoMedioMeses: média de meses nas empresas trabalhadas
+- resumo: 1 frase concisa resumindo a estabilidade profissional do candidato (se costuma ter boa permanência ou se apresenta histórico de rotatividade rápida com passagens curtas). Se não houver histórico de empregos com datas, devolva "empresas": [] e tempoMedioMeses: 0.
 
 Retorne JSON: {
   "criteria": [ { "criterion": "texto exato do critério", "met": "sim" | "parcial" | "não", "evidence": "trecho curto do material ou vazio" } ],
@@ -421,14 +421,13 @@ async function buildChecklist(
   try {
     const raw = await geminiGenerate({
       system: CHECKLIST_PROMPT,
-      prompt: `Critérios da vaga:\n${
-        criteria.length > 0 ? criteria.map((c) => `- ${c}`).join("\n") : "(sem critérios: devolva a lista vazia)"
-      }\n\nMaterial do candidato:\n${material}`,
+      prompt: `Critérios da vaga:\n${criteria.length > 0 ? criteria.map((c) => `- ${c}`).join("\n") : "(sem critérios: devolva a lista vazia)"
+        }\n\nMaterial do candidato:\n${material}`,
       maxTokens: 1100,
       json: true,
       companyId,
     });
-    const parsedTenure = parseTenureAnalysis(parseTenureFromJson(raw)) ?? extractHeuristicTenure(material);
+    const parsedTenure = parseTenureAnalysis(parseTenureFromJson(raw));
     return {
       checklist: criteria.length > 0 ? parseChecklist(raw, criteria) : null,
       segment: parseSegment(raw),
@@ -437,11 +436,10 @@ async function buildChecklist(
   } catch (error) {
     // Complementar: se falhar, a nota continua valendo.
     console.error("[ia] Falha no checklist por critério e permanência:", error);
-    const fallbackTenure = extractHeuristicTenure(material);
     return {
       checklist: null,
       segment: { area: null, role: null, level: null },
-      tenure: fallbackTenure,
+      tenure: null,
     };
   }
 }
@@ -675,7 +673,7 @@ export async function analyzeCareerProfile(applicationId: string, companyId?: st
  */
 export async function analyzeApplication(
   applicationId: string,
-  onStep: TriageStepReporter = async () => {}
+  onStep: TriageStepReporter = async () => { }
 ): Promise<{ score: number } | null> {
   const application = await findApplicationById(applicationId);
   if (!application) return null;
@@ -848,7 +846,6 @@ export async function runTriageWithTracking(
         try {
           const fresh = await findApplicationById(applicationId);
           if (fresh) {
-            const { autoCategorizeTalent } = await import("@/server/services/talent.service");
             await autoCategorizeTalent(fresh.company.id, applicationId, {
               area: fresh.aiArea,
               role: fresh.aiProfile,

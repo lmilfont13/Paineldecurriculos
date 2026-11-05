@@ -63,20 +63,55 @@ describe("parseTenureAnalysis", () => {
     expect(parsed?.estabilidade).toBe("MEDIA");
     expect(parsed?.empresas[0].empresa).toBe("Supermercado A");
   });
+
+  it("descarta dados pessoais, telefones e datas de nascimento confundidos com empresa", () => {
+    const polluted = {
+      tempoMedioMeses: 100,
+      resumo: "...",
+      empresas: [
+        {
+          empresa: "Maria Júlia de Maria Araújo Data de Nascimento: 09",
+          cargo: "Conforme currículo",
+          periodo: "11/2005",
+          meses: 252,
+        },
+        {
+          empresa: "GLEICIANE MUNIZ Telefone: (85) 9 87530785 | (85)",
+          cargo: "Conforme currículo",
+          periodo: "05/2026",
+          meses: 6,
+        },
+        {
+          empresa: "Empresa Real LTDA",
+          cargo: "Vendedora",
+          periodo: "2021 a 2023",
+          meses: 24,
+        },
+      ],
+    };
+
+    const parsed = parseTenureAnalysis(polluted);
+    expect(parsed).not.toBeNull();
+    // Apenas a Empresa Real LTDA deve ser aceita
+    expect(parsed?.totalExperiencias).toBe(1);
+    expect(parsed?.empresas[0].empresa).toBe("Empresa Real LTDA");
+    expect(parsed?.tempoMedioMeses).toBe(24);
+  });
+});
+
+describe("readTenure", () => {
+  it("retorna null quando aiTenure for nulo, sem inferir via regex em texto cru", () => {
+    const rawText = "Maria Júlia de Maria Araújo Data de Nascimento: 09/11/2005";
+    const res = readTenure(null, rawText);
+    expect(res).toBeNull();
+  });
 });
 
 describe("extractHeuristicTenure", () => {
-  it("extrai períodos a partir do texto do currículo", () => {
-    const text = `
-      Experiência Profissional
-      Atacadão Distribuidora
-      01/2020 a 06/2022 - Promotor de Vendas
-      Carrefour
-      08/2022 a 02/2024 - Repositor
-    `;
+  it("está desativado para evitar falsos positivos", () => {
+    const text = "01/2020 a 06/2022";
     const res = extractHeuristicTenure(text);
-    expect(res).not.toBeNull();
-    expect(res?.totalExperiencias).toBeGreaterThanOrEqual(1);
-    expect(res?.tempoMedioMeses).toBeGreaterThan(0);
+    expect(res).toBeNull();
   });
 });
+
