@@ -1,14 +1,95 @@
 "use client";
 
-import { Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, Radio, Sparkles, User, Users, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-type PresencePayload = {
+export type PresencePayload = {
   role: "candidato" | "equipe";
   path?: string;
+  name?: string;
+  timestamp?: number;
 };
+
+export type ScreenCategory = "cadastro" | "principal" | "perfil" | "painel";
+
+export function categorizePresence(
+  path?: string,
+  role: "candidato" | "equipe" = "candidato"
+): {
+  category: ScreenCategory;
+  categoryLabel: string;
+  screenTitle: string;
+  colorPill: string;
+} {
+  const p = (path || "").toLowerCase();
+
+  if (
+    role === "equipe" ||
+    p.startsWith("/painel") ||
+    p.startsWith("/candidaturas") ||
+    p.startsWith("/buscar-cvs") ||
+    p.startsWith("/talentos") ||
+    p.startsWith("/admin")
+  ) {
+    let screen = "Painel de Gestão";
+    if (p.includes("/candidaturas")) screen = "Triagem de Candidaturas";
+    else if (p.includes("/buscar-cvs")) screen = "Radar de Talentos & CVs";
+    else if (p.includes("/agentes")) screen = "Sala de Agentes IA";
+    else if (p.includes("/vagas/nova")) screen = "Criando nova vaga";
+    return {
+      category: "painel",
+      categoryLabel: "Equipe no Painel",
+      screenTitle: screen,
+      colorPill: "bg-amber-100 text-amber-900 border-amber-300",
+    };
+  }
+
+  if (p.includes("/candidat") || p.includes("/inscricao")) {
+    return {
+      category: "cadastro",
+      categoryLabel: "No Cadastro / Inscrição",
+      screenTitle: "Preenchendo Formulário de Candidatura",
+      colorPill: "bg-rose-100 text-rose-900 border-rose-300",
+    };
+  }
+
+  if (p.includes("/entrar")) {
+    return {
+      category: "cadastro",
+      categoryLabel: "No Cadastro / Inscrição",
+      screenTitle: "Tela de Login / Cadastro Inicial",
+      colorPill: "bg-rose-100 text-rose-900 border-rose-300",
+    };
+  }
+
+  if (p.includes("/perfil")) {
+    return {
+      category: "perfil",
+      categoryLabel: "No Perfil do Candidato",
+      screenTitle: "Consultando / Editando Meu Perfil",
+      colorPill: "bg-purple-100 text-purple-900 border-purple-300",
+    };
+  }
+
+  if (p.includes("/minhas-candidaturas") || p.includes("/notificacoes")) {
+    return {
+      category: "perfil",
+      categoryLabel: "No Perfil do Candidato",
+      screenTitle: "Acompanhando Minhas Candidaturas",
+      colorPill: "bg-purple-100 text-purple-900 border-purple-300",
+    };
+  }
+
+  return {
+    category: "principal",
+    categoryLabel: "Logado na Tela Principal",
+    screenTitle: "Navegando no Mural de Vagas Abertas",
+    colorPill: "bg-emerald-100 text-emerald-900 border-emerald-300",
+  };
+}
 
 function getTabPresenceKey(): string {
   try {
@@ -25,10 +106,12 @@ function getTabPresenceKey(): string {
 }
 
 /**
- * Rastreia visitantes nas páginas públicas da empresa (/[slug]/vagas, candidatura, etc.)
- * em tempo real via Supabase Realtime Presence (zero consultas ao banco).
+ * Rastreia visitantes nas páginas públicas da empresa (vagas, formulário de candidatura, perfil, etc.)
+ * em tempo real via Supabase Realtime Presence, atualizando sempre que a rota mudar.
  */
 export function PublicPresenceTracker({ slug }: { slug: string }) {
+  const pathname = usePathname();
+
   useEffect(() => {
     if (!slug) return;
     let supabase: ReturnType<typeof createClient> | null = null;
@@ -47,7 +130,8 @@ export function PublicPresenceTracker({ slug }: { slug: string }) {
       if (status === "SUBSCRIBED") {
         await channel.track({
           role: "candidato",
-          path: window.location.pathname,
+          path: pathname,
+          timestamp: Date.now(),
         } satisfies PresencePayload);
       }
     });
@@ -55,14 +139,23 @@ export function PublicPresenceTracker({ slug }: { slug: string }) {
     return () => {
       void channel.unsubscribe();
     };
-  }, [slug]);
+  }, [slug, pathname]);
 
   return null;
 }
 
+type OnlineSession = {
+  key: string;
+  role: "candidato" | "equipe";
+  path: string;
+  category: ScreenCategory;
+  categoryLabel: string;
+  screenTitle: string;
+};
+
 /**
- * Badge em tempo real mostrando quantas pessoas estão online agora
- * (separando candidatos visitando as vagas e membros da equipe no painel).
+ * Badge em tempo real com Popover detalhado mostrando exatamente quantas pessoas
+ * estão online e em qual tela cada uma está (No Cadastro, Na Tela Principal, No Perfil ou no Painel).
  */
 export function OnlineCounterBadge({
   slug,
@@ -71,8 +164,22 @@ export function OnlineCounterBadge({
   slug: string;
   variant?: "sidebar" | "topbar" | "admin";
 }) {
-  const [candidatesCount, setCandidatesCount] = useState(0);
-  const [teamCount, setTeamCount] = useState(1);
+  const [sessions, setSessions] = useState<OnlineSession[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Fecha o popover ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!slug) return;
@@ -90,16 +197,22 @@ export function OnlineCounterBadge({
 
     const syncCounts = () => {
       const state = channel.presenceState<PresencePayload>();
-      let cands = 0;
-      let team = 0;
-      for (const presences of Object.values(state)) {
+      const list: OnlineSession[] = [];
+
+      for (const [key, presences] of Object.entries(state)) {
         const first = presences[0];
         if (!first) continue;
-        if (first.role === "candidato") cands += 1;
-        else team += 1;
+        const info = categorizePresence(first.path, first.role);
+        list.push({
+          key,
+          role: first.role,
+          path: first.path || "/",
+          category: info.category,
+          categoryLabel: info.categoryLabel,
+          screenTitle: info.screenTitle,
+        });
       }
-      setCandidatesCount(cands);
-      setTeamCount(Math.max(team, 1));
+      setSessions(list);
     };
 
     channel
@@ -109,6 +222,7 @@ export function OnlineCounterBadge({
           await channel.track({
             role: "equipe",
             path: window.location.pathname,
+            timestamp: Date.now(),
           } satisfies PresencePayload);
         }
       });
@@ -118,75 +232,169 @@ export function OnlineCounterBadge({
     };
   }, [slug]);
 
-  const total = candidatesCount + teamCount;
-  const tooltip = `${total} online agora: ${candidatesCount} candidato(s) nas vagas · ${teamCount} na equipe`;
+  const candidates = sessions.filter((s) => s.role === "candidato");
+  const team = sessions.filter((s) => s.role === "equipe");
+
+  const cadastroCount = candidates.filter((s) => s.category === "cadastro").length;
+  const principalCount = candidates.filter((s) => s.category === "principal").length;
+  const perfilCount = candidates.filter((s) => s.category === "perfil").length;
+  const total = Math.max(sessions.length, 1);
 
   if (variant === "topbar") {
     return (
-      <div
-        title={tooltip}
-        className="ml-auto flex items-center gap-2 rounded-full border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1 text-[11px] font-medium text-[#0a0a0a]"
-      >
-        <span className="relative flex size-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-        </span>
-        <span>
-          <strong>{total}</strong> online
-        </span>
-        {candidatesCount > 0 && (
-          <span className="hidden text-[#1f7a4d] sm:inline">
-            ({candidatesCount} {candidatesCount === 1 ? "candidato" : "candidatos"})
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  if (variant === "admin") {
-    return (
-      <div
-        title={tooltip}
-        className="mx-3 mb-2 flex items-center justify-between rounded-xl border border-[#37322e] bg-[#2a2724] px-3 py-2 text-[11px] text-[#fafaf9]"
-      >
-        <div className="flex items-center gap-2">
+      <div className="relative" ref={containerRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen((p) => !p)}
+          className="ml-auto flex items-center gap-2 rounded-full border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1 text-[11px] font-medium text-[#0a0a0a] transition hover:bg-white"
+        >
           <span className="relative flex size-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
-          <span className="font-medium">Online agora</span>
-        </div>
-        <span className="font-bold">{total}</span>
+          <span>
+            <strong>{total}</strong> online
+          </span>
+          {cadastroCount > 0 && (
+            <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[9px] font-bold text-rose-800">
+              {cadastroCount} no cadastro
+            </span>
+          )}
+        </button>
       </div>
     );
   }
 
   return (
-    <div
-      title={tooltip}
-      className="mx-3 mb-2 flex items-center justify-between rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-[11px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="relative flex size-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-        </span>
-        <span className="truncate font-medium text-[#0a0a0a]">
-          Online agora
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {candidatesCount > 0 && (
-          <span className="rounded-full bg-[#e4f6ec] px-2 py-0.5 text-[10px] font-semibold text-[#1f7a4d]">
-            {candidatesCount} {candidatesCount === 1 ? "nas vagas" : "nas vagas"}
+    <div className="relative" ref={containerRef}>
+      {/* Botão Principal da Sidebar */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((p) => !p)}
+        className="mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-center justify-between rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-[11px] shadow-xs transition hover:border-[#0a0a0a]/20 hover:bg-[#fafaf9] active:scale-98"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="relative flex size-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
-        )}
-        <span className="flex items-center gap-1 rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[11px] font-bold text-[#0a0a0a]">
-          <Users className="size-3 text-[#71717a]" />
-          {total}
-        </span>
-      </div>
+          <span className="truncate font-medium text-[#0a0a0a]">Online agora</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {cadastroCount > 0 ? (
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+              {cadastroCount} no cadastro
+            </span>
+          ) : candidates.length > 0 ? (
+            <span className="rounded-full bg-[#e4f6ec] px-2 py-0.5 text-[10px] font-semibold text-[#1f7a4d]">
+              {candidates.length} nas vagas
+            </span>
+          ) : null}
+
+          <span className="flex items-center gap-1 rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[11px] font-bold text-[#0a0a0a]">
+            <Users className="size-3 text-[#71717a]" />
+            {total}
+            {isOpen ? <ChevronUp className="size-2.5 text-[#a1a1aa]" /> : <ChevronDown className="size-2.5 text-[#a1a1aa]" />}
+          </span>
+        </div>
+      </button>
+
+      {/* Popover Detalhado com as Telas em Tempo Real */}
+      {isOpen && (
+        <div className="absolute bottom-[calc(100%+6px)] left-3 z-50 w-72 rounded-2xl border border-[#e4e4e7] bg-white p-3.5 shadow-xl animate-in fade-in zoom-in-95">
+          <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              </span>
+              <h4 className="text-xs font-bold text-[#0a0a0a]">Onde estão online agora</h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-lg p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+
+          {/* Cards de Resumo Rápido */}
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-center">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-2">
+              <span className="block text-[10px] font-semibold text-rose-700">No Cadastro / Vaga</span>
+              <span className="text-base font-extrabold text-rose-950">{cadastroCount}</span>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2">
+              <span className="block text-[10px] font-semibold text-emerald-700">Tela Principal</span>
+              <span className="text-base font-extrabold text-emerald-950">{principalCount}</span>
+            </div>
+
+            <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-2">
+              <span className="block text-[10px] font-semibold text-purple-700">Perfil / Candidaturas</span>
+              <span className="text-base font-extrabold text-purple-950">{perfilCount}</span>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-2">
+              <span className="block text-[10px] font-semibold text-amber-700">Equipe / Painel</span>
+              <span className="text-base font-extrabold text-amber-950">{team.length}</span>
+            </div>
+          </div>
+
+          {/* Lista de Sessões Ativas */}
+          <div className="mt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+              Sessões Ativas ({sessions.length})
+            </p>
+            <div className="mt-1.5 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+              {sessions.map((s, idx) => {
+                const isCand = s.role === "candidato";
+                const isCad = s.category === "cadastro";
+                const isPerf = s.category === "perfil";
+
+                return (
+                  <div
+                    key={s.key || idx}
+                    className="flex items-center gap-2 rounded-lg border border-[#f4f4f5] bg-[#fafaf9] p-2 text-xs"
+                  >
+                    <div
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
+                        isCad
+                          ? "bg-rose-100 text-rose-700"
+                          : isPerf
+                            ? "bg-purple-100 text-purple-700"
+                            : isCand
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {isCad ? (
+                        <FileEdit className="size-3" />
+                      ) : isPerf ? (
+                        <User className="size-3" />
+                      ) : isCand ? (
+                        <LayoutDashboard className="size-3" />
+                      ) : (
+                        <Users className="size-3" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-[11px] font-bold text-[#0a0a0a]">
+                        {s.screenTitle}
+                      </span>
+                      <span className="block truncate text-[10px] text-[#71717a]">
+                        {s.categoryLabel} · <span className="font-mono text-[9px] text-[#a1a1aa]">{s.path}</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

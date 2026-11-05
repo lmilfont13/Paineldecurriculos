@@ -2,6 +2,7 @@ import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
+import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
 import {
   CompanyFooter,
   CompanyHeader,
@@ -11,6 +12,7 @@ import {
   getPublicSession,
   getTenant,
 } from "@/server/controllers/public.controller";
+import { getActiveRadioStation } from "@/server/services/message-template.service";
 
 export const metadata: Metadata = { title: "Meu perfil · Triagem" };
 
@@ -30,6 +32,8 @@ export default async function PerfilPage({
     redirect(signInPath(slug, `/${slug}/perfil`));
   }
 
+  const radioStation = await getActiveRadioStation(company.id);
+
   return (
     <>
       <CompanyHeader company={company} candidate={candidate} />
@@ -38,6 +42,12 @@ export default async function PerfilPage({
         <p className="mt-2 text-sm text-[#71717a]">
           Esses dados preenchem automaticamente suas próximas candidaturas.
         </p>
+
+        {/* Rádio da Empresa configurada pelo Gestor (apenas escutar e mutar) */}
+        <div className="mt-6">
+          <CandidateRadioPlayer station={radioStation} companyName={company.name} />
+        </div>
+
         <div className="mt-8">
           <ProfileForm slug={slug} candidate={candidate} />
         </div>
