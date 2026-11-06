@@ -15,6 +15,8 @@ import {
   saveDynamicOgEnabled,
   findSoundNotificationsEnabled,
   saveSoundNotificationsEnabled,
+  findTargetRadioSpotsEnabled,
+  saveTargetRadioSpotsEnabled,
 } from "@/server/repositories/company-feature.repository";
 
 export function isCandidateAiRadarEnabled(companyId: string): Promise<boolean> {
@@ -71,6 +73,14 @@ export function isSoundNotificationsEnabled(companyId: string): Promise<boolean>
 
 export function setSoundNotificationsEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveSoundNotificationsEnabled(companyId, enabled);
+}
+
+export function isTargetRadioSpotsEnabled(companyId: string): Promise<boolean> {
+  return findTargetRadioSpotsEnabled(companyId);
+}
+
+export function setTargetRadioSpotsEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveTargetRadioSpotsEnabled(companyId, enabled);
 }
 
 

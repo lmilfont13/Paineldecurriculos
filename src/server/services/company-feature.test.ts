@@ -26,6 +26,8 @@ import {
   setDynamicOgEnabled,
   isSoundNotificationsEnabled,
   setSoundNotificationsEnabled,
+  isTargetRadioSpotsEnabled,
+  setTargetRadioSpotsEnabled,
 } from "./company-feature.service";
 
 describe("company-feature service", () => {
@@ -121,6 +123,17 @@ describe("company-feature service", () => {
     (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
     expect(await isSoundNotificationsEnabled("comp_1")).toBe(true);
     await setSoundNotificationsEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de spots da Target na rádio", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isTargetRadioSpotsEnabled("comp_1")).toBe(true);
+    await setTargetRadioSpotsEnabled("comp_1", false);
     expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ body: "false" }),

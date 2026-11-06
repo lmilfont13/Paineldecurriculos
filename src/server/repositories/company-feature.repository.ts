@@ -9,6 +9,7 @@ export const CANDIDATE_TIMELINE_KEY = "__feature_candidate_timeline__";
 export const UNDO_ACTION_KEY = "__feature_undo_action__";
 export const DYNAMIC_OG_KEY = "__feature_dynamic_og__";
 export const SOUND_NOTIFICATIONS_KEY = "__feature_sound_notifications__";
+export const TARGET_RADIO_SPOTS_KEY = "__feature_target_radio_spots__";
 
 /**
  * Lê se uma determinada feature flag está habilitada para a empresa.
@@ -119,6 +120,16 @@ export function findSoundNotificationsEnabled(companyId: string): Promise<boolea
 /** Salva preferência de notificações sonoras. */
 export function saveSoundNotificationsEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveCompanyFeatureEnabled(companyId, SOUND_NOTIFICATIONS_KEY, "Notificações Sonoras para o Gestor", enabled);
+}
+
+/** Lê se os spots de áudio da Target na rádio estão habilitados. */
+export function findTargetRadioSpotsEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, TARGET_RADIO_SPOTS_KEY, true);
+}
+
+/** Salva preferência dos spots de áudio da Target na rádio. */
+export function saveTargetRadioSpotsEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, TARGET_RADIO_SPOTS_KEY, "Spots e Vinhetas da Target na Rádio", enabled);
 }
 
 

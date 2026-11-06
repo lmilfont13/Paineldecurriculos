@@ -340,4 +340,19 @@ export async function toggleCompanySoundNotificationsAction(
   return { ok: true };
 }
 
+/** Super Admin · Alterna Spots e Vinhetas da Target na Rádio. */
+export async function toggleCompanyTargetRadioSpotsAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setTargetRadioSpotsEnabled } = await import("@/server/services/company-feature.service");
+  await setTargetRadioSpotsEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 

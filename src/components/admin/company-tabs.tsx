@@ -18,6 +18,7 @@ import {
   CompanyUndoActionToggle,
   CompanyDynamicOgToggle,
   CompanySoundNotificationsToggle,
+  CompanyTargetRadioSpotsToggle,
 } from "@/components/admin/company-feature-toggles";
 
 const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
@@ -33,6 +34,7 @@ export function CompanyTabs({
   undoActionEnabled = true,
   dynamicOgEnabled = true,
   soundNotificationsEnabled = true,
+  targetRadioSpotsEnabled = true,
 }: {
   company: Company;
   manager: { email: string; name: string | null } | null;
@@ -43,6 +45,7 @@ export function CompanyTabs({
   undoActionEnabled?: boolean;
   dynamicOgEnabled?: boolean;
   soundNotificationsEnabled?: boolean;
+  targetRadioSpotsEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Dados");
   const [state, formAction, pending] = useActionState<CompanyFormState, FormData>(
@@ -265,6 +268,10 @@ export function CompanyTabs({
                 <CompanySoundNotificationsToggle
                   companyId={company.id}
                   initialEnabled={soundNotificationsEnabled}
+                />
+                <CompanyTargetRadioSpotsToggle
+                  companyId={company.id}
+                  initialEnabled={targetRadioSpotsEnabled}
                 />
               </div>
             </>

@@ -249,3 +249,4 @@ export function CandidateProcessTracker({
     </section>
   );
 }
+

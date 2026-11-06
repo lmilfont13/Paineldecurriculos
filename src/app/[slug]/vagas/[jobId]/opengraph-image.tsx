@@ -4,6 +4,7 @@ import { isDynamicOgEnabled } from "@/server/services/company-feature.service";
 import { contractLabels, workModeLabels } from "@/server/models/job.model";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const alt = "Vaga em Destaque";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

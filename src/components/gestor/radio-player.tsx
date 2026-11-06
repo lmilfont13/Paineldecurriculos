@@ -7,6 +7,7 @@ import {
   Radio,
   Search,
   Settings2,
+  Sparkles,
   Volume2,
   VolumeX,
   X,
@@ -14,10 +15,15 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { saveRadioStationAction } from "@/server/controllers/settings.controller";
-import { CURATED_STATIONS, type RadioStation } from "@/server/models/radio.model";
+import {
+  CURATED_STATIONS,
+  TARGET_RADIO_SPOTS,
+  type RadioSpot,
+  type RadioStation,
+} from "@/server/models/radio.model";
 
-export type { RadioStation };
-export { CURATED_STATIONS };
+export type { RadioStation, RadioSpot };
+export { CURATED_STATIONS, TARGET_RADIO_SPOTS };
 
 interface RadioBrowserResult {
   stationuuid: string;
@@ -50,6 +56,9 @@ export function GestorRadioPlayer({
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.5);
   const [muted, setMuted] = useState(false);
+
+  const [previewingSpotId, setPreviewingSpotId] = useState<string | null>(null);
+  const spotAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [configOpen, setConfigOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -89,7 +98,26 @@ export function GestorRadioPlayer({
     if (audioRef.current) {
       audioRef.current.volume = muted ? 0 : volume;
     }
+    if (spotAudioRef.current) {
+      spotAudioRef.current.volume = muted ? 0 : volume;
+    }
   }, [volume, muted]);
+
+  const toggleSpotPreview = (spot: RadioSpot) => {
+    const audio = spotAudioRef.current;
+    if (!audio) return;
+    if (previewingSpotId === spot.id) {
+      audio.pause();
+      setPreviewingSpotId(null);
+      return;
+    }
+    audio.src = spot.audioUrl;
+    audio.volume = muted ? 0 : volume;
+    audio
+      .play()
+      .then(() => setPreviewingSpotId(spot.id))
+      .catch(() => setPreviewingSpotId(null));
+  };
 
   const togglePlay = async () => {
     const audio = audioRef.current;
@@ -214,6 +242,12 @@ export function GestorRadioPlayer({
             setError("Stream offline.");
           }
         }}
+      />
+      <audio
+        ref={spotAudioRef}
+        preload="none"
+        onEnded={() => setPreviewingSpotId(null)}
+        onError={() => setPreviewingSpotId(null)}
       />
 
       {/* Player para todos: Play/Pause + Nome da Rádio + Volume */}
@@ -363,6 +397,38 @@ export function GestorRadioPlayer({
               ))}
             </ul>
           )}
+
+          {/* Spots Institucionais da Target com IA */}
+          <div className="border-t border-[#e7e5e4] pt-2">
+            <div className="mb-1.5 flex items-center gap-1 text-[10px] font-bold text-violet-900">
+              <Sparkles className="size-3 text-violet-600" />
+              <span>Spots Target IA (Vinhetas)</span>
+            </div>
+            <div className="space-y-1">
+              {TARGET_RADIO_SPOTS.map((spot) => {
+                const isPreviewing = previewingSpotId === spot.id;
+                return (
+                  <button
+                    key={spot.id}
+                    type="button"
+                    onClick={() => toggleSpotPreview(spot)}
+                    className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[10px] transition ${
+                      isPreviewing
+                        ? "bg-violet-100 text-violet-950 font-bold"
+                        : "bg-[#fafaf9] text-[#27272a] hover:bg-violet-50 hover:text-violet-900"
+                    }`}
+                  >
+                    <span className="truncate">
+                      {spot.title} · <span className="text-[#71717a] font-normal">{spot.subtitle}</span>
+                    </span>
+                    <span className="ml-1.5 shrink-0 text-[9px] font-semibold text-violet-700">
+                      {isPreviewing ? "Parar" : "Ouvir"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 

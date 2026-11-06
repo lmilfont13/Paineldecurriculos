@@ -5,6 +5,34 @@ export interface RadioStation {
   url: string;
 }
 
+export interface RadioSpot {
+  id: string;
+  title: string;
+  subtitle: string;
+  audioUrl: string;
+}
+
+export const TARGET_RADIO_SPOTS: RadioSpot[] = [
+  {
+    id: "spot-1-boas-vindas",
+    title: "Target Conecta",
+    subtitle: "Boas-vindas & Inspiração",
+    audioUrl: "/audio/spots/target-spot-1.mp3",
+  },
+  {
+    id: "spot-2-dica-curriculo",
+    title: "Dica Target",
+    subtitle: "Destaque seu perfil na triagem",
+    audioUrl: "/audio/spots/target-spot-2.mp3",
+  },
+  {
+    id: "spot-3-banco-talentos",
+    title: "Banco de Talentos",
+    subtitle: "Cadastre-se para futuras vagas",
+    audioUrl: "/audio/spots/target-spot-3.mp3",
+  },
+];
+
 export const CURATED_STATIONS: RadioStation[] = [
   {
     id: "hunter-lofi",

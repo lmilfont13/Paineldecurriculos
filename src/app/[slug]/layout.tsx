@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getTenant, getPublicSession } from "@/server/controllers/public.controller";
 import { getActiveRadioStation } from "@/server/services/message-template.service";
+import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.service";
 import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
@@ -42,7 +43,10 @@ export default async function TenantLayout({
   const company = await getTenant(slug);
   if (!company) notFound();
   const candidate = await getPublicSession();
-  const radioStation = await getActiveRadioStation(company.id);
+  const [radioStation, spotsEnabled] = await Promise.all([
+    getActiveRadioStation(company.id),
+    isTargetRadioSpotsEnabled(company.id),
+  ]);
 
   return (
     <div
@@ -52,7 +56,11 @@ export default async function TenantLayout({
       <AttributionTracker />
       <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
       {children}
-      <CandidateRadioPlayer station={radioStation} companyName={company.name} />
+      <CandidateRadioPlayer
+        station={radioStation}
+        companyName={company.name}
+        spotsEnabled={spotsEnabled}
+      />
     </div>
   );
 }

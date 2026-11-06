@@ -12,6 +12,7 @@ import {
   isUndoActionEnabled,
   isDynamicOgEnabled,
   isSoundNotificationsEnabled,
+  isTargetRadioSpotsEnabled,
 } from "@/server/services/company-feature.service";
 
 export const metadata: Metadata = { title: "Editar empresa · Console Triagem" };
@@ -33,6 +34,7 @@ export default async function EditarEmpresaPage({
   const undoActionEnabled = await isUndoActionEnabled(company.id);
   const dynamicOgEnabled = await isDynamicOgEnabled(company.id);
   const soundNotificationsEnabled = await isSoundNotificationsEnabled(company.id);
+  const targetRadioSpotsEnabled = await isTargetRadioSpotsEnabled(company.id);
 
   return (
     <>
@@ -57,6 +59,7 @@ export default async function EditarEmpresaPage({
           undoActionEnabled={undoActionEnabled}
           dynamicOgEnabled={dynamicOgEnabled}
           soundNotificationsEnabled={soundNotificationsEnabled}
+          targetRadioSpotsEnabled={targetRadioSpotsEnabled}
         />
       </div>
     </>
