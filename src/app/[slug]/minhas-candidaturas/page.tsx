@@ -7,6 +7,7 @@ import {
   CompanyFooter,
   CompanyHeader,
 } from "@/components/public/company-header";
+import { CandidateAiSimulator } from "@/components/candidate/candidate-ai-simulator";
 import { getMinhasCandidaturasData } from "@/server/controllers/public.controller";
 import {
   formatAppliedAt,
@@ -140,6 +141,14 @@ export default async function MinhasCandidaturasPage({
               ))}
             </ul>
           </section>
+        )}
+
+        {data.aiRadarEnabled && (
+          <CandidateAiSimulator
+            companyName={company.name}
+            candidateName={candidate.name}
+            applicationsCount={applications.length}
+          />
         )}
 
         <div className="mt-9 flex items-end justify-between gap-4">

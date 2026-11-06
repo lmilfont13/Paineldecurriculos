@@ -10,6 +10,7 @@ import {
   updateCompanyAction,
   type CompanyFormState,
 } from "@/server/controllers/company.controller";
+import { CompanyAiRadarToggle } from "@/components/admin/company-ai-radar-toggle";
 
 const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
 
@@ -17,9 +18,11 @@ const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
 export function CompanyTabs({
   company,
   manager,
+  candidateAiEnabled = true,
 }: {
   company: Company;
   manager: { email: string; name: string | null } | null;
+  candidateAiEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Dados");
   const [state, formAction, pending] = useActionState<CompanyFormState, FormData>(
@@ -214,6 +217,12 @@ export function CompanyTabs({
                   className="w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm focus:border-[#0a0a0a] focus:outline-none"
                 />
               </label>
+              <div className="pt-2">
+                <CompanyAiRadarToggle
+                  companyId={company.id}
+                  initialEnabled={candidateAiEnabled}
+                />
+              </div>
             </>
           )}
 

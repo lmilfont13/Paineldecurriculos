@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
 import { AiModelForm } from "@/components/gestor/ai-model-form";
+import { CandidateAiToggle } from "@/components/gestor/candidate-ai-toggle";
 import { ModelTrialCard } from "@/components/gestor/model-trial-card";
 import { SettingsTabs } from "@/components/gestor/settings-tabs";
-import { getAiSettingsAction } from "@/server/controllers/settings.controller";
+import { getAiSettingsAction, getCandidateAiRadarAction } from "@/server/controllers/settings.controller";
 
 export const metadata: Metadata = { title: "Inteligência artificial · Triagem" };
 
@@ -12,6 +13,7 @@ export const maxDuration = 120;
 
 export default async function IaSettingsPage() {
   const settings = await getAiSettingsAction();
+  const candidateAiRadar = await getCandidateAiRadarAction();
 
   return (
     <>
@@ -20,6 +22,7 @@ export default async function IaSettingsPage() {
       <SettingsTabs />
       <div className="mt-8 max-w-[640px]">
         {settings && <AiModelForm current={settings.current} options={settings.options} />}
+        <CandidateAiToggle initialEnabled={candidateAiRadar} />
         {settings && (
           <ModelTrialCard
             options={settings.options}

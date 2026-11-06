@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { CompanyTabs } from "@/components/admin/company-tabs";
 import { getEmpresaDetail } from "@/server/controllers/admin.controller";
+import { isCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
 
 export const metadata: Metadata = { title: "Editar empresa · Console Triagem" };
 
@@ -17,6 +18,7 @@ export default async function EditarEmpresaPage({
   const data = await getEmpresaDetail(id);
   if (!data) notFound();
   const { company, manager } = data;
+  const candidateAiEnabled = await isCandidateAiRadarEnabled(company.id);
 
   return (
     <>
@@ -31,7 +33,11 @@ export default async function EditarEmpresaPage({
         /{company.slug} · {company.email}
       </p>
       <div className="mt-8">
-        <CompanyTabs company={company} manager={manager} />
+        <CompanyTabs
+          company={company}
+          manager={manager}
+          candidateAiEnabled={candidateAiEnabled}
+        />
       </div>
     </>
   );

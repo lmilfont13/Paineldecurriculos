@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getTalentPoolJobId } from "@/server/services/talent-bank.service";
+import { isCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
 import { cache } from "react";
 
 import type { CandidateProfile } from "@/server/models/candidate.model";
@@ -159,11 +160,13 @@ export async function getMinhasCandidaturasData(slug: string) {
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
   const applications = await listCandidateApplications(candidate.id);
   const notifications = await listCandidateNotifications(candidate.id);
+  const aiRadarEnabled = await isCandidateAiRadarEnabled(company.id);
   return {
     company,
     candidate,
     applications,
     unread: notifications.filter((n) => !n.readAt).slice(0, 3),
+    aiRadarEnabled,
   };
 }
 

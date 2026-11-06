@@ -4,6 +4,7 @@ import { runModelTrial, type ModelTrialResult } from "@/server/services/model-tr
 import { getSessionUser, isAdmin, isManager } from "@/server/services/auth.service";
 import { isPrimaryCompanyAdmin } from "@/server/services/user.service";
 import { setActiveRadioStation, type RadioStationConfig } from "@/server/services/message-template.service";
+import { isCandidateAiRadarEnabled, setCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
 import { revalidatePath } from "next/cache";
 
 import { AI_MODEL_OPTIONS, parseAiModelChoice } from "@/server/models/ai-model.model";
@@ -206,4 +207,45 @@ export async function saveRadioStationAction(station: RadioStationConfig): Promi
     return res;
   }
   return { ok: false };
+}
+
+
+/** Configurações · Lê se a central de IA na área do candidato está ativada. */
+export async function getCandidateAiRadarAction(): Promise<boolean> {
+  const user = await requireManager();
+  return isCandidateAiRadarEnabled(user.companyId);
+}
+
+/** Configurações · Alterna a exibição da central de IA na área do candidato (gestor). */
+export async function toggleCandidateAiRadarAction(enabled: boolean): Promise<{ ok: boolean }> {
+  const user = await requireManager();
+  await setCandidateAiRadarEnabled(user.companyId, enabled);
+  try {
+    await createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      action: "CONFIGURACOES_ATUALIZADAS",
+      entityType: "EMPRESA",
+      metadata: { campo: "candidateAiRadarEnabled", enabled },
+    });
+  } catch {}
+  revalidatePath("/configuracoes/ia");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Super Admin · Alterna a exibição da central de IA para qualquer empresa. */
+export async function toggleCompanyCandidateAiRadarAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  await setCandidateAiRadarEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
