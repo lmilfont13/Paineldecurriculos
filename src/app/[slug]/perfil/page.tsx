@@ -1,8 +1,8 @@
+import { Radio } from "lucide-react";
 import { signInPath } from "@/server/models/candidate.model";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
 import {
   CompanyFooter,
   CompanyHeader,
@@ -43,9 +43,28 @@ export default async function PerfilPage({
           Esses dados preenchem automaticamente suas próximas candidaturas.
         </p>
 
-        {/* Rádio da Empresa configurada pelo Gestor (apenas escutar e mutar) */}
-        <div className="mt-6">
-          <CandidateRadioPlayer station={radioStation} companyName={company.name} />
+        {/* Rádio da Empresa configurada pelo Gestor (replicada e tocando em toda a área) */}
+        <div className="mt-6 flex items-center gap-3.5 rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-xs">
+          <div
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
+            style={{ backgroundColor: "var(--brand-primary, #0a0a0a)" }}
+          >
+            <Radio className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                RÁDIO DA EMPRESA ATIVA
+              </span>
+            </div>
+            <h3 className="mt-1 truncate text-sm font-extrabold text-[#0a0a0a]">
+              {radioStation?.name || "Hunter FM - Pop Hits"}
+            </h3>
+            <p className="truncate text-xs text-[#71717a]">
+              {radioStation?.genre || "Pop / Hits"} · Tocando continuamente na barra inferior em todas as telas
+            </p>
+          </div>
         </div>
 
         <div className="mt-8">
