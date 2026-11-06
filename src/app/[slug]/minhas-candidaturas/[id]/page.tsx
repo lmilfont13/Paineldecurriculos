@@ -10,34 +10,13 @@ import {
   CompanyHeader,
 } from "@/components/public/company-header";
 import { WithdrawButton } from "@/components/public/withdraw-button";
+import { CandidateProcessTracker } from "@/components/candidate/candidate-process-tracker";
 import { getMinhaCandidaturaData } from "@/server/controllers/public.controller";
 import { formatAppliedAt } from "@/server/models/application.model";
 import { formatInterviewLong } from "@/server/models/interview.model";
 import { formatNotificationAge } from "@/server/models/notification.model";
 
 export const metadata: Metadata = { title: "Minha candidatura · Triagem" };
-
-/** Rótulos da timeline na voz do candidato. */
-function eventLabel(
-  from: string | null,
-  to: string
-): { label: string; tone: "neutral" | "good" | "end" } {
-  if (from === null) return { label: "Candidatura enviada", tone: "neutral" };
-  switch (to) {
-    case "INTERVIEW":
-      return { label: "Você avançou para a entrevista", tone: "good" };
-    case "STANDBY":
-      return { label: "Perfil guardado em stand-by", tone: "neutral" };
-    case "PENDING":
-      return { label: "Voltou para análise", tone: "neutral" };
-    case "APPROVED":
-      return { label: "Você foi aprovado", tone: "good" };
-    case "REJECTED":
-      return { label: "Processo finalizado", tone: "end" };
-    default:
-      return { label: "Voltou para análise", tone: "neutral" };
-  }
-}
 
 /** Detalhe da candidatura para o candidato: timeline, respostas e CV. */
 export default async function MinhaCandidaturaPage({
@@ -166,59 +145,13 @@ export default async function MinhaCandidaturaPage({
           </section>
         )}
 
-        {/* Linha do tempo */}
-        <section className="mt-8 rounded-2xl border border-[#e4e4e7] bg-white p-6">
-          <h2 className="text-sm font-semibold text-[#0a0a0a]">
-            Andamento do processo
-          </h2>
-          <ol className="mt-5 space-y-0">
-            {application.statusEvents.map((event, i) => {
-              const { label, tone } = eventLabel(event.from, event.to);
-              const isLast = i === application.statusEvents.length - 1;
-              return (
-                <li key={event.id} className="relative flex gap-4 pb-6 last:pb-0">
-                  {!isLast && (
-                    <span
-                      aria-hidden
-                      className="absolute left-[7px] top-5 h-full w-px bg-[#e4e4e7]"
-                    />
-                  )}
-                  <span
-                    aria-hidden
-                    className={
-                      "mt-1 size-[15px] shrink-0 rounded-full border-2 border-white shadow-[0_0_0_1px_#e4e4e7] " +
-                      (tone === "good"
-                        ? "bg-[#1f7a4d]"
-                        : tone === "end"
-                          ? "bg-[#a1a1aa]"
-                          : "")
-                    }
-                    style={
-                      tone === "neutral"
-                        ? { backgroundColor: "var(--brand-primary)" }
-                        : undefined
-                    }
-                  />
-                  <span>
-                    <span
-                      className={
-                        "block text-sm " +
-                        (isLast
-                          ? "font-semibold text-[#0a0a0a]"
-                          : "font-medium text-[#0a0a0a]")
-                      }
-                    >
-                      {label}
-                    </span>
-                    <span className="block text-xs text-[#71717a]">
-                      {formatAppliedAt(event.createdAt, true)}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+        {/* Andamento do processo com quadro profissional e linha do tempo responsiva */}
+        <CandidateProcessTracker
+          currentStatus={application.status}
+          companyName={application.company.name}
+          events={application.statusEvents}
+          interviewAt={application.interviewAt}
+        />
 
         {/* O que você enviou */}
         <section className="mt-6 rounded-2xl border border-[#e4e4e7] bg-white p-6">

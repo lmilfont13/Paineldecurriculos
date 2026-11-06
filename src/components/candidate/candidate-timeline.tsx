@@ -145,3 +145,4 @@ export function CandidateApplicationTimeline({
     </div>
   );
 }
+

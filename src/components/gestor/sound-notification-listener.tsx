@@ -115,3 +115,4 @@ export function SoundToggleControl({ enabled = true }: { enabled?: boolean }) {
     </button>
   );
 }
+

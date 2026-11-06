@@ -39,3 +39,4 @@ export function playCandidateChimeSound() {
     // Silencia qualquer bloqueio de autoplay se o usuário ainda não interagiu
   }
 }
+
