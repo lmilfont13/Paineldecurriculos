@@ -17,13 +17,15 @@ import { useEffect, useRef, useState } from "react";
 import { saveRadioStationAction } from "@/server/controllers/settings.controller";
 import {
   CURATED_STATIONS,
+  TARGET_PLAYLIST_TRACKS,
   TARGET_RADIO_SPOTS,
   type RadioSpot,
   type RadioStation,
+  type RadioTrack,
 } from "@/server/models/radio.model";
 
-export type { RadioStation, RadioSpot };
-export { CURATED_STATIONS, TARGET_RADIO_SPOTS };
+export type { RadioStation, RadioSpot, RadioTrack };
+export { CURATED_STATIONS, TARGET_PLAYLIST_TRACKS, TARGET_RADIO_SPOTS };
 
 interface RadioBrowserResult {
   stationuuid: string;
@@ -51,6 +53,13 @@ export function GestorRadioPlayer({
       : CURATED_STATIONS,
   );
   const [current, setCurrent] = useState<RadioStation>(defaultStation);
+  const isPlaylistMode = current.url === "playlist:target";
+  const [trackIndex, setTrackIndex] = useState(0);
+  const currentTrack: RadioTrack =
+    TARGET_PLAYLIST_TRACKS[trackIndex % TARGET_PLAYLIST_TRACKS.length];
+
+  const activeAudioSrc = isPlaylistMode ? currentTrack.audioUrl : current.url;
+
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +112,14 @@ export function GestorRadioPlayer({
     }
   }, [volume, muted]);
 
+  // Se o trackIndex mudar enquanto está tocando a playlist oficial
+  useEffect(() => {
+    if (isPlaylistMode && audioRef.current && playing) {
+      audioRef.current.src = currentTrack.audioUrl;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [trackIndex, isPlaylistMode, currentTrack.audioUrl, playing]);
+
   const toggleSpotPreview = (spot: RadioSpot) => {
     const audio = spotAudioRef.current;
     if (!audio) return;
@@ -134,8 +151,8 @@ export function GestorRadioPlayer({
 
     try {
       setLoading(true);
-      if (audio.src !== current.url) {
-        audio.src = current.url;
+      if (audio.src !== activeAudioSrc) {
+        audio.src = activeAudioSrc;
       }
       await audio.play();
       setPlaying(true);
@@ -166,7 +183,11 @@ export function GestorRadioPlayer({
 
     try {
       setLoading(true);
-      audio.src = station.url;
+      const targetSrc =
+        station.url === "playlist:target"
+          ? TARGET_PLAYLIST_TRACKS[0].audioUrl
+          : station.url;
+      audio.src = targetSrc;
       await audio.play();
       setPlaying(true);
     } catch {
@@ -230,6 +251,11 @@ export function GestorRadioPlayer({
       <audio
         ref={audioRef}
         preload="none"
+        onEnded={() => {
+          if (isPlaylistMode) {
+            setTrackIndex((i) => (i + 1) % TARGET_PLAYLIST_TRACKS.length);
+          }
+        }}
         onPlaying={() => {
           setLoading(false);
           setPlaying(true);
@@ -285,8 +311,12 @@ export function GestorRadioPlayer({
             {saving
               ? "Salvando rádio p/ equipe..."
               : playing
-                ? `Tocando • ${current.genre}`
-                : current.genre}
+                ? isPlaylistMode
+                  ? `Tocando: ${currentTrack.title} • ${currentTrack.artist}`
+                  : `Tocando • ${current.genre}`
+                : isPlaylistMode
+                  ? `${TARGET_PLAYLIST_TRACKS.length} faixas selecionadas + Spots`
+                  : current.genre}
           </p>
         </div>
 

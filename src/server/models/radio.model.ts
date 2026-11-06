@@ -12,6 +12,34 @@ export interface RadioSpot {
   audioUrl: string;
 }
 
+export interface RadioTrack {
+  id: string;
+  title: string;
+  artist: string;
+  audioUrl: string;
+}
+
+export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
+  {
+    id: "track-1",
+    title: "Days Like These",
+    artist: "Target Chill Beats",
+    audioUrl: "/audio/music/target-track-1.mp3",
+  },
+  {
+    id: "track-2",
+    title: "At My Front Door",
+    artist: "DJ Quads · Focus Lo-Fi",
+    audioUrl: "/audio/music/target-track-2.mp3",
+  },
+  {
+    id: "track-3",
+    title: "Summer Sunset",
+    artist: "Target Acoustic Vibe",
+    audioUrl: "/audio/music/target-track-3.mp3",
+  },
+];
+
 export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   {
     id: "spot-1-boas-vindas",
@@ -34,6 +62,12 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
 ];
 
 export const CURATED_STATIONS: RadioStation[] = [
+  {
+    id: "target-exclusive",
+    name: "Rádio Target (Playlist Oficial)",
+    genre: "Músicas Selecionadas + Spots IA",
+    url: "playlist:target",
+  },
   {
     id: "hunter-lofi",
     name: "Hunter.FM — Lo-Fi",

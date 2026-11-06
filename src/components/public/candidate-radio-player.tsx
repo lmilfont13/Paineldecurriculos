@@ -10,6 +10,7 @@ import {
   Pause,
   Play,
   Radio,
+  SkipForward,
   Sparkles,
   Volume2,
   VolumeX,
@@ -19,9 +20,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   CURATED_STATIONS,
+  TARGET_PLAYLIST_TRACKS,
   TARGET_RADIO_SPOTS,
   type RadioSpot,
   type RadioStation,
+  type RadioTrack,
 } from "@/server/models/radio.model";
 
 const STORAGE_KEY_CANDIDATE_VOLUME = "triagem:candidate:radio:volume";
@@ -40,9 +43,15 @@ export function CandidateRadioPlayer({
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
   const spotTimerRef = useRef<NodeJS.Timeout | null>(null);
   const spotIndexRef = useRef<number>(0);
+  const playedSongsCountRef = useRef<number>(0);
 
-  // Se o gestor não configurou nenhuma estação ainda, usa a padrão
+  // Se o gestor não configurou nenhuma estação ainda, usa a padrão (Playlist Oficial Target)
   const currentStation = station ?? CURATED_STATIONS[0];
+  const isPlaylistMode = currentStation.url === "playlist:target";
+
+  const [trackIndex, setTrackIndex] = useState(0);
+  const currentTrack: RadioTrack =
+    TARGET_PLAYLIST_TRACKS[trackIndex % TARGET_PLAYLIST_TRACKS.length];
 
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,6 +60,11 @@ export function CandidateRadioPlayer({
   const [muted, setMuted] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [activeSpot, setActiveSpot] = useState<RadioSpot | null>(null);
+
+  // Define qual áudio carregar na rádio (faixa da playlist ou stream ao vivo)
+  const activeAudioSrc = isPlaylistMode
+    ? currentTrack.audioUrl
+    : currentStation.url;
 
   // Carrega preferências salvas
   useEffect(() => {
@@ -67,7 +81,7 @@ export function CandidateRadioPlayer({
     }
   }, []);
 
-  // Aplica volume e mute no elemento de áudio (com ducking se spot estiver tocando)
+  // Aplica volume e mute no elemento de áudio (com ducking suave se spot estiver tocando)
   useEffect(() => {
     if (audioRef.current) {
       if (muted) {
@@ -79,19 +93,23 @@ export function CandidateRadioPlayer({
       }
     }
     if (spotAudioRef.current) {
-      spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.2);
+      spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
     }
   }, [volume, muted, activeSpot]);
 
   // Sincroniza se a estação mudar no servidor (quando o gestor alterar)
   useEffect(() => {
     if (station && audioRef.current && playing) {
-      if (audioRef.current.src !== station.url) {
-        audioRef.current.src = station.url;
+      const nextSrc =
+        station.url === "playlist:target"
+          ? currentTrack.audioUrl
+          : station.url;
+      if (audioRef.current.src !== nextSrc) {
+        audioRef.current.src = nextSrc;
         audioRef.current.play().catch(() => {});
       }
     }
-  }, [station, playing]);
+  }, [station, playing, currentTrack.audioUrl]);
 
   // Função para restaurar o som da rádio e limpar o spot ativo
   const finishSpot = useCallback(() => {
@@ -119,12 +137,10 @@ export function CandidateRadioPlayer({
 
       if (spotAudioRef.current) {
         spotAudioRef.current.src = spot.audioUrl;
-        spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.2);
-        spotAudioRef.current
-          .play()
-          .catch(() => {
-            finishSpot();
-          });
+        spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
+        spotAudioRef.current.play().catch(() => {
+          finishSpot();
+        });
       }
     },
     [finishSpot, muted, spotsEnabled, volume]
@@ -139,7 +155,34 @@ export function CandidateRadioPlayer({
     finishSpot();
   }, [finishSpot]);
 
-  // Agendamento periódico de spots enquanto a rádio estiver tocando
+  // Avançar para a próxima música da playlist
+  const nextTrack = useCallback(() => {
+    setTrackIndex((prev) => (prev + 1) % TARGET_PLAYLIST_TRACKS.length);
+  }, []);
+
+  // Quando uma faixa da playlist termina
+  const handleTrackEnded = () => {
+    if (!isPlaylistMode) return;
+
+    playedSongsCountRef.current += 1;
+
+    // A cada 2 músicas finalizadas, injeta um spot da Target
+    if (spotsEnabled && playedSongsCountRef.current % 2 === 0) {
+      playSpot();
+    }
+
+    nextTrack();
+  };
+
+  // Se o trackIndex mudar enquanto está tocando, toca a nova faixa
+  useEffect(() => {
+    if (isPlaylistMode && audioRef.current && playing) {
+      audioRef.current.src = currentTrack.audioUrl;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [trackIndex, isPlaylistMode, currentTrack.audioUrl, playing]);
+
+  // Agendamento periódico de spots enquanto a rádio estiver tocando (para streams contínuos ou intervalo)
   useEffect(() => {
     if (!playing || !spotsEnabled) {
       if (spotTimerRef.current) {
@@ -152,8 +195,8 @@ export function CandidateRadioPlayer({
       return;
     }
 
-    // Primeiro spot toca após 45 segundos de rádio tocando
-    const initialDelay = 45000;
+    // Primeiro spot toca após 50 segundos de rádio tocando
+    const initialDelay = 50000;
     spotTimerRef.current = setTimeout(() => {
       playSpot();
     }, initialDelay);
@@ -193,7 +236,7 @@ export function CandidateRadioPlayer({
     if (!audio) return;
 
     if (!audio.src) {
-      audio.src = currentStation.url;
+      audio.src = activeAudioSrc;
     }
 
     const startAudio = () => {
@@ -226,7 +269,7 @@ export function CandidateRadioPlayer({
       window.removeEventListener("pointerdown", onUserInteraction);
       window.removeEventListener("keydown", onUserInteraction);
     };
-  }, [currentStation.url]);
+  }, [activeAudioSrc]);
 
   const togglePlay = async () => {
     const audio = audioRef.current;
@@ -250,8 +293,8 @@ export function CandidateRadioPlayer({
 
     try {
       setLoading(true);
-      if (audio.src !== currentStation.url) {
-        audio.src = currentStation.url;
+      if (audio.src !== activeAudioSrc) {
+        audio.src = activeAudioSrc;
       }
       await audio.play();
       setPlaying(true);
@@ -280,10 +323,11 @@ export function CandidateRadioPlayer({
 
   return (
     <>
-      {/* Stream principal da rádio musical */}
+      {/* Stream principal da rádio musical / playlist oficial */}
       <audio
         ref={audioRef}
         preload="auto"
+        onEnded={handleTrackEnded}
         onPlaying={() => {
           setLoading(false);
           setPlaying(true);
@@ -293,7 +337,7 @@ export function CandidateRadioPlayer({
           if (playing) {
             setPlaying(false);
             setLoading(false);
-            setError("Stream offline.");
+            setError("Áudio temporariamente offline.");
           }
         }}
       />
@@ -324,7 +368,11 @@ export function CandidateRadioPlayer({
                 </span>
                 <div className="min-w-0">
                   <span className="block truncate text-xs font-bold text-[#0a0a0a]">
-                    {activeSpot ? `Target: ${activeSpot.title}` : currentStation.name}
+                    {activeSpot
+                      ? `Target: ${activeSpot.title}`
+                      : isPlaylistMode
+                        ? currentTrack.title
+                        : currentStation.name}
                   </span>
                   <span className="block text-[10px] text-[#71717a]">
                     {activeSpot
@@ -337,6 +385,17 @@ export function CandidateRadioPlayer({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
+                {isPlaylistMode && (
+                  <button
+                    type="button"
+                    onClick={nextTrack}
+                    title="Próxima música"
+                    className="p-1.5 text-[#71717a] hover:text-[#0a0a0a]"
+                  >
+                    <SkipForward className="size-3.5" />
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={toggleMute}
@@ -378,7 +437,7 @@ export function CandidateRadioPlayer({
             /* Versão completa com controles de escutar e mutar */
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                {/* Lado Esquerdo: Identificação da rádio da empresa */}
+                {/* Lado Esquerdo: Identificação da rádio e faixa atual */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className="flex size-10 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
@@ -394,20 +453,20 @@ export function CandidateRadioPlayer({
                         RÁDIO NO AR
                       </span>
                       <span className="truncate text-[10px] text-[#71717a]">
-                        {companyName || "Empresa"}
+                        {companyName || "Empresa"} · {currentStation.name}
                       </span>
                     </div>
 
                     <h4 className="mt-0.5 truncate text-xs font-extrabold text-[#0a0a0a] sm:text-sm">
-                      {currentStation.name}
+                      {isPlaylistMode ? currentTrack.title : currentStation.name}
                     </h4>
                     <p className="truncate text-[11px] text-[#71717a]">
-                      {currentStation.genre} · <span className="text-[#a1a1aa]">Controle pelo gestor</span>
+                      {isPlaylistMode ? currentTrack.artist : currentStation.genre}
                     </p>
                   </div>
                 </div>
 
-                {/* Lado Direito: Apenas Escutar (Play/Pause) e Mutar (Mute/Volume) */}
+                {/* Lado Direito: Ações de Play, Mute, Volume e Próxima Faixa */}
                 <div className="flex items-center gap-2 sm:gap-2.5 ml-auto">
                   {/* Equalizador animado quando tocando */}
                   {playing && (
@@ -417,6 +476,19 @@ export function CandidateRadioPlayer({
                       <span className="w-0.5 h-1.5 bg-emerald-500 animate-[bounce_0.6s_infinite]" />
                       <span className="w-0.5 h-3 bg-emerald-500 animate-[bounce_0.9s_infinite]" />
                     </div>
+                  )}
+
+                  {/* Botão de Próxima Música (disponível no modo playlist) */}
+                  {isPlaylistMode && (
+                    <button
+                      type="button"
+                      onClick={nextTrack}
+                      title="Pular para a próxima música"
+                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 text-[11px] font-medium text-[#27272a] transition hover:bg-[#f4f4f5] active:scale-95"
+                    >
+                      <SkipForward className="size-3 text-[#71717a]" />
+                      <span>Próxima</span>
+                    </button>
                   )}
 
                   {/* Botão de disparo manual de Vinheta Target para teste/escuta rápida */}
