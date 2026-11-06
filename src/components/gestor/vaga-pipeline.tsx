@@ -22,10 +22,11 @@ const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }
 ];
 type PipelinePerson = { id:string; name:string; status:AppStatusKey; aiScore:number|null; aiState:AIState|null; createdAt:string; photoUrl?:string|null; age?:number|null };
 
-export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, companyName, templates }: {
+export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, companyName, templates, undoEnabled = true }: {
   applications: PipelinePerson[]; aiMinScore:number;
   jobId:string; jobTitle:string; companyName:string;
   templates:{ id:string; subject:string; body:string }[];
+  undoEnabled?: boolean;
 }) {
   const [rejectOpen,setRejectOpen]=useState(false);
   const [people,setPeople]=useState(applications);
@@ -33,7 +34,7 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
   const [overStage,setOverStage]=useState<AppStatusKey|null>(null);
   // Movimento aguardando confirmação: a caixa mostra o que o candidato vai receber.
   const [confirm,setConfirm]=useState<{id:string;name:string;from:AppStatusKey;stage:AppStatusKey}|null>(null);
-  const [toast,setToast]=useState<string|null>(null);
+  const [toast,setToast]=useState<{ message: string; action?: { label: string; onClick: () => void } } | null>(null);
   const [pending,startTransition]=useTransition();
   // Filtro de idade: só muda o que aparece no funil. Idade nunca entra na nota nem vai para a IA.
   const [ageOpen,setAgeOpen]=useState(false);
@@ -48,17 +49,39 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
 
   function move(id:string,stage:AppStatusKey,notice:MoveNoticeChoice){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
+    const previousStage=person.status;
     setDraggingId(null); setOverStage(null);
     const previous=people;
     startTransition(async()=>{
       try{
         const result=await moveApplicationAction(id,stage,notice);
-        if(!result.ok){setToast(result.error);return;}
+        if(!result.ok){setToast({ message: result.error });return;}
         setPeople(current=>current.map(p=>p.id===id?{...p,status:stage}:p));
         setConfirm(null);
         const aviso=notice.mode==="silent"?" (sem aviso)":notice.mode==="custom"?" com a sua mensagem":"";
-        setToast(`${person.name} → ${appStatusLabels[stage]}${aviso}.`);
-      }catch{setPeople(previous);setToast("Não foi possível mover o candidato. Tente novamente.");}
+        if(undoEnabled){
+          setToast({
+            message: `${person.name} → ${appStatusLabels[stage]}${aviso}.`,
+            action: {
+              label: "Desfazer",
+              onClick: () => {
+                setPeople(cur=>cur.map(p=>p.id===id?{...p,status:previousStage}:p));
+                startTransition(async()=>{
+                  try{
+                    await moveApplicationAction(id,previousStage,{ mode: "silent" });
+                    setToast({ message: `Movimento de ${person.name} desfeito.` });
+                  }catch{
+                    setPeople(cur=>cur.map(p=>p.id===id?{...p,status:stage}:p));
+                    setToast({ message: "Não foi possível desfazer." });
+                  }
+                });
+              }
+            }
+          });
+        }else{
+          setToast({ message: `${person.name} → ${appStatusLabels[stage]}${aviso}.` });
+        }
+      }catch{setPeople(previous);setToast({ message: "Não foi possível mover o candidato. Tente novamente." });}
     });
   }
   /** Quem está na triagem e já atingiu a nota mínima da vaga: passa todos de uma vez. */
@@ -67,14 +90,14 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
     if(ready.length===0||!window.confirm(`Passar ${ready.length} candidato${ready.length===1?"":"s"} que atingiram a nota mínima (${aiMinScore}) para "Em análise"?`))return;
     const ids=ready.map(p=>p.id); const previous=people;
     setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"SHORTLISTED"}:p));
-    startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast(`${updated} candidato${updated===1?"":"s"} movido${updated===1?"":"s"} para Em análise.`);}catch{setPeople(previous);setToast("Não foi possível passar os candidatos. Tente novamente.");}});
+    startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast({ message: `${updated} candidato${updated===1?"":"s"} movido${updated===1?"":"s"} para Em análise.` });}catch{setPeople(previous);setToast({ message: "Não foi possível passar os candidatos. Tente novamente." });}});
   }
   /** Quem ainda está na triagem (respeita o filtro de idade): mover para banco de dados de uma vez, com mensagem. */
   const stillPending=visible.filter(p=>p.status==="PENDING");
   function onBulkRejected(ids:string[]){
     if(ids.length===0)return;
     setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"REJECTED"}:p));
-    setToast(`${ids.length} candidato${ids.length===1?"":"s"} movido${ids.length===1?"":"s"} para o banco de dados com a mensagem enviada.`);
+    setToast({ message: `${ids.length} candidato${ids.length===1?"":"s"} movido${ids.length===1?"":"s"} para o banco de dados com a mensagem enviada.` });
   }
   function askMove(id:string,stage:AppStatusKey){
     const person=people.find(p=>p.id===id); if(!person||person.status===stage)return;
@@ -115,6 +138,6 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
       onClose={()=>setRejectOpen(false)} onDone={onBulkRejected}/>}
     {confirm&&<StageMoveDialog candidateName={confirm.name} from={confirm.from} to={confirm.stage} companyName={companyName} jobTitle={jobTitle}
       pending={pending} onCancel={()=>setConfirm(null)} onConfirm={(notice)=>move(confirm.id,confirm.stage,notice)}/>}
-    {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
+    {toast&&<Toast message={toast.message} action={toast.action} onDone={()=>setToast(null)}/>}
   </>;
 }

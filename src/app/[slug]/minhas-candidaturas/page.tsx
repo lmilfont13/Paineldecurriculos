@@ -8,7 +8,9 @@ import {
   CompanyHeader,
 } from "@/components/public/company-header";
 import { CandidateAiSimulator } from "@/components/candidate/candidate-ai-simulator";
+import { CandidateApplicationTimeline } from "@/components/candidate/candidate-timeline";
 import { getMinhasCandidaturasData } from "@/server/controllers/public.controller";
+import { isCandidateTimelineEnabled } from "@/server/services/company-feature.service";
 import {
   formatAppliedAt,
   type AppStatusKey,
@@ -50,6 +52,7 @@ export default async function MinhasCandidaturasPage({
   }
 
   const { company, candidate, applications, unread } = data;
+  const timelineEnabled = await isCandidateTimelineEnabled(company.id);
   const running = applications.filter((a) => !CLOSED.includes(a.status));
   const closed = applications.filter((a) => CLOSED.includes(a.status));
 
@@ -235,6 +238,13 @@ export default async function MinhasCandidaturasPage({
                         )}
                   </p>
                 </div>
+                {!app.preRegistered && (
+                  <CandidateApplicationTimeline
+                    status={app.status}
+                    interviewAt={app.interviewAt}
+                    enabled={timelineEnabled}
+                  />
+                )}
               </Link>
             );
           })}

@@ -8,6 +8,10 @@ import {
   isCandidateAiRadarEnabled,
   isWhatsappTemplatesEnabled,
   isCommandPaletteEnabled,
+  isCandidateTimelineEnabled,
+  isUndoActionEnabled,
+  isDynamicOgEnabled,
+  isSoundNotificationsEnabled,
 } from "@/server/services/company-feature.service";
 
 export const metadata: Metadata = { title: "Editar empresa · Console Triagem" };
@@ -25,6 +29,10 @@ export default async function EditarEmpresaPage({
   const candidateAiEnabled = await isCandidateAiRadarEnabled(company.id);
   const whatsappTemplatesEnabled = await isWhatsappTemplatesEnabled(company.id);
   const commandPaletteEnabled = await isCommandPaletteEnabled(company.id);
+  const candidateTimelineEnabled = await isCandidateTimelineEnabled(company.id);
+  const undoActionEnabled = await isUndoActionEnabled(company.id);
+  const dynamicOgEnabled = await isDynamicOgEnabled(company.id);
+  const soundNotificationsEnabled = await isSoundNotificationsEnabled(company.id);
 
   return (
     <>
@@ -45,6 +53,10 @@ export default async function EditarEmpresaPage({
           candidateAiEnabled={candidateAiEnabled}
           whatsappTemplatesEnabled={whatsappTemplatesEnabled}
           commandPaletteEnabled={commandPaletteEnabled}
+          candidateTimelineEnabled={candidateTimelineEnabled}
+          undoActionEnabled={undoActionEnabled}
+          dynamicOgEnabled={dynamicOgEnabled}
+          soundNotificationsEnabled={soundNotificationsEnabled}
         />
       </div>
     </>

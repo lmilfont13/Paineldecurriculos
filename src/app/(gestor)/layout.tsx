@@ -6,11 +6,15 @@ import {
   GestorTopbar,
 } from "@/components/gestor/sidebar";
 import { CommandPalette } from "@/components/gestor/command-palette";
+import { SoundNotificationListener } from "@/components/gestor/sound-notification-listener";
 import { logoutAction } from "@/server/controllers/auth.controller";
 import { getGestorShell } from "@/server/controllers/gestor.controller";
 import { brandCssVars } from "@/server/models/company.model";
 import { personInitials } from "@/server/models/dashboard.model";
-import { isCommandPaletteEnabled } from "@/server/services/company-feature.service";
+import {
+  isCommandPaletteEnabled,
+  isSoundNotificationsEnabled,
+} from "@/server/services/company-feature.service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { company } = await getGestorShell();
@@ -30,6 +34,7 @@ export default async function GestorLayout({
 }) {
   const { user, company, pendingCount, radioStation, canManageRadio, activeJobsCount, totalJobsCount, jobsToday } = await getGestorShell();
   const commandPaletteEnabled = await isCommandPaletteEnabled(company.id);
+  const soundNotificationsEnabled = await isSoundNotificationsEnabled(company.id);
   const userName = user.name ?? user.email;
   const companyInitials = personInitials(company.name);
 
@@ -39,6 +44,7 @@ export default async function GestorLayout({
       style={brandCssVars(company) as React.CSSProperties}
     >
       <CommandPalette enabled={commandPaletteEnabled} />
+      <SoundNotificationListener pendingCount={pendingCount} enabled={soundNotificationsEnabled} />
       <GestorSidebar
         companyName={company.name}
         companySlug={company.slug}
@@ -63,6 +69,7 @@ export default async function GestorLayout({
           logoUrl={company.logoUrl}
           logoutAction={logoutAction}
           commandPaletteEnabled={commandPaletteEnabled}
+          soundEnabled={soundNotificationsEnabled}
         />
         <main className="flex-1 overflow-x-clip px-4 pb-28 pt-6 md:px-8 md:pb-12 md:pt-8 lg:px-10">
           <div className="mx-auto w-full max-w-[1180px]">{children}</div>

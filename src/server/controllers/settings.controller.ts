@@ -280,3 +280,64 @@ export async function toggleCompanyCommandPaletteAction(
   return { ok: true };
 }
 
+/** Super Admin · Alterna Linha do Tempo no Portal do Candidato. */
+export async function toggleCompanyCandidateTimelineAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setCandidateTimelineEnabled } = await import("@/server/services/company-feature.service");
+  await setCandidateTimelineEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Super Admin · Alterna Ação de Desfazer (Undo) no Funil. */
+export async function toggleCompanyUndoActionAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setUndoActionEnabled } = await import("@/server/services/company-feature.service");
+  await setUndoActionEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Super Admin · Alterna Cards Sociais Dinâmicos (Open Graph). */
+export async function toggleCompanyDynamicOgAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setDynamicOgEnabled } = await import("@/server/services/company-feature.service");
+  await setDynamicOgEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Super Admin · Alterna Notificações Sonoras para o Gestor. */
+export async function toggleCompanySoundNotificationsAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setSoundNotificationsEnabled } = await import("@/server/services/company-feature.service");
+  await setSoundNotificationsEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+

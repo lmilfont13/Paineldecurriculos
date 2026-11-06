@@ -18,6 +18,14 @@ import {
   setWhatsappTemplatesEnabled,
   isCommandPaletteEnabled,
   setCommandPaletteEnabled,
+  isCandidateTimelineEnabled,
+  setCandidateTimelineEnabled,
+  isUndoActionEnabled,
+  setUndoActionEnabled,
+  isDynamicOgEnabled,
+  setDynamicOgEnabled,
+  isSoundNotificationsEnabled,
+  setSoundNotificationsEnabled,
 } from "./company-feature.service";
 
 describe("company-feature service", () => {
@@ -69,6 +77,50 @@ describe("company-feature service", () => {
     (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
     expect(await isCommandPaletteEnabled("comp_1")).toBe(true);
     await setCommandPaletteEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de linha do tempo do candidato", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isCandidateTimelineEnabled("comp_1")).toBe(true);
+    await setCandidateTimelineEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de desfazer no funil", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isUndoActionEnabled("comp_1")).toBe(true);
+    await setUndoActionEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de cards sociais dinâmicos", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isDynamicOgEnabled("comp_1")).toBe(true);
+    await setDynamicOgEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de notificações sonoras", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isSoundNotificationsEnabled("comp_1")).toBe(true);
+    await setSoundNotificationsEnabled("comp_1", false);
     expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ body: "false" }),

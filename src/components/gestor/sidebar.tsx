@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
 import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 import { CommandPaletteTrigger, openCommandPalette } from "@/components/gestor/command-palette";
+import { SoundToggleControl } from "@/components/gestor/sound-notification-listener";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -226,6 +227,7 @@ export function GestorTopbar({
   logoUrl,
   logoutAction,
   commandPaletteEnabled = true,
+  soundEnabled = true,
 }: {
   companyName: string;
   companySlug?: string;
@@ -233,6 +235,7 @@ export function GestorTopbar({
   logoUrl: string | null;
   logoutAction: () => Promise<void>;
   commandPaletteEnabled?: boolean;
+  soundEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const section = NAV.find((n) => isActive(pathname, n.href))?.label ?? "Painel";
@@ -252,6 +255,7 @@ export function GestorTopbar({
 
       <div className="flex items-center gap-2">
         <CommandPaletteTrigger enabled={commandPaletteEnabled} />
+        <SoundToggleControl enabled={soundEnabled} />
         {commandPaletteEnabled && (
           <button
             type="button"

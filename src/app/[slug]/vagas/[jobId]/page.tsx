@@ -55,7 +55,11 @@ export async function generateMetadata({
       url,
       siteName: company.name,
       type: "website",
-      ...(company.logoUrl ? { images: [company.logoUrl] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
     ...(hidden ? { robots: { index: false, follow: false } } : {}),
   };

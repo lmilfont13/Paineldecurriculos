@@ -54,3 +54,4 @@ describe("search service (command palette)", () => {
     expect(res.jobs[0].title).toBe("Vendedor Interno");
   });
 });
+

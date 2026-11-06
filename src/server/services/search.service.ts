@@ -9,3 +9,4 @@ export async function searchGlobal(
 ): Promise<GlobalSearchResult> {
   return findGlobalGestorItems(companyId, query);
 }
+

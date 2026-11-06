@@ -14,6 +14,10 @@ import { CompanyAiRadarToggle } from "@/components/admin/company-ai-radar-toggle
 import {
   CompanyWhatsappTemplatesToggle,
   CompanyCommandPaletteToggle,
+  CompanyCandidateTimelineToggle,
+  CompanyUndoActionToggle,
+  CompanyDynamicOgToggle,
+  CompanySoundNotificationsToggle,
 } from "@/components/admin/company-feature-toggles";
 
 const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
@@ -25,12 +29,20 @@ export function CompanyTabs({
   candidateAiEnabled = true,
   whatsappTemplatesEnabled = true,
   commandPaletteEnabled = true,
+  candidateTimelineEnabled = true,
+  undoActionEnabled = true,
+  dynamicOgEnabled = true,
+  soundNotificationsEnabled = true,
 }: {
   company: Company;
   manager: { email: string; name: string | null } | null;
   candidateAiEnabled?: boolean;
   whatsappTemplatesEnabled?: boolean;
   commandPaletteEnabled?: boolean;
+  candidateTimelineEnabled?: boolean;
+  undoActionEnabled?: boolean;
+  dynamicOgEnabled?: boolean;
+  soundNotificationsEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Dados");
   const [state, formAction, pending] = useActionState<CompanyFormState, FormData>(
@@ -237,6 +249,22 @@ export function CompanyTabs({
                 <CompanyCommandPaletteToggle
                   companyId={company.id}
                   initialEnabled={commandPaletteEnabled}
+                />
+                <CompanyCandidateTimelineToggle
+                  companyId={company.id}
+                  initialEnabled={candidateTimelineEnabled}
+                />
+                <CompanyUndoActionToggle
+                  companyId={company.id}
+                  initialEnabled={undoActionEnabled}
+                />
+                <CompanyDynamicOgToggle
+                  companyId={company.id}
+                  initialEnabled={dynamicOgEnabled}
+                />
+                <CompanySoundNotificationsToggle
+                  companyId={company.id}
+                  initialEnabled={soundNotificationsEnabled}
                 />
               </div>
             </>

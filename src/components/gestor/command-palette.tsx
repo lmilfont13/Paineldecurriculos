@@ -410,3 +410,4 @@ export function CommandPaletteTrigger({ enabled = true }: { enabled?: boolean })
     </button>
   );
 }
+

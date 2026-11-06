@@ -14,6 +14,7 @@ import { WhatsAppShare } from "@/components/gestor/whatsapp-share";
 import { AskAiBox } from "@/components/gestor/ask-ai-box";
 import { JobMetrics } from "@/components/gestor/job-metrics";
 import { VagaPipeline } from "@/components/gestor/vaga-pipeline";
+import { isUndoActionEnabled } from "@/server/services/company-feature.service";
 import { getVagaDetailData } from "@/server/controllers/gestor.controller";
 import { listMessageTemplatesAction } from "@/server/controllers/application.controller";
 import {
@@ -66,6 +67,7 @@ export default async function VagaHubPage({
   const data = await getVagaDetailData(jobId);
   if (!data) notFound();
   const { job, publicUrl, applications, ages } = data;
+  const undoActionEnabled = await isUndoActionEnabled(job.companyId);
   // Modelos de mensagem da empresa (reprovação em massa no funil).
   const messageTemplates = await listMessageTemplatesAction();
 
@@ -243,6 +245,7 @@ export default async function VagaHubPage({
         jobTitle={job.title}
         companyName={data.companyName}
         templates={messageTemplates}
+        undoEnabled={undoActionEnabled}
         applications={applications.map((person) => ({
           id: person.id,
           name: person.name,

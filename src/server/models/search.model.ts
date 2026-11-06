@@ -20,3 +20,4 @@ export interface GlobalSearchResult {
   candidates: SearchCandidateItem[];
   jobs: SearchJobItem[];
 }
+

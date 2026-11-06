@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 export const CANDIDATE_AI_RADAR_KEY = "__candidate_ai_radar__";
 export const WHATSAPP_TEMPLATES_KEY = "__feature_whatsapp_templates__";
 export const COMMAND_PALETTE_KEY = "__feature_command_palette__";
+export const CANDIDATE_TIMELINE_KEY = "__feature_candidate_timeline__";
+export const UNDO_ACTION_KEY = "__feature_undo_action__";
+export const DYNAMIC_OG_KEY = "__feature_dynamic_og__";
+export const SOUND_NOTIFICATIONS_KEY = "__feature_sound_notifications__";
 
 /**
  * Lê se uma determinada feature flag está habilitada para a empresa.
@@ -76,5 +80,46 @@ export function findCommandPaletteEnabled(companyId: string): Promise<boolean> {
 export function saveCommandPaletteEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveCompanyFeatureEnabled(companyId, COMMAND_PALETTE_KEY, "Command Palette (Ctrl+K)", enabled);
 }
+
+/** Lê se a linha do tempo do candidato está habilitada. */
+export function findCandidateTimelineEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, CANDIDATE_TIMELINE_KEY, true);
+}
+
+/** Salva preferência da linha do tempo do candidato. */
+export function saveCandidateTimelineEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, CANDIDATE_TIMELINE_KEY, "Linha do Tempo no Portal do Candidato", enabled);
+}
+
+/** Lê se o botão de desfazer (Undo) no funil está habilitado. */
+export function findUndoActionEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, UNDO_ACTION_KEY, true);
+}
+
+/** Salva preferência do botão de desfazer no funil. */
+export function saveUndoActionEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, UNDO_ACTION_KEY, "Ação de Desfazer (Undo) no Funil", enabled);
+}
+
+/** Lê se cards sociais dinâmicos estão habilitados. */
+export function findDynamicOgEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, DYNAMIC_OG_KEY, true);
+}
+
+/** Salva preferência de cards sociais dinâmicos. */
+export function saveDynamicOgEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, DYNAMIC_OG_KEY, "Cards Sociais Dinâmicos (Open Graph)", enabled);
+}
+
+/** Lê se notificações sonoras de novas candidaturas estão habilitadas. */
+export function findSoundNotificationsEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, SOUND_NOTIFICATIONS_KEY, true);
+}
+
+/** Salva preferência de notificações sonoras. */
+export function saveSoundNotificationsEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, SOUND_NOTIFICATIONS_KEY, "Notificações Sonoras para o Gestor", enabled);
+}
+
 
 

@@ -17,3 +17,4 @@ export async function searchGlobalAction(query: string): Promise<GlobalSearchRes
   }
   return searchGlobal(user.companyId, query);
 }
+
