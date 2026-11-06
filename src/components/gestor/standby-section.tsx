@@ -154,7 +154,7 @@ export function StandbySection({
                       disabled={importingId === p.id}
                       onClick={() => handleImport(p.id)}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[#0e7a6b]/30 bg-[#e6f4f1] px-2.5 py-1 text-[11px] font-medium text-[#0e7a6b] transition hover:bg-[#d5ede8] disabled:opacity-50"
-                      title="Importa o candidato para esta vaga na etapa 'Passou da triagem'"
+                      title="Importa o candidato para esta vaga na etapa 'Em análise'"
                     >
                       {importingId === p.id ? (
                         <Loader2 className="size-3.5 animate-spin" />

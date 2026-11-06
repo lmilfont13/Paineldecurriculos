@@ -256,12 +256,11 @@ export function OnlineCounterBadge({
   }, [slug, userName]);
 
   const candidates = sessions.filter((s) => s.role === "candidato");
-  const team = sessions.filter((s) => s.role === "equipe");
-
   const cadastroCount = candidates.filter((s) => s.category === "cadastro").length;
   const principalCount = candidates.filter((s) => s.category === "principal").length;
   const perfilCount = candidates.filter((s) => s.category === "perfil").length;
-  const total = Math.max(sessions.length, 1);
+  // Apenas candidatos contam no número online (o gestor não é contabilizado)
+  const total = candidates.length;
 
   if (variant === "topbar") {
     return (
@@ -364,10 +363,10 @@ export function OnlineCounterBadge({
             </div>
           </div>
 
-          {/* Cards de Resumo Rápido */}
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-center">
+          {/* Cards de Resumo Rápido (Apenas Candidatos, sem gestor) */}
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
             <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-2">
-              <span className="block text-[10px] font-semibold text-rose-700">No Cadastro / Vaga</span>
+              <span className="block text-[10px] font-semibold text-rose-700">No Cadastro</span>
               <span className="text-base font-extrabold text-rose-950">{cadastroCount}</span>
             </div>
 
@@ -377,74 +376,67 @@ export function OnlineCounterBadge({
             </div>
 
             <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-2">
-              <span className="block text-[10px] font-semibold text-purple-700">Perfil / Candidaturas</span>
+              <span className="block text-[10px] font-semibold text-purple-700">No Perfil</span>
               <span className="text-base font-extrabold text-purple-950">{perfilCount}</span>
-            </div>
-
-            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-2">
-              <span className="block text-[10px] font-semibold text-amber-700">Equipe / Painel</span>
-              <span className="text-base font-extrabold text-amber-950">{team.length}</span>
             </div>
           </div>
 
-          {/* Lista de Sessões Ativas */}
+          {/* Lista de Sessões Ativas (Apenas Candidatos/Visitantes) */}
           <div className="mt-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
-              Sessões Ativas ({sessions.length})
+              Candidatos Online ({candidates.length})
             </p>
             <div className="mt-1.5 max-h-44 space-y-1.5 overflow-y-auto pr-1">
-              {sessions.map((s, idx) => {
-                const isCand = s.role === "candidato";
-                const isCad = s.category === "cadastro";
-                const isPerf = s.category === "perfil";
+              {candidates.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[#e4e4e7] p-4 text-center">
+                  <p className="text-xs text-[#a1a1aa]">Nenhum candidato navegando no momento.</p>
+                </div>
+              ) : (
+                candidates.map((s, idx) => {
+                  const isCad = s.category === "cadastro";
+                  const isPerf = s.category === "perfil";
 
-                return (
-                  <div
-                    key={s.key || idx}
-                    className="flex items-center gap-2 rounded-lg border border-[#f4f4f5] bg-[#fafaf9] p-2 text-xs"
-                  >
+                  return (
                     <div
-                      className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
-                        isCad
-                          ? "bg-rose-100 text-rose-700"
-                          : isPerf
-                            ? "bg-purple-100 text-purple-700"
-                            : isCand
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-amber-100 text-amber-800"
-                      }`}
+                      key={s.key || idx}
+                      className="flex items-center gap-2 rounded-lg border border-[#f4f4f5] bg-[#fafaf9] p-2 text-xs"
                     >
-                      {isCad ? (
-                        <FileEdit className="size-3" />
-                      ) : isPerf ? (
-                        <User className="size-3" />
-                      ) : isCand ? (
-                        <LayoutDashboard className="size-3" />
-                      ) : (
-                        <Users className="size-3" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate text-[11px] font-bold text-[#0a0a0a]">
-                          {s.name ? s.name : isCand ? "Visitante (sem login)" : "Membro da equipe"}
-                        </span>
-                        {s.isRegistered && (
-                          <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800">
-                            Cadastrado
-                          </span>
+                      <div
+                        className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
+                          isCad
+                            ? "bg-rose-100 text-rose-700"
+                            : isPerf
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {isCad ? (
+                          <FileEdit className="size-3" />
+                        ) : isPerf ? (
+                          <User className="size-3" />
+                        ) : (
+                          <LayoutDashboard className="size-3" />
                         )}
                       </div>
-                      <span className="block truncate text-[10px] font-medium text-[#57534e]">
-                        {s.screenTitle}
-                      </span>
-                      <span className="block truncate text-[9px] text-[#a1a1aa]">
-                        {s.categoryLabel}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-[11px] font-bold text-[#0a0a0a]">
+                            {s.name ? s.name : "Visitante (sem login)"}
+                          </span>
+                          {s.isRegistered && (
+                            <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800">
+                              Cadastrado
+                            </span>
+                          )}
+                        </div>
+                        <span className="block truncate text-[10px] font-medium text-[#57534e]">
+                          {s.screenTitle}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

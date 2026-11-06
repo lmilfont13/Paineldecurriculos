@@ -173,7 +173,7 @@ export type SubmitApplicationResult =
  */
 export const appStatusLabels = {
   PENDING: "Triagem",
-  SHORTLISTED: "Passou da triagem",
+  SHORTLISTED: "Em análise",
   INTERVIEW: "Entrevista",
   STANDBY: "Stand-by",
   APPROVED: "Aprovado",

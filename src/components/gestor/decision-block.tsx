@@ -15,7 +15,7 @@ import { STANDBY_REASONS } from "@/server/models/standby.model";
 
 /** Próximo passo do funil — o processo é direcional, não uma escolha livre. */
 const NEXT: Partial<Record<AppStatusKey, { to: AppStatusKey; label: string }>> = {
-  PENDING: { to: "SHORTLISTED", label: "Passou da triagem" },
+  PENDING: { to: "SHORTLISTED", label: "Em análise" },
   SHORTLISTED: { to: "INTERVIEW", label: "Chamar para entrevista" },
   STANDBY: { to: "INTERVIEW", label: "Chamar para entrevista" },
   INTERVIEW: { to: "APPROVED", label: "Aprovar" },
@@ -23,7 +23,7 @@ const NEXT: Partial<Record<AppStatusKey, { to: AppStatusKey; label: string }>> =
 
 const STAGE_COPY: Record<AppStatusKey, string> = {
   PENDING: "Ainda não decidido. O candidato está esperando um retorno seu.",
-  SHORTLISTED: "Passou da primeira fase. Falta chamar para a entrevista.",
+  SHORTLISTED: "Em análise da equipe. Falta chamar para a entrevista.",
   INTERVIEW: "Em entrevista. O candidato já foi avisado por e-mail.",
   STANDBY: "Guardado em stand-by no funil para próximas oportunidades.",
   APPROVED: "Aprovado. O candidato já foi avisado por e-mail.",

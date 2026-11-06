@@ -89,3 +89,4 @@ export function CandidateAiToggle({ initialEnabled }: CandidateAiToggleProps) {
     </div>
   );
 }
+

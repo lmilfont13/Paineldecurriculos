@@ -42,7 +42,7 @@ export function pickForAssistant(rows: AssistantRow[], max = ASSISTANT_MAX): Ass
 
 const STATUS_PT: Record<string, string> = {
   PENDING: "em triagem",
-  SHORTLISTED: "passou da triagem",
+  SHORTLISTED: "em análise",
   INTERVIEW: "em entrevista",
   STANDBY: "em stand-by",
   APPROVED: "aprovado",

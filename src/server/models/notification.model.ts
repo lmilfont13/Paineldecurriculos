@@ -17,7 +17,7 @@ export function stageNotification(
       return {
         type: "STAGE_CHANGED",
         title: "Você passou da primeira fase",
-        body: `Sua candidatura para ${jobTitle} passou da triagem da ${companyName}. O próximo passo é a conversa; você é avisado por aqui.`,
+        body: `Sua candidatura para ${jobTitle} avançou na ${companyName}. O próximo passo é a conversa; você é avisado por aqui.`,
       };
     case "INTERVIEW":
       return {
@@ -107,7 +107,7 @@ export function whatHappensNow(
     case "PENDING":
       return `A ${companyName} está avaliando as candidaturas. Você é avisado aqui e por e-mail assim que houver novidade.`;
     case "SHORTLISTED":
-      return `Sua candidatura passou da triagem. A ${companyName} vai chamar você para a conversa em breve.`;
+      return `Sua candidatura avançou de fase. A ${companyName} vai chamar você para a conversa em breve.`;
     case "INTERVIEW":
       return interviewWhen
         ? `Sua conversa com a ${companyName} está marcada para ${interviewWhen}.`

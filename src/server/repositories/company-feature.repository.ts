@@ -35,3 +35,4 @@ export async function saveCandidateAiRadarEnabled(companyId: string, enabled: bo
     },
   });
 }
+

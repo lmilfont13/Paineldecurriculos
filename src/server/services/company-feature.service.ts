@@ -12,3 +12,4 @@ export function isCandidateAiRadarEnabled(companyId: string): Promise<boolean> {
 export function setCandidateAiRadarEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveCandidateAiRadarEnabled(companyId, enabled);
 }
+

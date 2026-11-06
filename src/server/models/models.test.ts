@@ -485,7 +485,7 @@ describe("tons da marca Tarhget", () => {
   });
 });
 
-describe("etapa 'Passou da triagem'", () => {
+describe("etapa 'Em análise'", () => {
   it("avisa o candidato no portal, sem citar nota nem análise", async () => {
     const { stageNotification } = await import("@/server/models/notification.model");
     const n = stageNotification("SHORTLISTED", "Empresa", "Vendedor");
@@ -495,6 +495,6 @@ describe("etapa 'Passou da triagem'", () => {
 
   it("tem rótulo para o gestor", async () => {
     const { appStatusLabels } = await import("@/server/models/application.model");
-    expect(appStatusLabels.SHORTLISTED).toBe("Passou da triagem");
+    expect(appStatusLabels.SHORTLISTED).toBe("Em análise");
   });
 });

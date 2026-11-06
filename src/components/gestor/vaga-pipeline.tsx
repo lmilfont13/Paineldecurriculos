@@ -14,7 +14,7 @@ import { StageMoveDialog, type MoveNoticeChoice } from "@/components/gestor/stag
 
 const STAGES: { key: AppStatusKey; label: string; accent: string; hint: string }[] = [
   { key: "PENDING", label: "Triagem", accent: "#b07818", hint: "Novas candidaturas" },
-  { key: "SHORTLISTED", label: "Passou da triagem", accent: "#2f5fa8", hint: "Prontos para chamar" },
+  { key: "SHORTLISTED", label: "Em análise", accent: "#2f5fa8", hint: "Prontos para chamar" },
   { key: "INTERVIEW", label: "Entrevista", accent: "#b07818", hint: "Em conversa" },
   { key: "STANDBY", label: "Stand-by", accent: "#0e7a6b", hint: "Guardados p/ depois" },
   { key: "APPROVED", label: "Aprovados", accent: "#1f7a4d", hint: "Prontos para avançar" },
@@ -64,10 +64,10 @@ export function VagaPipeline({ applications, aiMinScore, jobId, jobTitle, compan
   /** Quem está na triagem e já atingiu a nota mínima da vaga: passa todos de uma vez. */
   const ready=visible.filter(p=>p.status==="PENDING"&&p.aiScore!==null&&p.aiScore>=aiMinScore);
   function passAllReady(){
-    if(ready.length===0||!window.confirm(`Passar ${ready.length} candidato${ready.length===1?"":"s"} que atingiram a nota mínima (${aiMinScore}) para "Passou da triagem"?`))return;
+    if(ready.length===0||!window.confirm(`Passar ${ready.length} candidato${ready.length===1?"":"s"} que atingiram a nota mínima (${aiMinScore}) para "Em análise"?`))return;
     const ids=ready.map(p=>p.id); const previous=people;
     setPeople(current=>current.map(p=>ids.includes(p.id)?{...p,status:"SHORTLISTED"}:p));
-    startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast(`${updated} candidato${updated===1?"":"s"} passou${updated===1?"":"ram"} da triagem.`);}catch{setPeople(previous);setToast("Não foi possível passar os candidatos. Tente novamente.");}});
+    startTransition(async()=>{try{let updated=0;for(let i=0;i<ids.length;i+=100)updated+=(await bulkSetApplicationStatusAction(ids.slice(i,i+100),"SHORTLISTED")).updated;setToast(`${updated} candidato${updated===1?"":"s"} movido${updated===1?"":"s"} para Em análise.`);}catch{setPeople(previous);setToast("Não foi possível passar os candidatos. Tente novamente.");}});
   }
   /** Quem ainda está na triagem (respeita o filtro de idade): mover para banco de dados de uma vez, com mensagem. */
   const stillPending=visible.filter(p=>p.status==="PENDING");

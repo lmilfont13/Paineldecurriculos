@@ -32,7 +32,7 @@ const EMAIL_TEXT: Record<EmailOutcome, string> = {
 
 const STATUS_TEXT: Record<string, string> = {
   PENDING: "Triagem",
-  SHORTLISTED: "Passou da triagem",
+  SHORTLISTED: "Em análise",
   INTERVIEW: "Entrevista",
   STANDBY: "Stand-by",
   APPROVED: "Aprovado",

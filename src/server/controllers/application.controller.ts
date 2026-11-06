@@ -353,7 +353,7 @@ export async function setApplicationStatusAction(
   });
   const statusLabels = {
     PENDING: "Triagem",
-    SHORTLISTED: "Passou da triagem",
+    SHORTLISTED: "Em análise",
     INTERVIEW: "Entrevista",
     STANDBY: "Stand-by",
     APPROVED: "Aprovado",

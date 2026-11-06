@@ -44,7 +44,7 @@ export type { CandidaturaRow };
 /** Etapas do funil como abas — a organização segue o processo, não a tabela. */
 const TABS: { key: StageKey; label: string }[] = [
   { key: "PENDING", label: "Triagem" },
-  { key: "SHORTLISTED", label: "Passou da triagem" },
+  { key: "SHORTLISTED", label: "Em análise" },
   { key: "INTERVIEW", label: "Entrevista" },
   { key: "STANDBY", label: "Stand-by" },
   { key: "APPROVED", label: "Aprovados" },
@@ -81,7 +81,7 @@ const BULK_BY_TAB: Record<StageKey, AppStatusKey[]> = {
 
 const BULK_LABELS: Record<AppStatusKey, string> = {
   PENDING: "Voltar p/ triagem",
-  SHORTLISTED: "Passou da triagem",
+  SHORTLISTED: "Em análise",
   INTERVIEW: "Chamar p/ entrevista",
   STANDBY: "Colocar em stand-by",
   APPROVED: "Aprovar",
@@ -253,7 +253,7 @@ export function CandidaturasTable({
 
   /** Ações que enviam e-mail ao candidato exigem confirmação (irreversível). */
   function requestBulk(newStatus: AppStatusKey) {
-    // Voltar para a triagem e "passou da triagem" não avisam o candidato por e-mail: sem confirmação.
+    // Voltar para a triagem e "em análise" não avisam o candidato por e-mail: sem confirmação.
     if (newStatus === "PENDING" || newStatus === "SHORTLISTED") return runBulk(newStatus);
     setConfirm(newStatus);
   }
@@ -262,7 +262,7 @@ export function CandidaturasTable({
   const readyToPass = filtered.filter((r) => r.status === "PENDING" && meetsMinimum(r));
 
   function passAllMeetingMinimum() {
-    if (!window.confirm(`Passar ${readyToPass.length} candidato${readyToPass.length === 1 ? "" : "s"} que atingiram a nota mínima para "Passou da triagem"?`)) return;
+    if (!window.confirm(`Passar ${readyToPass.length} candidato${readyToPass.length === 1 ? "" : "s"} que atingiram a nota mínima para "Em análise"?`)) return;
     runBulk("SHORTLISTED", readyToPass.map((r) => r.id));
   }
 
@@ -611,7 +611,7 @@ export function CandidaturasTable({
             type="button"
             disabled={pending}
             onClick={passAllMeetingMinimum}
-            title="Move para 'Passou da triagem' todos da triagem que atingiram a nota mínima da vaga"
+            title="Move para 'Em análise' todos da triagem que atingiram a nota mínima da vaga"
             className="h-10 rounded-xl px-4 text-[13px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
           >
