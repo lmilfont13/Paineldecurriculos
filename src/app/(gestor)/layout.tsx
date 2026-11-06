@@ -26,7 +26,7 @@ export default async function GestorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, company, pendingCount, radioStation, canManageRadio, jobsToday } = await getGestorShell();
+  const { user, company, pendingCount, radioStation, canManageRadio, activeJobsCount, totalJobsCount, jobsToday } = await getGestorShell();
   const userName = user.name ?? user.email;
   const companyInitials = personInitials(company.name);
 
@@ -45,6 +45,8 @@ export default async function GestorLayout({
         userInitials={personInitials(userName)}
         radioStation={radioStation}
         canManageRadio={canManageRadio}
+        activeJobsCount={activeJobsCount}
+        totalJobsCount={totalJobsCount}
         jobsToday={jobsToday}
 
         logoutAction={logoutAction}

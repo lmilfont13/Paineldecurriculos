@@ -171,11 +171,15 @@ type OnlineSession = {
 export function OnlineCounterBadge({
   slug,
   variant = "sidebar",
+  activeJobsCount = 0,
+  totalJobsCount = 0,
   jobsToday = 0,
   userName,
 }: {
   slug: string;
   variant?: "sidebar" | "topbar" | "admin";
+  activeJobsCount?: number;
+  totalJobsCount?: number;
   jobsToday?: number;
   userName?: string;
 }) {
@@ -339,15 +343,25 @@ export function OnlineCounterBadge({
             </button>
           </div>
 
-          {/* Vagas cadastradas hoje até o momento */}
+          {/* Vagas da empresa */}
           <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[#e7e5e4] bg-[#fafaf9] p-2.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <Briefcase className="size-3.5 text-[#b07818] shrink-0" />
-              <span className="truncate text-[11px] font-medium text-[#57534e]">Vagas cadastradas hoje:</span>
+              <span className="truncate text-[11px] font-medium text-[#57534e]">
+                {activeJobsCount > 0 ? "Vagas ativas na empresa:" : "Vagas cadastradas:"}
+              </span>
             </div>
-            <span className="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-[#0a0a0a] shadow-xs">
-              {jobsToday} {jobsToday === 1 ? "vaga" : "vagas"}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {jobsToday > 0 && (
+                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                  +{jobsToday} hoje
+                </span>
+              )}
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-[#0a0a0a] shadow-xs">
+                {activeJobsCount > 0 ? activeJobsCount : totalJobsCount}{" "}
+                {(activeJobsCount > 0 ? activeJobsCount : totalJobsCount) === 1 ? "vaga" : "vagas"}
+              </span>
+            </div>
           </div>
 
           {/* Cards de Resumo Rápido */}

@@ -94,6 +94,8 @@ export function GestorSidebar({
   userInitials,
   radioStation,
   canManageRadio = false,
+  activeJobsCount = 0,
+  totalJobsCount = 0,
   jobsToday = 0,
 
   logoutAction,
@@ -107,6 +109,8 @@ export function GestorSidebar({
   userInitials: string;
   radioStation?: RadioStation | null;
   canManageRadio?: boolean;
+  activeJobsCount?: number;
+  totalJobsCount?: number;
   jobsToday?: number;
 
   logoutAction: () => Promise<void>;
@@ -185,6 +189,8 @@ export function GestorSidebar({
           <OnlineCounterBadge
             slug={companySlug}
             variant="sidebar"
+            activeJobsCount={activeJobsCount}
+            totalJobsCount={totalJobsCount}
             jobsToday={jobsToday}
 
             userName={userName}
