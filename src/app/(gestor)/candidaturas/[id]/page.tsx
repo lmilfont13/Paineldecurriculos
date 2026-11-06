@@ -54,6 +54,8 @@ import {
   type AppStatusKey,
 } from "@/server/models/application.model";
 import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
+import { WhatsAppQuickButton } from "@/components/gestor/whatsapp-quick-templates";
+import { isWhatsappTemplatesEnabled } from "@/server/services/company-feature.service";
 import { instagramUrl } from "@/server/models/instagram.model";
 import { ExternalLink } from "lucide-react";
 import {
@@ -95,6 +97,7 @@ export default async function CandidaturaDetailPage({
       ? await getIntakeInvite(app.id, app.job.id, app.job.title, app.name, app.email, app.phone)
       : null;
   if (!app) notFound();
+  const whatsappTemplatesEnabled = await isWhatsappTemplatesEnabled(app.company.id);
 
   const meets = app.aiScore !== null && app.aiScore >= app.job.aiMinScore;
   const coreAnswers = app.answers.filter((a) => a.field.isCore);
@@ -242,13 +245,22 @@ export default async function CandidaturaDetailPage({
               </div>
             </div>
           </div>
-          <Link
-            href="/candidaturas"
-            aria-label="Fechar"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-          >
-            ✕
-          </Link>
+          <div className="flex items-center gap-3">
+            <WhatsAppQuickButton
+              candidateName={app.name}
+              candidatePhone={app.phone}
+              jobTitle={app.job.title}
+              companyName={app.company.name}
+              enabled={whatsappTemplatesEnabled}
+            />
+            <Link
+              href="/candidaturas"
+              aria-label="Fechar"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+            >
+              ✕
+            </Link>
+          </div>
         </div>
       </header>
 

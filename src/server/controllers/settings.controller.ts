@@ -249,3 +249,34 @@ export async function toggleCompanyCandidateAiRadarAction(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/** Super Admin · Alterna templates de WhatsApp rápidos para qualquer empresa. */
+export async function toggleCompanyWhatsappTemplatesAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setWhatsappTemplatesEnabled } = await import("@/server/services/company-feature.service");
+  await setWhatsappTemplatesEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Super Admin · Alterna Command Palette (Ctrl+K) para qualquer empresa. */
+export async function toggleCompanyCommandPaletteAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setCommandPaletteEnabled } = await import("@/server/services/company-feature.service");
+  await setCommandPaletteEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+

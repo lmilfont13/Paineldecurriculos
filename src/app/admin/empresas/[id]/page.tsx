@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 
 import { CompanyTabs } from "@/components/admin/company-tabs";
 import { getEmpresaDetail } from "@/server/controllers/admin.controller";
-import { isCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
+import {
+  isCandidateAiRadarEnabled,
+  isWhatsappTemplatesEnabled,
+  isCommandPaletteEnabled,
+} from "@/server/services/company-feature.service";
 
 export const metadata: Metadata = { title: "Editar empresa · Console Triagem" };
 
@@ -19,6 +23,8 @@ export default async function EditarEmpresaPage({
   if (!data) notFound();
   const { company, manager } = data;
   const candidateAiEnabled = await isCandidateAiRadarEnabled(company.id);
+  const whatsappTemplatesEnabled = await isWhatsappTemplatesEnabled(company.id);
+  const commandPaletteEnabled = await isCommandPaletteEnabled(company.id);
 
   return (
     <>
@@ -37,6 +43,8 @@ export default async function EditarEmpresaPage({
           company={company}
           manager={manager}
           candidateAiEnabled={candidateAiEnabled}
+          whatsappTemplatesEnabled={whatsappTemplatesEnabled}
+          commandPaletteEnabled={commandPaletteEnabled}
         />
       </div>
     </>

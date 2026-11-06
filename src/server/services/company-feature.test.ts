@@ -11,7 +11,14 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { isCandidateAiRadarEnabled, setCandidateAiRadarEnabled } from "./company-feature.service";
+import {
+  isCandidateAiRadarEnabled,
+  setCandidateAiRadarEnabled,
+  isWhatsappTemplatesEnabled,
+  setWhatsappTemplatesEnabled,
+  isCommandPaletteEnabled,
+  setCommandPaletteEnabled,
+} from "./company-feature.service";
 
 describe("company-feature service", () => {
   beforeEach(() => {
@@ -42,6 +49,28 @@ describe("company-feature service", () => {
     expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({ body: "false" }),
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de whatsapp templates", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue({ body: "true" });
+    expect(await isWhatsappTemplatesEnabled("comp_1")).toBe(true);
+    await setWhatsappTemplatesEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ body: "false" }),
+      })
+    );
+  });
+
+  it("controla flag de command palette", async () => {
+    (prisma.messageTemplate.findUnique as any).mockResolvedValue(null);
+    expect(await isCommandPaletteEnabled("comp_1")).toBe(true);
+    await setCommandPaletteEnabled("comp_1", false);
+    expect(prisma.messageTemplate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
         update: expect.objectContaining({ body: "false" }),
       })
     );

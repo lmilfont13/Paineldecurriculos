@@ -11,6 +11,10 @@ import {
   type CompanyFormState,
 } from "@/server/controllers/company.controller";
 import { CompanyAiRadarToggle } from "@/components/admin/company-ai-radar-toggle";
+import {
+  CompanyWhatsappTemplatesToggle,
+  CompanyCommandPaletteToggle,
+} from "@/components/admin/company-feature-toggles";
 
 const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
 
@@ -19,10 +23,14 @@ export function CompanyTabs({
   company,
   manager,
   candidateAiEnabled = true,
+  whatsappTemplatesEnabled = true,
+  commandPaletteEnabled = true,
 }: {
   company: Company;
   manager: { email: string; name: string | null } | null;
   candidateAiEnabled?: boolean;
+  whatsappTemplatesEnabled?: boolean;
+  commandPaletteEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Dados");
   const [state, formAction, pending] = useActionState<CompanyFormState, FormData>(
@@ -221,6 +229,14 @@ export function CompanyTabs({
                 <CompanyAiRadarToggle
                   companyId={company.id}
                   initialEnabled={candidateAiEnabled}
+                />
+                <CompanyWhatsappTemplatesToggle
+                  companyId={company.id}
+                  initialEnabled={whatsappTemplatesEnabled}
+                />
+                <CompanyCommandPaletteToggle
+                  companyId={company.id}
+                  initialEnabled={commandPaletteEnabled}
                 />
               </div>
             </>

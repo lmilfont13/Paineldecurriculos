@@ -15,6 +15,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
 import { OnlineCounterBadge } from "@/components/gestor/online-presence";
+import { CommandPaletteTrigger, openCommandPalette } from "@/components/gestor/command-palette";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -224,36 +225,52 @@ export function GestorTopbar({
   companyInitials,
   logoUrl,
   logoutAction,
+  commandPaletteEnabled = true,
 }: {
   companyName: string;
   companySlug?: string;
   companyInitials: string;
   logoUrl: string | null;
   logoutAction: () => Promise<void>;
+  commandPaletteEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const section = NAV.find((n) => isActive(pathname, n.href))?.label ?? "Painel";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-[#e4e4e7] bg-white/95 px-4 backdrop-blur md:static md:bg-white md:px-8">
-      <span className="flex min-w-0 flex-1 items-center gap-2.5 md:hidden">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-[#e4e4e7] bg-white/95 px-4 backdrop-blur md:static md:bg-white md:px-8">
+      <span className="flex min-w-0 items-center gap-2.5 md:hidden">
         <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={28} />
         <span className="truncate text-[13px] font-semibold text-[#0a0a0a]">{companyName}</span>
       </span>
-      <button
-        type="button"
-        onClick={() => logoutAction()}
-        aria-label="Sair"
-        className="flex size-9 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] md:hidden"
-      >
-        <LogOut aria-hidden className="size-[18px]" strokeWidth={1.75} />
-      </button>
 
       <span className="hidden text-[13px] md:inline">
         <span className="text-[#71717a]">{companyName}</span>
         <span className="mx-2 text-[#a1a1aa]">/</span>
         <span className="font-medium text-[#0a0a0a]">{section}</span>
       </span>
+
+      <div className="flex items-center gap-2">
+        <CommandPaletteTrigger enabled={commandPaletteEnabled} />
+        {commandPaletteEnabled && (
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            aria-label="Buscar"
+            className="flex size-9 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] sm:hidden"
+          >
+            <Search aria-hidden className="size-[18px]" strokeWidth={1.75} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => logoutAction()}
+          aria-label="Sair"
+          className="flex size-9 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] md:hidden"
+        >
+          <LogOut aria-hidden className="size-[18px]" strokeWidth={1.75} />
+        </button>
+      </div>
     </header>
   );
 }

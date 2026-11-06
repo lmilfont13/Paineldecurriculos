@@ -3,31 +3,42 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 
 export const CANDIDATE_AI_RADAR_KEY = "__candidate_ai_radar__";
+export const WHATSAPP_TEMPLATES_KEY = "__feature_whatsapp_templates__";
+export const COMMAND_PALETTE_KEY = "__feature_command_palette__";
 
 /**
- * Lê se o radar / central de IA está habilitado para a área do candidato na empresa.
- * Se ainda não foi configurado, o padrão é true (habilitado).
+ * Lê se uma determinada feature flag está habilitada para a empresa.
+ * Se ainda não foi configurada, utiliza defaultValue (padrão: true).
  */
-export async function findCandidateAiRadarEnabled(companyId: string): Promise<boolean> {
+export async function findCompanyFeatureEnabled(
+  companyId: string,
+  featureKey: string,
+  defaultValue = true
+): Promise<boolean> {
   const row = await prisma.messageTemplate.findUnique({
-    where: { companyId_subjectKey: { companyId, subjectKey: CANDIDATE_AI_RADAR_KEY } },
+    where: { companyId_subjectKey: { companyId, subjectKey: featureKey } },
     select: { body: true },
   });
-  if (!row) return true; // padrão: ativado
+  if (!row) return defaultValue;
   return row.body === "true" || row.body === "1";
 }
 
 /**
- * Salva a preferência de exibição da central de IA na área do candidato.
+ * Salva a preferência de uma feature flag para a empresa.
  */
-export async function saveCandidateAiRadarEnabled(companyId: string, enabled: boolean): Promise<void> {
+export async function saveCompanyFeatureEnabled(
+  companyId: string,
+  featureKey: string,
+  subjectTitle: string,
+  enabled: boolean
+): Promise<void> {
   const val = enabled ? "true" : "false";
   await prisma.messageTemplate.upsert({
-    where: { companyId_subjectKey: { companyId, subjectKey: CANDIDATE_AI_RADAR_KEY } },
+    where: { companyId_subjectKey: { companyId, subjectKey: featureKey } },
     create: {
       companyId,
-      subject: "Central de IA na Área do Candidato",
-      subjectKey: CANDIDATE_AI_RADAR_KEY,
+      subject: subjectTitle,
+      subjectKey: featureKey,
       body: val,
     },
     update: {
@@ -35,4 +46,35 @@ export async function saveCandidateAiRadarEnabled(companyId: string, enabled: bo
     },
   });
 }
+
+/** Lê se o radar / central de IA está habilitado para a área do candidato. */
+export function findCandidateAiRadarEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, CANDIDATE_AI_RADAR_KEY, true);
+}
+
+/** Salva preferência da central de IA na área do candidato. */
+export function saveCandidateAiRadarEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, CANDIDATE_AI_RADAR_KEY, "Central de IA na Área do Candidato", enabled);
+}
+
+/** Lê se os templates de WhatsApp rápidos com 1 clique estão habilitados. */
+export function findWhatsappTemplatesEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, WHATSAPP_TEMPLATES_KEY, true);
+}
+
+/** Salva preferência dos templates rápidos de WhatsApp. */
+export function saveWhatsappTemplatesEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, WHATSAPP_TEMPLATES_KEY, "Templates de WhatsApp com 1 Clique", enabled);
+}
+
+/** Lê se o Command Palette (Ctrl+K) está habilitado. */
+export function findCommandPaletteEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, COMMAND_PALETTE_KEY, true);
+}
+
+/** Salva preferência do Command Palette (Ctrl+K). */
+export function saveCommandPaletteEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(companyId, COMMAND_PALETTE_KEY, "Command Palette (Ctrl+K)", enabled);
+}
+
 
