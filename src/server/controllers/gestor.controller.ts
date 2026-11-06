@@ -14,7 +14,6 @@ import type {
 } from "@/server/models/dashboard.model";
 import {
   countPendingApplications,
-  countCompanyApplicationsSince,
   getCompanyApplication,
   getOtherApplicationsOfPerson,
   getQueueSiblings,
@@ -46,6 +45,20 @@ import { countCompanyJobsSince, getCompanyJob, listCompanyJobs } from "@/server/
 import { appUrl } from "@/lib/env";
 import { effectiveAge } from "@/server/models/age.model";
 
+function getStartOfTodayInBrazil(): Date {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = Number(parts.find((p) => p.type === "year")?.value);
+  const month = Number(parts.find((p) => p.type === "month")?.value);
+  const day = Number(parts.find((p) => p.type === "day")?.value);
+  return new Date(Date.UTC(year, month - 1, day, 3, 0, 0));
+}
+
 /** Dados do shell do gestor (sidebar/topbar) — 1x por request. */
 export const getGestorShell = cache(async () => {
   const user = await requireManager();
@@ -56,11 +69,9 @@ export const getGestorShell = cache(async () => {
   if (!company) throw new Error("Empresa da sessão não encontrada");
   const radioStation = await getActiveRadioStation(user.companyId);
   const canManageRadio = await isPrimaryCompanyAdmin(user.companyId, user.id);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const startOfToday = getStartOfTodayInBrazil();
   const jobsToday = await countCompanyJobsSince(user.companyId, startOfToday);
-  const appsToday = await countCompanyApplicationsSince(user.companyId, startOfToday);
-  return { user, company, pendingCount, radioStation, canManageRadio, jobsToday, appsToday };
+  return { user, company, pendingCount, radioStation, canManageRadio, jobsToday };
 });
 
 export async function getVagasPageData() {

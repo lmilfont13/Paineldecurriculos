@@ -95,7 +95,7 @@ export function GestorSidebar({
   radioStation,
   canManageRadio = false,
   jobsToday = 0,
-  appsToday = 0,
+
   logoutAction,
 }: {
   companyName: string;
@@ -108,7 +108,7 @@ export function GestorSidebar({
   radioStation?: RadioStation | null;
   canManageRadio?: boolean;
   jobsToday?: number;
-  appsToday?: number;
+
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -186,7 +186,7 @@ export function GestorSidebar({
             slug={companySlug}
             variant="sidebar"
             jobsToday={jobsToday}
-            appsToday={appsToday}
+
             userName={userName}
           />
         )}
