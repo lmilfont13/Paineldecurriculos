@@ -12,6 +12,7 @@ import {
   Play,
   Plus,
   Radio,
+  RadioTower,
   Search,
   Settings2,
   SkipBack,
@@ -33,6 +34,7 @@ import {
 } from "@/server/controllers/settings.controller";
 import {
   CURATED_STATIONS,
+  DEFAULT_MUSIC_CATALOG,
   TARGET_PLAYLIST_TRACKS,
   TARGET_RADIO_SPOTS,
   type RadioSpot,
@@ -41,7 +43,7 @@ import {
 } from "@/server/models/radio.model";
 
 export type { RadioStation, RadioSpot, RadioTrack };
-export { CURATED_STATIONS, TARGET_PLAYLIST_TRACKS, TARGET_RADIO_SPOTS };
+export { CURATED_STATIONS, DEFAULT_MUSIC_CATALOG, TARGET_PLAYLIST_TRACKS, TARGET_RADIO_SPOTS };
 
 interface RadioBrowserResult {
   stationuuid: string;
@@ -66,7 +68,7 @@ export function GestorRadioPlayer({
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
   const realtimeChannelRef = useRef<any>(null);
 
-  // Normaliza o nome da Rádio Tarhget
+  // Normaliza o nome oficial da Rádio Tarhget
   const normalizeStation = useCallback((st: RadioStation): RadioStation => {
     if (st.url === "playlist:target") {
       return { ...st, name: "Rádio Tarhget", genre: "Músicas Selecionadas + Spots IA" };
@@ -87,10 +89,10 @@ export function GestorRadioPlayer({
   const isPlaylistMode = current.url === "playlist:target";
 
   // Fila de reprodução da Rádio Tarhget
-  const [playlistTracks, setPlaylistTracks] = useState<RadioTrack[]>(TARGET_PLAYLIST_TRACKS);
+  const [playlistTracks, setPlaylistTracks] = useState<RadioTrack[]>(DEFAULT_MUSIC_CATALOG);
   const [trackIndex, setTrackIndex] = useState(0);
   const currentTrack: RadioTrack =
-    playlistTracks[trackIndex % (playlistTracks.length || 1)] ?? TARGET_PLAYLIST_TRACKS[0];
+    playlistTracks[trackIndex % (playlistTracks.length || 1)] ?? DEFAULT_MUSIC_CATALOG[0];
 
   const activeAudioSrc = isPlaylistMode ? currentTrack?.audioUrl : current.url;
 
@@ -104,10 +106,9 @@ export function GestorRadioPlayer({
   const [previewingSpotId, setPreviewingSpotId] = useState<string | null>(null);
   const [liveBroadcastSpot, setLiveBroadcastSpot] = useState<RadioSpot | null>(null);
 
-  // Painéis de configuração e fila
+  // Painéis e abas de controle
   const [configOpen, setConfigOpen] = useState(false);
-  const [queueOpen, setQueueOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"estacao" | "fila" | "spots">("estacao");
+  const [activeTab, setActiveTab] = useState<"fila" | "estacao" | "spots">("fila");
 
   // Busca de rádios FM públicas
   const [query, setQuery] = useState("");
@@ -115,7 +116,7 @@ export function GestorRadioPlayer({
   const [searchResults, setSearchResults] = useState<RadioStation[]>([]);
 
   // Catálogo e busca de músicas
-  const [musicCatalog, setMusicCatalog] = useState<RadioTrack[]>(TARGET_PLAYLIST_TRACKS);
+  const [musicCatalog, setMusicCatalog] = useState<RadioTrack[]>(DEFAULT_MUSIC_CATALOG);
   const [musicSearchQuery, setMusicSearchQuery] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [customArtist, setCustomArtist] = useState("");
@@ -127,7 +128,7 @@ export function GestorRadioPlayer({
   const [savedPlaylist, setSavedPlaylist] = useState(false);
   const [broadcastNotification, setBroadcastNotification] = useState<string | null>(null);
 
-  // Conecta ao Supabase Realtime para transmitir vinhetas e atualizar playlists em tempo real
+  // Conecta ao Supabase Realtime para sincronização com candidatos
   useEffect(() => {
     if (!companySlug) return;
     try {
@@ -148,7 +149,7 @@ export function GestorRadioPlayer({
     }
   }, [companySlug]);
 
-  // Carrega a playlist salva e o catálogo de músicas do servidor
+  // Carrega a fila salva e catálogo da empresa
   useEffect(() => {
     void (async () => {
       try {
@@ -163,12 +164,12 @@ export function GestorRadioPlayer({
           setMusicCatalog(catalog);
         }
       } catch {
-        // Fallback para valores padrão
+        // Fallback para catálogo padrão
       }
     })();
   }, []);
 
-  // Sincroniza se o servidor atualizar a estação
+  // Sincroniza se o servidor atualizar a estação inicial
   useEffect(() => {
     if (initialStation && initialStation.url !== current.url) {
       const norm = normalizeStation(initialStation);
@@ -194,10 +195,9 @@ export function GestorRadioPlayer({
     }
   }, []);
 
-  // Aplica volumes
+  // Aplica volume com ducking se houver vinheta
   useEffect(() => {
     if (audioRef.current) {
-      // Se houver vinheta tocando, aplica ducking no áudio da rádio
       if (previewingSpotId || liveBroadcastSpot) {
         audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
       } else {
@@ -209,7 +209,7 @@ export function GestorRadioPlayer({
     }
   }, [volume, muted, previewingSpotId, liveBroadcastSpot]);
 
-  // Se a faixa da playlist mudar enquanto está tocando
+  // Atualiza áudio se a faixa mudar em reprodução
   useEffect(() => {
     if (isPlaylistMode && audioRef.current && playing && currentTrack?.audioUrl) {
       if (audioRef.current.src !== currentTrack.audioUrl) {
@@ -286,7 +286,7 @@ export function GestorRadioPlayer({
       setLoading(true);
       const targetSrc =
         norm.url === "playlist:target"
-          ? (playlistTracks[0]?.audioUrl || TARGET_PLAYLIST_TRACKS[0].audioUrl)
+          ? (playlistTracks[0]?.audioUrl || DEFAULT_MUSIC_CATALOG[0].audioUrl)
           : norm.url;
       audio.src = targetSrc;
       await audio.play();
@@ -326,7 +326,6 @@ export function GestorRadioPlayer({
 
   // Disparar Vinheta no Ar AO VIVO para os Candidatos
   const broadcastSpotLive = (spot: RadioSpot) => {
-    // 1. Toca no player do gestor com ducking
     const audio = spotAudioRef.current;
     if (audio) {
       audio.src = spot.audioUrl;
@@ -335,7 +334,6 @@ export function GestorRadioPlayer({
       }).catch(() => {});
     }
 
-    // 2. Dispara sinal via Realtime para todos os candidatos
     const channel = realtimeChannelRef.current;
     if (channel) {
       channel.send({
@@ -357,7 +355,7 @@ export function GestorRadioPlayer({
   // Operações de Fila (Reordenar, Adicionar, Remover)
   const addTrackToQueue = (track: RadioTrack) => {
     setPlaylistTracks((prev) => {
-      const exists = prev.some((t) => t.id === track.id && t.audioUrl === track.audioUrl);
+      const exists = prev.some((t) => t.id === track.id || t.audioUrl === track.audioUrl);
       if (exists) return prev;
       return [...prev, track];
     });
@@ -365,7 +363,7 @@ export function GestorRadioPlayer({
 
   const removeTrackFromQueue = (index: number) => {
     setPlaylistTracks((prev) => {
-      if (prev.length <= 1) return prev; // Mantém pelo menos 1 música
+      if (prev.length <= 1) return prev;
       const next = prev.filter((_, i) => i !== index);
       if (trackIndex >= next.length) {
         setTrackIndex(0);
@@ -395,7 +393,6 @@ export function GestorRadioPlayer({
         setSavedPlaylist(true);
         setTimeout(() => setSavedPlaylist(false), 3000);
 
-        // Notifica candidatos via Realtime
         const channel = realtimeChannelRef.current;
         if (channel) {
           channel.send({
@@ -468,7 +465,6 @@ export function GestorRadioPlayer({
     }
   };
 
-  // Filtra músicas do catálogo para a busca
   const filteredCatalog = musicCatalog.filter(
     (t) =>
       t.title.toLowerCase().includes(musicSearchQuery.toLowerCase()) ||
@@ -511,14 +507,14 @@ export function GestorRadioPlayer({
         }}
       />
 
-      {/* Notificação de Vinheta no Ar */}
+      {/* Alerta de Transmissão ao Vivo */}
       {broadcastNotification && (
-        <div className="mb-2 rounded-md bg-amber-500/10 px-2 py-1 text-center text-[10px] font-bold text-amber-700 animate-pulse">
+        <div className="mb-2 rounded-md bg-amber-500/15 px-2 py-1 text-center text-[10px] font-bold text-amber-800 animate-pulse">
           {broadcastNotification}
         </div>
       )}
 
-      {/* Player: Controles + Título + Volume */}
+      {/* Linha Principal do Player: Play/Pause + Título + Volume + Config */}
       <div className="flex items-center gap-1.5">
         <button
           type="button"
@@ -610,235 +606,68 @@ export function GestorRadioPlayer({
           className="h-1 w-9 cursor-pointer accent-[#1c1917]"
         />
 
-        {/* Botão de Fila & Músicas (acessível quando em playlist) */}
+        {/* Botão de Configurações, Fila e Vinhetas */}
         <button
           type="button"
-          onClick={() => {
-            setQueueOpen((prev) => !prev);
-            if (!queueOpen) setConfigOpen(false);
-          }}
-          title="Fila de músicas da Rádio Tarhget"
+          onClick={() => setConfigOpen((prev) => !prev)}
+          title="Fila de músicas, estações e spots"
           className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
-            queueOpen
+            configOpen
               ? "bg-stone-900 text-white"
               : "text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
           }`}
         >
-          <ListMusic className="size-3.5" />
+          {configOpen ? (
+            <X className="size-3.5" />
+          ) : (
+            <Settings2 className="size-3.5" />
+          )}
         </button>
+      </div>
 
-        {/* Botão de configuração de estação / spots */}
-        {canManage && (
+      {/* BOTÕES DE ACESSO RÁPIDO VISÍVEIS (quando o painel não está aberto) */}
+      {!configOpen && (
+        <div className="mt-2 flex gap-1 border-t border-[#f4f4f5] pt-1.5">
           <button
             type="button"
             onClick={() => {
-              setConfigOpen((prev) => !prev);
-              if (!configOpen) setQueueOpen(false);
+              setActiveTab("fila");
+              setConfigOpen(true);
             }}
-            title="Estações, Fila e Vinhetas no Ar"
-            className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
-              configOpen
-                ? "bg-stone-900 text-white"
-                : "text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-            }`}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-[#fafaf9] py-1 text-[10px] font-semibold text-[#1c1917] transition hover:bg-stone-100"
           >
-            {configOpen ? (
-              <X className="size-3.5" />
-            ) : (
-              <Settings2 className="size-3.5" />
-            )}
+            <ListMusic className="size-3 text-amber-600" />
+            <span>Fila da Rádio ({playlistTracks.length})</span>
           </button>
-        )}
-      </div>
 
-      {/* PAINEL: Fila e Músicas da Rádio Tarhget */}
-      {queueOpen && (
-        <div className="mt-2.5 space-y-2 border-t border-[#e7e5e4] pt-2 text-[11px]">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-stone-900 flex items-center gap-1">
-              <Music className="size-3 text-amber-600" />
-              Fila da Rádio Tarhget ({playlistTracks.length})
-            </span>
-            <button
-              type="button"
-              onClick={saveAndSyncQueue}
-              disabled={savingPlaylist}
-              className="flex items-center gap-1 rounded bg-stone-900 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-black disabled:opacity-50"
-            >
-              {savingPlaylist ? (
-                <Loader2 className="size-2.5 animate-spin" />
-              ) : savedPlaylist ? (
-                <Check className="size-2.5 text-emerald-400" />
-              ) : null}
-              {savedPlaylist ? "Sincronizado!" : "Salvar Fila"}
-            </button>
-          </div>
-
-          {/* Lista da Fila Atual com Reordenação */}
-          <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
-            {playlistTracks.map((track, idx) => {
-              const isCurrent = isPlaylistMode && idx === trackIndex;
-              return (
-                <div
-                  key={`${track.id}-${idx}`}
-                  className={`flex items-center justify-between gap-1 rounded px-1.5 py-1 ${
-                    isCurrent
-                      ? "bg-amber-500/10 border border-amber-500/20 font-medium text-stone-900"
-                      : "bg-[#fafaf9] text-[#27272a] hover:bg-stone-100"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrackIndex(idx);
-                      if (!playing) togglePlay();
-                    }}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                  >
-                    <span className="text-[9px] font-mono text-[#a1a1aa] w-3 shrink-0">
-                      {idx + 1}
-                    </span>
-                    {isCurrent ? (
-                      <Disc className="size-3 text-amber-600 shrink-0 animate-spin" />
-                    ) : null}
-                    <span className="truncate text-[10px]">
-                      {track.title} · <span className="text-[#71717a]">{track.artist}</span>
-                    </span>
-                  </button>
-
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => moveTrackInQueue(idx, "up")}
-                      disabled={idx === 0}
-                      title="Mover para cima"
-                      className="p-0.5 text-[#71717a] hover:text-stone-900 disabled:opacity-20"
-                    >
-                      <ArrowUp className="size-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveTrackInQueue(idx, "down")}
-                      disabled={idx === playlistTracks.length - 1}
-                      title="Mover para baixo"
-                      className="p-0.5 text-[#71717a] hover:text-stone-900 disabled:opacity-20"
-                    >
-                      <ArrowDown className="size-2.5" />
-                    </button>
-                    {playlistTracks.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeTrackFromQueue(idx)}
-                        title="Remover da fila"
-                        className="p-0.5 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="size-2.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Busca no Catálogo Local de Músicas */}
-          <div className="pt-1.5 border-t border-[#f4f4f5]">
-            <p className="text-[10px] font-semibold text-stone-700 mb-1">
-              Buscar e Adicionar Músicas
-            </p>
-            <div className="relative mb-1.5">
-              <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[#a1a1aa]" />
-              <input
-                type="text"
-                value={musicSearchQuery}
-                onChange={(e) => setMusicSearchQuery(e.target.value)}
-                placeholder="Buscar (ex: RÜFÜS, Tinlicker, Lo-Fi)..."
-                className="h-6 w-full rounded border border-[#e4e4e7] pl-6 pr-2 text-[10px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#71717a] focus:outline-none"
-              />
-            </div>
-
-            <div className="max-h-24 overflow-y-auto space-y-1">
-              {filteredCatalog.map((item) => {
-                const inQueue = playlistTracks.some(
-                  (t) => t.id === item.id || t.audioUrl === item.audioUrl
-                );
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-1 rounded bg-[#fafaf9] px-1.5 py-0.5"
-                  >
-                    <span className="truncate text-[10px] text-stone-800">
-                      {item.title} <span className="text-stone-400">· {item.artist}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => addTrackToQueue(item)}
-                      disabled={inQueue}
-                      className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-semibold ${
-                        inQueue
-                          ? "text-stone-400 bg-stone-100 cursor-default"
-                          : "bg-stone-900 text-white hover:bg-black"
-                      }`}
-                    >
-                      {inQueue ? "Na fila" : <><Plus className="size-2.5" /> Fila</>}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Adicionar Link Externo / MP3 Próprio */}
-          <details className="text-[10px] text-stone-600">
-            <summary className="cursor-pointer font-medium hover:text-stone-900">
-              + Adicionar áudio por URL direta (MP3)
-            </summary>
-            <form onSubmit={addCustomTrack} className="mt-1 space-y-1">
-              <input
-                type="text"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Título da música"
-                className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
-              />
-              <input
-                type="text"
-                value={customArtist}
-                onChange={(e) => setCustomArtist(e.target.value)}
-                placeholder="Artista / Produtor"
-                className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
-              />
-              <input
-                type="url"
-                value={customUrl}
-                onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="https://.../musica.mp3"
-                className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
-              />
-              <button
-                type="submit"
-                className="w-full rounded bg-stone-900 py-1 text-[10px] font-bold text-white hover:bg-black"
-              >
-                Adicionar à Fila
-              </button>
-            </form>
-          </details>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("spots");
+              setConfigOpen(true);
+            }}
+            className="flex items-center gap-1 rounded-lg border border-[#e7e5e4] bg-[#fafaf9] px-2 py-1 text-[10px] font-semibold text-[#1c1917] transition hover:bg-stone-100"
+          >
+            <Sparkles className="size-3 text-violet-600" />
+            <span>Spots</span>
+          </button>
         </div>
       )}
 
-      {/* PAINEL: Estações e Vinhetas no Ar (Exclusivo Admin/Gestor) */}
-      {canManage && configOpen && (
+      {/* PAINEL COMPLETO COM ABAS */}
+      {configOpen && (
         <div className="mt-2.5 space-y-2.5 border-t border-[#e7e5e4] pt-2">
-          {/* Navegação por abas dentro das configurações */}
-          <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-0.5 text-[10px] font-semibold text-stone-600">
+          {/* Menu de Abas */}
+          <div className="grid grid-cols-3 gap-1 rounded-lg bg-stone-100 p-0.5 text-[10px] font-semibold text-stone-600">
             <button
               type="button"
-              onClick={() => setActiveTab("estacao")}
-              className={`rounded-md py-1 transition ${
-                activeTab === "estacao" ? "bg-white text-stone-900 shadow-xs" : ""
+              onClick={() => setActiveTab("fila")}
+              className={`flex items-center justify-center gap-1 rounded-md py-1 transition ${
+                activeTab === "fila" ? "bg-white text-stone-900 shadow-xs" : ""
               }`}
             >
-              Estação
+              <ListMusic className="size-3 text-amber-600" />
+              <span>Fila ({playlistTracks.length})</span>
             </button>
             <button
               type="button"
@@ -847,16 +676,290 @@ export function GestorRadioPlayer({
                 activeTab === "spots" ? "bg-white text-stone-900 shadow-xs" : ""
               }`}
             >
-              <Sparkles className="size-2.5 text-amber-600" />
-              Spots & Vinhetas
+              <Sparkles className="size-3 text-violet-600" />
+              <span>Spots no Ar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("estacao")}
+              className={`flex items-center justify-center gap-1 rounded-md py-1 transition ${
+                activeTab === "estacao" ? "bg-white text-stone-900 shadow-xs" : ""
+              }`}
+            >
+              <Radio className="size-3 text-stone-600" />
+              <span>Estação</span>
             </button>
           </div>
 
+          {/* ABA 1: FILA DE MÚSICAS & BUSCA (DESTAQUE) */}
+          {activeTab === "fila" && (
+            <div className="space-y-2 text-[11px]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-stone-900 flex items-center gap-1">
+                    <Music className="size-3 text-amber-600" />
+                    Fila da Rádio Tarhget
+                  </p>
+                  <p className="text-[9px] text-[#71717a]">
+                    Ordene as músicas e salve para todos os candidatos
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={saveAndSyncQueue}
+                  disabled={savingPlaylist}
+                  className="flex items-center gap-1 rounded-md bg-stone-900 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs hover:bg-black active:scale-95 disabled:opacity-50"
+                >
+                  {savingPlaylist ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : savedPlaylist ? (
+                    <Check className="size-3 text-emerald-400" />
+                  ) : null}
+                  {savedPlaylist ? "Salvo no Ar!" : "Salvar Fila"}
+                </button>
+              </div>
+
+              {/* Se a rádio ativa não for a Tarhget, botão para ativar com 1 clique */}
+              {!isPlaylistMode && (
+                <button
+                  type="button"
+                  onClick={() => selectStationAsAdmin(CURATED_STATIONS[0])}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[10px] font-bold text-amber-900 hover:bg-amber-500/20"
+                >
+                  <RadioTower className="size-3 text-amber-700" />
+                  <span>Sintonizar Rádio Tarhget para Tocar a Fila</span>
+                </button>
+              )}
+
+              {/* Lista das músicas da Fila Atual */}
+              <div className="max-h-40 overflow-y-auto space-y-1 rounded-lg border border-[#f4f4f5] p-1 bg-[#fafaf9]">
+                {playlistTracks.map((track, idx) => {
+                  const isCurrent = isPlaylistMode && idx === trackIndex;
+                  return (
+                    <div
+                      key={`${track.id}-${idx}`}
+                      className={`flex items-center justify-between gap-1 rounded px-2 py-1 ${
+                        isCurrent
+                          ? "bg-amber-500/15 border border-amber-500/25 font-bold text-stone-900"
+                          : "bg-white text-[#27272a] hover:bg-stone-50 border border-transparent"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isPlaylistMode) selectStationAsAdmin(CURATED_STATIONS[0]);
+                          setTrackIndex(idx);
+                          if (!playing) togglePlay();
+                        }}
+                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                      >
+                        <span className="text-[9px] font-mono text-[#a1a1aa] w-3 shrink-0">
+                          {idx + 1}
+                        </span>
+                        {isCurrent ? (
+                          <Disc className="size-3 text-amber-600 shrink-0 animate-spin" />
+                        ) : null}
+                        <span className="truncate text-[10px]">
+                          {track.title} · <span className="text-[#71717a] font-normal">{track.artist}</span>
+                        </span>
+                      </button>
+
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => moveTrackInQueue(idx, "up")}
+                          disabled={idx === 0}
+                          title="Mover para cima"
+                          className="p-1 rounded text-[#71717a] hover:bg-stone-200 hover:text-stone-900 disabled:opacity-20"
+                        >
+                          <ArrowUp className="size-2.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTrackInQueue(idx, "down")}
+                          disabled={idx === playlistTracks.length - 1}
+                          title="Mover para baixo"
+                          className="p-1 rounded text-[#71717a] hover:bg-stone-200 hover:text-stone-900 disabled:opacity-20"
+                        >
+                          <ArrowDown className="size-2.5" />
+                        </button>
+                        {playlistTracks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTrackFromQueue(idx)}
+                            title="Remover da fila"
+                            className="p-1 rounded text-red-500 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="size-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Busca e Adição de Músicas do Catálogo */}
+              <div className="rounded-lg border border-[#e7e5e4] bg-white p-2 space-y-1.5">
+                <p className="text-[10px] font-bold text-stone-900">
+                  Buscar no Catálogo de Músicas
+                </p>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[#a1a1aa]" />
+                  <input
+                    type="text"
+                    value={musicSearchQuery}
+                    onChange={(e) => setMusicSearchQuery(e.target.value)}
+                    placeholder="Buscar (ex: RÜFÜS, Tinlicker, Tiësto, Beats)..."
+                    className="h-6 w-full rounded border border-[#e4e4e7] pl-6 pr-2 text-[10px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#71717a] focus:outline-none"
+                  />
+                </div>
+
+                <div className="max-h-28 overflow-y-auto space-y-1">
+                  {filteredCatalog.map((item) => {
+                    const inQueue = playlistTracks.some(
+                      (t) => t.id === item.id || t.audioUrl === item.audioUrl
+                    );
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-1 rounded bg-[#fafaf9] px-2 py-1 text-[10px]"
+                      >
+                        <span className="truncate">
+                          <strong className="font-semibold text-stone-800">{item.title}</strong>{" "}
+                          <span className="text-[#71717a]">· {item.artist}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => addTrackToQueue(item)}
+                          disabled={inQueue}
+                          className={`flex items-center gap-0.5 rounded px-2 py-0.5 text-[9px] font-bold transition ${
+                            inQueue
+                              ? "text-stone-400 bg-stone-100 cursor-default"
+                              : "bg-stone-900 text-white hover:bg-black"
+                          }`}
+                        >
+                          {inQueue ? "Na fila" : <><Plus className="size-2.5" /> Fila</>}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Adicionar por URL direta */}
+              <details className="text-[10px] text-stone-600">
+                <summary className="cursor-pointer font-medium hover:text-stone-900">
+                  + Inserir música por link direto (MP3)
+                </summary>
+                <form onSubmit={addCustomTrack} className="mt-1 space-y-1">
+                  <input
+                    type="text"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    placeholder="Nome da música"
+                    className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
+                  />
+                  <input
+                    type="text"
+                    value={customArtist}
+                    onChange={(e) => setCustomArtist(e.target.value)}
+                    placeholder="Artista"
+                    className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
+                  />
+                  <input
+                    type="url"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    placeholder="https://.../audio.mp3"
+                    className="h-6 w-full rounded border border-[#e4e4e7] px-1.5 text-[10px]"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-stone-900 py-1 text-[10px] font-bold text-white hover:bg-black"
+                  >
+                    Adicionar à Fila
+                  </button>
+                </form>
+              </details>
+            </div>
+          )}
+
+          {/* ABA 2: SPOTS & VINHETAS NO AR */}
+          {activeTab === "spots" && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-stone-900 flex items-center gap-1">
+                  <Sparkles className="size-3 text-amber-600" />
+                  Vinhetas Tarhget Masterizadas
+                </span>
+                <span className="text-[9px] text-[#71717a]">
+                  Pronúncia: Tár-guet
+                </span>
+              </div>
+              <p className="text-[9px] text-stone-500">
+                Ao disparar no ar, o som da música baixa suavemente para os candidatos e a vinheta toca com efeitos de rádio FM.
+              </p>
+
+              <div className="space-y-1.5 pt-1">
+                {TARGET_RADIO_SPOTS.map((spot) => {
+                  const isPreviewing = previewingSpotId === spot.id;
+                  const isLive = liveBroadcastSpot?.id === spot.id;
+                  return (
+                    <div
+                      key={spot.id}
+                      className={`rounded-lg border p-1.5 transition ${
+                        isLive
+                          ? "border-amber-400 bg-amber-500/10"
+                          : "border-stone-200 bg-[#fafaf9]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[10px] font-bold text-stone-900">
+                            {spot.title}
+                          </p>
+                          <p className="truncate text-[9px] text-[#71717a]">
+                            {spot.subtitle}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleSpotPreview(spot)}
+                            className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition ${
+                              isPreviewing
+                                ? "bg-stone-800 text-white"
+                                : "bg-stone-200 text-stone-700 hover:bg-stone-300"
+                            }`}
+                          >
+                            {isPreviewing ? "Parar" : "Ouvir"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => broadcastSpotLive(spot)}
+                            className="flex items-center gap-1 rounded bg-amber-600 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs transition hover:bg-amber-700 active:scale-95"
+                          >
+                            <Radio className="size-2.5" />
+                            <span>No Ar</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ABA 3: SELEÇÃO DE ESTAÇÃO */}
           {activeTab === "estacao" && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-medium text-[#71717a]">
-                  Estação da equipe & candidatos
+                  Estação da equipe (Admin)
                 </p>
                 {savingStation ? (
                   <span className="text-[9px] font-semibold text-amber-700 animate-pulse">
@@ -892,7 +995,7 @@ export function GestorRadioPlayer({
                   className="flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-800 bg-stone-900 px-2 py-1 text-[10px] font-bold text-white shadow-xs transition hover:bg-black active:scale-98"
                 >
                   <Radio className="size-3 text-amber-400" />
-                  <span>Ativar Rádio Tarhget Oficial</span>
+                  <span>Sintonizar Rádio Tarhget</span>
                 </button>
               )}
 
@@ -937,76 +1040,6 @@ export function GestorRadioPlayer({
                   ))}
                 </ul>
               )}
-            </div>
-          )}
-
-          {activeTab === "spots" && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-stone-900 flex items-center gap-1">
-                  <Sparkles className="size-3 text-amber-600" />
-                  Vinhetas Tarhget Masterizadas
-                </span>
-                <span className="text-[9px] text-[#71717a]">
-                  Pronúncia Oficial: Tár-guet
-                </span>
-              </div>
-              <p className="text-[9px] text-stone-500">
-                Ao disparar no ar, o volume da música dos candidatos baixa suavemente e a vinheta toca com efeitos de rádio FM.
-              </p>
-
-              <div className="space-y-1.5 pt-1">
-                {TARGET_RADIO_SPOTS.map((spot) => {
-                  const isPreviewing = previewingSpotId === spot.id;
-                  const isLive = liveBroadcastSpot?.id === spot.id;
-                  return (
-                    <div
-                      key={spot.id}
-                      className={`rounded-lg border p-1.5 transition ${
-                        isLive
-                          ? "border-amber-400 bg-amber-500/10"
-                          : "border-stone-200 bg-[#fafaf9]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[10px] font-bold text-stone-900">
-                            {spot.title}
-                          </p>
-                          <p className="truncate text-[9px] text-[#71717a]">
-                            {spot.subtitle}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0 ml-1.5">
-                          {/* Testar no fone local */}
-                          <button
-                            type="button"
-                            onClick={() => toggleSpotPreview(spot)}
-                            className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition ${
-                              isPreviewing
-                                ? "bg-stone-800 text-white"
-                                : "bg-stone-200 text-stone-700 hover:bg-stone-300"
-                            }`}
-                          >
-                            {isPreviewing ? "Parar" : "Ouvir"}
-                          </button>
-
-                          {/* Disparar AO VIVO para os candidatos */}
-                          <button
-                            type="button"
-                            onClick={() => broadcastSpotLive(spot)}
-                            className="flex items-center gap-1 rounded bg-amber-600 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs transition hover:bg-amber-700 active:scale-95"
-                          >
-                            <Radio className="size-2.5" />
-                            <span>No Ar</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
         </div>
