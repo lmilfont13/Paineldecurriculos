@@ -10,6 +10,7 @@ import {
 } from "@/server/services/message-template.service";
 import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.service";
 import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
+import { CandidateSentimentWidget } from "@/components/public/candidate-sentiment-widget";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
@@ -73,6 +74,11 @@ export default async function TenantLayout({
         playlist={customPlaylist}
         spotIntervalMinutes={spotIntervalMinutes}
         spots={customSpots}
+      />
+      <CandidateSentimentWidget
+        companySlug={company.slug}
+        companyName={company.name}
+        candidateName={candidate?.name}
       />
     </div>
   );
