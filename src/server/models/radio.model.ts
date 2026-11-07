@@ -46,6 +46,24 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
     audioUrl: "/audio/music/Tinlicker & The Boxer Rebellion - Diamonds (Further Than I Ever Was) - (192 Kbps).mp3",
   },
   {
+    id: "tinlicker-because-you-move-me",
+    title: "Because You Move Me",
+    artist: "Tinlicker & Helsloot",
+    audioUrl: "/audio/music/Tinlicker & Helsloot - Because You Move Me - (256 Kbps).mp3",
+  },
+  {
+    id: "tinlicker-you-take-my-hand",
+    title: "You Take My Hand (feat. Jamie Irrepressible)",
+    artist: "Tinlicker",
+    audioUrl: "/audio/music/Tinlicker - You Take My Hand (Feat. Jamie Irrepressible) [Official Video] - (320 Kbps).mp3",
+  },
+  {
+    id: "silverr7-world-hold-on",
+    title: "World Hold On",
+    artist: "silverr7",
+    audioUrl: "/audio/music/silverr7 - World Hold On - (320 Kbps) (2).mp3",
+  },
+  {
     id: "track-1",
     title: "Days Like These",
     artist: "Tarhget Chill Beats",

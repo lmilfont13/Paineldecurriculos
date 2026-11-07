@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     "/*": ["./public/demo/**/*"],
     "/**/*": ["./public/demo/**/*"],
   },
+  // Exclui arquivos de áudio pesados de serem incluídos dentro do bundle das Serverless Functions.
+  // Eles são servidos diretamente pela CDN estática da Vercel.
+  outputFileTracingExcludes: {
+    "/*": ["./public/audio/**/*"],
+    "/**/*": ["./public/audio/**/*"],
+  },
   experimental: {
     serverActions: {
       // Currículo em PDF de até 5 MB via server action (regra 5)
