@@ -21,7 +21,7 @@ import {
   CompanyTargetRadioSpotsToggle,
 } from "@/components/admin/company-feature-toggles";
 
-const TABS = ["Dados", "Marca", "Página", "Gestor", "Status"] as const;
+const TABS = ["Dados", "Marca", "Página", "Recursos", "Gestor", "Status"] as const;
 
 /** A7 · Editar empresa em abas (frame 105:2 do Figma). */
 export function CompanyTabs({
@@ -240,6 +240,20 @@ export function CompanyTabs({
                   className="w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm focus:border-[#0a0a0a] focus:outline-none"
                 />
               </label>
+            </>
+          )}
+
+          {tab === "Recursos" && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#0a0a0a]">
+                  Recursos & Módulos da Plataforma
+                </h3>
+                <p className="mt-1 text-xs text-[#71717a]">
+                  Ative ou desative funcionalidades sob medida para esta empresa.
+                </p>
+              </div>
+
               <div className="pt-2">
                 <CompanyAiRadarToggle
                   companyId={company.id}
@@ -274,7 +288,7 @@ export function CompanyTabs({
                   initialEnabled={targetRadioSpotsEnabled}
                 />
               </div>
-            </>
+            </div>
           )}
 
           {state?.error && (
@@ -286,15 +300,17 @@ export function CompanyTabs({
             <p className="text-sm text-[#1f7a4d]">Alterações salvas.</p>
           )}
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={pending}
-              className="h-10 rounded-2xl bg-[#0a0a0a] px-6 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-            >
-              {pending ? "Salvando…" : "Salvar alterações"}
-            </button>
-          </div>
+          {tab !== "Recursos" && (
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={pending}
+                className="h-10 rounded-2xl bg-[#0a0a0a] px-6 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {pending ? "Salvando…" : "Salvar alterações"}
+              </button>
+            </div>
+          )}
         </form>
       ) : (
         <div className="mt-6 rounded-3xl border border-[#e4e4e7] bg-white p-6">

@@ -4,17 +4,13 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Maximize2,
-  Minimize2,
   Music,
   Pause,
   Play,
   Radio,
   SkipForward,
-  Sparkles,
   Volume2,
   VolumeX,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -368,18 +364,10 @@ export function CandidateRadioPlayer({
                 </span>
                 <div className="min-w-0">
                   <span className="block truncate text-xs font-bold text-[#0a0a0a]">
-                    {activeSpot
-                      ? `Target: ${activeSpot.title}`
-                      : isPlaylistMode
-                        ? currentTrack.title
-                        : currentStation.name}
+                    {isPlaylistMode ? currentTrack.title : currentStation.name}
                   </span>
                   <span className="block text-[10px] text-[#71717a]">
-                    {activeSpot
-                      ? "Spot no ar"
-                      : playing
-                        ? "Rádio no ar"
-                        : "Pausada"}
+                    {playing ? "Rádio no ar" : "Pausada"}
                   </span>
                 </div>
               </div>
@@ -491,19 +479,6 @@ export function CandidateRadioPlayer({
                     </button>
                   )}
 
-                  {/* Botão de disparo manual de Vinheta Target para teste/escuta rápida */}
-                  {spotsEnabled && playing && !activeSpot && (
-                    <button
-                      type="button"
-                      onClick={() => playSpot()}
-                      title="Ouvir vinheta institucional da Target"
-                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50/80 px-2 py-1 text-[10px] font-bold text-violet-800 transition hover:bg-violet-100 active:scale-95"
-                    >
-                      <Sparkles className="size-3 text-violet-600" />
-                      <span>Spot Target</span>
-                    </button>
-                  )}
-
                   {/* Mutar / Volume */}
                   <div className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 shadow-2xs">
                     <button
@@ -559,37 +534,6 @@ export function CandidateRadioPlayer({
                   </button>
                 </div>
               </div>
-
-              {/* Banner Interativo quando um Spot da Target está no ar com Ducking */}
-              {activeSpot && (
-                <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 px-3 py-1.5 shadow-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="relative flex size-2 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
-                      <span className="relative inline-flex size-2 rounded-full bg-violet-600" />
-                    </span>
-                    <span className="rounded bg-violet-200/70 px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wide text-violet-900 shrink-0">
-                      Target no Ar
-                    </span>
-                    <span className="truncate text-xs font-semibold text-violet-950">
-                      {activeSpot.title}
-                    </span>
-                    <span className="hidden sm:inline truncate text-[11px] text-violet-700">
-                      · {activeSpot.subtitle}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={skipCurrentSpot}
-                    title="Pular spot e voltar à música"
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-200/50 hover:text-violet-950 shrink-0 transition"
-                  >
-                    <X className="size-3" />
-                    <span>Pular spot</span>
-                  </button>
-                </div>
-              )}
 
               {error && (
                 <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1 text-[11px] text-rose-800">
