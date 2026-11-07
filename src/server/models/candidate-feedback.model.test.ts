@@ -58,3 +58,4 @@ describe("candidate-feedback.model", () => {
     expect(summary.recentComments[0]?.comment).toBe("Travou");
   });
 });
+

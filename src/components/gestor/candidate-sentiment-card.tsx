@@ -229,3 +229,4 @@ export function CandidateSentimentCard({
     </div>
   );
 }
+

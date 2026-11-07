@@ -60,3 +60,4 @@ export async function getCandidateSentimentSummary(
   const records = await findCandidateFeedbacksRaw(companyId);
   return calculateSentimentSummary(records);
 }
+
