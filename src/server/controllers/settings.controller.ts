@@ -201,7 +201,7 @@ export async function saveRadioStationAction(station: RadioStationConfig): Promi
     revalidatePath("/", "layout");
     return res;
   }
-  if (isManager(user) && (await isPrimaryCompanyAdmin(user.companyId, user.id))) {
+  if (isManager(user)) {
     const res = await setActiveRadioStation(user.companyId, station);
     revalidatePath("/", "layout");
     return res;

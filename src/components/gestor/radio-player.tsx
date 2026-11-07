@@ -47,11 +47,14 @@ export function GestorRadioPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const defaultStation = initialStation ?? CURATED_STATIONS[0];
-  const [stations, setStations] = useState<RadioStation[]>(() =>
-    initialStation && !CURATED_STATIONS.some((s) => s.url === initialStation.url)
-      ? [initialStation, ...CURATED_STATIONS]
-      : CURATED_STATIONS,
-  );
+  const [stations, setStations] = useState<RadioStation[]>(() => {
+    if (initialStation && !CURATED_STATIONS.some((s) => s.url === initialStation.url)) {
+      // Garante sempre a Rádio Target Oficial no topo da lista
+      const rest = CURATED_STATIONS.slice(1);
+      return [CURATED_STATIONS[0], initialStation, ...rest];
+    }
+    return CURATED_STATIONS;
+  });
   const [current, setCurrent] = useState<RadioStation>(defaultStation);
   const isPlaylistMode = current.url === "playlist:target";
   const [trackIndex, setTrackIndex] = useState(0);
@@ -73,6 +76,7 @@ export function GestorRadioPlayer({
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [searchResults, setSearchResults] = useState<RadioStation[]>([]);
 
   // Sincroniza quando o admin atualiza a estação no servidor
@@ -174,9 +178,18 @@ export function GestorRadioPlayer({
 
     // Salva no servidor para que todos os usuários escutem esta estação
     setSaving(true);
-    saveRadioStationAction(station)
-      .catch(() => {})
-      .finally(() => setSaving(false));
+    setSaved(false);
+    try {
+      const res = await saveRadioStationAction(station);
+      if (res?.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
 
     const audio = audioRef.current;
     if (!audio) return;
@@ -366,9 +379,20 @@ export function GestorRadioPlayer({
       {canManage && configOpen && (
         <div className="mt-2 space-y-2 border-t border-[#e7e5e4] pt-2">
           <div>
-            <p className="mb-1 text-[10px] font-medium text-[#71717a]">
-              Estação da equipe (Admin)
-            </p>
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-[10px] font-medium text-[#71717a]">
+                Estação da equipe (Admin)
+              </p>
+              {saving ? (
+                <span className="text-[9px] font-semibold text-amber-700 animate-pulse">
+                  Salvando…
+                </span>
+              ) : saved ? (
+                <span className="text-[9px] font-semibold text-emerald-700">
+                  ✓ Salvo para todos
+                </span>
+              ) : null}
+            </div>
             <select
               aria-label="Selecionar estação de rádio para todos"
               value={current.url}
@@ -384,6 +408,17 @@ export function GestorRadioPlayer({
                 </option>
               ))}
             </select>
+
+            {/* Atalho com 1 clique para ativar ou voltar para a Rádio Target Oficial */}
+            {current.url !== "playlist:target" && (
+              <button
+                type="button"
+                onClick={() => selectStationAsAdmin(CURATED_STATIONS[0])}
+                className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-800 bg-stone-900 px-2 py-1 text-[10px] font-bold text-white shadow-xs transition hover:bg-black active:scale-98"
+              >
+                <span>Usar Rádio Target (Playlist Oficial)</span>
+              </button>
+            )}
           </div>
 
           <form onSubmit={searchRadioBrowser} className="flex gap-1">

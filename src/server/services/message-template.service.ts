@@ -65,6 +65,11 @@ export async function saveMessageTemplate(
   await saveTemplate(companyId, cleanSubject, subjectKey(cleanSubject), text);
 }
 
+function isValidRadioUrl(url?: string): boolean {
+  if (!url) return false;
+  return url === "playlist:target" || url.startsWith("https://") || url.startsWith("/");
+}
+
 /** Lê a estação de rádio definida pelo admin (retorna null para usar a padrão). */
 export async function getActiveRadioStation(
   companyId?: string | null
@@ -73,7 +78,7 @@ export async function getActiveRadioStation(
     const raw = await findRadioStationRaw(companyId);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as RadioStationConfig;
-    if (parsed?.url?.startsWith("https://") && parsed?.name) {
+    if (isValidRadioUrl(parsed?.url) && parsed?.name) {
       return {
         id: String(parsed.id || parsed.url),
         name: String(parsed.name).slice(0, 80),
@@ -92,7 +97,7 @@ export async function setActiveRadioStation(
   companyId: string | null,
   station: RadioStationConfig
 ): Promise<{ ok: boolean }> {
-  if (!station?.url?.startsWith("https://") || !station?.name?.trim()) {
+  if (!isValidRadioUrl(station?.url) || !station?.name?.trim()) {
     return { ok: false };
   }
   const clean: RadioStationConfig = {
