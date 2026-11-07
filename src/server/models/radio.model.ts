@@ -38,6 +38,42 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
     audioUrl: "/audio/music/Tinlicker - Fractal - (320 Kbps).mp3",
   },
   {
+    id: "lynnic-itsarius-fernweh",
+    title: "Fernweh (Extended Mix)",
+    artist: "Lynnic, ItsArius & Malte Marten",
+    audioUrl: "/audio/music/Lynnic, ItsArius & Malte Marten - Fernweh (Extended Mix) - (320 Kbps).mp3",
+  },
+  {
+    id: "ry-x-only-fejka",
+    title: "Only (Fejká's Sunrise Edit)",
+    artist: "Ry X & Fejká",
+    audioUrl: "/audio/music/Ry X - Only (Fejká's Sunrise Edit) - (320 Kbps).mp3",
+  },
+  {
+    id: "melanie-c-i-turn-to-you",
+    title: "I Turn To You (Sadrican Progressive Remix)",
+    artist: "Melanie C · Sadrican",
+    audioUrl: "/audio/music/Melanie C - I Turn To You (Sadrican 2026 Progressive Remix) _ Club Anthem 🔮✨ - (320 Kbps).mp3",
+  },
+  {
+    id: "elderbrook-inner-light",
+    title: "Inner Light (with Bob Moses)",
+    artist: "Elderbrook & Bob Moses",
+    audioUrl: "/audio/music/Music 1 (2).mp3",
+  },
+  {
+    id: "mike-posner-ibiza-wizzal",
+    title: "I Took A Pill In Ibiza (Wizzal Deep Remix)",
+    artist: "Mike Posner · HilalDeep",
+    audioUrl: "/audio/music/Music 1 (3).mp3",
+  },
+  {
+    id: "atb-robert-miles-aris-lind",
+    title: "ATB, Robert Miles & More (Energetic Trance Set)",
+    artist: "Aris Lind",
+    audioUrl: "/audio/music/ATB, Robert Miles, & more... Aris Lind_ Energetic Trance Remix Set 2026 - (320 Kbps).mp3",
+  },
+  {
     id: "tiesto-in-my-memory",
     title: "In My Memory (Miss Cyanna Deep Remix)",
     artist: "Tiësto",
@@ -66,6 +102,24 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
     title: "World Hold On",
     artist: "silverr7",
     audioUrl: "/audio/music/silverr7 - World Hold On - (320 Kbps) (2).mp3",
+  },
+  {
+    id: "music-1-6",
+    title: "Deep Progressive Session I",
+    artist: "Rádio Tarhget Selection",
+    audioUrl: "/audio/music/Music 1 (6).mp3",
+  },
+  {
+    id: "music-1-7",
+    title: "Deep Progressive Session II",
+    artist: "Rádio Tarhget Selection",
+    audioUrl: "/audio/music/Music 1 (7).mp3",
+  },
+  {
+    id: "music-1-8",
+    title: "Deep Progressive Session III",
+    artist: "Rádio Tarhget Selection",
+    audioUrl: "/audio/music/Music 1 (8).mp3",
   },
   {
     id: "track-1",

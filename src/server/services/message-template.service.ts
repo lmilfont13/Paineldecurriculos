@@ -122,30 +122,93 @@ export async function setActiveRadioStation(
   return { ok: true };
 }
 
-/** Lê o catálogo de músicas disponíveis da Rádio Tarhget. */
-export async function getMusicCatalog(): Promise<RadioTrack[]> {
-  return DEFAULT_MUSIC_CATALOG;
+/** Extrai título e artista limpos a partir do nome do arquivo MP3. */
+export function parseTrackFromFilename(fileName: string): RadioTrack {
+  const audioUrl = `/audio/music/${fileName}`;
+  const existing = DEFAULT_MUSIC_CATALOG.find(
+    (t) => t.audioUrl.toLowerCase() === audioUrl.toLowerCase()
+  );
+  if (existing) return existing;
+
+  const base = fileName
+    .replace(/\.mp3$/i, "")
+    .replace(/\s*-\s*\(\d+\s*Kbps\)\s*(\(\d+\))?$/i, "")
+    .replace(/\s*\[Official[^\]]*\]/gi, "")
+    .replace(/\s*\(Official[^)]*\)/gi, "")
+    .trim();
+
+  const parts = base.split(/\s+-\s+/);
+  const artist = parts.length > 1 ? parts[0].trim() : "Rádio Tarhget";
+  const title = parts.length > 1 ? parts.slice(1).join(" - ").trim() : base;
+  const id = `file-${fileName
+    .toLowerCase()
+    .replace(/\.mp3$/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80)}`;
+
+  return {
+    id,
+    title: title.slice(0, 80) || fileName,
+    artist: artist.slice(0, 80) || "Rádio Tarhget",
+    audioUrl,
+  };
 }
 
-/** Lê a playlist da Rádio Tarhget configurada para a empresa ou padrão. */
+/** Lê o catálogo completo de músicas disponíveis (combina catálogo padrão + leitura dinâmica de public/audio/music). */
+export async function getMusicCatalog(): Promise<RadioTrack[]> {
+  try {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const musicDir = path.resolve(process.cwd(), "public/audio/music");
+    const entries = await fs.readdir(musicDir);
+    const mp3Files = entries.filter((f) => f.toLowerCase().endsWith(".mp3"));
+
+    const catalogMap = new Map<string, RadioTrack>();
+    for (const track of DEFAULT_MUSIC_CATALOG) {
+      catalogMap.set(track.audioUrl.toLowerCase(), track);
+    }
+    for (const fileName of mp3Files) {
+      const urlKey = `/audio/music/${fileName}`.toLowerCase();
+      if (!catalogMap.has(urlKey)) {
+        catalogMap.set(urlKey, parseTrackFromFilename(fileName));
+      }
+    }
+    return Array.from(catalogMap.values());
+  } catch {
+    return DEFAULT_MUSIC_CATALOG;
+  }
+}
+
+/** Lê a playlist da Rádio Tarhget configurada para a empresa ou catálogo completo. */
 export async function getActiveRadioPlaylist(
   companyId?: string | null
 ): Promise<RadioTrack[]> {
+  const fullCatalog = await getMusicCatalog();
   try {
     const raw = await findRadioPlaylistRaw(companyId);
-    if (!raw) return DEFAULT_MUSIC_CATALOG;
+    if (!raw) return fullCatalog;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((item) => ({
+      const savedTracks: RadioTrack[] = parsed.map((item) => ({
         id: String(item.id || item.audioUrl),
         title: String(item.title || "Música").slice(0, 80),
         artist: String(item.artist || "Rádio Tarhget").slice(0, 80),
         audioUrl: String(item.audioUrl),
       }));
+      // Se a fila salva tinha apenas as 10 músicas antigas padrão, anexa automaticamente as novas faixas da pasta
+      const savedUrls = new Set(savedTracks.map((t) => t.audioUrl.toLowerCase()));
+      if (savedTracks.length <= 10 && fullCatalog.length > savedTracks.length) {
+        const missingFromFolder = fullCatalog.filter(
+          (t) => !savedUrls.has(t.audioUrl.toLowerCase())
+        );
+        return [...savedTracks, ...missingFromFolder];
+      }
+      return savedTracks;
     }
-    return DEFAULT_MUSIC_CATALOG;
+    return fullCatalog;
   } catch {
-    return DEFAULT_MUSIC_CATALOG;
+    return fullCatalog;
   }
 }
 

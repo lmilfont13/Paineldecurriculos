@@ -217,6 +217,8 @@ export function GestorRadioPlayer({
   const [savedStation, setSavedStation] = useState(false);
   const [savingPlaylist, setSavingPlaylist] = useState(false);
   const [savedPlaylist, setSavedPlaylist] = useState(false);
+  const [uploadingMp3, setUploadingMp3] = useState(false);
+  const mp3FileInputRef = useRef<HTMLInputElement | null>(null);
   const [broadcastNotification, setBroadcastNotification] = useState<string | null>(null);
 
   // Intervalo e temporizador automático dos Spots / Vinhetas (0 = manual apenas, padrão)
@@ -1192,12 +1194,42 @@ export function GestorRadioPlayer({
     }
   };
 
+  // Sincroniza e salva a fila de reprodução automaticamente no servidor e abas
+  const persistPlaylistTracks = useCallback(
+    async (nextTracks: RadioTrack[]) => {
+      try {
+        await saveRadioPlaylistAction(nextTracks);
+        localChannelRef.current?.postMessage({
+          type: "playlist_sync",
+          tracks: nextTracks,
+          trackIndex,
+          timestamp: Date.now(),
+        });
+        for (const ch of realtimeChannelsRef.current) {
+          ch.send({
+            type: "broadcast",
+            event: "playlist_sync",
+            payload: {
+              tracks: nextTracks,
+              trackIndex,
+            },
+          });
+        }
+      } catch {
+        // Ignora erro
+      }
+    },
+    [trackIndex]
+  );
+
   // Operações de Fila (Reordenar, Adicionar, Remover)
   const addTrackToQueue = (track: RadioTrack) => {
     setPlaylistTracks((prev) => {
       const exists = prev.some((t) => t.id === track.id || t.audioUrl === track.audioUrl);
       if (exists) return prev;
-      return [...prev, track];
+      const next = [...prev, track];
+      void persistPlaylistTracks(next);
+      return next;
     });
   };
 
@@ -1208,6 +1240,7 @@ export function GestorRadioPlayer({
       if (trackIndex >= next.length) {
         setTrackIndex(0);
       }
+      void persistPlaylistTracks(next);
       return next;
     });
   };
@@ -1220,8 +1253,150 @@ export function GestorRadioPlayer({
       const item = copy[index];
       copy[index] = copy[targetIndex];
       copy[targetIndex] = item;
+      void persistPlaylistTracks(copy);
       return copy;
     });
+  };
+
+  // Carrega todas as faixas da pasta public/audio/music para a fila ativa
+  const loadAllFolderTracksToQueue = async () => {
+    setSavingPlaylist(true);
+    try {
+      const freshCatalog = await getMusicCatalogAction();
+      const catalogToUse =
+        freshCatalog && freshCatalog.length > 0 ? freshCatalog : musicCatalog;
+      setMusicCatalog(catalogToUse);
+
+      setPlaylistTracks((prev) => {
+        const existingUrls = new Set(prev.map((t) => t.audioUrl.toLowerCase()));
+        const missing = catalogToUse.filter(
+          (t) => !existingUrls.has(t.audioUrl.toLowerCase())
+        );
+        const merged = missing.length > 0 ? [...prev, ...missing] : catalogToUse;
+        void persistPlaylistTracks(merged);
+        return merged;
+      });
+
+      setBroadcastNotification(
+        `Todas as ${catalogToUse.length} músicas da pasta foram sincronizadas na fila!`
+      );
+      setTimeout(() => setBroadcastNotification(null), 4000);
+    } catch {
+      setError("Não foi possível sincronizar a pasta de músicas.");
+    } finally {
+      setSavingPlaylist(false);
+    }
+  };
+
+  // Upload direto de arquivo(s) .MP3 do computador
+  const handleMp3FileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingMp3(true);
+    setError(null);
+    const addedTracks: RadioTrack[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        let uploadedTrack: RadioTrack | null = null;
+
+        // 1. Tenta enviar diretamente para /api/radio/upload-track (salva em public/audio/music local ou Supabase Storage)
+        if (file.size <= 4.2 * 1024 * 1024 || window.location.hostname === "localhost") {
+          try {
+            const fd = new FormData();
+            fd.append("file", file);
+            if (customTitle.trim() && files.length === 1) {
+              fd.append("title", customTitle.trim());
+            }
+            if (customArtist.trim() && files.length === 1) {
+              fd.append("artist", customArtist.trim());
+            }
+
+            const res = await fetch("/api/radio/upload-track", {
+              method: "POST",
+              body: fd,
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.ok && data?.track) {
+                uploadedTrack = data.track as RadioTrack;
+              }
+            }
+          } catch {
+            // Se exceder limite de payload serverless, tenta URL assinada abaixo
+          }
+        }
+
+        // 2. Fallback para arquivos MP3 grandes em produção (upload direto via URL assinada para Supabase Storage)
+        if (!uploadedTrack) {
+          const params = new URLSearchParams({ filename: file.name });
+          if (customTitle.trim() && files.length === 1) {
+            params.set("title", customTitle.trim());
+          }
+          if (customArtist.trim() && files.length === 1) {
+            params.set("artist", customArtist.trim());
+          }
+          const signRes = await fetch(`/api/radio/upload-track?${params.toString()}`);
+          const signData = await signRes.json();
+
+          if (!signRes.ok || !signData?.ok || !signData?.signedUrl) {
+            throw new Error(signData?.error || `Falha ao enviar ${file.name}`);
+          }
+
+          const putRes = await fetch(signData.signedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "audio/mpeg" },
+            body: file,
+          });
+
+          if (!putRes.ok) {
+            throw new Error(`Erro no upload de ${file.name}`);
+          }
+
+          uploadedTrack = signData.track as RadioTrack;
+        }
+
+        if (uploadedTrack) {
+          addedTracks.push(uploadedTrack);
+        }
+      }
+
+      if (addedTracks.length > 0) {
+        setMusicCatalog((prev) => {
+          const urls = new Set(prev.map((t) => t.audioUrl.toLowerCase()));
+          const unique = addedTracks.filter((t) => !urls.has(t.audioUrl.toLowerCase()));
+          return [...unique, ...prev];
+        });
+
+        setPlaylistTracks((prev) => {
+          const urls = new Set(prev.map((t) => t.audioUrl.toLowerCase()));
+          const unique = addedTracks.filter((t) => !urls.has(t.audioUrl.toLowerCase()));
+          const next = [...prev, ...unique];
+          void persistPlaylistTracks(next);
+          return next;
+        });
+
+        if (files.length === 1) {
+          setCustomTitle("");
+          setCustomArtist("");
+        }
+
+        setBroadcastNotification(
+          addedTracks.length === 1
+            ? `MP3 "${addedTracks[0].title}" adicionado à pasta e à fila!`
+            : `${addedTracks.length} arquivos MP3 adicionados à pasta e à fila!`
+        );
+        setTimeout(() => setBroadcastNotification(null), 4000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Erro ao enviar arquivo MP3.");
+    } finally {
+      setUploadingMp3(false);
+      if (mp3FileInputRef.current) {
+        mp3FileInputRef.current.value = "";
+      }
+    }
   };
 
   const saveAndSyncQueue = async () => {
@@ -1664,12 +1839,23 @@ export function GestorRadioPlayer({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={loadAllFolderTracksToQueue}
+                          disabled={savingPlaylist}
+                          title="Carregar todas as músicas presentes na pasta public/audio/music"
+                          className="flex items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1.5 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5] disabled:opacity-50"
+                        >
+                          <RefreshCw className="size-3.5 text-[#71717a]" />
+                          <span>Sincronizar Pasta ({musicCatalog.length})</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={saveAndSyncQueue}
                           disabled={savingPlaylist}
-                          className="flex items-center gap-1.5 rounded-lg bg-stone-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-stone-800 disabled:opacity-50"
+                          className="flex items-center gap-1.5 rounded-lg bg-[#1c1917] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 disabled:opacity-50"
                         >
                           {savingPlaylist ? (
                             <Loader2 className="size-3.5 animate-spin" />
@@ -1777,9 +1963,48 @@ export function GestorRadioPlayer({
                     </div>
                   </div>
 
-                  {/* Coluna Direita: Catálogo Completo & Adicionar Personalizada */}
+                  {/* Coluna Direita: Upload Direto de MP3, Catálogo Completo & Link */}
                   <div className="lg:col-span-5 flex flex-col gap-4">
-                    {/* Formulário: Adicionar Faixa por Link */}
+                    {/* Card 1: Enviar Arquivo(s) MP3 Diretamente do Computador */}
+                    <div className="bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs">
+                      <h4 className="text-xs font-bold text-[#0a0a0a] mb-1 flex items-center gap-1.5">
+                        <Plus className="size-3.5 text-[#0a0a0a]" />
+                        <span>Adicionar Arquivo MP3 Diretamente</span>
+                      </h4>
+                      <p className="text-[11px] text-[#71717a] mb-3">
+                        Selecione um ou mais arquivos <code className="font-mono text-[10px]">.mp3</code> do seu computador para incluir na pasta e na fila da rádio.
+                      </p>
+
+                      <input
+                        ref={mp3FileInputRef}
+                        type="file"
+                        accept=".mp3,audio/mpeg,audio/mp3"
+                        multiple
+                        onChange={handleMp3FileSelect}
+                        className="hidden"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => mp3FileInputRef.current?.click()}
+                        disabled={uploadingMp3}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#1c1917] px-4 py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {uploadingMp3 ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            <span>Enviando arquivo(s) MP3...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Music className="size-4" />
+                            <span>Selecionar Arquivo(s) .MP3 do Computador</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Card 2: Formulário: Adicionar Faixa por Link */}
                     <div className="bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs">
                       <h4 className="text-xs font-bold text-[#0a0a0a] mb-2 flex items-center gap-1.5">
                         <Plus className="size-3.5 text-[#71717a]" />
