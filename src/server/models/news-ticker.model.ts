@@ -1,6 +1,6 @@
 /**
  * Modelo e curadoria de notícias do mercado de varejo e principais notícias do dia
- * para o letreiro digital (News Ticker) da Rádio Tarhget e Painel de Vagas.
+ * para o letreiro digital (News Ticker) da Rádio Tarhget e Portal do Candidato.
  */
 
 export type NewsTickerCategory = "VAREJO" | "ECONOMIA" | "MERCADO" | "EMPREGOS";
@@ -75,7 +75,34 @@ export const DEFAULT_RETAIL_NEWS: NewsTickerItem[] = [
 ];
 
 let cachedNews: { items: NewsTickerItem[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de cache para notícias sempre frescas
+
+function cleanXmlText(text: string): string {
+  return text
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+}
+
+function detectCategory(title: string): NewsTickerCategory {
+  const t = title.toLowerCase();
+  if (/emprego|vaga|contrata|caged|trabalh|clt|sal[aá]ri|desempreg|renda|carreira/i.test(t)) {
+    return "EMPREGOS";
+  }
+  if (/varejo|supermerc|atacarej|atacado|loja|com[eé]rcio|compra|consum|alimento|bebida|sacola|shopping|ponto de venda|pdv/i.test(t)) {
+    return "VAREJO";
+  }
+  if (/infla[cç]|pib|juros|selic|d[oó]lar|c[aâ]mbio|banco central|copom|impost|tribut|arrecada|fiscal|bolsa fam/i.test(t)) {
+    return "ECONOMIA";
+  }
+  return "MERCADO";
+}
 
 /**
  * Busca notícias recentes de feeds públicos de notícias de economia e varejo.
@@ -87,51 +114,95 @@ export async function getRetailAndMarketNews(): Promise<NewsTickerItem[]> {
     return cachedNews.items;
   }
 
+  const liveNews: NewsTickerItem[] = [];
+
+  // 1. Agência Brasil Economia
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
+    const timeout = setTimeout(() => controller.abort(), 2200);
 
-    // Tenta obter feed público oficial da Agência Brasil Economia
     const res = await fetch("https://agenciabrasil.ebc.com.br/rss/economia/feed.xml", {
       signal: controller.signal,
-      next: { revalidate: 600 },
+      next: { revalidate: 300 },
     }).catch(() => null);
 
     clearTimeout(timeout);
 
     if (res && res.ok) {
       const xml = await res.text();
-      const itemsMatch = xml.matchAll(/<item>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>[\s\S]*?<\/item>/gi);
-      const parsedItems: NewsTickerItem[] = [];
+      const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/item>/gi;
+      let m;
       let idx = 1;
-
-      for (const m of itemsMatch) {
-        const rawTitle = m[1]?.trim();
-        if (rawTitle && rawTitle.length > 15) {
-          const isRetail = /varejo|com[eé]rcio|supermerc|loja|alimento|venda|consumo/i.test(rawTitle);
-          parsedItems.push({
-            id: `news-feed-${idx++}`,
-            category: isRetail ? "VAREJO" : "ECONOMIA",
-            title: rawTitle,
+      while ((m = itemRegex.exec(xml)) !== null && liveNews.length < 5) {
+        const title = cleanXmlText(m[1] ?? "");
+        if (title.length > 20 && !liveNews.some((n) => n.title === title)) {
+          liveNews.push({
+            id: `agb-${idx++}`,
+            category: detectCategory(title),
+            title,
             source: "Agência Brasil",
-            timeAgo: "hoje",
+            timeAgo: "ao vivo",
           });
         }
-        if (parsedItems.length >= 5) break;
-      }
-
-      if (parsedItems.length > 0) {
-        // Mescla notícias ao vivo com destaques setoriais de varejo
-        const combined = [...parsedItems, ...DEFAULT_RETAIL_NEWS.slice(0, 4)];
-        cachedNews = { items: combined, timestamp: now };
-        return combined;
       }
     }
   } catch {
-    // Fallback gracioso silencioso para não quebrar a UI
+    // Falha silenciosa
+  }
+
+  // 2. G1 Economia
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2200);
+
+    const res = await fetch("https://g1.globo.com/rss/g1/economia/", {
+      signal: controller.signal,
+      next: { revalidate: 300 },
+    }).catch(() => null);
+
+    clearTimeout(timeout);
+
+    if (res && res.ok) {
+      const xml = await res.text();
+      const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/item>/gi;
+      let m;
+      let idx = 1;
+      while ((m = itemRegex.exec(xml)) !== null && liveNews.length < 8) {
+        const title = cleanXmlText(m[1] ?? "");
+        if (title.length > 20 && !liveNews.some((n) => n.title === title)) {
+          liveNews.push({
+            id: `g1-${idx++}`,
+            category: detectCategory(title),
+            title,
+            source: "G1 Economia",
+            timeAgo: "hoje",
+          });
+        }
+      }
+    }
+  } catch {
+    // Falha silenciosa
+  }
+
+  // Se conseguimos notícias ao vivo, alternamos com notícias focadas em varejo
+  if (liveNews.length > 0) {
+    const combined: NewsTickerItem[] = [];
+    let liveIdx = 0;
+    let defIdx = 0;
+
+    while (combined.length < 12 && (liveIdx < liveNews.length || defIdx < DEFAULT_RETAIL_NEWS.length)) {
+      if (liveIdx < liveNews.length) {
+        combined.push(liveNews[liveIdx++]);
+      }
+      if (defIdx < DEFAULT_RETAIL_NEWS.length) {
+        combined.push(DEFAULT_RETAIL_NEWS[defIdx++]);
+      }
+    }
+
+    cachedNews = { items: combined, timestamp: now };
+    return combined;
   }
 
   cachedNews = { items: DEFAULT_RETAIL_NEWS, timestamp: now };
   return DEFAULT_RETAIL_NEWS;
 }
-
