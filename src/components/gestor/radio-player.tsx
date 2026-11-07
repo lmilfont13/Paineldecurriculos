@@ -145,11 +145,12 @@ export function GestorRadioPlayer({
   const spotIndexRef = useRef(0);
 
   // Conecta ao Supabase Realtime para sincronização com candidatos
+  const resolvedSlug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
+
   useEffect(() => {
-    if (!companySlug) return;
     try {
       const supabase = createClient();
-      const channel = supabase.channel(`radio:${companySlug}`);
+      const channel = supabase.channel(`radio:${resolvedSlug}`);
       channel.subscribe((status) => {
         if (status === "SUBSCRIBED") {
           realtimeChannelRef.current = channel;
@@ -163,7 +164,40 @@ export function GestorRadioPlayer({
     } catch {
       // Ignora erro se não configurado
     }
-  }, [companySlug]);
+  }, [resolvedSlug]);
+
+  // Funções de transmissão ao vivo para a área do candidato
+  const broadcastTrackChange = useCallback((newIndex: number, track: RadioTrack) => {
+    const channel = realtimeChannelRef.current;
+    if (channel) {
+      channel.send({
+        type: "broadcast",
+        event: "track_change",
+        payload: {
+          trackIndex: newIndex,
+          track,
+          timestamp: Date.now(),
+        },
+      });
+    }
+  }, []);
+
+  const broadcastStationChange = useCallback((newStation: RadioStation) => {
+    const channel = realtimeChannelRef.current;
+    if (channel) {
+      channel.send({
+        type: "broadcast",
+        event: "station_change",
+        payload: {
+          station: newStation,
+          isPlaylistMode: newStation.url === "playlist:target",
+          trackIndex: 0,
+          track: playlistTracks[0],
+          timestamp: Date.now(),
+        },
+      });
+    }
+  }, [playlistTracks]);
 
   // Carrega a fila salva, catálogo e intervalo de spots da empresa
   useEffect(() => {
@@ -310,12 +344,18 @@ export function GestorRadioPlayer({
 
   const playNextTrack = () => {
     if (!isPlaylistMode || playlistTracks.length === 0) return;
-    setTrackIndex((i) => (i + 1) % playlistTracks.length);
+    const nextIdx = (trackIndex + 1) % playlistTracks.length;
+    setTrackIndex(nextIdx);
+    const track = playlistTracks[nextIdx];
+    if (track) broadcastTrackChange(nextIdx, track);
   };
 
   const playPrevTrack = () => {
     if (!isPlaylistMode || playlistTracks.length === 0) return;
-    setTrackIndex((i) => (i - 1 + playlistTracks.length) % playlistTracks.length);
+    const prevIdx = (trackIndex - 1 + playlistTracks.length) % playlistTracks.length;
+    setTrackIndex(prevIdx);
+    const track = playlistTracks[prevIdx];
+    if (track) broadcastTrackChange(prevIdx, track);
   };
 
   const selectStationAsAdmin = async (station: RadioStation) => {
@@ -326,6 +366,9 @@ export function GestorRadioPlayer({
     setStations((prev) =>
       prev.some((s) => s.url === norm.url) ? prev : [norm, ...prev]
     );
+
+    // Transmite a nova estação para os candidatos imediatamente
+    broadcastStationChange(norm);
 
     setSavingStation(true);
     setSavedStation(false);
@@ -813,6 +856,7 @@ export function GestorRadioPlayer({
                         onClick={() => {
                           if (!isPlaylistMode) selectStationAsAdmin(CURATED_STATIONS[0]);
                           setTrackIndex(idx);
+                          broadcastTrackChange(idx, playlistTracks[idx]);
                           if (!playing) togglePlay();
                         }}
                         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"

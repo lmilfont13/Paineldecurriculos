@@ -49,7 +49,9 @@ export function CandidateRadioPlayer({
   const playedSongsCountRef = useRef<number>(0);
 
   // Se o gestor não configurou nenhuma estação ainda, usa a padrão (Playlist Oficial Target)
-  const currentStation = station ?? CURATED_STATIONS[0];
+  const [currentStation, setCurrentStation] = useState<RadioStation>(
+    station ?? CURATED_STATIONS[0]
+  );
   const isPlaylistMode = currentStation.url === "playlist:target";
 
   const [playlistTracks, setPlaylistTracks] = useState<RadioTrack[]>(
@@ -67,6 +69,7 @@ export function CandidateRadioPlayer({
   const [muted, setMuted] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [activeSpot, setActiveSpot] = useState<RadioSpot | null>(null);
+  const [liveBroadcastNote, setLiveBroadcastNote] = useState<string | null>(null);
 
   // Define qual áudio carregar na rádio (faixa da playlist ou stream ao vivo)
   const activeAudioSrc = isPlaylistMode
@@ -175,9 +178,16 @@ export function CandidateRadioPlayer({
     }
   }, [playlist]);
 
+  // Sincroniza se a estação inicial do servidor mudar
+  useEffect(() => {
+    if (station) {
+      setCurrentStation(station);
+    }
+  }, [station]);
+
   // Escuta transmissões ao vivo da Rádio Tarhget via Supabase Realtime
   useEffect(() => {
-    if (!companySlug) return;
+    const slug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
     let supabase: ReturnType<typeof createClient> | null = null;
     try {
       supabase = createClient();
@@ -185,39 +195,92 @@ export function CandidateRadioPlayer({
       return;
     }
 
-    const channel = supabase.channel(`radio:${companySlug}`);
-    channel
-      .on("broadcast", { event: "play_spot" }, (e) => {
-        const payload = e.payload as { spotId?: string; audioUrl?: string; title?: string };
-        const found = TARGET_RADIO_SPOTS.find(
-          (s) => s.id === payload?.spotId || s.audioUrl === payload?.audioUrl
-        );
-        if (found) {
-          playSpot(found);
-        } else if (payload?.audioUrl) {
-          playSpot({
-            id: payload.spotId || "spot-live",
-            title: payload.title || "Tarhget no Ar",
-            subtitle: "Vinheta Oficial",
-            audioUrl: payload.audioUrl,
-          });
+    const onPlaySpot = (e: { payload?: { spotId?: string; audioUrl?: string; title?: string } }) => {
+      const payload = e.payload;
+      const found = TARGET_RADIO_SPOTS.find(
+        (s) => s.id === payload?.spotId || s.audioUrl === payload?.audioUrl
+      );
+      if (found) {
+        playSpot(found);
+      } else if (payload?.audioUrl) {
+        playSpot({
+          id: payload.spotId || "spot-live",
+          title: payload.title || "Tarhget no Ar",
+          subtitle: "Vinheta Oficial",
+          audioUrl: payload.audioUrl,
+        });
+      }
+    };
+
+    const onTrackChange = (e: { payload?: { trackIndex?: number; track?: RadioTrack } }) => {
+      const payload = e.payload;
+      if (typeof payload?.trackIndex === "number") {
+        setTrackIndex(payload.trackIndex);
+      }
+      if (payload?.track?.title) {
+        setLiveBroadcastNote(`🎵 No Ar: ${payload.track.title} • ${payload.track.artist || "Rádio Tarhget"}`);
+        setTimeout(() => setLiveBroadcastNote(null), 4000);
+      }
+      if (audioRef.current && payload?.track?.audioUrl) {
+        if (audioRef.current.src !== payload.track.audioUrl) {
+          audioRef.current.src = payload.track.audioUrl;
+          if (playing) {
+            audioRef.current.play().catch(() => {});
+          }
         }
-      })
-      .on("broadcast", { event: "playlist_sync" }, (e) => {
-        const payload = e.payload as { tracks?: RadioTrack[]; trackIndex?: number };
-        if (Array.isArray(payload?.tracks) && payload.tracks.length > 0) {
-          setPlaylistTracks(payload.tracks);
+      }
+    };
+
+    const onStationChange = (e: { payload?: { station?: RadioStation; track?: RadioTrack } }) => {
+      const payload = e.payload;
+      if (payload?.station) {
+        setCurrentStation(payload.station);
+        setLiveBroadcastNote(`📻 Estação sintonizada: ${payload.station.name}`);
+        setTimeout(() => setLiveBroadcastNote(null), 4000);
+        if (audioRef.current) {
+          const nextSrc =
+            payload.station.url === "playlist:target"
+              ? (payload.track?.audioUrl || playlistTracks[0]?.audioUrl)
+              : payload.station.url;
+          if (nextSrc && audioRef.current.src !== nextSrc) {
+            audioRef.current.src = nextSrc;
+            if (playing) {
+              audioRef.current.play().catch(() => {});
+            }
+          }
         }
-        if (typeof payload?.trackIndex === "number") {
-          setTrackIndex(payload.trackIndex);
-        }
-      })
-      .subscribe();
+      }
+    };
+
+    const onPlaylistSync = (e: { payload?: { tracks?: RadioTrack[]; trackIndex?: number } }) => {
+      const payload = e.payload;
+      if (Array.isArray(payload?.tracks) && payload.tracks.length > 0) {
+        setPlaylistTracks(payload.tracks);
+      }
+      if (typeof payload?.trackIndex === "number") {
+        setTrackIndex(payload.trackIndex);
+      }
+    };
+
+    const channels = [supabase.channel(`radio:${slug}`)];
+    if (slug !== "global") {
+      channels.push(supabase.channel("radio:global"));
+    }
+
+    for (const ch of channels) {
+      ch.on("broadcast", { event: "play_spot" }, onPlaySpot)
+        .on("broadcast", { event: "track_change" }, onTrackChange)
+        .on("broadcast", { event: "station_change" }, onStationChange)
+        .on("broadcast", { event: "playlist_sync" }, onPlaylistSync)
+        .subscribe();
+    }
 
     return () => {
-      void channel.unsubscribe();
+      for (const ch of channels) {
+        void ch.unsubscribe();
+      }
     };
-  }, [companySlug, playSpot]);
+  }, [companySlug, playSpot, playing, playlistTracks]);
 
   // Quando uma faixa da playlist termina
   const handleTrackEnded = () => {
@@ -414,6 +477,13 @@ export function CandidateRadioPlayer({
         className="fixed bottom-4 inset-x-3 sm:inset-x-6 z-40 max-w-xl mx-auto"
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all hover:border-[#0a0a0a]/20 sm:p-3.5">
+          {/* Notificação de Transmissão ao Vivo */}
+          {liveBroadcastNote && (
+            <div className="mb-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-1 text-center text-[10px] font-bold text-amber-900 animate-pulse">
+              {liveBroadcastNote}
+            </div>
+          )}
+
           {minimized ? (
             /* Versão compacta / minimizada */
             <div className="flex items-center justify-between gap-3">
