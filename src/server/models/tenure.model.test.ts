@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calculateMedian,
   classifyStability,
+  computeMonthsFromPeriodString,
   extractHeuristicTenure,
   formatDurationMonths,
   parseTenureAnalysis,
@@ -17,6 +19,34 @@ describe("formatDurationMonths", () => {
     expect(formatDurationMonths(14)).toBe("1 ano e 2 meses");
     expect(formatDurationMonths(24)).toBe("2 anos");
     expect(formatDurationMonths(25)).toBe("2 anos e 1 mês");
+  });
+});
+
+describe("calculateMedian", () => {
+  it("calcula mediana com quantidade ímpar de itens", () => {
+    expect(calculateMedian([6, 12, 24])).toBe(12);
+    expect(calculateMedian([36, 12, 18, 6, 24])).toBe(18);
+  });
+
+  it("calcula mediana com quantidade par de itens", () => {
+    expect(calculateMedian([12, 24])).toBe(18);
+    expect(calculateMedian([6, 12, 18, 30])).toBe(15);
+  });
+
+  it("retorna 0 para array vazio", () => {
+    expect(calculateMedian([])).toBe(0);
+  });
+});
+
+describe("computeMonthsFromPeriodString", () => {
+  it("converte texto direto de meses ou anos", () => {
+    expect(computeMonthsFromPeriodString("1 ano e 2 meses")).toBe(14);
+    expect(computeMonthsFromPeriodString("18 meses")).toBe(18);
+    expect(computeMonthsFromPeriodString("2 anos")).toBe(24);
+  });
+
+  it("calcula período entre anos", () => {
+    expect(computeMonthsFromPeriodString("2019 a 2021")).toBe(24);
   });
 });
 
@@ -47,19 +77,23 @@ describe("classifyStability", () => {
 });
 
 describe("parseTenureAnalysis", () => {
-  it("normaliza empresas e calcula tempo médio", () => {
+  it("normaliza empresas e calcula tempo médio e mediana", () => {
     const data = {
       tempoMedioMeses: 18,
       resumo: "Bom tempo de permanência",
       empresas: [
         { empresa: "Supermercado A", cargo: "Operador", periodo: "2020 a 2022", meses: 24 },
         { empresa: "Loja B", cargo: "Vendedor", periodo: "2022 a 2023", meses: 12 },
+        { empresa: "Comércio C", cargo: "Caixa", periodo: "2023 a 2024", meses: 6 },
       ],
     };
     const parsed = parseTenureAnalysis(data);
     expect(parsed).not.toBeNull();
-    expect(parsed?.totalExperiencias).toBe(2);
-    expect(parsed?.tempoMedioMeses).toBe(18);
+    expect(parsed?.totalExperiencias).toBe(3);
+    expect(parsed?.tempoMedioMeses).toBe(14); // (24+12+6)/3 = 14
+    expect(parsed?.tempoMedianoMeses).toBe(12); // mediana de [6, 12, 24] = 12
+    expect(parsed?.tempoMedianoFormatado).toBe("1 ano");
+    expect(parsed?.tempoMedioFormatado).toBe("1 ano e 2 meses");
     expect(parsed?.estabilidade).toBe("MEDIA");
     expect(parsed?.empresas[0].empresa).toBe("Supermercado A");
   });
@@ -96,22 +130,32 @@ describe("parseTenureAnalysis", () => {
     expect(parsed?.totalExperiencias).toBe(1);
     expect(parsed?.empresas[0].empresa).toBe("Empresa Real LTDA");
     expect(parsed?.tempoMedioMeses).toBe(24);
+    expect(parsed?.tempoMedianoMeses).toBe(24);
   });
 });
 
 describe("readTenure", () => {
-  it("retorna null quando aiTenure for nulo, sem inferir via regex em texto cru", () => {
+  it("retorna null quando aiTenure for nulo e não houver seção de experiência", () => {
     const rawText = "Maria Júlia de Maria Araújo Data de Nascimento: 09/11/2005";
     const res = readTenure(null, rawText);
     expect(res).toBeNull();
   });
-});
 
-describe("extractHeuristicTenure", () => {
-  it("está desativado para evitar falsos positivos", () => {
-    const text = "01/2020 a 06/2022";
-    const res = extractHeuristicTenure(text);
-    expect(res).toBeNull();
+  it("extrai do histórico profissional quando houver seção e datas", () => {
+    const textWithSection = `
+      Maria Júlia da Silva
+      Telefone: (85) 99999-9999
+      
+      Experiência Profissional
+      Supermercado Guanabara
+      01/2020 a 01/2022 - Operadora de Caixa
+      Atacadão
+      02/2022 a 02/2023 - Repositora
+    `;
+    const res = readTenure(null, textWithSection);
+    expect(res).not.toBeNull();
+    expect(res?.totalExperiencias).toBeGreaterThanOrEqual(1);
+    expect(res?.tempoMedioMeses).toBeGreaterThan(0);
+    expect(res?.tempoMedianoMeses).toBeGreaterThan(0);
   });
 });
-

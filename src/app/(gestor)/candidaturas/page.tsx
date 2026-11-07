@@ -33,32 +33,48 @@ export default async function CandidaturasPage({
   const { applications, jobs, companyName, ages } = await getCandidaturasPageData();
   const messageTemplates = await listMessageTemplatesAction();
 
-  const rows: CandidaturaRow[] = applications.map((app) => ({
-    id: app.id,
-    name: titleCasePt(app.name),
-    email: app.email,
-    createdAt: app.createdAt.toISOString(),
-    status: app.status,
-    aiState: app.aiState,
-    aiScore: app.aiScore,
-    resumeUrl: app.resumeUrl,
-    jobId: app.job.id,
-    jobTitle: app.job.title,
-    jobCode: app.job.code,
-    aiIndex: decisionIndex(app.aiScore, criteriaCoverage(readChecklist(app.aiChecklist))),
-    infoState: infoRequestState(app.infoRequestedAt, app.infoAnsweredAt),
-    aiMinScore: app.job.aiMinScore,
-    isDemo: app.isDemo,
-    preRegistered: app.preRegistered,
-    photoUrl: app.photoUrl,
-    aiArea: app.aiArea,
-    aiProfile: app.aiProfile,
-    aiLevel: app.aiLevel,
-    age: ages[app.id] ?? null,
-    tenureStability: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.estabilidade ?? null,
-    tenureAvg: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.tempoMedioFormatado ?? null,
-    tenureRisk: readTenure((app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist)?.classificacaoRisco ?? null,
-  }));
+  const rows: CandidaturaRow[] = applications.map((app) => {
+    const tenure = readTenure(
+      (app as { aiTenure?: unknown }).aiTenure ?? app.aiChecklist,
+      (app as { resumeText?: string | null }).resumeText
+    );
+
+    return {
+      id: app.id,
+      name: titleCasePt(app.name),
+      email: app.email,
+      createdAt: app.createdAt.toISOString(),
+      status: app.status,
+      aiState: app.aiState,
+      aiScore: app.aiScore,
+      resumeUrl: app.resumeUrl,
+      jobId: app.job.id,
+      jobTitle: app.job.title,
+      jobCode: app.job.code,
+      aiIndex: decisionIndex(app.aiScore, criteriaCoverage(readChecklist(app.aiChecklist))),
+      infoState: infoRequestState(app.infoRequestedAt, app.infoAnsweredAt),
+      aiMinScore: app.job.aiMinScore,
+      isDemo: app.isDemo,
+      preRegistered: app.preRegistered,
+      photoUrl: app.photoUrl,
+      aiArea: app.aiArea,
+      aiProfile: app.aiProfile,
+      aiLevel: app.aiLevel,
+      age: ages[app.id] ?? null,
+      tenureStability: tenure?.estabilidade ?? null,
+      tenureAvg: tenure?.tempoMedioFormatado ?? null,
+      tenureMedian: tenure?.tempoMedianoFormatado ?? null,
+      tenureCompanies: tenure?.empresas
+        ? tenure.empresas.map((e) => ({
+            empresa: e.empresa,
+            duracaoFormatada: e.duracaoFormatada,
+            periodo: e.periodo,
+            meses: e.meses,
+          }))
+        : null,
+      tenureRisk: tenure?.classificacaoRisco ?? null,
+    };
+  });
 
   const hasOpenJobs = jobs.some((j) => j.status === "OPEN");
 

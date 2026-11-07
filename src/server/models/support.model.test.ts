@@ -47,8 +47,8 @@ describe("support.model", () => {
     expect(resolveRoomFromCoords(20, 20)).toBe("atendimento");
     expect(resolveRoomFromCoords(50, 50)).toBe("recepcao");
     expect(resolveRoomFromCoords(75, 25)).toBe("cafe");
-    expect(resolveRoomFromCoords(20, 75)).toBe("jogos");
-    expect(resolveRoomFromCoords(75, 75)).toBe("diretoria");
+    expect(resolveRoomFromCoords(42, 75)).toBe("jogos");
+    expect(resolveRoomFromCoords(55, 75)).toBe("diretoria");
   });
 });
 

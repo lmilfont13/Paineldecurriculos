@@ -289,7 +289,6 @@ export function findApplicationsByCompany(
     },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     include: { job: { select: { id: true, title: true, code: true, aiMinScore: true } } },
-    omit: { resumeText: true },
   });
 }
 

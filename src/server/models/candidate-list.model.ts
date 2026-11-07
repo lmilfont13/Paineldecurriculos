@@ -31,9 +31,11 @@ export type CandidaturaRow = {
   aiLevel?: string | null;
   /** Idade, só para o gestor conferir (nunca entra na nota nem vai para a IA). */
   age?: number | null;
-  /** Estabilidade e tempo médio nas empresas (análise de durabilidade). */
+  /** Estabilidade, tempo médio e mediana nas empresas (análise de durabilidade e rotatividade). */
   tenureStability?: "ALTA" | "MEDIA" | "BAIXA" | "INSUFICIENTE" | null;
   tenureAvg?: string | null;
+  tenureMedian?: string | null;
+  tenureCompanies?: { empresa: string; duracaoFormatada: string; periodo: string; meses?: number }[] | null;
   tenureRisk?: "BAIXO" | "MEDIO" | "ALTO" | "NEUTRO" | null;
 };
 

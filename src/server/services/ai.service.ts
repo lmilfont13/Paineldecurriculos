@@ -28,6 +28,7 @@ import {
   parseScoreResponse,
 } from "@/server/models/ai.model";
 import {
+  extractHeuristicTenure,
   parseTenureAnalysis,
   type TenureAnalysis,
 } from "@/server/models/tenure.model";
@@ -390,6 +391,7 @@ Analise também a durabilidade e o tempo de permanência em cada empresa onde ho
   - periodo: texto do período de trabalho (ex.: "Jan/2021 a Mar/2023", "2019 - 2021", "2023 - Atual"). NUNCA use data de nascimento nem ano de formação escolar/faculdade como período de trabalho.
   - meses: duração estimada do emprego em meses inteiros (ex.: 26 para 2 anos e 2 meses). Se for nascimento ou formatura, NÃO inclua.
 - tempoMedioMeses: média de meses nas empresas trabalhadas
+- tempoMedianoMeses: mediana de meses nas empresas trabalhadas
 - resumo: 1 frase concisa resumindo a estabilidade profissional do candidato (se costuma ter boa permanência ou se apresenta histórico de rotatividade rápida com passagens curtas). Se não houver histórico de empregos com datas, devolva "empresas": [] e tempoMedioMeses: 0.
 
 Retorne JSON: {
@@ -397,6 +399,7 @@ Retorne JSON: {
   "profile": { "area": "...", "role": "...", "level": "..." },
   "tenure": {
     "tempoMedioMeses": 18,
+    "tempoMedianoMeses": 16,
     "resumo": "...",
     "empresas": [
       { "empresa": "...", "cargo": "...", "periodo": "...", "meses": 14 }
@@ -427,7 +430,7 @@ async function buildChecklist(
       json: true,
       companyId,
     });
-    const parsedTenure = parseTenureAnalysis(parseTenureFromJson(raw));
+    const parsedTenure = parseTenureAnalysis(parseTenureFromJson(raw)) ?? extractHeuristicTenure(material);
     return {
       checklist: criteria.length > 0 ? parseChecklist(raw, criteria) : null,
       segment: parseSegment(raw),
@@ -439,7 +442,7 @@ async function buildChecklist(
     return {
       checklist: null,
       segment: { area: null, role: null, level: null },
-      tenure: null,
+      tenure: extractHeuristicTenure(material),
     };
   }
 }

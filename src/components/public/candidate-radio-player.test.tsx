@@ -30,7 +30,7 @@ describe("Candidate Radio Config", () => {
     for (const spot of TARGET_RADIO_SPOTS) {
       expect(spot.id).toBeTruthy();
       expect(spot.title).toBeTruthy();
-      expect(spot.audioUrl).toMatch(/^\/audio\/spots\/.+\.mp3$/);
+      expect(spot.audioUrl).toMatch(/^\/audio\/spots\/.+\.mp3(?:\?.*)?$/);
     }
   });
 });

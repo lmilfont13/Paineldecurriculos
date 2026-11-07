@@ -749,19 +749,32 @@ export function CandidaturasTable({
                     {row.aiLevel && (
                       <span className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + levelClass}>{row.aiLevel}</span>
                     )}
-                    {row.tenureAvg && (
-                      <span
-                        className={`mt-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          row.tenureStability === "ALTA"
-                            ? "bg-[#e4f6ec] text-[#1f7a4d]"
-                            : row.tenureStability === "BAIXA"
-                              ? "bg-[#fbeae8] text-[#c23b3b]"
-                              : "bg-[#f4f4f5] text-[#52525b]"
-                        }`}
-                        title={`Tempo médio de permanência: ${row.tenureAvg} por empresa`}
-                      >
-                        {row.tenureStability === "BAIXA" ? "⚠ Rotatividade: " : "Média: "}{row.tenureAvg}/empresa
-                      </span>
+                    {(row.tenureAvg || row.tenureMedian) && (
+                      <div className="mt-2 flex flex-col items-center gap-1">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                            row.tenureStability === "ALTA"
+                              ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                              : row.tenureStability === "BAIXA"
+                                ? "bg-[#fbeae8] text-[#c23b3b]"
+                                : "bg-[#eaf1fb] text-[#2f5fa8]"
+                          }`}
+                          title={`Permanência nas empresas:\nMédia: ${row.tenureAvg || "-"}\nMediana: ${row.tenureMedian || "-"}${
+                            row.tenureCompanies?.length ? "\nEmpresas:\n" + row.tenureCompanies.map(c => "• " + c.empresa + ": " + c.duracaoFormatada).join("\n") : ""
+                          }`}
+                        >
+                          Média: {row.tenureAvg || "-"} · Mediana: {row.tenureMedian || row.tenureAvg || "-"}
+                        </span>
+                        {row.tenureCompanies && row.tenureCompanies.length > 0 && (
+                          <span
+                            className="text-[9px] text-[#71717a] truncate max-w-[200px]"
+                            title={row.tenureCompanies.map(c => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")}
+                          >
+                            {row.tenureCompanies.slice(0, 2).map(c => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")}
+                            {row.tenureCompanies.length > 2 ? ` +${row.tenureCompanies.length - 2}` : ""}
+                          </span>
+                        )}
+                      </div>
                     )}
                     {row.infoState && (
                       <span
@@ -896,18 +909,27 @@ export function CandidaturasTable({
                   <span className="block truncate text-[11px] text-[#a1a1aa]">
                     {jobLabel(row.jobTitle, row.jobCode)}
                     {row.age != null && <span title="Só para sua conferência: não entra na nota nem vai para a IA">{" · "}{row.age} anos</span>}
-                    {row.tenureAvg && (
+                    {(row.tenureAvg || row.tenureMedian) && (
                       <span
-                        className={`ml-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium ${
+                        className={`ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-medium ${
                           row.tenureStability === "ALTA"
                             ? "bg-[#e4f6ec] text-[#1f7a4d]"
                             : row.tenureStability === "BAIXA"
                               ? "bg-[#fbeae8] text-[#c23b3b]"
                               : "bg-[#f4f4f5] text-[#52525b]"
                         }`}
-                        title={`Média nas empresas: ${row.tenureAvg}`}
+                        title={`Permanência nas empresas:\nMédia: ${row.tenureAvg || "-"}\nMediana: ${row.tenureMedian || "-"}${
+                          row.tenureCompanies?.length ? "\nHistórico:\n" + row.tenureCompanies.map(c => "• " + c.empresa + ": " + c.duracaoFormatada + " (" + c.periodo + ")").join("\n") : ""
+                        }`}
                       >
-                        {row.tenureStability === "BAIXA" ? "⚠ " : ""}{row.tenureAvg}/empresa
+                        {row.tenureStability === "BAIXA" ? "⚠ " : ""}
+                        <span>Média {row.tenureAvg}</span>
+                        {row.tenureMedian && (
+                          <span className="text-[#71717a]">· Mediana {row.tenureMedian}</span>
+                        )}
+                        {row.tenureCompanies && row.tenureCompanies.length > 0 && (
+                          <span className="text-[#a1a1aa]">({row.tenureCompanies.length} emp.)</span>
+                        )}
                       </span>
                     )}
                     {waiting && (
