@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { playVoiceSpeech } from "@/lib/audio-speech";
 import {
   CURATED_STATIONS,
   TARGET_PLAYLIST_TRACKS,
@@ -400,6 +401,7 @@ export function CandidateRadioPlayer({
     (payload?: {
       targetCandidateName?: string;
       message?: string;
+      voice?: string;
       audioUrl?: string;
       broadcastMode?: "all" | "private";
       timestamp?: number;
@@ -415,37 +417,55 @@ export function CandidateRadioPlayer({
       const isTargetedToMe = Boolean(
         myName && targetName && (myName.includes(targetName) || targetName.includes(myName))
       );
-      const isBroadcastToAll = payload.broadcastMode !== "private" || !payload.targetCandidateName;
 
-      // Se o recado for direcionado para mim ou para todos na rádio
-      if (isTargetedToMe || isBroadcastToAll) {
-        setLiveAnnouncement(
-          isTargetedToMe
-            ? `🌟 Mensagem Especial no Ar para você: "${payload.message}"`
-            : `🎙️ Recado da Rádio para ${payload.targetCandidateName || "você"}: "${payload.message}"`
-        );
-        setTimeout(() => setLiveAnnouncement(null), 16000);
+      // Na rádio, o áudio toca no ar para todos os ouvintes conectados na estação,
+      // dando destaque VIP personalizado com banner especial para o candidato citado.
+      setLiveAnnouncement(
+        isTargetedToMe
+          ? `🌟 Mensagem Especial no Ar para você: "${payload.message}"`
+          : payload.targetCandidateName
+            ? `🎙️ Alô no Ar da Rádio Tarhget para ${payload.targetCandidateName}: "${payload.message}"`
+            : `🎙️ Recado Geral da Rádio: "${payload.message}"`
+      );
+      setTimeout(() => setLiveAnnouncement(null), 16000);
 
-        if (payload.audioUrl && spotAudioRef.current) {
-          setActiveSpot({
-            id: "live-shoutout",
-            title: isTargetedToMe
-              ? `🌟 Alô Especial para ${candidateName || myStoredName || payload.targetCandidateName}`
-              : `🎙️ Alô no Ar para ${payload.targetCandidateName || "Candidatos"}`,
-            subtitle: payload.message,
-            audioUrl: payload.audioUrl,
-          });
+      // Ducking suave da música para 12%
+      if (audioRef.current) {
+        audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+      }
 
-          // Ducking suave da música para 12%
-          if (audioRef.current) {
-            audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+      const speakFallback = () => {
+        playVoiceSpeech(
+          payload.message || "",
+          payload.voice || "pt-BR-AntonioNeural",
+          () => {
+            if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+          },
+          () => {
+            finishSpot();
           }
-          spotAudioRef.current.pause();
-          spotAudioRef.current.currentTime = 0;
-          spotAudioRef.current.src = payload.audioUrl;
-          spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.3);
-          spotAudioRef.current.play().catch(() => finishSpot());
-        }
+        );
+      };
+
+      if (payload.audioUrl && spotAudioRef.current) {
+        setActiveSpot({
+          id: "live-shoutout",
+          title: isTargetedToMe
+            ? `🌟 Alô Especial para ${candidateName || myStoredName || payload.targetCandidateName}`
+            : `🎙️ Alô no Ar para ${payload.targetCandidateName || "Candidatos"}`,
+          subtitle: payload.message,
+          audioUrl: payload.audioUrl,
+        });
+
+        spotAudioRef.current.pause();
+        spotAudioRef.current.currentTime = 0;
+        spotAudioRef.current.src = payload.audioUrl;
+        spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.3);
+        spotAudioRef.current.play().catch(() => {
+          speakFallback();
+        });
+      } else {
+        speakFallback();
       }
     },
     [candidateName, finishSpot, muted, shouldProcessAudioEvent, volume]

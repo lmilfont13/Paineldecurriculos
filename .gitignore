@@ -48,4 +48,10 @@ next-env.d.ts
 # Claude Code (config local do usuário)
 .claude/settings.local.json
 .env*.local
+
+# Áudios locais não catalogados
+public/audio/music/*Trance Remix Set*
+public/audio/music/*Fernweh*
+public/audio/music/*Sadrican*
+
 scratch/

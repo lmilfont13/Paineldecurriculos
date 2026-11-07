@@ -11,6 +11,42 @@ export interface GenerateSpotInput {
   sfxPreset?: string;
 }
 
+async function synthesizeWebTtsAudio(script: string): Promise<string | null> {
+  try {
+    const clean = script.replace(/\bTarh?get\b/gi, "Tár-guet");
+    const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
+    const chunks: Buffer[] = [];
+
+    for (const s of sentences) {
+      const trimmed = s.trim();
+      if (!trimmed) continue;
+      const subParts = trimmed.length > 180 ? trimmed.match(/.{1,180}(\s|$)/g) || [trimmed] : [trimmed];
+      for (const part of subParts) {
+        const p = part.trim();
+        if (!p) continue;
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(p)}&tl=pt-BR&client=tw-ob`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          },
+        });
+        if (res.ok) {
+          const buf = Buffer.from(await res.arrayBuffer());
+          chunks.push(buf);
+        }
+      }
+    }
+
+    if (chunks.length > 0) {
+      const full = Buffer.concat(chunks);
+      return `data:audio/mpeg;base64,${full.toString("base64")}`;
+    }
+  } catch (err) {
+    console.error("[radio-spot] Falha no Web TTS fallback:", err);
+  }
+  return null;
+}
+
 export async function generateRadioSpotService(
   input: GenerateSpotInput
 ): Promise<{ ok: boolean; spot?: RadioSpot; error?: string }> {
@@ -70,16 +106,32 @@ export async function generateRadioSpotService(
 
     return { ok: true, spot };
   } catch (err: any) {
-    console.error("[radio-spot] Erro ao gerar vinheta com Python:", err.message);
-    
-    // Fallback gracioso para ambiente serverless / cloud onde python local não está disponível
+    console.warn("[radio-spot] Gerador Python indisponível no ambiente. Usando sintetizador Web TTS:", err.message);
+
+    // Fallback de alta fidelidade: gera o áudio MP3 falado com o texto e o nome exato do candidato
+    const webAudio = await synthesizeWebTtsAudio(script);
     const fallbackId = `custom-spot-${Date.now()}`;
+    let finalAudioUrl = webAudio || "";
+
+    if (webAudio && webAudio.startsWith("data:audio/mpeg;base64,")) {
+      try {
+        const fs = await import("node:fs/promises");
+        const base64Data = webAudio.replace(/^data:audio\/mpeg;base64,/, "");
+        const fileName = `${fallbackId}.mp3`;
+        const filePath = path.resolve(process.cwd(), "public/audio/spots", fileName);
+        await fs.writeFile(filePath, Buffer.from(base64Data, "base64"));
+        finalAudioUrl = `/audio/spots/${fileName}`;
+      } catch {
+        // Mantém a data URI se o disco for somente-leitura (ex: Vercel)
+      }
+    }
+
     const fallbackSpot: RadioSpot = {
       id: fallbackId,
       title,
-      subtitle: `Locução IA Michelin (${voice.includes("Antonio") ? "Voz Antônio" : "Voz Thalita"})`,
-      audioUrl: "/audio/spots/target-spot-raio-1.mp3",
-      durationSeconds: Math.max(5, Math.min(25, Math.round(script.split(" ").length * 0.4))),
+      subtitle: `Locução ao Vivo (${voice.includes("Antonio") ? "Voz Masculina FM" : "Voz Feminina Executiva"})`,
+      audioUrl: finalAudioUrl,
+      durationSeconds: Math.max(4, Math.round(script.split(" ").length * 0.45)),
       enabled: true,
       isCustom: true,
     };

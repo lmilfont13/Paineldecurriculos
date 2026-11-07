@@ -38,6 +38,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { playVoiceSpeech, stopVoiceSpeech } from "@/lib/audio-speech";
 import {
   generateRadioSpotAction,
   getMusicCatalogAction,
@@ -132,6 +133,8 @@ export function GestorRadioPlayer({
   const [liveBroadcastSpot, setLiveBroadcastSpot] = useState<RadioSpot | null>(null);
   const [savingSpots, setSavingSpots] = useState(false);
   const [savedSpots, setSavedSpots] = useState(false);
+  const [previewingShoutout, setPreviewingShoutout] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Modal de Criação de Vinheta com IA Michelin
   const [showNewSpotModal, setShowNewSpotModal] = useState(false);
@@ -844,9 +847,98 @@ export function GestorRadioPlayer({
     }
   };
 
+  // Ouvir Prévia do Alô no Fone antes de colocar no ar (Exigência do usuário)
+  const togglePreviewShoutout = async () => {
+    if (!shoutoutMessage.trim()) return;
+
+    if (previewingShoutout) {
+      stopVoiceSpeech();
+      if (spotAudioRef.current) {
+        spotAudioRef.current.pause();
+        spotAudioRef.current.currentTime = 0;
+      }
+      setPreviewingShoutout(false);
+      setPreviewLoading(false);
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+      return;
+    }
+
+    setPreviewLoading(true);
+    setError(null);
+
+    const finishPreview = () => {
+      setPreviewingShoutout(false);
+      setPreviewLoading(false);
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+    };
+
+    // Ducking imediato na música da rádio para ouvir a locução com clareza
+    if (audioRef.current) {
+      audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+    }
+
+    try {
+      const explicitTarget = customCandidateInput.trim();
+      const targetName = explicitTarget || (selectedCandidate === "all" ? "" : selectedCandidate);
+
+      // Tenta gerar áudio masterizado no servidor
+      const res = await generateRadioSpotAction({
+        title: `Prévia Alô para ${targetName || "Candidato"}`,
+        script: shoutoutMessage,
+        voice: shoutoutVoice,
+        sfxPreset: "acolhimento-suave",
+      });
+
+      const audioUrl = res.ok && res.spot?.audioUrl ? res.spot.audioUrl : undefined;
+
+      if (audioUrl && spotAudioRef.current) {
+        setPreviewLoading(false);
+        setPreviewingShoutout(true);
+        spotAudioRef.current.pause();
+        spotAudioRef.current.currentTime = 0;
+        spotAudioRef.current.src = audioUrl;
+        spotAudioRef.current.volume = muted ? 0 : volume;
+        await spotAudioRef.current.play();
+        return;
+      }
+    } catch {
+      // Ignora erro do servidor: faz fallback nativo no navegador
+    }
+
+    setPreviewLoading(false);
+    setPreviewingShoutout(true);
+
+    const started = playVoiceSpeech(
+      shoutoutMessage,
+      shoutoutVoice,
+      () => {
+        if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+      },
+      () => {
+        finishPreview();
+      }
+    );
+
+    if (!started) {
+      finishPreview();
+      setError("Navegador não suporta sintetizador para prévia.");
+    }
+  };
+
   // Transmitir Alô no Ar Personalizado para Candidato Online (Nível Michelin)
   const sendPersonalizedShoutout = async () => {
     if (!shoutoutMessage.trim()) return;
+
+    // Se estiver tocando prévia, interrompe antes de transmitir
+    if (previewingShoutout) {
+      stopVoiceSpeech();
+      if (spotAudioRef.current) {
+        spotAudioRef.current.pause();
+      }
+      setPreviewingShoutout(false);
+      setPreviewLoading(false);
+    }
+
     setSendingShoutout(true);
     try {
       const explicitTarget = customCandidateInput.trim();
@@ -864,11 +956,12 @@ export function GestorRadioPlayer({
 
       const audioUrl = res.ok && res.spot?.audioUrl ? res.spot.audioUrl : undefined;
 
-      // 2. Transmite instantaneamente via BroadcastChannel com timestamp para deduplicação
+      // 2. Transmite instantaneamente via BroadcastChannel com timestamp e voz
       localChannelRef.current?.postMessage({
         type: "live_shoutout",
         targetCandidateName: targetName,
         message: shoutoutMessage,
+        voice: shoutoutVoice,
         audioUrl,
         broadcastMode: isAll ? "all" : "private",
         timestamp: shoutoutTimestamp,
@@ -882,6 +975,7 @@ export function GestorRadioPlayer({
           payload: {
             targetCandidateName: targetName,
             message: shoutoutMessage,
+            voice: shoutoutVoice,
             audioUrl,
             broadcastMode: isAll ? "all" : "private",
             timestamp: shoutoutTimestamp,
@@ -890,28 +984,47 @@ export function GestorRadioPlayer({
       }
 
       // 4. Toca no retorno do estúdio do DJ com DUCKING suave da música de fundo (sem sobreposição!)
+      if (audioRef.current) {
+        audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+      }
+
+      setLiveBroadcastSpot({
+        id: `shoutout-${shoutoutTimestamp}`,
+        title: `🎙️ Alô no Ar para ${targetName || "Candidatos"}`,
+        subtitle: shoutoutMessage,
+        audioUrl: audioUrl || "",
+      });
+
+      const restoreMusicVolume = () => {
+        setLiveBroadcastSpot(null);
+        if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+      };
+
       if (audioUrl && spotAudioRef.current) {
         spotAudioRef.current.pause();
         spotAudioRef.current.currentTime = 0;
         spotAudioRef.current.src = audioUrl;
         spotAudioRef.current.volume = muted ? 0 : volume;
 
-        setLiveBroadcastSpot({
-          id: `shoutout-${shoutoutTimestamp}`,
-          title: `🎙️ Alô no Ar para ${targetName || "Candidatos"}`,
-          subtitle: shoutoutMessage,
-          audioUrl,
-        });
-
-        // Ducking imediato na música da rádio para 12%
-        if (audioRef.current) {
-          audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
-        }
-
         spotAudioRef.current.play().catch(() => {
-          setLiveBroadcastSpot(null);
-          if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+          playVoiceSpeech(
+            shoutoutMessage,
+            shoutoutVoice,
+            () => {
+              if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+            },
+            restoreMusicVolume
+          );
         });
+      } else {
+        playVoiceSpeech(
+          shoutoutMessage,
+          shoutoutVoice,
+          () => {
+            if (audioRef.current) audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+          },
+          restoreMusicVolume
+        );
       }
 
       setSentShoutout(true);
@@ -1082,11 +1195,17 @@ export function GestorRadioPlayer({
         preload="none"
         onEnded={() => {
           setPreviewingSpotId(null);
+          setPreviewingShoutout(false);
+          setPreviewLoading(false);
           setLiveBroadcastSpot(null);
+          if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
         }}
         onError={() => {
           setPreviewingSpotId(null);
+          setPreviewingShoutout(false);
+          setPreviewLoading(false);
           setLiveBroadcastSpot(null);
+          if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
         }}
       />
       <audio ref={sfxAudioRef} preload="none" />
@@ -1248,12 +1367,12 @@ export function GestorRadioPlayer({
           role="dialog"
           aria-modal="true"
           aria-label="Estúdio DJ Rádio Tarhget"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-150"
           onClick={(e) => {
             if (e.target === e.currentTarget) setConfigOpen(false);
           }}
         >
-          <div className="flex flex-col w-full max-w-5xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="flex flex-col w-full max-w-5xl max-h-[92vh] bg-[#fafaf9] rounded-2xl shadow-2xl border border-stone-300 overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Header do Estúdio DJ */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-stone-900 text-white">
               <div className="flex items-center gap-3">
@@ -1406,8 +1525,8 @@ export function GestorRadioPlayer({
               </button>
             </div>
 
-            {/* Conteúdo com Espaço Amplo e Scroll Interno */}
-            <div className="flex-1 overflow-y-auto bg-stone-50/50 p-6">
+            {/* Conteúdo com Espaço Amplo e Scroll Interno (100% Sólido) */}
+            <div className="flex-1 overflow-y-auto bg-[#fafaf9] p-6">
               {/* ABA 1: FILA DE MÚSICAS & CATÁLOGO */}
               {activeTab === "fila" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1462,7 +1581,7 @@ export function GestorRadioPlayer({
                             key={`${track.id}-${idx}`}
                             className={`flex items-center justify-between p-3.5 transition ${
                               isSelectedTrack
-                                ? "bg-amber-500/10 font-medium"
+                                ? "bg-[#fef3c7] font-medium"
                                 : "hover:bg-stone-50"
                             }`}
                           >
@@ -1595,7 +1714,7 @@ export function GestorRadioPlayer({
                           placeholder="Buscar por nome ou artista..."
                           value={musicSearchQuery}
                           onChange={(e) => setMusicSearchQuery(e.target.value)}
-                          className="w-full rounded-lg border border-stone-200 bg-stone-50/50 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-stone-900"
+                          className="w-full rounded-lg border border-stone-200 bg-stone-100 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-stone-900"
                         />
                       </div>
 
@@ -1633,7 +1752,7 @@ export function GestorRadioPlayer({
               {activeTab === "spots" && (
                 <div className="space-y-5">
                   {/* Card de Frequência, Ações Gerais e Gerador */}
-                  <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4 shadow-xs">
+                  <div className="rounded-xl border border-violet-200 bg-[#f5f3ff] p-4 shadow-xs">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2">
@@ -1689,7 +1808,7 @@ export function GestorRadioPlayer({
                       </div>
                     </div>
 
-                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-white/90 border border-violet-200/80 px-3 py-2 text-xs">
+                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-white border border-violet-200 px-3 py-2 text-xs">
                       <div className="flex items-center gap-2 text-stone-700">
                         <Sparkles className="size-3.5 text-violet-600" />
                         {spotIntervalMinutes > 0 ? (
@@ -1743,10 +1862,10 @@ export function GestorRadioPlayer({
                           key={spot.id}
                           className={`flex flex-col justify-between rounded-xl border p-4 transition shadow-xs ${
                             isLive
-                              ? "border-amber-400 bg-amber-500/10 ring-2 ring-amber-400/30"
+                              ? "border-amber-400 bg-[#fef3c7] ring-2 ring-amber-400"
                               : isEnabled
                                 ? "border-stone-200 bg-white hover:border-stone-300"
-                                : "border-stone-200 bg-stone-50 opacity-60"
+                                : "border-stone-200 bg-stone-100 opacity-60"
                           }`}
                         >
                           <div>
@@ -1823,8 +1942,8 @@ export function GestorRadioPlayer({
               {/* ABA 3: ALÔ NO AR & CANDIDATOS ONLINE (NÍVEL MICHELIN) */}
               {activeTab === "alo" && (
                 <div className="space-y-6">
-                  {/* Banner de Estrategista de Rádio Tarhget */}
-                  <div className="rounded-xl border border-amber-300 bg-amber-500/10 p-5 shadow-xs">
+                  {/* Banner de Estrategista de Rádio Tarhget (100% Sólido) */}
+                  <div className="rounded-xl border border-amber-300 bg-[#fffbeb] p-5 shadow-xs">
                     <div className="flex items-start gap-3">
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white font-bold">
                         <Mic className="size-5" />
@@ -1855,7 +1974,7 @@ export function GestorRadioPlayer({
                       </div>
 
                       {/* Campo Direto para Buscar ou Digitar o Nome (ex: Vanessa) */}
-                      <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 shadow-2xs">
+                      <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-[#fffdf5] px-3 py-2 shadow-2xs">
                         <Search className="size-4 text-amber-700 shrink-0" />
                         <input
                           type="text"
@@ -1899,7 +2018,7 @@ export function GestorRadioPlayer({
                           }}
                           className={`flex items-center justify-between p-3 cursor-pointer transition ${
                             selectedCandidate === "all" && !customCandidateInput.trim()
-                              ? "bg-amber-500/15 border-l-4 border-amber-600 font-medium"
+                              ? "bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
                               : "hover:bg-stone-50"
                           }`}
                         >
@@ -1925,7 +2044,7 @@ export function GestorRadioPlayer({
                         {customCandidateInput.trim() && (
                           <div
                             onClick={() => setSelectedCandidate(customCandidateInput.trim())}
-                            className="flex items-center justify-between p-3 cursor-pointer bg-amber-500/15 border-l-4 border-amber-600 font-medium"
+                            className="flex items-center justify-between p-3 cursor-pointer bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-bold">
@@ -1971,7 +2090,7 @@ export function GestorRadioPlayer({
                                 }}
                                 className={`flex items-center justify-between p-3 cursor-pointer transition ${
                                   isSelected
-                                    ? "bg-amber-500/15 border-l-4 border-amber-600 font-medium"
+                                    ? "bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
                                     : "hover:bg-stone-50"
                                 }`}
                               >
@@ -2031,7 +2150,7 @@ export function GestorRadioPlayer({
                                 `Atenção ${target}! A equipe de atração de talentos viu sua chegada. Seja muito bem-vindo ao nosso portal e sinta-se em casa. Acreditamos no seu potencial!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
                           >
                             <span className="font-bold block text-stone-900 mb-0.5">🌟 Boas-Vindas & Acolhimento</span>
                             <span className="text-stone-500 line-clamp-1">&quot;Atenção {customCandidateInput.trim() || "candidato"}! Seja bem-vindo...&quot;</span>
@@ -2045,7 +2164,7 @@ export function GestorRadioPlayer({
                                 `Passando no ar da rádio Tarhget para desejar um dia espetacular e muito produtivo para ${target}! Curta a seleção musical e foque no seu futuro!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
                           >
                             <span className="font-bold block text-stone-900 mb-0.5">☀️ Energia & Ótimo Dia</span>
                             <span className="text-stone-500 line-clamp-1">&quot;Passando no ar para desejar um dia espetacular para {customCandidateInput.trim() || "você"}...&quot;</span>
@@ -2059,7 +2178,7 @@ export function GestorRadioPlayer({
                                 `Dica de ouro da nossa equipe para ${target}: conte suas experiências reais e mantenha seu currículo atualizado. Estamos sempre em busca de talentos como você!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
                           >
                             <span className="font-bold block text-stone-900 mb-0.5">💡 Dica dos Recrutadores</span>
                             <span className="text-stone-500 line-clamp-1">&quot;Dica de ouro da nossa equipe para {customCandidateInput.trim() || "você"}...&quot;</span>
@@ -2073,7 +2192,7 @@ export function GestorRadioPlayer({
                                 `Aviso especial para ${target}: parabéns por dar esse passo na sua carreira! Nosso portal de vagas é atualizado diariamente, volte sempre!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
                           >
                             <span className="font-bold block text-stone-900 mb-0.5">🚀 Incentivo & Retorno</span>
                             <span className="text-stone-500 line-clamp-1">&quot;Parabéns pelo passo na carreira, volte sempre...&quot;</span>
@@ -2081,7 +2200,7 @@ export function GestorRadioPlayer({
                         </div>
                       </div>
 
-                      {/* Textarea do Alô */}
+                      {/* Textarea do Alô (100% Sólido) */}
                       <div>
                         <label className="text-[11px] font-semibold text-stone-600 block mb-1">
                           Mensagem que o Locutor irá Falar no Ar:
@@ -2091,51 +2210,93 @@ export function GestorRadioPlayer({
                           value={shoutoutMessage}
                           onChange={(e) => setShoutoutMessage(e.target.value)}
                           placeholder="Digite o recado ao vivo..."
-                          className="w-full rounded-xl border border-stone-300 p-3 text-xs text-stone-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 leading-relaxed"
+                          className="w-full rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 leading-relaxed"
                         />
                       </div>
 
-                      {/* Opções de Voz de Estúdio */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-stone-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-stone-700 whitespace-nowrap">Voz do Locutor:</span>
-                          <select
-                            value={shoutoutVoice}
-                            onChange={(e) => setShoutoutVoice(e.target.value)}
-                            className="h-8 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-900 outline-none focus:border-amber-600"
-                          >
-                            <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Voz Grave & Marcante)</option>
-                            <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Calorosa & Acolhedora)</option>
-                            <option value="pt-BR-FranciscaNeural">🎙️ Francisca Comercial (Voz Dinâmica & Fluida)</option>
-                            <option value="pt-BR-FabioNeural">🎙️ Fábio Jovem (Voz Amigável & Descontraída)</option>
-                          </select>
+                      {/* Opções de Voz de Estúdio e Ações (Ouvir Prévia + Transmitir no Ar) */}
+                      <div className="flex flex-col gap-3 pt-3 border-t border-stone-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-stone-700 whitespace-nowrap">Voz do Locutor:</span>
+                            <select
+                              value={shoutoutVoice}
+                              onChange={(e) => setShoutoutVoice(e.target.value)}
+                              className="h-8 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-900 outline-none focus:border-amber-600"
+                            >
+                              <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Voz Grave & Marcante)</option>
+                              <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Calorosa & Acolhedora)</option>
+                              <option value="pt-BR-FranciscaNeural">🎙️ Francisca Comercial (Voz Dinâmica & Fluida)</option>
+                              <option value="pt-BR-FabioNeural">🎙️ Fábio Jovem (Voz Amigável & Descontraída)</option>
+                            </select>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* BOTÃO 1: OUVIR PRÉVIA NO FONE ANTES DE TRANSMITIR (Exigência do usuário) */}
+                            <button
+                              type="button"
+                              onClick={togglePreviewShoutout}
+                              disabled={!shoutoutMessage.trim() || sendingShoutout}
+                              className={`flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition active:scale-95 disabled:opacity-50 shrink-0 ${
+                                previewingShoutout
+                                  ? "bg-stone-900 text-white shadow-md ring-2 ring-amber-400"
+                                  : "bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-300"
+                              }`}
+                              title="Ouvir como a locução soará antes de colocar no ar"
+                            >
+                              {previewLoading ? (
+                                <Loader2 className="size-4 animate-spin text-amber-600" />
+                              ) : previewingShoutout ? (
+                                <Pause className="size-4 text-amber-400 fill-current" />
+                              ) : (
+                                <Headphones className="size-4 text-stone-700" />
+                              )}
+                              <span>
+                                {previewingShoutout
+                                  ? "⏹️ Parar Prévia"
+                                  : previewLoading
+                                    ? "Preparando..."
+                                    : "🎧 Ouvir Prévia no Fone"}
+                              </span>
+                            </button>
+
+                            {/* BOTÃO 2: TRANSMITIR AO VIVO NO AR */}
+                            <button
+                              type="button"
+                              onClick={sendPersonalizedShoutout}
+                              disabled={sendingShoutout || !shoutoutMessage.trim()}
+                              className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-amber-700 active:scale-95 disabled:opacity-50 shrink-0"
+                            >
+                              {sendingShoutout ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : sentShoutout ? (
+                                <Check className="size-4 text-emerald-300" />
+                              ) : (
+                                <Send className="size-4" />
+                              )}
+                              <span>
+                                {sentShoutout
+                                  ? "Alô Transmitido com Sucesso!"
+                                  : sendingShoutout
+                                    ? "Transmitindo..."
+                                    : customCandidateInput.trim()
+                                      ? `🔴 Transmitir para ${customCandidateInput.trim()}`
+                                      : selectedCandidate !== "all"
+                                        ? `🔴 Transmitir para ${selectedCandidate}`
+                                        : "🔴 Transmitir Alô Geral"}
+                              </span>
+                            </button>
+                          </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={sendPersonalizedShoutout}
-                          disabled={sendingShoutout || !shoutoutMessage.trim()}
-                          className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-amber-700 active:scale-95 disabled:opacity-50 shrink-0"
-                        >
-                          {sendingShoutout ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : sentShoutout ? (
-                            <Check className="size-4 text-emerald-300" />
-                          ) : (
-                            <Send className="size-4" />
-                          )}
-                          <span>
-                            {sentShoutout
-                              ? "Alô Transmitido com Sucesso!"
-                              : sendingShoutout
-                                ? "Masterizando & Transmitindo..."
-                                : customCandidateInput.trim()
-                                  ? `🔴 Transmitir Alô no Ar para ${customCandidateInput.trim()}`
-                                  : selectedCandidate !== "all"
-                                    ? `🔴 Transmitir Alô no Ar para ${selectedCandidate}`
-                                    : "🔴 Transmitir Alô Geral no Ar"}
-                          </span>
-                        </button>
+                        {previewingShoutout && (
+                          <div className="flex items-center gap-2 rounded-lg bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs text-amber-950 font-semibold animate-pulse">
+                            <Headphones className="size-4 text-amber-700 shrink-0" />
+                            <span>
+                              🎧 Reproduzindo prévia da mensagem no fone com atenuação da música. Ajuste o texto ou locutor como desejar antes de transmitir ao vivo!
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2169,7 +2330,7 @@ export function GestorRadioPlayer({
                         <div
                           key={st.id}
                           className={`flex items-center justify-between p-3.5 transition ${
-                            isCurrent ? "bg-amber-500/10" : "hover:bg-stone-50"
+                            isCurrent ? "bg-[#fef3c7]" : "hover:bg-stone-50"
                           }`}
                         >
                           <div className="flex items-center gap-3">
