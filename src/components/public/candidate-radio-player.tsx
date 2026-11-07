@@ -33,7 +33,7 @@ export function CandidateRadioPlayer({
   companySlug,
   spotsEnabled = true,
   playlist,
-  spotIntervalMinutes = 10,
+  spotIntervalMinutes = 0,
 }: {
   station?: RadioStation | null;
   companyName?: string;
@@ -70,6 +70,17 @@ export function CandidateRadioPlayer({
   const [minimized, setMinimized] = useState(false);
   const [activeSpot, setActiveSpot] = useState<RadioSpot | null>(null);
   const [liveBroadcastNote, setLiveBroadcastNote] = useState<string | null>(null);
+
+  // Refs de estado para callbacks assíncronos e Realtime estável
+  const playingRef = useRef(playing);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  const playlistTracksRef = useRef(playlistTracks);
+  useEffect(() => {
+    playlistTracksRef.current = playlistTracks;
+  }, [playlistTracks]);
 
   // Define qual áudio carregar na rádio (faixa da playlist ou stream ao vivo)
   const activeAudioSrc = isPlaylistMode
@@ -185,126 +196,197 @@ export function CandidateRadioPlayer({
     }
   }, [station]);
 
-  // Escuta transmissões ao vivo da Rádio Tarhget via Supabase Realtime
-  useEffect(() => {
-    const slug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
-    let supabase: ReturnType<typeof createClient> | null = null;
-    try {
-      supabase = createClient();
-    } catch {
-      return;
-    }
-
-    const onPlaySpot = (e: { payload?: { spotId?: string; audioUrl?: string; title?: string } }) => {
-      const payload = e.payload;
+  // Callbacks de sincronização em tempo real (estáveis para Realtime e BroadcastChannel)
+  const handleSpotReceived = useCallback(
+    (payload?: { spotId?: string; audioUrl?: string; title?: string; subtitle?: string }) => {
+      if (!payload) return;
       const found = TARGET_RADIO_SPOTS.find(
-        (s) => s.id === payload?.spotId || s.audioUrl === payload?.audioUrl
+        (s) => s.id === payload.spotId || s.audioUrl === payload.audioUrl
       );
       if (found) {
         playSpot(found);
-      } else if (payload?.audioUrl) {
+      } else if (payload.audioUrl) {
         playSpot({
           id: payload.spotId || "spot-live",
-          title: payload.title || "Tarhget no Ar",
-          subtitle: "Vinheta Oficial",
+          title: payload.title || "Rádio Tarhget no Ar",
+          subtitle: payload.subtitle || "Vinheta Oficial",
           audioUrl: payload.audioUrl,
         });
       }
-    };
+    },
+    [playSpot]
+  );
 
-    const onTrackChange = (e: { payload?: { trackIndex?: number; track?: RadioTrack } }) => {
-      const payload = e.payload;
-      if (typeof payload?.trackIndex === "number") {
+  const handleTrackChangeReceived = useCallback(
+    (payload?: { trackIndex?: number; track?: RadioTrack }) => {
+      if (!payload) return;
+
+      // Sincroniza modo Rádio Tarhget imediatamente
+      setCurrentStation((prev) => (prev.url === "playlist:target" ? prev : CURATED_STATIONS[0]));
+
+      if (typeof payload.trackIndex === "number") {
         setTrackIndex(payload.trackIndex);
       }
-      if (payload?.track?.title) {
+      if (payload.track?.title) {
         setLiveBroadcastNote(`🎵 No Ar: ${payload.track.title} • ${payload.track.artist || "Rádio Tarhget"}`);
         setTimeout(() => setLiveBroadcastNote(null), 4000);
       }
-      if (audioRef.current && payload?.track?.audioUrl) {
-        if (audioRef.current.src !== payload.track.audioUrl) {
-          audioRef.current.src = payload.track.audioUrl;
-          if (playing) {
-            audioRef.current.play().catch(() => {});
+
+      const audio = audioRef.current;
+      if (audio && payload.track?.audioUrl) {
+        const currentSrc = audio.currentSrc || audio.src;
+        const isSame =
+          currentSrc.endsWith(payload.track.audioUrl) || currentSrc === payload.track.audioUrl;
+        const isAudioPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
+        const shouldPlay = playingRef.current || isAudioPlaying;
+
+        if (!isSame) {
+          audio.src = payload.track.audioUrl;
+          if (shouldPlay) {
+            audio.play().then(() => {
+              setPlaying(true);
+            }).catch(() => {});
           }
+        } else if (shouldPlay && audio.paused) {
+          audio.play().then(() => {
+            setPlaying(true);
+          }).catch(() => {});
         }
       }
-    };
+    },
+    []
+  );
 
-    const onStationChange = (e: { payload?: { station?: RadioStation; track?: RadioTrack } }) => {
-      const payload = e.payload;
-      if (payload?.station) {
-        setCurrentStation(payload.station);
-        setLiveBroadcastNote(`📻 Estação sintonizada: ${payload.station.name}`);
-        setTimeout(() => setLiveBroadcastNote(null), 4000);
-        if (audioRef.current) {
-          const nextSrc =
-            payload.station.url === "playlist:target"
-              ? (payload.track?.audioUrl || playlistTracks[0]?.audioUrl)
-              : payload.station.url;
-          if (nextSrc && audioRef.current.src !== nextSrc) {
-            audioRef.current.src = nextSrc;
-            if (playing) {
-              audioRef.current.play().catch(() => {});
+  const handleStationChangeReceived = useCallback(
+    (payload?: { station?: RadioStation; track?: RadioTrack }) => {
+      if (!payload?.station) return;
+      setCurrentStation(payload.station);
+      setLiveBroadcastNote(`📻 Estação sintonizada: ${payload.station.name}`);
+      setTimeout(() => setLiveBroadcastNote(null), 4000);
+
+      const audio = audioRef.current;
+      if (audio) {
+        const nextSrc =
+          payload.station.url === "playlist:target"
+            ? (payload.track?.audioUrl || playlistTracksRef.current[0]?.audioUrl || TARGET_PLAYLIST_TRACKS[0].audioUrl)
+            : payload.station.url;
+        if (nextSrc) {
+          const currentSrc = audio.currentSrc || audio.src;
+          const isSame = currentSrc.endsWith(nextSrc) || currentSrc === nextSrc;
+          const isAudioPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
+          const shouldPlay = playingRef.current || isAudioPlaying;
+
+          if (!isSame) {
+            audio.src = nextSrc;
+            if (shouldPlay) {
+              audio.play().then(() => {
+                setPlaying(true);
+              }).catch(() => {});
             }
+          } else if (shouldPlay && audio.paused) {
+            audio.play().then(() => {
+              setPlaying(true);
+            }).catch(() => {});
           }
         }
       }
-    };
+    },
+    []
+  );
 
-    const onPlaylistSync = (e: { payload?: { tracks?: RadioTrack[]; trackIndex?: number } }) => {
-      const payload = e.payload;
+  const handlePlaylistSyncReceived = useCallback(
+    (payload?: { tracks?: RadioTrack[]; trackIndex?: number }) => {
       if (Array.isArray(payload?.tracks) && payload.tracks.length > 0) {
         setPlaylistTracks(payload.tracks);
       }
       if (typeof payload?.trackIndex === "number") {
         setTrackIndex(payload.trackIndex);
       }
-    };
+    },
+    []
+  );
 
-    const channels = [supabase.channel(`radio:${slug}`)];
-    if (slug !== "global") {
-      channels.push(supabase.channel("radio:global"));
+  // Escuta transmissões ao vivo da Rádio Tarhget via BroadcastChannel (local) e Supabase Realtime (remoto)
+  useEffect(() => {
+    // 1. Canal local BroadcastChannel: sincronização instantânea sem atraso entre abas abertas
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      bc = new BroadcastChannel("triagem_radio_sync");
+      bc.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        if (data.type === "play_spot") {
+          handleSpotReceived(data);
+        } else if (data.type === "track_change") {
+          handleTrackChangeReceived(data);
+        } else if (data.type === "station_change") {
+          handleStationChangeReceived(data);
+        } else if (data.type === "playlist_sync") {
+          handlePlaylistSyncReceived(data);
+        }
+      };
     }
 
-    for (const ch of channels) {
-      ch.on("broadcast", { event: "play_spot" }, onPlaySpot)
-        .on("broadcast", { event: "track_change" }, onTrackChange)
-        .on("broadcast", { event: "station_change" }, onStationChange)
-        .on("broadcast", { event: "playlist_sync" }, onPlaylistSync)
-        .subscribe();
+    // 2. Supabase Realtime: sincronização em tempo real entre dispositivos e redes
+    const slug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
+    let supabase: ReturnType<typeof createClient> | null = null;
+    try {
+      supabase = createClient();
+    } catch {
+      supabase = null;
+    }
+
+    const channels: any[] = [];
+    if (supabase) {
+      const mainCh = supabase.channel(`radio:${slug}`, { config: { broadcast: { ack: false } } });
+      channels.push(mainCh);
+      if (slug !== "global") {
+        const globalCh = supabase.channel("radio:global", { config: { broadcast: { ack: false } } });
+        channels.push(globalCh);
+      }
+
+      for (const ch of channels) {
+        ch.on("broadcast", { event: "play_spot" }, (e: any) => handleSpotReceived(e.payload))
+          .on("broadcast", { event: "track_change" }, (e: any) => handleTrackChangeReceived(e.payload))
+          .on("broadcast", { event: "station_change" }, (e: any) => handleStationChangeReceived(e.payload))
+          .on("broadcast", { event: "playlist_sync" }, (e: any) => handlePlaylistSyncReceived(e.payload))
+          .subscribe();
+      }
     }
 
     return () => {
+      bc?.close();
       for (const ch of channels) {
         void ch.unsubscribe();
       }
     };
-  }, [companySlug, playSpot, playing, playlistTracks]);
+  }, [
+    companySlug,
+    handleSpotReceived,
+    handleTrackChangeReceived,
+    handleStationChangeReceived,
+    handlePlaylistSyncReceived,
+  ]);
 
-  // Quando uma faixa da playlist termina
+  // Quando uma faixa da playlist termina, avança normalmente para a próxima
   const handleTrackEnded = () => {
     if (!isPlaylistMode) return;
-
     playedSongsCountRef.current += 1;
-
-    // Se o intervalo for automático (> 0) e a cada 3 músicas finalizadas, injeta um spot da Target
-    if (spotsEnabled && spotIntervalMinutes > 0 && playedSongsCountRef.current % 3 === 0) {
-      playSpot();
-    }
-
     nextTrack();
   };
 
   // Se o trackIndex mudar enquanto está tocando, toca a nova faixa
   useEffect(() => {
     if (isPlaylistMode && audioRef.current && playing) {
-      audioRef.current.src = currentTrack.audioUrl;
-      audioRef.current.play().catch(() => {});
+      const currentSrc = audioRef.current.currentSrc || audioRef.current.src;
+      if (!currentSrc.endsWith(currentTrack.audioUrl) && currentSrc !== currentTrack.audioUrl) {
+        audioRef.current.src = currentTrack.audioUrl;
+        audioRef.current.play().catch(() => {});
+      }
     }
   }, [trackIndex, isPlaylistMode, currentTrack.audioUrl, playing]);
 
-  // Agendamento periódico de spots por tempo definido (ex: a cada X minutos)
+  // Agendamento periódico de spots: apenas se o gestor tiver ativado explicitamente intervalo > 0
   useEffect(() => {
     if (!playing || !spotsEnabled || spotIntervalMinutes <= 0) {
       if (spotTimerRef.current) {
@@ -315,11 +397,9 @@ export function CandidateRadioPlayer({
     }
 
     const intervalMs = spotIntervalMinutes * 60 * 1000;
-    // Primeiro spot toca após 45 segundos (ou no intervalo se for menor)
-    const initialDelay = Math.min(45000, intervalMs);
     spotTimerRef.current = setTimeout(() => {
       playSpot();
-    }, initialDelay);
+    }, intervalMs);
 
     return () => {
       if (spotTimerRef.current) {
@@ -331,7 +411,7 @@ export function CandidateRadioPlayer({
   // Quando o áudio do spot terminar
   const handleSpotEnded = () => {
     finishSpot();
-    // Agenda o próximo spot de acordo com o intervalo em minutos configurado
+    // Agenda o próximo spot somente se o gestor ativou intervalo automático > 0
     if (playing && spotsEnabled && spotIntervalMinutes > 0) {
       if (spotTimerRef.current) clearTimeout(spotTimerRef.current);
       const intervalMs = spotIntervalMinutes * 60 * 1000;
@@ -414,7 +494,8 @@ export function CandidateRadioPlayer({
 
     try {
       setLoading(true);
-      if (audio.src !== activeAudioSrc) {
+      const currentSrc = audio.currentSrc || audio.src;
+      if (!currentSrc.endsWith(activeAudioSrc) && currentSrc !== activeAudioSrc) {
         audio.src = activeAudioSrc;
       }
       await audio.play();

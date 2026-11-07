@@ -76,7 +76,8 @@ export function GestorRadioPlayer({
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
-  const realtimeChannelRef = useRef<any>(null);
+  const localChannelRef = useRef<BroadcastChannel | null>(null);
+  const realtimeChannelsRef = useRef<any[]>([]);
 
   // Normaliza o nome oficial da Rádio Tarhget
   const normalizeStation = useCallback((st: RadioStation): RadioStation => {
@@ -138,28 +139,52 @@ export function GestorRadioPlayer({
   const [savedPlaylist, setSavedPlaylist] = useState(false);
   const [broadcastNotification, setBroadcastNotification] = useState<string | null>(null);
 
-  // Intervalo e temporizador automático dos Spots / Vinhetas
-  const [spotIntervalMinutes, setSpotIntervalMinutes] = useState(10);
+  // Intervalo e temporizador automático dos Spots / Vinhetas (0 = manual apenas, padrão)
+  const [spotIntervalMinutes, setSpotIntervalMinutes] = useState(0);
   const [savingInterval, setSavingInterval] = useState(false);
-  const [nextSpotSeconds, setNextSpotSeconds] = useState(10 * 60);
+  const [nextSpotSeconds, setNextSpotSeconds] = useState(0);
   const spotIndexRef = useRef(0);
 
-  // Conecta ao Supabase Realtime para sincronização com candidatos
+  // Conecta ao Supabase Realtime e BroadcastChannel para sincronização instantânea
   const resolvedSlug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
 
+  // 1. BroadcastChannel instantâneo para sincronia entre abas locais no mesmo navegador
+  useEffect(() => {
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      localChannelRef.current = new BroadcastChannel("triagem_radio_sync");
+      return () => {
+        localChannelRef.current?.close();
+        localChannelRef.current = null;
+      };
+    }
+  }, []);
+
+  // 2. Conexão Supabase Realtime para sincronização remota entre navegadores/dispositivos
   useEffect(() => {
     try {
       const supabase = createClient();
-      const channel = supabase.channel(`radio:${resolvedSlug}`);
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          realtimeChannelRef.current = channel;
-        }
+      const channels: any[] = [];
+      const mainCh = supabase.channel(`radio:${resolvedSlug}`, {
+        config: { broadcast: { ack: false } },
       });
+      mainCh.subscribe();
+      channels.push(mainCh);
+
+      if (resolvedSlug !== "global") {
+        const globalCh = supabase.channel("radio:global", {
+          config: { broadcast: { ack: false } },
+        });
+        globalCh.subscribe();
+        channels.push(globalCh);
+      }
+
+      realtimeChannelsRef.current = channels;
 
       return () => {
-        void channel.unsubscribe();
-        realtimeChannelRef.current = null;
+        for (const ch of channels) {
+          void ch.unsubscribe();
+        }
+        realtimeChannelsRef.current = [];
       };
     } catch {
       // Ignora erro se não configurado
@@ -168,9 +193,19 @@ export function GestorRadioPlayer({
 
   // Funções de transmissão ao vivo para a área do candidato
   const broadcastTrackChange = useCallback((newIndex: number, track: RadioTrack) => {
-    const channel = realtimeChannelRef.current;
-    if (channel) {
-      channel.send({
+    if (!track) return;
+
+    // Transmissão instantânea para abas locais (zero latência)
+    localChannelRef.current?.postMessage({
+      type: "track_change",
+      trackIndex: newIndex,
+      track,
+      timestamp: Date.now(),
+    });
+
+    // Transmissão via Supabase Realtime
+    for (const ch of realtimeChannelsRef.current) {
+      ch.send({
         type: "broadcast",
         event: "track_change",
         payload: {
@@ -183,9 +218,19 @@ export function GestorRadioPlayer({
   }, []);
 
   const broadcastStationChange = useCallback((newStation: RadioStation) => {
-    const channel = realtimeChannelRef.current;
-    if (channel) {
-      channel.send({
+    // Transmissão instantânea para abas locais
+    localChannelRef.current?.postMessage({
+      type: "station_change",
+      station: newStation,
+      isPlaylistMode: newStation.url === "playlist:target",
+      trackIndex: 0,
+      track: playlistTracks[0],
+      timestamp: Date.now(),
+    });
+
+    // Transmissão via Supabase Realtime
+    for (const ch of realtimeChannelsRef.current) {
+      ch.send({
         type: "broadcast",
         event: "station_change",
         payload: {
@@ -217,6 +262,9 @@ export function GestorRadioPlayer({
         if (typeof savedInterval === "number") {
           setSpotIntervalMinutes(savedInterval);
           setNextSpotSeconds(savedInterval > 0 ? savedInterval * 60 : 0);
+        } else {
+          setSpotIntervalMinutes(0);
+          setNextSpotSeconds(0);
         }
       } catch {
         // Fallback para valores padrão
@@ -329,7 +377,8 @@ export function GestorRadioPlayer({
 
     try {
       setLoading(true);
-      if (!audio.src || audio.src !== activeAudioSrc) {
+      const currentSrc = audio.currentSrc || audio.src;
+      if (!currentSrc || (!currentSrc.endsWith(activeAudioSrc) && currentSrc !== activeAudioSrc)) {
         audio.src = activeAudioSrc;
       }
       await audio.play();
@@ -439,9 +488,19 @@ export function GestorRadioPlayer({
       }).catch(() => {});
     }
 
-    const channel = realtimeChannelRef.current;
-    if (channel) {
-      channel.send({
+    // 1. Transmissão instantânea local entre abas
+    localChannelRef.current?.postMessage({
+      type: "play_spot",
+      spotId: spot.id,
+      title: spot.title,
+      subtitle: spot.subtitle,
+      audioUrl: spot.audioUrl,
+      timestamp: Date.now(),
+    });
+
+    // 2. Transmissão via Supabase Realtime
+    for (const ch of realtimeChannelsRef.current) {
+      ch.send({
         type: "broadcast",
         event: "play_spot",
         payload: {
@@ -498,9 +557,17 @@ export function GestorRadioPlayer({
         setSavedPlaylist(true);
         setTimeout(() => setSavedPlaylist(false), 3000);
 
-        const channel = realtimeChannelRef.current;
-        if (channel) {
-          channel.send({
+        // 1. Local BroadcastChannel
+        localChannelRef.current?.postMessage({
+          type: "playlist_sync",
+          tracks: playlistTracks,
+          trackIndex,
+          timestamp: Date.now(),
+        });
+
+        // 2. Supabase Realtime
+        for (const ch of realtimeChannelsRef.current) {
+          ch.send({
             type: "broadcast",
             event: "playlist_sync",
             payload: {

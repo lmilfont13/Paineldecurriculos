@@ -160,20 +160,20 @@ export async function setActiveRadioPlaylist(
   return { ok: true };
 }
 
-/** Lê o intervalo de spots/vinhetas da rádio configurado (em minutos; 0 = manual apenas). Padrão: 10 min. */
+/** Lê o intervalo de spots/vinhetas da rádio configurado (em minutos; 0 = manual apenas). Padrão: 0 min (manual). */
 export async function getActiveRadioSpotInterval(
   companyId?: string | null
 ): Promise<number> {
   try {
     const raw = await findRadioSpotIntervalRaw(companyId);
-    if (!raw) return 10;
+    if (!raw) return 0;
     const parsed = parseInt(raw, 10);
     if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 120) {
       return parsed;
     }
-    return 10;
+    return 0;
   } catch {
-    return 10;
+    return 0;
   }
 }
 
