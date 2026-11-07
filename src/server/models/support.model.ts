@@ -27,43 +27,43 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     id: "atendimento",
     name: "Balcões de Atendimento RH",
     shortName: "Atendimento RH",
-    description: "Converse 1 a 1 com recrutadores nos balcões privados.",
+    description: "Atendimento individual e confidencial (1:1) com recrutadores.",
     icon: "🎧",
     bounds: { xMin: 4, xMax: 45, yMin: 6, yMax: 47 },
     spawn: { x: 26, y: 29 },
   },
   recepcao: {
     id: "recepcao",
-    name: "Recepção & Sala de Espera",
-    shortName: "Recepção",
-    description: "Retire sua senha de atendimento e aguarde nos sofás.",
-    icon: "🛋️",
+    name: "Recepção & Mural de Vagas",
+    shortName: "Recepção & Vagas",
+    description: "Consulte o mural de vagas abertas, retire senha e veja orientações.",
+    icon: "🏢",
     bounds: { xMin: 34, xMax: 68, yMin: 36, yMax: 76 },
     spawn: { x: 49, y: 55 },
   },
   cafe: {
     id: "cafe",
-    name: "Café & Networking",
-    shortName: "Café",
-    description: "Troque ideias e experiências com outros candidatos.",
-    icon: "☕",
+    name: "Lounge Corporativo & Assistentes",
+    shortName: "Lounge & Bots",
+    description: "Tire dúvidas com os assistentes virtuais e faça networking profissional.",
+    icon: "🤖",
     bounds: { xMin: 55, xMax: 96, yMin: 6, yMax: 47 },
     spawn: { x: 74, y: 33 },
   },
   jogos: {
     id: "jogos",
-    name: "Sala de Jogos & Quiz",
-    shortName: "Sala de Jogos",
-    description: "Fliperamas, mesa de sinuca e quiz rápido de carreira.",
-    icon: "🎮",
+    name: "Espaço Preparação & Simulado",
+    shortName: "Simulado & Dicas",
+    description: "Simulado rápido de entrevista e boas práticas para processos seletivos.",
+    icon: "🎯",
     bounds: { xMin: 4, xMax: 39, yMin: 52, yMax: 95 },
     spawn: { x: 23, y: 78 },
   },
   diretoria: {
     id: "diretoria",
-    name: "Diretoria & Lounge VIP",
-    shortName: "Diretoria",
-    description: "Espaço executivo para bate-papos especiais e entrevistas.",
+    name: "Sala Executiva & Entrevistas",
+    shortName: "Sala Executiva",
+    description: "Ambiente reservado para alinhamentos com gestores e liderança.",
     icon: "🏛️",
     bounds: { xMin: 65, xMax: 96, yMin: 52, yMax: 95 },
     spawn: { x: 82, y: 76 },
@@ -351,6 +351,19 @@ export interface SupportReportDTO {
   createdAt: string;
 }
 
+export interface SupportJobDTO {
+  id: string;
+  code: string | null;
+  title: string;
+  description: string;
+  requirements: string | null;
+  location: string | null;
+  contract: "CLT" | "PJ" | "FREELANCE" | "INTERNSHIP";
+  workMode: "REMOTE" | "HYBRID" | "ONSITE";
+  isTalentPool: boolean;
+  createdAt: string;
+}
+
 export interface SupportSpaceStateDTO {
   /** Se a sala está liberada para candidatos no portal público (false = Modo Teste Equipe) */
   isPublicEnabled: boolean;
@@ -366,10 +379,326 @@ export interface SupportSpaceStateDTO {
   activeMessages: SupportMessageDTO[];
   /** Pares em conversa privada ativa — visível para todos como cadeado 🔒 (sem mensagens) */
   activePrivatePairs: ActivePrivatePairDTO[];
+  /** Vagas abertas da empresa para o Mural de Vagas e Bots Assistentes */
+  openJobs: SupportJobDTO[];
   /** Apenas preenchido se viewerRole === 'STAFF' */
   staffQueue: SupportConversationDTO[];
   staffActiveDesks: SupportConversationDTO[];
   staffOpenReports: SupportReportDTO[];
+}
+
+export type AssistantBotId = "vagas" | "avisos" | "curriculo";
+
+export interface SupportAssistantBotDef {
+  id: AssistantBotId;
+  name: string;
+  roleTitle: string;
+  badge: string;
+  shortSpecialty: string;
+  greeting: string;
+  x: number;
+  y: number;
+  room: SupportRoomId;
+  avatar: AvatarConfig;
+  quickPrompts: string[];
+}
+
+export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
+  {
+    id: "vagas",
+    name: "Clara · Bot de Vagas",
+    roleTitle: "Assistente de Oportunidades & Requisitos",
+    badge: "Mural de Vagas",
+    shortSpecialty: "Tira dúvidas sobre requisitos, modalidade, local e contrato de cada vaga aberta.",
+    greeting:
+      "Olá! Sou a Clara, assistente virtual de vagas. Selecione uma vaga aberta abaixo ou faça uma pergunta para consultar requisitos, modalidade de trabalho e como se candidatar.",
+    x: 42,
+    y: 48,
+    room: "recepcao",
+    avatar: {
+      skin: "#f3c6a0",
+      hair: "coque",
+      hairColor: "#1c1917",
+      shirt: "#1e40af",
+      pants: "#0f172a",
+      accessory: "headset",
+    },
+    quickPrompts: [
+      "Quais vagas estão abertas agora?",
+      "Quais são os requisitos desta vaga?",
+      "Qual a modalidade e tipo de contrato?",
+      "Como funciona o Banco de Talentos?",
+    ],
+  },
+  {
+    id: "avisos",
+    name: "Heitor · Bot de Acompanhamento",
+    roleTitle: "Assistente de Etapas & Avisos do Sistema",
+    badge: "Avisos & Status",
+    shortSpecialty: "Explica onde acompanhar avisos do RH, status da candidatura e pré-entrevista.",
+    greeting:
+      "Olá! Sou o Heitor, assistente de acompanhamento do sistema. Posso explicar onde você recebe os avisos do RH, como consultar o andamento da sua inscrição e como responder pedidos de pré-entrevista.",
+    x: 23,
+    y: 23,
+    room: "atendimento",
+    avatar: {
+      skin: "#e0a370",
+      hair: "curto",
+      hairColor: "#4a2c11",
+      shirt: "#334155",
+      pants: "#1e293b",
+      accessory: "glasses",
+    },
+    quickPrompts: [
+      "Onde vejo os avisos e mensagens do RH?",
+      "Como acompanhar o status da minha candidatura?",
+      "O que é o formulário de Pré-Entrevista?",
+      "Como funciona a senha de atendimento ao vivo?",
+    ],
+  },
+  {
+    id: "curriculo",
+    name: "Helena · Bot de Triagem & CV",
+    roleTitle: "Assistente de Currículo & Cadastro",
+    badge: "Currículo & PDF",
+    shortSpecialty: "Orienta sobre envio de currículo em PDF (até 5 MB), cadastro e privacidade LGPD.",
+    greeting:
+      "Olá! Sou a Helena, assistente de cadastro e currículo. Posso ajudar você com o formato do currículo em PDF, atualização do perfil e proteção dos seus dados (LGPD).",
+    x: 75,
+    y: 27,
+    room: "cafe",
+    avatar: {
+      skin: "#8d5524",
+      hair: "longo",
+      hairColor: "#1c1917",
+      shirt: "#0f766e",
+      pants: "#1e293b",
+      accessory: "headset",
+    },
+    quickPrompts: [
+      "Qual o formato e tamanho aceito para o currículo?",
+      "Preciso enviar currículo em toda vaga?",
+      "Como destacar minhas experiências no PDF?",
+      "Meus documentos e dados estão protegidos (LGPD)?",
+    ],
+  },
+];
+
+export interface SystemGuideCard {
+  id: string;
+  step: string;
+  title: string;
+  description: string;
+  whereToFind: string;
+  linkType: "candidaturas" | "notificacoes" | "vagas" | "fila";
+  ctaLabel: string;
+}
+
+export const CANDIDATE_SYSTEM_GUIDES: SystemGuideCard[] = [
+  {
+    id: "sino-notificacoes",
+    step: "Canal 1 · Avisos Oficiais",
+    title: "Central de Notificações (Sino no Topo)",
+    description:
+      "Sempre que a equipe de RH avança sua candidatura de etapa, envia um comunicado ou atualiza seu processo, um alerta aparece na Central de Novidades.",
+    whereToFind: "Ícone de Sino no cabeçalho superior ou menu 'Notificações'",
+    linkType: "notificacoes",
+    ctaLabel: "Abrir Meus Avisos",
+  },
+  {
+    id: "minhas-candidaturas",
+    step: "Canal 2 · Status em Tempo Real",
+    title: "Painel Minhas Candidaturas",
+    description:
+      "Consulte todas as vagas em que você se inscreveu, veja a linha do tempo de etapas (Em Análise, Pré-selecionado, Entrevista) e revise suas respostas.",
+    whereToFind: "Menu 'Minhas Candidaturas' no portal do candidato",
+    linkType: "candidaturas",
+    ctaLabel: "Ver Minhas Candidaturas",
+  },
+  {
+    id: "pre-entrevista",
+    step: "Canal 3 · Etapa Complementar",
+    title: "Solicitação de Pré-Entrevista",
+    description:
+      "Quando você avança para entrevista, o gestor pode solicitar dados complementares pelo sistema. Um aviso destacado aparecerá na sua candidatura com link seguro.",
+    whereToFind: "Dentro do card da vaga em 'Minhas Candidaturas'",
+    linkType: "candidaturas",
+    ctaLabel: "Verificar Pendências",
+  },
+  {
+    id: "atendimento-balcao",
+    step: "Canal 4 · Suporte Síncrono",
+    title: "Senha nos Balcões de Atendimento RH",
+    description:
+      "Aqui na sala ao vivo, você retira uma senha na aba 'Atendimento RH'. Quando o recrutador chamar seu número, o chat privado (🔒) abrirá automaticamente.",
+    whereToFind: "Aba 'Atendimento RH' → Retirar Senha",
+    linkType: "fila",
+    ctaLabel: "Ir para Fila do RH",
+  },
+];
+
+export const HOW_IT_WORKS_STEPS = [
+  {
+    number: "01",
+    title: "Consulte o Mural de Vagas",
+    summary:
+      "Veja todas as posições abertas da empresa, requisitos e regime de trabalho sem sair da sala.",
+    actionTab: "vagas" as const,
+    actionLabel: "Ver Mural de Vagas",
+  },
+  {
+    number: "02",
+    title: "Tire Dúvidas com Bots 24h",
+    summary:
+      "Pergunte aos assistentes virtuais sobre qualquer vaga específica, envio de currículo PDF ou etapas.",
+    actionTab: "bots" as const,
+    actionLabel: "Falar com Assistente",
+  },
+  {
+    number: "03",
+    title: "Acompanhe Avisos no Sistema",
+    summary:
+      "Saiba exatamente onde chegam convites de entrevista, mudanças de status e pedidos do RH.",
+    actionTab: "orientacoes" as const,
+    actionLabel: "Ver Guia de Avisos",
+  },
+  {
+    number: "04",
+    title: "Atendimento Humano 1:1",
+    summary:
+      "Precisa falar com um recrutador? Retire uma senha e seja atendido com sigilo nos Balcões 1 a 3.",
+    actionTab: "rh" as const,
+    actionLabel: "Retirar Senha RH",
+  },
+];
+
+const CONTRACT_LABELS: Record<SupportJobDTO["contract"], string> = {
+  CLT: "CLT",
+  PJ: "PJ",
+  FREELANCE: "Freelance",
+  INTERNSHIP: "Estágio",
+};
+
+const WORK_MODE_LABELS: Record<SupportJobDTO["workMode"], string> = {
+  REMOTE: "Remoto",
+  HYBRID: "Híbrido",
+  ONSITE: "Presencial",
+};
+
+export function formatSupportJobContract(contract: SupportJobDTO["contract"]): string {
+  return CONTRACT_LABELS[contract] ?? contract;
+}
+
+export function formatSupportJobWorkMode(workMode: SupportJobDTO["workMode"]): string {
+  return WORK_MODE_LABELS[workMode] ?? workMode;
+}
+
+/**
+ * Gera resposta imediata e contextualizada dos Bots Assistentes Corporativos,
+ * utilizando os dados reais das vagas abertas da empresa e as regras do sistema.
+ */
+export function generateAssistantBotReply(params: {
+  botId: AssistantBotId;
+  question: string;
+  selectedJob: SupportJobDTO | null;
+  openJobs: SupportJobDTO[];
+  companyName: string;
+}): string {
+  const { botId, question, selectedJob, openJobs, companyName } = params;
+  const q = stripAccents(question);
+  const regularJobs = openJobs.filter((j) => !j.isTalentPool);
+  const talentPoolJob = openJobs.find((j) => j.isTalentPool);
+
+  // Se o candidato perguntou sobre listagem geral de vagas abertas
+  if (
+    q.includes("quais vagas") ||
+    q.includes("vagas abertas") ||
+    q.includes("oportunidades")
+  ) {
+    if (regularJobs.length === 0) {
+      return `No momento a ${companyName} está recebendo cadastros pelo nosso Banco de Talentos. Você pode acessar a aba "Mural de Vagas" ao lado para cadastrar seu currículo em PDF e ficar no radar da equipe de RH!`;
+    }
+    const listText = regularJobs
+      .slice(0, 6)
+      .map(
+        (j) =>
+          `• ${j.title} (${formatSupportJobWorkMode(j.workMode)} · ${formatSupportJobContract(j.contract)}${j.location ? ` · ${j.location}` : ""})`
+      )
+      .join("\n");
+    return `Atualmente temos ${regularJobs.length} ${regularJobs.length === 1 ? "vaga aberta" : "vagas abertas"} na ${companyName}:\n${listText}\n\nSelecione qualquer uma delas no seletor acima ou na aba "Mural de Vagas" para ver todos os requisitos e se candidatar.`;
+  }
+
+  // Bot de Vagas ou pergunta sobre vaga selecionada
+  if (botId === "vagas") {
+    if (q.includes("banco de talentos")) {
+      return talentPoolJob
+        ? `O Banco de Talentos da ${companyName} está ativo! Caso não encontre uma vaga exata para seu perfil hoje, você pode enviar seu currículo em PDF pelo Banco de Talentos no Mural de Vagas. Quando surgir uma oportunidade compatível, o RH entrará em contato.`
+        : `Você pode se candidatar diretamente às vagas abertas no Mural de Vagas. Seu perfil e currículo em PDF ficam salvos para futuras oportunidades na ${companyName}.`;
+    }
+
+    if (selectedJob) {
+      const meta = `${formatSupportJobWorkMode(selectedJob.workMode)} · Contrato ${formatSupportJobContract(selectedJob.contract)}${selectedJob.location ? ` · Local: ${selectedJob.location}` : ""}`;
+      if (q.includes("requisito") || q.includes("exig") || q.includes("precisa")) {
+        const reqs = selectedJob.requirements?.trim()
+          ? selectedJob.requirements
+              .split("\n")
+              .map((l) => l.replace(/^[-•*]\s*/, "").trim())
+              .filter(Boolean)
+              .slice(0, 6)
+              .map((l) => `• ${l}`)
+              .join("\n")
+          : "Os requisitos detalhados estão descritos na página da vaga. Recomendo anexar seu currículo em PDF atualizado destacando suas experiências na área.";
+        return `Requisitos para a vaga de **${selectedJob.title}** (${meta}):\n${reqs}\n\nPara se inscrever, clique em "Candidatar-se" no card da vaga no Mural.`;
+      }
+
+      if (
+        q.includes("modalidade") ||
+        q.includes("contrato") ||
+        q.includes("local") ||
+        q.includes("remoto") ||
+        q.includes("presencial") ||
+        q.includes("hibrido")
+      ) {
+        return `A vaga **${selectedJob.title}** opera no modelo **${formatSupportJobWorkMode(selectedJob.workMode)}**, com regime de contratação **${formatSupportJobContract(selectedJob.contract)}**${selectedJob.location ? ` e localização base em **${selectedJob.location}**` : ""}.`;
+      }
+
+      const shortDesc =
+        selectedJob.description.length > 260
+          ? `${selectedJob.description.slice(0, 260).trim()}...`
+          : selectedJob.description;
+      return `Sobre a vaga **${selectedJob.title}** (${meta}):\n${shortDesc}\n\n${selectedJob.requirements ? `Principais requisitos: ${selectedJob.requirements.split("\n").filter(Boolean).slice(0, 3).join("; ")}.` : "Clique em 'Ver Detalhes / Candidatar' no Mural de Vagas para concluir sua inscrição em 4 passos rápidos."}`;
+    }
+
+    return regularJobs.length > 0
+      ? `Temos ${regularJobs.length} vagas abertas no momento! Selecione uma vaga na caixa acima para que eu possa detalhar os requisitos, local de trabalho e regime de contratação específicos dela.`
+      : `Consulte a aba "Mural de Vagas" para acessar nosso Banco de Talentos e enviar seu currículo em PDF.`;
+  }
+
+  // Bot de Avisos & Sistema
+  if (botId === "avisos") {
+    if (q.includes("pre-entrevista") || q.includes("pre entrevista") || q.includes("documento")) {
+      return `A **Pré-Entrevista** é uma etapa complementar solicitada pelo gestor quando seu perfil avança. Você receberá um aviso no sino de **Notificações** e verá um botão destacado em **Minhas Candidaturas** para preencher os dados com total segurança e sigilo (LGPD).`;
+    }
+    if (q.includes("senha") || q.includes("balcao") || q.includes("fila") || q.includes("rh")) {
+      return `Para falar individualmente com um recrutador aqui na sala:\n1. Abra a aba **Atendimento RH**;\n2. Escolha o assunto e clique em **Retirar Senha**;\n3. Quando o recrutador chamar sua senha para o Balcão 1, 2 ou 3, sua conversa privada (🔒) abrirá automaticamente.`;
+    }
+    if (q.includes("status") || q.includes("andamento") || q.includes("etapa")) {
+      return `Você acompanha o status de todas as suas inscrições na página **Minhas Candidaturas** (menu superior). Lá cada vaga mostra em qual etapa você está: *Em Análise*, *Pré-selecionado*, *Contratado* ou *Processo Encerrado*.`;
+    }
+    return `Todos os avisos oficiais da ${companyName} ficam centralizados em dois lugares no portal:\n• **Sino de Notificações** (no topo da página): alertas de novas mensagens e mudanças de fase;\n• **Minhas Candidaturas**: histórico completo de cada vaga e eventuais solicitações de pré-entrevista.\nAlém disso, enviamos cópia dos avisos importantes para o seu e-mail cadastrado.`;
+  }
+
+  // Bot de Currículo & Triagem
+  if (q.includes("lgpd") || q.includes("dados") || q.includes("segur") || q.includes("cpf")) {
+    return `Seus dados são protegidos segundo a **LGPD**. No espaço público nunca peça ou informe CPF/RG. Dados sensíveis de pré-entrevista só são solicitados em formulário criptografado próprio dentro de **Minhas Candidaturas** e ficam mascarados no sistema.`;
+  }
+  if (q.includes("toda vaga") || q.includes("reaproveitar") || q.includes("salvo")) {
+    return `Ao fazer login como candidato, seu currículo em PDF e seus dados básicos ficam salvos no seu perfil! Assim, ao se candidatar a uma nova vaga da ${companyName}, você pode reaproveitar o PDF já enviado ou anexar uma versão atualizada.`;
+  }
+  if (q.includes("destacar") || q.includes("dica") || q.includes("estrutura")) {
+    return `Para um currículo em PDF claro e eficiente:\n• Use um arquivo PDF com texto selecionável (evite fotos escaneadas);\n• Destaque suas experiências mais recentes, tecnologias/habilidades e resultados alcançados;\n• Não é necessário incluir número de RG ou CPF no arquivo do currículo.`;
+  }
+  return `O envio de currículo no portal aceita exclusivamente arquivos no formato **PDF com até 5 MB**. Certifique-se de que o texto do PDF seja legível (não apenas imagem) para facilitar a leitura pelos recrutadores da ${companyName}.`;
 }
 
 export interface QuizQuestion {
@@ -383,36 +712,37 @@ export interface QuizQuestion {
 export const CAREER_ARCADE_QUIZ: QuizQuestion[] = [
   {
     id: "q1",
-    question: "Qual atitude mais destaca um candidato em uma entrevista?",
+    question: "Qual atitude mais destaca um candidato em uma entrevista corporativa?",
     options: [
       "Decorar respostas prontas da internet",
-      "Dar exemplos reais de problemas que resolveu em equipe",
-      "Falar apenas sobre cargos anteriores sem citar resultados",
+      "Apresentar exemplos reais de desafios que resolveu e resultados obtidos",
+      "Falar apenas sobre cargos anteriores sem citar entregas práticas",
     ],
     correctIndex: 1,
-    tip: "Exemplos práticos (situação, ação e resultado) mostram como você atua no dia a dia!",
+    tip: "Exemplos estruturados (Situação, Ação e Resultado) demonstram clareza e maturidade profissional.",
   },
   {
     id: "q2",
-    question: "No currículo em PDF, o que ajuda tanto o recrutador quanto a triagem?",
+    question: "No currículo em PDF (máx. 5 MB), o que facilita a avaliação do recrutador?",
     options: [
-      "Texto claro, experiências recentes primeiro e conquistas objetivas",
+      "Texto selecionável e claro, experiências recentes primeiro e conquistas objetivas",
       "Usar apenas imagens escaneadas sem texto selecionável",
       "Incluir números de documentos sensíveis no topo da página",
     ],
     correctIndex: 0,
-    tip: "Um PDF com texto claro e estruturado facilita a leitura humana e valoriza sua experiência!",
+    tip: "Um PDF com texto claro e bem estruturado valoriza sua trajetória profissional!",
   },
   {
     id: "q3",
-    question: "Ao conversar na sala de networking com outros candidatos, qual é a melhor prática?",
+    question: "Onde o candidato acompanha avisos oficiais sobre suas inscrições no sistema?",
     options: [
-      "Compartilhar dados pessoais como CPF no balão público",
-      "Trocar dicas sobre a área com cordialidade e respeito",
-      "Enviar várias mensagens seguidas em letras maiúsculas",
+      "Apenas perguntando no chat público da sala",
+      "No Sino de Notificações, na página Minhas Candidaturas e no e-mail cadastrado",
+      "Não há histórico de avisos no portal",
     ],
     correctIndex: 1,
-    tip: "Gentileza e boas trocas criam conexões valiosas para sua carreira!",
+    tip: "O sistema registra cada avanço de etapa em 'Minhas Candidaturas' e no ícone de 'Notificações'!",
   },
 ];
+
 

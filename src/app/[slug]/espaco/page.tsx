@@ -40,7 +40,7 @@ export default async function PublicSupportSpacePage({
   const { company, jobs } = data;
 
   return (
-    <div className="min-h-screen bg-[#faf9f7]">
+    <div className="min-h-screen bg-slate-50/70">
       <CompanyHeader
         company={company}
         candidate={candidate}
@@ -49,56 +49,66 @@ export default async function PublicSupportSpacePage({
       />
 
       <main className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-900">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
                 <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
-                AO VIVO
+                ATENDIMENTO & CARREIRAS AO VIVO
               </span>
-              <h1 className="text-xl font-black tracking-tight text-stone-900 md:text-2xl">
-                Espaço de Carreiras & Suporte Online · {company.name}
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 md:text-xl">
+                Centro Corporativo de Carreiras & Suporte · {company.name}
               </h1>
             </div>
-            <p className="mt-1 text-xs text-stone-600 md:text-sm">
-              Caminhe pelos ambientes isométricos com seu boneco, converse em nuvens públicas, retire senha para atendimento individual com o RH ou jogue no fliperama!
+            <p className="mt-1 text-xs text-slate-600">
+              Consulte o Mural de Vagas Abertas, tire dúvidas em tempo real com nossos Bots Assistentes, veja como acompanhar avisos no sistema ou retire uma senha para atendimento confidencial com o RH.
             </p>
           </div>
 
-          <Link
-            href={`/${company.slug}/vagas`}
-            className="rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 shadow-2xs transition hover:bg-stone-50"
-          >
-            ← Voltar para as Vagas ({jobs.length})
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {candidate && (
+              <Link
+                href={`/${company.slug}/minhas-candidaturas`}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-100"
+              >
+                Minhas Candidaturas & Avisos
+              </Link>
+            )}
+            <Link
+              href={`/${company.slug}/vagas`}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50"
+            >
+              ← Portal de Vagas ({jobs.length})
+            </Link>
+          </div>
         </div>
 
         {!initialState.isPublicEnabled && initialState.viewerRole !== "STAFF" ? (
-          <div className="mx-auto my-8 max-w-xl rounded-3xl border-2 border-stone-900 bg-white p-8 text-center shadow-[0_12px_30px_rgba(0,0,0,0.08)] space-y-4">
-            <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border-2 border-stone-900 bg-amber-300 text-3xl shadow-[0_4px_0_#18181b]">
+          <div className="mx-auto my-8 max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm space-y-4">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-2xl">
               🎧
             </div>
-            <span className="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-amber-900">
-              Em preparação pela equipe
+            <span className="inline-block rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-900">
+              Ambiente em Homologação pela Equipe
             </span>
-            <h2 className="text-xl font-black text-stone-900">
-              A Sala de Suporte ao Vivo está em Modo de Teste Interno
+            <h2 className="text-lg font-bold text-slate-900">
+              O Centro de Suporte ao Vivo está em preparação
             </h2>
-            <p className="text-sm leading-relaxed text-stone-600">
-              A equipe de RH da <strong>{company.name}</strong> está preparando os ambientes de atendimento, café e recepção. Enquanto isso, você pode conferir todas as oportunidades abertas no mural de vagas!
+            <p className="text-sm leading-relaxed text-slate-600">
+              A equipe de RH da <strong>{company.name}</strong> está configurando os balcões de atendimento e assistentes virtuais. Enquanto isso, consulte todas as oportunidades abertas no nosso portal de vagas.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link
                 href={`/${company.slug}/vagas`}
-                className="rounded-2xl border-2 border-stone-900 bg-amber-400 px-5 py-2.5 text-xs font-black text-stone-950 shadow-[0_4px_0_#18181b] transition hover:bg-amber-300"
+                className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-2xs transition hover:bg-slate-800"
               >
-                Ver Vagas Abertas ({jobs.length})
+                Acessar Mural de Vagas ({jobs.length})
               </Link>
               <Link
                 href="/login"
-                className="rounded-2xl border border-stone-300 bg-stone-50 px-4 py-2.5 text-xs font-bold text-stone-700 hover:bg-stone-100"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Sou Gestor / Admin (Entrar p/ Testar)
+                Acesso Gestor / RH
               </Link>
             </div>
           </div>

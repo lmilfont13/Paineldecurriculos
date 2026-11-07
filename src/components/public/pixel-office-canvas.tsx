@@ -2,9 +2,11 @@
 
 import React, { useState } from "react";
 import {
+  SUPPORT_ASSISTANT_BOTS,
   SUPPORT_DESK_POSITIONS,
   SUPPORT_ROOMS,
   type ActivePrivatePairDTO,
+  type AssistantBotId,
   type AvatarConfig,
   type SupportRoomId,
 } from "@/server/models/support.model";
@@ -43,89 +45,23 @@ interface PixelOfficeCanvasProps {
   reactions: ReactionFloatingItem[];
   activePrivatePairs: ActivePrivatePairDTO[];
   queueCount: number;
+  openJobCount: number;
   onMoveTo: (x: number, y: number) => void;
   onSelectUser: (user: MapPresenceUser) => void;
   onOpenArcadeQuiz: () => void;
   onOpenQueuePanel: () => void;
-  onGrabCoffee?: () => void;
+  onOpenJobBoard: () => void;
+  onOpenGuidesPanel: () => void;
+  onSelectBot: (botId: AssistantBotId) => void;
 }
 
 /**
- * Personagens de ambientação do escritório (Barista, Dev RH, Gamer, Networking)
- * posicionados exatamente como na imagem de referência para dar vida imediata
- * à sala mesmo quando há poucos usuários online.
- */
-const AMBIENT_NPCS: Array<{
-  id: string;
-  displayName: string;
-  kind: "STAFF" | "CANDIDATE";
-  x: number;
-  y: number;
-  emoji: string;
-  tipBubble: string;
-  avatar: AvatarConfig;
-}> = [
-  {
-    id: "npc_rh_guide",
-    displayName: "Sofia · Anfitriã RH",
-    kind: "STAFF",
-    x: 23,
-    y: 23,
-    emoji: "❤️",
-    tipBubble: "Bem-vindo! Retire sua senha na Recepção ou chame um recrutador nos Balcões 1, 2 e 3!",
-    avatar: {
-      skin: "#f3c6a0",
-      hair: "longo",
-      hairColor: "#4a2c11",
-      shirt: "#2563eb",
-      pants: "#1e293b",
-      accessory: "headset",
-    },
-  },
-  {
-    id: "npc_cafe_barista",
-    displayName: "Leo · Barista Café",
-    kind: "CANDIDATE",
-    x: 78,
-    y: 26,
-    emoji: "☕",
-    tipBubble: "Pegue um café expresso quentinho enquanto troca ideias com outros candidatos! ☕",
-    avatar: {
-      skin: "#e0a370",
-      hair: "topete",
-      hairColor: "#d97706",
-      shirt: "#d97706",
-      pants: "#451a03",
-      accessory: "none",
-    },
-  },
-  {
-    id: "npc_arcade_champ",
-    displayName: "Bia · Arcade Quiz",
-    kind: "CANDIDATE",
-    x: 19,
-    y: 67,
-    emoji: "🎵",
-    tipBubble: "Clique nas máquinas de fliperama para jogar o Quiz Rápido de Carreira! 🎮",
-    avatar: {
-      skin: "#8d5524",
-      hair: "cacheado",
-      hairColor: "#1c1917",
-      shirt: "#7c3aed",
-      pants: "#1e293b",
-      accessory: "headset",
-    },
-  },
-];
-
-/**
- * Mapa Isométrico 32-bit em Pixel-Art (estilo Habbo Hotel / Gather.town / Mortadela)
- * com 5 salas interligadas:
- * 1. Sup. Esquerda: Balcões de Atendimento RH (Carpete azul, 3 PCs, tapete circular e sofás)
- * 2. Centro: Recepção & Sala de Espera (Piso de madeira, roda de sofás e painel de senhas)
- * 3. Sup. Direita: Café & Networking (Piso verde-menta, máquinas de expresso, balcão e mesas)
- * 4. Inf. Esquerda: Sala de Jogos & Arcade (3 fliperamas iluminados e mesa de sinuca)
- * 5. Inf. Direita: Diretoria & Lounge VIP (Paredes lilás, sofás executivos e mesa)
+ * Mapa Isométrico Corporativo com 5 setores integrados e 3 Bots Assistentes:
+ * 1. Sup. Esquerda: Balcões de Atendimento RH (Atendimento Individual 1:1)
+ * 2. Centro: Recepção, Mural de Vagas & Totem de Senhas
+ * 3. Sup. Direita: Lounge Corporativo & Bots Assistentes 24h
+ * 4. Inf. Esquerda: Espaço Preparação & Simulado de Entrevista
+ * 5. Inf. Direita: Sala Executiva & Guia de Avisos do Sistema
  */
 export function PixelOfficeCanvas({
   meId,
@@ -134,13 +70,16 @@ export function PixelOfficeCanvas({
   reactions,
   activePrivatePairs,
   queueCount,
+  openJobCount,
   onMoveTo,
   onSelectUser,
   onOpenArcadeQuiz,
   onOpenQueuePanel,
-  onGrabCoffee,
+  onOpenJobBoard,
+  onOpenGuidesPanel,
+  onSelectBot,
 }: PixelOfficeCanvasProps) {
-  const [activeNpcTip, setActiveNpcTip] = useState<string | null>(null);
+  const [activeBotTip, setActiveBotTip] = useState<AssistantBotId | null>("vagas");
   const [clickRipple, setClickRipple] = useState<{ x: number; y: number; id: number } | null>(
     null
   );
@@ -177,27 +116,27 @@ export function PixelOfficeCanvas({
   return (
     <div
       onClick={handleCanvasClick}
-      className="relative aspect-[16/9] min-h-[440px] w-full cursor-pointer select-none overflow-hidden rounded-3xl border-4 border-stone-950 bg-[#090a0f] shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
+      className="relative aspect-[16/9] min-h-[450px] w-full cursor-pointer select-none overflow-hidden rounded-2xl border border-slate-300 bg-slate-950 shadow-lg"
     >
-      {/* ─── CENÁRIO ISOMÉTRICO PIXEL-ART DE ALTA DEFINIÇÃO ─── */}
+      {/* ─── CENÁRIO ISOMÉTRICO DO ESCRITÓRIO CORPORATIVO ─── */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/virtual-office-isometric.jpg"
-        alt="Mapa Isométrico do Espaço de Carreiras"
+        alt="Planta Interativa do Centro de Carreiras & Suporte ao Vivo"
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]"
       />
 
-      {/* Vinheta cinematográfica sutil nas bordas para destacar os balões e HUD */}
+      {/* Vinheta corporativa sutil nas bordas para leitura limpa do HUD */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, transparent 68%, rgba(9,10,15,0.48) 100%)",
+            "radial-gradient(circle at 50% 50%, rgba(15,23,42,0.04) 55%, rgba(15,23,42,0.58) 100%)",
         }}
       />
 
-      {/* ─── LINHAS DOURADAS CONECTANDO DUPLAS EM CONVERSA PRIVADA 🔒 ─── */}
+      {/* ─── LINHAS CONECTANDO DUPLAS EM ATENDIMENTO PRIVADO 🔒 ─── */}
       <svg
         viewBox="0 0 1000 562.5"
         preserveAspectRatio="none"
@@ -215,7 +154,7 @@ export function PixelOfficeCanvas({
                 y1={u1.y * 5.625 - 16}
                 x2={u2.x * 10}
                 y2={u2.y * 5.625 - 16}
-                stroke="#000000"
+                stroke="#0f172a"
                 strokeWidth="6"
                 strokeLinecap="round"
               />
@@ -224,8 +163,8 @@ export function PixelOfficeCanvas({
                 y1={u1.y * 5.625 - 16}
                 x2={u2.x * 10}
                 y2={u2.y * 5.625 - 16}
-                stroke="#fbbf24"
-                strokeWidth="3.5"
+                stroke="#38bdf8"
+                strokeWidth="3"
                 strokeDasharray="8 6"
                 strokeLinecap="round"
               />
@@ -239,11 +178,11 @@ export function PixelOfficeCanvas({
         <span
           key={clickRipple.id}
           style={{ left: `${clickRipple.x}%`, top: `${clickRipple.y}%` }}
-          className="pointer-events-none absolute z-10 h-4 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-300 bg-amber-300/30 animate-ping"
+          className="pointer-events-none absolute z-10 h-4 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-sky-400 bg-sky-400/30 animate-ping"
         />
       )}
 
-      {/* ─── INDICADORES INTERATIVOS DOS 3 BALCÕES DE ATENDIMENTO RH (SALA AZUL) ─── */}
+      {/* ─── INDICADORES INTERATIVOS DOS 3 BALCÕES DE ATENDIMENTO RH ─── */}
       {[1, 2, 3].map((deskNum) => {
         const pos = SUPPORT_DESK_POSITIONS[deskNum];
         const occupiedBy = occupiedDesks.get(deskNum);
@@ -256,113 +195,141 @@ export function PixelOfficeCanvas({
               onMoveTo(pos.candidate.x, pos.candidate.y);
             }}
             style={{ left: `${pos.staff.x}%`, top: `${pos.staff.y - 7}%` }}
-            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg border-2 border-stone-950 px-2 py-0.5 text-[10px] font-black shadow-[0_2px_0_#090a0f] transition hover:scale-105 ${
+            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold shadow-sm transition hover:scale-105 ${
               occupiedBy
-                ? "bg-amber-400 text-stone-950"
-                : "bg-sky-950/90 text-sky-200 hover:bg-sky-900"
+                ? "border-amber-300 bg-amber-500 text-slate-950"
+                : "border-slate-700 bg-slate-900/90 text-sky-200 hover:bg-slate-800"
             }`}
             title={
               occupiedBy
                 ? `Balcão ${deskNum}: Em atendimento (${occupiedBy})`
-                : `Caminhar até o Balcão ${deskNum}`
+                : `Ir até o Balcão ${deskNum}`
             }
           >
             <span>{occupiedBy ? "🔒" : "🎧"}</span>
-            <span>B{deskNum}</span>
+            <span>Balcão {deskNum}</span>
           </button>
         );
       })}
 
-      {/* ─── PLACAS FLUTUANTES ESTILO HABBO / GATHER NOS AMBIENTES ─── */}
-      {/* 1. Sala Atendimento RH (Sup. Esquerda) */}
+      {/* ─── ESTAÇÕES CORPORATIVAS INTERATIVAS NO MAPA ─── */}
+      {/* 1. Balcões de Atendimento RH (Sup. Esquerda) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onMoveTo(SUPPORT_ROOMS.atendimento.spawn.x, SUPPORT_ROOMS.atendimento.spawn.y);
+          onOpenQueuePanel();
         }}
-        className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-xl border-2 border-stone-950 bg-sky-400 px-3 py-1 text-[11px] font-black text-stone-950 shadow-[0_3px_0_#090a0f] transition hover:scale-105 hover:bg-sky-300"
+        className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:border-sky-400 hover:bg-slate-900"
       >
-        <span>🎧</span>
+        <span className="flex size-5 items-center justify-center rounded bg-sky-500/20 text-xs">
+          🎧
+        </span>
         <span>Atendimento RH · Balcões 1 a 3</span>
       </button>
 
-      {/* 2. Café & Networking (Sup. Direita) */}
+      {/* 2. Mural de Vagas Abertas (Topo Central) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onMoveTo(44, 42);
+          onOpenJobBoard();
+        }}
+        className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-blue-400/50 bg-blue-950/95 px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:scale-[1.02] hover:bg-blue-900"
+      >
+        <span>📋 Mural de Vagas Abertas</span>
+        <span className="rounded bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          {openJobCount} {openJobCount === 1 ? "oportunidade" : "oportunidades"}
+        </span>
+      </button>
+
+      {/* 3. Bots Assistentes & Tira-Dúvidas (Sup. Direita) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onMoveTo(SUPPORT_ROOMS.cafe.spawn.x, SUPPORT_ROOMS.cafe.spawn.y);
-          onGrabCoffee?.();
+          onSelectBot("vagas");
         }}
-        className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-xl border-2 border-stone-950 bg-emerald-400 px-3 py-1 text-[11px] font-black text-stone-950 shadow-[0_3px_0_#090a0f] transition hover:scale-105 hover:bg-emerald-300"
+        className="absolute right-3 top-3 z-20 flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:border-emerald-400 hover:bg-slate-900"
       >
-        <span>☕</span>
-        <span>Café & Networking · Pegar Expresso</span>
+        <span className="flex size-5 items-center justify-center rounded bg-emerald-500/20 text-xs">
+          🤖
+        </span>
+        <span>Assistentes Virtuais · Tira-Dúvidas</span>
       </button>
 
-      {/* 3. Totem Central da Recepção (Retirar Senha) */}
+      {/* 4. Totem Central da Recepção (Retirar Senha) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onOpenQueuePanel();
         }}
-        className="absolute left-[49%] top-[43%] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-xl border-2 border-stone-950 bg-amber-400 px-3.5 py-1.5 text-[11px] font-black text-stone-950 shadow-[0_4px_0_#090a0f] transition hover:scale-105 hover:bg-amber-300"
+        className="absolute left-[50%] top-[44%] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-lg border border-amber-400/70 bg-slate-900/95 px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur-xs transition hover:scale-105 hover:border-amber-300"
       >
-        <span>🛋️ Recepção · Retirar Senha</span>
-        <span className="rounded-md bg-stone-950 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300">
+        <span className="text-amber-300">🎫</span>
+        <span>Recepção · Retirar Senha RH</span>
+        <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-950">
           {queueCount} na fila
         </span>
       </button>
 
-      {/* 4. Sala de Jogos & Fliperama (Inf. Esquerda) */}
+      {/* 5. Simulado de Entrevista & Dicas (Inf. Esquerda) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onOpenArcadeQuiz();
         }}
-        className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded-xl border-2 border-stone-950 bg-purple-500 px-3 py-1.5 text-[11px] font-black text-white shadow-[0_3px_0_#090a0f] transition hover:scale-105 hover:bg-purple-400"
+        className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 shadow-md backdrop-blur-xs transition hover:border-indigo-400 hover:bg-slate-900"
       >
-        <span>🕹️</span>
-        <span>Fliperama & Sinuca · Jogar Quiz</span>
+        <span>🎯</span>
+        <span>Simulado de Entrevista & Boas Práticas</span>
       </button>
 
-      {/* 5. Diretoria & Lounge VIP (Inf. Direita) */}
+      {/* 6. Central de Avisos & Acompanhamento no Sistema (Inf. Direita) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onMoveTo(SUPPORT_ROOMS.diretoria.spawn.x, SUPPORT_ROOMS.diretoria.spawn.y);
+          onOpenGuidesPanel();
         }}
-        className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-xl border-2 border-stone-950 bg-fuchsia-300 px-3 py-1.5 text-[11px] font-black text-stone-950 shadow-[0_3px_0_#090a0f] transition hover:scale-105 hover:bg-fuchsia-200"
+        className="absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 shadow-md backdrop-blur-xs transition hover:border-sky-400 hover:bg-slate-900"
       >
-        <span>🏛️</span>
-        <span>Diretoria & Lounge VIP</span>
+        <span>🔔</span>
+        <span>Como Acompanhar Avisos no Sistema</span>
       </button>
 
-      {/* ─── PERSONAGENS DE AMBIENTAÇÃO (ANFITRIÃ RH, BARISTA, ARCADE) ─── */}
-      {AMBIENT_NPCS.map((npc) => (
+      {/* ─── BOTS ASSISTENTES CORPORATIVOS (VAGAS, AVISOS DO SISTEMA, CURRÍCULO) ─── */}
+      {SUPPORT_ASSISTANT_BOTS.map((bot) => (
         <MapAvatarNode
-          key={npc.id}
-          id={npc.id}
-          displayName={npc.displayName}
-          kind={npc.kind}
-          avatar={npc.avatar}
-          x={npc.x}
-          y={npc.y}
+          key={`bot_${bot.id}`}
+          id={`bot_${bot.id}`}
+          displayName={bot.name}
+          kind="STAFF"
+          avatar={bot.avatar}
+          x={bot.x}
+          y={bot.y}
           isAmbientNpc
-          bubbleText={activeNpcTip === npc.id ? npc.tipBubble : null}
-          reactionEmoji={npc.emoji}
+          bubbleText={
+            activeBotTip === bot.id
+              ? `${bot.shortSpecialty} (Clique para perguntar)`
+              : null
+          }
+          reactionEmoji="🤖"
           onSelect={() => {
-            onMoveTo(Math.min(90, npc.x + 5), Math.min(90, npc.y + 4));
-            setActiveNpcTip((prev) => (prev === npc.id ? null : npc.id));
+            onMoveTo(Math.min(90, bot.x + 5), Math.min(90, bot.y + 4));
+            setActiveBotTip(bot.id);
+            onSelectBot(bot.id);
           }}
         />
       ))}
 
-      {/* ─── BONEQUINHOS DOS PARTICIPANTES ONLINE EM TEMPO REAL ─── */}
+      {/* ─── PARTICIPANTES ONLINE EM TEMPO REAL ─── */}
       {users.map((u) => {
         const activeBubble = bubbles.find((b) => b.participantId === u.participantId);
         const activeReaction = reactions.find(

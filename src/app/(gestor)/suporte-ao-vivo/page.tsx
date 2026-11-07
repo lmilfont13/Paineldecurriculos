@@ -26,7 +26,7 @@ export default async function GestorLiveSupportPage() {
             </h1>
           </div>
           <p className="mt-1 text-sm text-[#71717a]">
-            Atenda candidatos nos Balcões 1, 2 e 3, converse por balões públicos ou mensagens privadas com cadeado 🔒 e envie avisos gerais na sala.
+            Gerencie os Balcões de Atendimento 1 a 3, acompanhe o Mural de Vagas integrado, os Bots Assistentes de dúvidas e as orientações de avisos para candidatos.
           </p>
         </div>
 

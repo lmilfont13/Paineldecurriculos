@@ -9,12 +9,14 @@ import {
   type ActivePrivatePairDTO,
   type AvatarConfig,
   type SupportConversationDTO,
+  type SupportJobDTO,
   type SupportMessageDTO,
   type SupportParticipantDTO,
   type SupportReportDTO,
   type SupportSpaceStateDTO,
   type SupportTopicId,
 } from "@/server/models/support.model";
+import { listOpenJobs } from "@/server/services/job.service";
 import {
   closeAllConversationsOfParticipant,
   createGuestParticipant,
@@ -330,10 +332,23 @@ export async function getSupportSpaceState(
     : candidate?.name?.trim() || null;
 
   const meRow = await resolveCurrentParticipant(actor);
-  const [openConvs, isPublicEnabled] = await Promise.all([
-    listOpenConversationsForCompany(companyId),
-    isLiveSupportSpaceEnabled(companyId).catch(() => false),
-  ]);
+  const openConvs = await listOpenConversationsForCompany(companyId);
+  const isPublicEnabled = await isLiveSupportSpaceEnabled(companyId).catch(
+    () => false
+  );
+  const rawOpenJobs = await listOpenJobs(companyId).catch(() => []);
+  const openJobs: SupportJobDTO[] = rawOpenJobs.map((j) => ({
+    id: j.id,
+    code: j.code,
+    title: j.title,
+    description: j.description,
+    requirements: j.requirements,
+    location: j.location,
+    contract: j.contract,
+    workMode: j.workMode,
+    isTalentPool: j.isTalentPool,
+    createdAt: j.createdAt.toISOString(),
+  }));
 
   const waitingServiceList = openConvs.filter(
     (c) => c.kind === "SERVICE" && c.status === "WAITING"
@@ -446,6 +461,7 @@ export async function getSupportSpaceState(
     myOutgoingDmRequest,
     activeMessages,
     activePrivatePairs,
+    openJobs,
     staffQueue: isStaff ? waitingServiceList.map(toConversationDTO) : [],
     staffActiveDesks: isStaff ? activeServiceList.map(toConversationDTO) : [],
     staffOpenReports,
