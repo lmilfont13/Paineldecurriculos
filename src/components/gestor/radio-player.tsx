@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  Clock,
   Disc,
   ListMusic,
   Loader2,
@@ -22,6 +23,7 @@ import {
   Volume2,
   VolumeX,
   X,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -29,7 +31,9 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getMusicCatalogAction,
   getRadioPlaylistAction,
+  getRadioSpotIntervalAction,
   saveRadioPlaylistAction,
+  saveRadioSpotIntervalAction,
   saveRadioStationAction,
 } from "@/server/controllers/settings.controller";
 import {
@@ -128,6 +132,12 @@ export function GestorRadioPlayer({
   const [savedPlaylist, setSavedPlaylist] = useState(false);
   const [broadcastNotification, setBroadcastNotification] = useState<string | null>(null);
 
+  // Intervalo e temporizador automático dos Spots / Vinhetas
+  const [spotIntervalMinutes, setSpotIntervalMinutes] = useState(10);
+  const [savingInterval, setSavingInterval] = useState(false);
+  const [nextSpotSeconds, setNextSpotSeconds] = useState(10 * 60);
+  const spotIndexRef = useRef(0);
+
   // Conecta ao Supabase Realtime para sincronização com candidatos
   useEffect(() => {
     if (!companySlug) return;
@@ -149,13 +159,14 @@ export function GestorRadioPlayer({
     }
   }, [companySlug]);
 
-  // Carrega a fila salva e catálogo da empresa
+  // Carrega a fila salva, catálogo e intervalo de spots da empresa
   useEffect(() => {
     void (async () => {
       try {
-        const [savedQueue, catalog] = await Promise.all([
+        const [savedQueue, catalog, savedInterval] = await Promise.all([
           getRadioPlaylistAction(),
           getMusicCatalogAction(),
+          getRadioSpotIntervalAction(),
         ]);
         if (savedQueue && savedQueue.length > 0) {
           setPlaylistTracks(savedQueue);
@@ -163,11 +174,56 @@ export function GestorRadioPlayer({
         if (catalog && catalog.length > 0) {
           setMusicCatalog(catalog);
         }
+        if (typeof savedInterval === "number") {
+          setSpotIntervalMinutes(savedInterval);
+          setNextSpotSeconds(savedInterval > 0 ? savedInterval * 60 : 0);
+        }
       } catch {
-        // Fallback para catálogo padrão
+        // Fallback para valores padrão
       }
     })();
   }, []);
+
+  // Temporizador para disparar spot a cada X minutos automaticamente
+  useEffect(() => {
+    if (!playing || spotIntervalMinutes <= 0) return;
+
+    const timer = setInterval(() => {
+      setNextSpotSeconds((prev) => {
+        if (prev <= 1) {
+          const spot = TARGET_RADIO_SPOTS[spotIndexRef.current % TARGET_RADIO_SPOTS.length];
+          spotIndexRef.current += 1;
+          broadcastSpotLive(spot);
+          return spotIntervalMinutes * 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [playing, spotIntervalMinutes]);
+
+  const handleIntervalChange = async (minutes: number) => {
+    setSpotIntervalMinutes(minutes);
+    setNextSpotSeconds(minutes > 0 ? minutes * 60 : 0);
+    setSavingInterval(true);
+    try {
+      await saveRadioSpotIntervalAction(minutes);
+    } catch {
+      // Ignora erro
+    } finally {
+      setSavingInterval(false);
+    }
+  };
+
+  const triggerNextSpotNow = () => {
+    const spot = TARGET_RADIO_SPOTS[spotIndexRef.current % TARGET_RADIO_SPOTS.length];
+    spotIndexRef.current += 1;
+    broadcastSpotLive(spot);
+    if (spotIntervalMinutes > 0) {
+      setNextSpotSeconds(spotIntervalMinutes * 60);
+    }
+  };
 
   // Sincroniza se o servidor atualizar a estação inicial
   useEffect(() => {
@@ -887,21 +943,88 @@ export function GestorRadioPlayer({
 
           {/* ABA 2: SPOTS & VINHETAS NO AR */}
           {activeTab === "spots" && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-stone-900 flex items-center gap-1">
                   <Sparkles className="size-3 text-amber-600" />
-                  Vinhetas Tarhget Masterizadas
+                  Vinhetas & Spots Tarhget
                 </span>
                 <span className="text-[9px] text-[#71717a]">
                   Pronúncia: Tár-guet
                 </span>
               </div>
-              <p className="text-[9px] text-stone-500">
-                Ao disparar no ar, o som da música baixa suavemente para os candidatos e a vinheta toca com efeitos de rádio FM.
-              </p>
 
-              <div className="space-y-1.5 pt-1">
+              {/* Card de Frequência / Tempo Definido */}
+              <div className="rounded-lg border border-[#e7e5e4] bg-[#fafaf9] p-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="spot-interval" className="text-[10px] font-bold text-stone-800 flex items-center gap-1">
+                    <Clock className="size-3 text-violet-600" />
+                    Frequência no Ar
+                  </label>
+                  {savingInterval ? (
+                    <span className="text-[9px] font-semibold text-amber-700 animate-pulse">
+                      Salvando…
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-[#71717a]">
+                      {spotIntervalMinutes > 0 ? "Automático" : "Manual"}
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  id="spot-interval"
+                  value={spotIntervalMinutes}
+                  onChange={(e) => handleIntervalChange(parseInt(e.target.value, 10))}
+                  className="h-6 w-full rounded border border-[#e4e4e7] bg-white px-1.5 text-[10px] text-[#0a0a0a] outline-none"
+                >
+                  <option value={0}>Apenas manual (acionar quando eu quiser)</option>
+                  <option value={3}>A cada 3 minutos</option>
+                  <option value={5}>A cada 5 minutos</option>
+                  <option value={10}>A cada 10 minutos (Recomendado)</option>
+                  <option value={15}>A cada 15 minutos</option>
+                  <option value={20}>A cada 20 minutos</option>
+                  <option value={30}>A cada 30 minutos</option>
+                </select>
+
+                {/* Status do temporizador e disparo rápido */}
+                <div className="flex items-center justify-between gap-1 pt-0.5">
+                  <div className="text-[9px] text-stone-600">
+                    {spotIntervalMinutes > 0 ? (
+                      <span className="font-medium">
+                        ⏱️ Próximo spot em:{" "}
+                        <strong className="text-stone-900 font-mono">
+                          {Math.floor(nextSpotSeconds / 60)
+                            .toString()
+                            .padStart(2, "0")}
+                          :
+                          {(nextSpotSeconds % 60).toString().padStart(2, "0")}
+                        </strong>
+                      </span>
+                    ) : (
+                      <span className="text-[#71717a]">
+                        Disparo automático desligado.
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={triggerNextSpotNow}
+                    title="Disparar a próxima vinheta agora"
+                    className="flex items-center gap-1 rounded bg-violet-900 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs transition hover:bg-violet-950 active:scale-95"
+                  >
+                    <Zap className="size-2.5 text-amber-300" />
+                    <span>Disparar Agora</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista das Vinhetas com Disparo Imediato */}
+              <div className="space-y-1.5 pt-0.5">
+                <p className="text-[9px] text-stone-500">
+                  Ou selecione uma vinheta específica para acionar na hora:
+                </p>
                 {TARGET_RADIO_SPOTS.map((spot) => {
                   const isPreviewing = previewingSpotId === spot.id;
                   const isLive = liveBroadcastSpot?.id === spot.id;

@@ -33,12 +33,14 @@ export function CandidateRadioPlayer({
   companySlug,
   spotsEnabled = true,
   playlist,
+  spotIntervalMinutes = 10,
 }: {
   station?: RadioStation | null;
   companyName?: string;
   companySlug?: string;
   spotsEnabled?: boolean;
   playlist?: RadioTrack[];
+  spotIntervalMinutes?: number;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -223,8 +225,8 @@ export function CandidateRadioPlayer({
 
     playedSongsCountRef.current += 1;
 
-    // A cada 2 músicas finalizadas, injeta um spot da Target
-    if (spotsEnabled && playedSongsCountRef.current % 2 === 0) {
+    // Se o intervalo for automático (> 0) e a cada 3 músicas finalizadas, injeta um spot da Target
+    if (spotsEnabled && spotIntervalMinutes > 0 && playedSongsCountRef.current % 3 === 0) {
       playSpot();
     }
 
@@ -239,21 +241,19 @@ export function CandidateRadioPlayer({
     }
   }, [trackIndex, isPlaylistMode, currentTrack.audioUrl, playing]);
 
-  // Agendamento periódico de spots enquanto a rádio estiver tocando (para streams contínuos ou intervalo)
+  // Agendamento periódico de spots por tempo definido (ex: a cada X minutos)
   useEffect(() => {
-    if (!playing || !spotsEnabled) {
+    if (!playing || !spotsEnabled || spotIntervalMinutes <= 0) {
       if (spotTimerRef.current) {
         clearTimeout(spotTimerRef.current);
         spotTimerRef.current = null;
       }
-      if (activeSpot) {
-        skipCurrentSpot();
-      }
       return;
     }
 
-    // Primeiro spot toca após 50 segundos de rádio tocando
-    const initialDelay = 50000;
+    const intervalMs = spotIntervalMinutes * 60 * 1000;
+    // Primeiro spot toca após 45 segundos (ou no intervalo se for menor)
+    const initialDelay = Math.min(45000, intervalMs);
     spotTimerRef.current = setTimeout(() => {
       playSpot();
     }, initialDelay);
@@ -263,17 +263,18 @@ export function CandidateRadioPlayer({
         clearTimeout(spotTimerRef.current);
       }
     };
-  }, [playing, spotsEnabled, playSpot, activeSpot, skipCurrentSpot]);
+  }, [playing, spotsEnabled, spotIntervalMinutes, playSpot]);
 
   // Quando o áudio do spot terminar
   const handleSpotEnded = () => {
     finishSpot();
-    // Agenda o próximo spot para daqui a 3.5 minutos
-    if (playing && spotsEnabled) {
+    // Agenda o próximo spot de acordo com o intervalo em minutos configurado
+    if (playing && spotsEnabled && spotIntervalMinutes > 0) {
       if (spotTimerRef.current) clearTimeout(spotTimerRef.current);
+      const intervalMs = spotIntervalMinutes * 60 * 1000;
       spotTimerRef.current = setTimeout(() => {
         playSpot();
-      }, 210000);
+      }, intervalMs);
     }
   };
 

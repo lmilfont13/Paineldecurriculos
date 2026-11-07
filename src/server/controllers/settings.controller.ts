@@ -8,6 +8,8 @@ import {
   type RadioStationConfig,
   getActiveRadioPlaylist,
   setActiveRadioPlaylist,
+  getActiveRadioSpotInterval,
+  setActiveRadioSpotInterval,
   getMusicCatalog,
 } from "@/server/services/message-template.service";
 import type { RadioTrack } from "@/server/models/radio.model";
@@ -239,6 +241,30 @@ export async function saveRadioPlaylistAction(tracks: RadioTrack[]): Promise<{ o
   }
   if (isManager(user)) {
     const res = await setActiveRadioPlaylist(user.companyId, tracks);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  return { ok: false };
+}
+
+/** Lê o intervalo de spots / vinhetas programado da Rádio (em minutos). */
+export async function getRadioSpotIntervalAction(): Promise<number> {
+  const user = await getSessionUser();
+  const companyId = user && !isAdmin(user) ? user.companyId : null;
+  return getActiveRadioSpotInterval(companyId);
+}
+
+/** Salva o intervalo de spots / vinhetas programado da Rádio (em minutos; 0 = manual). */
+export async function saveRadioSpotIntervalAction(minutes: number): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  if (isAdmin(user)) {
+    const res = await setActiveRadioSpotInterval(null, minutes);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  if (isManager(user)) {
+    const res = await setActiveRadioSpotInterval(user.companyId, minutes);
     revalidatePath("/", "layout");
     return res;
   }

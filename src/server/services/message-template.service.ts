@@ -12,10 +12,12 @@ import {
 } from "@/server/models/message-templates.model";
 import {
   findRadioPlaylistRaw,
+  findRadioSpotIntervalRaw,
   findRadioStationRaw,
   findTemplate,
   findTemplatesByCompany,
   saveRadioPlaylistRaw,
+  saveRadioSpotIntervalRaw,
   saveRadioStationRaw,
   saveTemplate,
 } from "@/server/repositories/message-template.repository";
@@ -188,5 +190,32 @@ export async function setActiveRadioPlaylist(
     audioUrl: String(t.audioUrl).trim().slice(0, 500),
   }));
   await saveRadioPlaylistRaw(companyId, JSON.stringify(clean));
+  return { ok: true };
+}
+
+/** Lê o intervalo de spots/vinhetas da rádio configurado (em minutos; 0 = manual apenas). Padrão: 10 min. */
+export async function getActiveRadioSpotInterval(
+  companyId?: string | null
+): Promise<number> {
+  try {
+    const raw = await findRadioSpotIntervalRaw(companyId);
+    if (!raw) return 10;
+    const parsed = parseInt(raw, 10);
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 120) {
+      return parsed;
+    }
+    return 10;
+  } catch {
+    return 10;
+  }
+}
+
+/** Salva o intervalo de spots/vinhetas da rádio configurado pelo gestor. */
+export async function setActiveRadioSpotInterval(
+  companyId: string | null,
+  minutes: number
+): Promise<{ ok: boolean }> {
+  const safeMinutes = Math.max(0, Math.min(120, Math.round(minutes)));
+  await saveRadioSpotIntervalRaw(companyId, String(safeMinutes));
   return { ok: true };
 }
