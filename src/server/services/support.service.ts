@@ -2,11 +2,17 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { readEnv } from "@/lib/env";
+import { geminiGenerate } from "@/lib/gemini";
 import {
   DEFAULT_AVATAR,
+  SUPPORT_ASSISTANT_BOTS,
   containsProfanity,
+  formatSupportJobContract,
+  formatSupportJobWorkMode,
+  generateAssistantBotReply,
   normalizeAvatar,
   type ActivePrivatePairDTO,
+  type AssistantBotId,
   type AvatarConfig,
   type SupportConversationDTO,
   type SupportJobDTO,
@@ -856,5 +862,121 @@ export async function toggleSupportSpacePublicVisibility(
   await setLiveSupportSpaceEnabled(actor.companyId, Boolean(enabled));
   return Boolean(enabled);
 }
+
+/**
+ * Responde perguntas enviadas via balão público ou chat para um dos 3 Bots Assistentes de IA.
+ * Usa `geminiGenerate` com o contexto real das vagas abertas da empresa e fallback determinístico.
+ */
+export async function askSupportBotAi(
+  actor: SupportViewerActor,
+  input: {
+    botId: AssistantBotId;
+    question: string;
+    selectedJobId?: string | null;
+    companyName: string;
+  }
+): Promise<{ bubbleText: string; fullReply: string; botName: string }> {
+  const cleanQuestion = input.question.replace(/\s+/g, " ").trim().slice(0, 220);
+  if (!cleanQuestion) {
+    throw new Error("Digite uma pergunta para o assistente.");
+  }
+  if (containsProfanity(cleanQuestion)) {
+    throw new Error("Por favor, mantenha uma comunicação cordial com o assistente.");
+  }
+
+  const bot =
+    SUPPORT_ASSISTANT_BOTS.find((b) => b.id === input.botId) ??
+    SUPPORT_ASSISTANT_BOTS[0];
+
+  const rawJobs = await listOpenJobs(actor.companyId).catch(() => []);
+  const openJobs: SupportJobDTO[] = rawJobs.map((j) => ({
+    id: j.id,
+    code: j.code,
+    title: j.title,
+    description: j.description,
+    requirements: j.requirements,
+    location: j.location,
+    contract: j.contract,
+    workMode: j.workMode,
+    isTalentPool: j.isTalentPool,
+    createdAt: j.createdAt.toISOString(),
+  }));
+
+  const selectedJob =
+    openJobs.find((j) => j.id === input.selectedJobId) ??
+    openJobs.find((j) => !j.isTalentPool) ??
+    openJobs[0] ??
+    null;
+
+  const fallbackReply = generateAssistantBotReply({
+    botId: bot.id,
+    question: cleanQuestion,
+    selectedJob,
+    openJobs,
+    companyName: input.companyName,
+  });
+
+  try {
+    const jobsSummary =
+      openJobs.length === 0
+        ? "Nenhuma vaga aberta cadastrada no momento."
+        : openJobs
+            .slice(0, 8)
+            .map(
+              (j) =>
+                `- ${j.title}${j.isTalentPool ? " [Banco de Talentos]" : ""} | Modalidade: ${formatSupportJobWorkMode(j.workMode)} | Contrato: ${formatSupportJobContract(j.contract)}${j.location ? ` | Local: ${j.location}` : ""}${j.requirements ? ` | Requisitos: ${j.requirements.replace(/\s+/g, " ").slice(0, 180)}` : ""}`
+            )
+            .join("\n");
+
+    const focusedJobContext = selectedJob
+      ? `Vaga selecionada em foco: "${selectedJob.title}" (${formatSupportJobWorkMode(selectedJob.workMode)}, ${formatSupportJobContract(selectedJob.contract)}${selectedJob.location ? `, ${selectedJob.location}` : ""}). Descrição: ${selectedJob.description.replace(/\s+/g, " ").slice(0, 260)}. Requisitos: ${(selectedJob.requirements || "Ver descrição").replace(/\s+/g, " ").slice(0, 220)}.`
+      : "";
+
+    const systemPrompt = [
+      `Você é ${bot.name} (${bot.roleTitle}) na sala corporativa de atendimento ao vivo da empresa ${input.companyName}.`,
+      `Regras do sistema Triagem: O candidato acompanha avisos no Sino de Notificações (menu topo), vê etapas em "Minhas Candidaturas" e preenche Pré-Entrevista quando solicitado pelo RH. Currículo deve ser PDF até 5 MB. Atendimento humano 1:1 é feito retirando senha para as Mesas RH 1, 2 ou 3.`,
+      `Vagas abertas da empresa hoje:\n${jobsSummary}`,
+      focusedJobContext,
+      `Responda em português brasileiro executivo, prestativo e direto, em no máximo 2 frases curtas (até 170 caracteres no primeiro parágrafo) para caber em um balão de fala acima da sua mesa no escritório virtual.`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const aiText = (
+      await geminiGenerate({
+        system: systemPrompt,
+        prompt: `Pergunta do candidato na sala ao vivo: "${cleanQuestion}"`,
+        maxTokens: 200,
+        companyId: actor.companyId,
+      })
+    )
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .trim();
+
+    if (aiText && aiText.length >= 8) {
+      const compactBubble =
+        aiText.length > 165 ? `${aiText.slice(0, 162).trim()}...` : aiText;
+      return {
+        bubbleText: compactBubble,
+        fullReply: aiText,
+        botName: bot.name,
+      };
+    }
+  } catch {
+    // Usa fallback determinístico abaixo se a chave de IA não estiver ativa ou falhar
+  }
+
+  const compactFallback =
+    fallbackReply.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  return {
+    bubbleText:
+      compactFallback.length > 165
+        ? `${compactFallback.slice(0, 162).trim()}...`
+        : compactFallback,
+    fullReply: fallbackReply,
+    botName: bot.name,
+  };
+}
+
 
 

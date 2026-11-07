@@ -10,7 +10,6 @@ import {
   DEFAULT_AVATAR,
   HAIR_COLORS,
   HAIR_STYLES,
-  HOUSE_RULES,
   PANTS_COLORS,
   QUICK_REACTIONS,
   SHIRT_COLORS,
@@ -18,21 +17,19 @@ import {
   SUPPORT_ASSISTANT_BOTS,
   SUPPORT_DESK_POSITIONS,
   SUPPORT_ROOMS,
-  SUPPORT_ROOM_IDS,
   SUPPORT_TOPICS,
   formatSupportJobContract,
   formatSupportJobWorkMode,
-  generateAssistantBotReply,
   resolveRoomFromCoords,
   sanitizePublicBubble,
   type AssistantBotId,
   type AvatarConfig,
   type SupportJobDTO,
-  type SupportRoomId,
   type SupportSpaceStateDTO,
   type SupportTopicId,
 } from "@/server/models/support.model";
 import {
+  askSupportBotAiAction,
   callServiceTicketAction,
   closeSupportConversationAction,
   enterSupportSpaceAction,
@@ -54,7 +51,6 @@ import {
   type ReactionFloatingItem,
 } from "./pixel-office-canvas";
 import {
-  Ban,
   Bell,
   Bot,
   Briefcase,
@@ -76,7 +72,6 @@ import {
   ShieldAlert,
   Sparkles,
   Users,
-  VolumeX,
   X,
 } from "lucide-react";
 
@@ -93,6 +88,7 @@ interface BotChatMessage {
   id: string;
   sender: "bot" | "user";
   botId: AssistantBotId;
+  authorName?: string;
   text: string;
 }
 
@@ -134,14 +130,21 @@ export function VirtualCareerSpace({
   const [remoteUsers, setRemoteUsers] = useState<Record<string, MapPresenceUser>>({});
   const [publicBubbles, setPublicBubbles] = useState<PublicBubbleItem[]>([]);
   const [publicFeed, setPublicFeed] = useState<PublicBubbleItem[]>([]);
+  const [botBubbles, setBotBubbles] = useState<
+    Record<string, { text: string; expiresAt: number }>
+  >({});
+  const [loadingBotId, setLoadingBotId] = useState<AssistantBotId | null>(null);
   const [reactions, setReactions] = useState<ReactionFloatingItem[]>([]);
   const [staffAnnouncement, setStaffAnnouncement] = useState<{
     author: string;
     text: string;
   } | null>(null);
 
-  // Entrada de mensagem pública na sala
+  // Entrada de balão público na sala (ou pergunta via balão para um Bot IA)
   const [bubbleInput, setBubbleInput] = useState("");
+  const [targetBotForBubble, setTargetBotForBubble] = useState<AssistantBotId | null>(
+    "vagas"
+  );
   const [isAnnouncementMode, setIsAnnouncementMode] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
@@ -175,7 +178,7 @@ export function VirtualCareerSpace({
   });
 
   const botChatContainerRef = useRef<HTMLDivElement | null>(null);
-  const botInputRef = useRef<HTMLInputElement | null>(null);
+  const bubbleInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fila RH e Conversa Privada
   const [selectedTopic, setSelectedTopic] = useState<SupportTopicId>("VAGA");
@@ -233,6 +236,18 @@ export function VirtualCareerSpace({
       const now = Date.now();
       setPublicBubbles((prev) => prev.filter((b) => b.expiresAt > now));
       setReactions((prev) => prev.filter((r) => r.expiresAt > now));
+      setBotBubbles((prev) => {
+        const next: Record<string, { text: string; expiresAt: number }> = {};
+        let changed = false;
+        for (const [k, v] of Object.entries(prev)) {
+          if (v.expiresAt > now) {
+            next[k] = v;
+          } else {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -263,7 +278,7 @@ export function VirtualCareerSpace({
         const pos = SUPPORT_DESK_POSITIONS[desk]?.candidate ?? SUPPORT_ROOMS.atendimento.spawn;
         setMyCoords(pos);
         setSideTab("rh");
-        showToast(`🎧 Você foi chamado para atendimento no Balcão ${desk}!`);
+        showToast(`🎧 Você foi chamado para atendimento na Mesa RH 0${desk}!`);
         void refreshServerState(payload?.payload?.conversationId);
       })
       .on("broadcast", { event: "dm_invite" }, () => {
@@ -287,7 +302,7 @@ export function VirtualCareerSpace({
     };
   }, [me?.inboxKey, refreshServerState, showToast]);
 
-  // Conexão ao canal do mapa da empresa (Presence + Broadcast)
+  // Conexão ao canal do mapa da empresa (Presence + Broadcast de balões de fala e respostas de IA)
   useEffect(() => {
     if (!me) return;
 
@@ -314,13 +329,44 @@ export function VirtualCareerSpace({
           kind: data.kind,
           text: data.text,
           room: data.room || "recepcao",
-          expiresAt: Date.now() + 7000,
+          expiresAt: Date.now() + 8000,
         };
         setPublicBubbles((prev) => [
           ...prev.filter((b) => b.participantId !== data.participantId),
           item,
         ]);
         setPublicFeed((prev) => [...prev.slice(-35), item]);
+      } else if (type === "bot_bubble" && data.botId && data.text) {
+        const bId = data.botId as AssistantBotId;
+        setBotBubbles((prev) => ({
+          ...prev,
+          [bId]: {
+            text: data.text,
+            expiresAt: Date.now() + 12000,
+          },
+        }));
+        if (data.senderId !== me.id) {
+          setBotMessages((prev) => [
+            ...prev.slice(-24),
+            ...(data.question
+              ? [
+                  {
+                    id: `remote_q_${Date.now()}`,
+                    sender: "user" as const,
+                    botId: bId,
+                    authorName: data.askedBy || "Candidato",
+                    text: data.question,
+                  },
+                ]
+              : []),
+            {
+              id: `remote_a_${Date.now() + 1}`,
+              sender: "bot" as const,
+              botId: bId,
+              text: data.fullReply || data.text,
+            },
+          ]);
+        }
       } else if (type === "reaction" && data.participantId) {
         setReactions((prev) => [
           ...prev.filter((r) => r.participantId !== data.participantId),
@@ -384,6 +430,9 @@ export function VirtualCareerSpace({
       );
       ch.on("broadcast", { event: "bubble" }, ({ payload }) =>
         handleIncomingEvent("bubble", payload)
+      );
+      ch.on("broadcast", { event: "bot_bubble" }, ({ payload }) =>
+        handleIncomingEvent("bot_bubble", payload)
       );
       ch.on("broadcast", { event: "reaction" }, ({ payload }) =>
         handleIncomingEvent("reaction", payload)
@@ -460,32 +509,6 @@ export function VirtualCareerSpace({
     [emitRealtimeEvent, me]
   );
 
-  // Atalhos de teclado (setas / WASD) quando não estiver digitando em um input
-  useEffect(() => {
-    if (!me || showAvatarModal || showFullGuideModal) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return;
-
-      const step = 3.5;
-      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-        e.preventDefault();
-        moveAvatarTo(myCoords.x, Math.max(14, myCoords.y - step));
-      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-        e.preventDefault();
-        moveAvatarTo(myCoords.x, Math.min(90, myCoords.y + step));
-      } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-        e.preventDefault();
-        moveAvatarTo(Math.max(8, myCoords.x - step), myCoords.y);
-      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-        e.preventDefault();
-        moveAvatarTo(Math.min(92, myCoords.x + step), myCoords.y);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [me, moveAvatarTo, myCoords.x, myCoords.y, showAvatarModal, showFullGuideModal]);
-
   // Salvar entrada / credencial do participante
   const handleEnterSpace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -499,7 +522,7 @@ export function VirtualCareerSpace({
       });
       setSpaceState(nextState);
       setShowAvatarModal(false);
-      showToast("Bem-vindo ao Centro de Carreiras & Suporte ao Vivo!");
+      showToast("Credencial confirmada. Clique em qualquer Bot IA para perguntar via balão!");
     } catch (err: any) {
       setEntryError(err?.message || "Não foi possível entrar no espaço.");
     } finally {
@@ -507,83 +530,168 @@ export function VirtualCareerSpace({
     }
   };
 
-  // Trocar de Bot Assistente e focar imediatamente no chat
-  const handleSwitchBot = useCallback(
-    (botId: AssistantBotId, customJob?: SupportJobDTO) => {
+  /**
+   * Envia uma pergunta em BALÃO PÚBLICO para um Bot IA:
+   * 1. Mostra o balão de fala sobre o boneco do usuário (todos na sala veem a pergunta);
+   * 2. Chama a IA (`askSupportBotAiAction`) com o contexto das vagas da empresa;
+   * 3. Mostra a resposta da IA em um BALÃO PÚBLICO sobre a mesa do Bot (todos na sala veem a resposta!)
+   *    e também registra no histórico lateral.
+   */
+  const handleAskBotViaBubble = useCallback(
+    async (botId: AssistantBotId, rawQuestion: string, customJob?: SupportJobDTO) => {
+      if (!me) {
+        setShowAvatarModal(true);
+        return;
+      }
+      if (me.isMuted || me.isBanned) {
+        showToast("Você está temporariamente silenciado pela moderação.");
+        return;
+      }
+
+      const check = sanitizePublicBubble(rawQuestion);
+      if (!check.ok) {
+        showToast(check.error || "Digite uma pergunta válida.");
+        return;
+      }
+
+      const bot =
+        SUPPORT_ASSISTANT_BOTS.find((b) => b.id === botId) ??
+        SUPPORT_ASSISTANT_BOTS[0];
+
       setActiveBotId(botId);
+      setTargetBotForBubble(botId);
       setSideTab("bots");
 
+      // Move o boneco do candidato até a cadeira em frente à mesa do Bot IA
+      moveAvatarTo(bot.visitorSpot.x, bot.visitorSpot.y);
+
+      const jobToQuery =
+        customJob?.id ||
+        selectedBotJobId ||
+        regularJobs[0]?.id ||
+        openJobs[0]?.id ||
+        null;
       if (customJob) {
         setSelectedBotJobId(customJob.id);
-        const reply = generateAssistantBotReply({
-          botId: "vagas",
-          question: "Resumo e requisitos desta vaga",
-          selectedJob: customJob,
-          openJobs,
+      }
+
+      // 1. Dispara o BALÃO PÚBLICO do candidato para que todos na sala vejam a pergunta
+      const userBubble: PublicBubbleItem = {
+        id: `b_${Date.now()}`,
+        participantId: me.id,
+        displayName: me.displayName,
+        kind: me.kind,
+        text: `@${bot.name.split("·")[0].trim()}: ${check.clean}`,
+        room: bot.room,
+        expiresAt: Date.now() + 9000,
+      };
+      setPublicBubbles((prev) => [
+        ...prev.filter((b) => b.participantId !== me.id),
+        userBubble,
+      ]);
+      setPublicFeed((prev) => [...prev.slice(-35), userBubble]);
+      emitRealtimeEvent("bubble", userBubble as unknown as Record<string, unknown>);
+
+      // Adiciona a pergunta no histórico lateral imediatamente
+      setBotMessages((prev) => [
+        ...prev.slice(-24),
+        {
+          id: `usr_${Date.now()}`,
+          sender: "user",
+          botId,
+          authorName: me.displayName,
+          text: check.clean,
+        },
+      ]);
+
+      setBubbleInput("");
+      setBotInput("");
+      setLoadingBotId(botId);
+
+      // 2. Consulta a IA da plataforma e transmite o BALÃO DE RESPOSTA do Bot para toda a sala
+      try {
+        const res = await askSupportBotAiAction(companySlug, {
+          botId,
+          question: check.clean,
+          selectedJobId: jobToQuery,
           companyName,
         });
-        setBotMessages((prev) => [
+
+        setBotBubbles((prev) => ({
           ...prev,
-          {
-            id: `u_${Date.now()}`,
-            sender: "user",
-            botId: "vagas",
-            text: `Quero saber sobre a vaga: ${customJob.title}`,
+          [botId]: {
+            text: res.bubbleText,
+            expiresAt: Date.now() + 12000,
           },
+        }));
+
+        setBotMessages((prev) => [
+          ...prev.slice(-24),
           {
-            id: `b_${Date.now() + 1}`,
+            id: `bot_${Date.now() + 1}`,
             sender: "bot",
-            botId: "vagas",
-            text: reply,
+            botId,
+            text: res.fullReply,
           },
         ]);
+
+        // Transmite a resposta em balão do Bot para todos os participantes online na sala
+        emitRealtimeEvent("bot_bubble", {
+          botId,
+          text: res.bubbleText,
+          fullReply: res.fullReply,
+          question: check.clean,
+          askedBy: me.displayName,
+          senderId: me.id,
+        });
+      } catch (err: any) {
+        showToast(err?.message || "Não foi possível obter resposta da IA.");
+      } finally {
+        setLoadingBotId(null);
+      }
+    },
+    [
+      companyName,
+      companySlug,
+      emitRealtimeEvent,
+      me,
+      moveAvatarTo,
+      openJobs,
+      regularJobs,
+      selectedBotJobId,
+      showToast,
+    ]
+  );
+
+  // Selecionar um Bot no mapa ou no painel lateral
+  const handleSelectBotStation = useCallback(
+    (botId: AssistantBotId, customJob?: SupportJobDTO) => {
+      const bot =
+        SUPPORT_ASSISTANT_BOTS.find((b) => b.id === botId) ??
+        SUPPORT_ASSISTANT_BOTS[0];
+      setActiveBotId(botId);
+      setTargetBotForBubble(botId);
+      setSideTab("bots");
+      moveAvatarTo(bot.visitorSpot.x, bot.visitorSpot.y);
+
+      if (customJob) {
+        void handleAskBotViaBubble(
+          "vagas",
+          `Quais os requisitos e detalhes da vaga ${customJob.title}?`,
+          customJob
+        );
+        return;
       }
 
       setTimeout(() => {
-        botInputRef.current?.focus();
-      }, 80);
+        bubbleInputRef.current?.focus();
+      }, 60);
     },
-    [companyName, openJobs]
+    [handleAskBotViaBubble, moveAvatarTo]
   );
 
-  // Enviar pergunta para o Bot Assistente ativo
-  const handleAskBotQuestion = (questionText: string) => {
-    const trimmed = questionText.trim();
-    if (!trimmed) return;
-    const selectedJob =
-      openJobs.find((j) => j.id === selectedBotJobId) ??
-      regularJobs[0] ??
-      openJobs[0] ??
-      null;
-
-    const reply = generateAssistantBotReply({
-      botId: activeBotId,
-      question: trimmed,
-      selectedJob,
-      openJobs,
-      companyName,
-    });
-
-    setBotMessages((prev) => [
-      ...prev.slice(-24),
-      {
-        id: `usr_${Date.now()}`,
-        sender: "user",
-        botId: activeBotId,
-        text: trimmed,
-      },
-      {
-        id: `bot_${Date.now() + 1}`,
-        sender: "bot",
-        botId: activeBotId,
-        text: reply,
-      },
-    ]);
-    setBotInput("");
-  };
-
-  // Enviar balão público na sala ou comunicado da equipe
-  const handleSendPublicBubble = (e: React.FormEvent) => {
+  // Enviar balão na barra inferior (se um Bot estiver em foco, manda pergunta via balão para o Bot IA!)
+  const handleSendBottomBarBubble = (e: React.FormEvent) => {
     e.preventDefault();
     if (!me) {
       setShowAvatarModal(true);
@@ -610,6 +718,12 @@ export function VirtualCareerSpace({
       return;
     }
 
+    // Se estiver com um Bot IA selecionado para balão, dispara a pergunta pública + resposta IA no balão!
+    if (targetBotForBubble) {
+      void handleAskBotViaBubble(targetBotForBubble, check.clean);
+      return;
+    }
+
     const bubble: PublicBubbleItem = {
       id: `b_${Date.now()}`,
       participantId: me.id,
@@ -617,7 +731,7 @@ export function VirtualCareerSpace({
       kind: me.kind,
       text: check.clean,
       room: currentRoom,
-      expiresAt: Date.now() + 7000,
+      expiresAt: Date.now() + 8000,
     };
 
     setPublicBubbles((prev) => [
@@ -653,7 +767,7 @@ export function VirtualCareerSpace({
       setSpaceState(next);
       moveAvatarTo(SUPPORT_ROOMS.recepcao.spawn.x, SUPPORT_ROOMS.recepcao.spawn.y);
       emitRealtimeEvent("state_sync", { ts: Date.now() });
-      showToast("🎫 Senha retirada! Aguarde o recrutador chamar seu número.");
+      showToast("🎫 Senha retirada! Aguarde o recrutador chamar seu número para a Mesa RH.");
     } catch (err: any) {
       showToast(err?.message || "Não foi possível entrar na fila.");
     } finally {
@@ -661,17 +775,17 @@ export function VirtualCareerSpace({
     }
   };
 
-  // Equipe chama senha para um balcão (1, 2 ou 3)
+  // Equipe chama senha para uma Mesa RH (1, 2 ou 3)
   const handleCallTicket = async (conversationId: string, desk: number) => {
     setBusyAction(true);
     try {
       const next = await callServiceTicketAction(companySlug, conversationId, desk);
       setSpaceState(next);
-      const staffPos = SUPPORT_DESK_POSITIONS[desk]?.staff ?? SUPPORT_ROOMS.atendimento.spawn;
+      const staffPos = SUPPORT_DESK_POSITIONS[desk]?.candidate ?? SUPPORT_ROOMS.atendimento.spawn;
       moveAvatarTo(staffPos.x, staffPos.y);
       setSideTab("rh");
       emitRealtimeEvent("state_sync", { ts: Date.now() });
-      showToast(`🎧 Senha chamada para o Balcão ${desk}!`);
+      showToast(`🎧 Candidato chamado para a Mesa RH 0${desk}!`);
     } catch (err: any) {
       showToast(err?.message || "Erro ao chamar senha.");
     } finally {
@@ -846,13 +960,17 @@ export function VirtualCareerSpace({
     SUPPORT_ASSISTANT_BOTS.find((b) => b.id === activeBotId) ??
     SUPPORT_ASSISTANT_BOTS[0];
 
+  const targetBotObj = targetBotForBubble
+    ? SUPPORT_ASSISTANT_BOTS.find((b) => b.id === targetBotForBubble) ?? null
+    : null;
+
   const activeBotMessages = botMessages.filter((m) => m.botId === activeBotId);
 
   return (
     <div className="space-y-3">
       {/* ─── TOAST DE FEEDBACK ─── */}
       {feedbackToast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-stone-800 bg-stone-950 px-4 py-2 text-xs font-semibold text-white shadow-xl animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-xs font-semibold text-white shadow-xl animate-in fade-in slide-in-from-bottom-4">
           {feedbackToast}
         </div>
       )}
@@ -877,23 +995,20 @@ export function VirtualCareerSpace({
         </div>
       )}
 
-      {/* ─── BARRA ÚNICA DE COMANDO (NÍVEL MICHELIN · ZERO POLUIÇÃO) ─── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 shadow-2xs">
-        {/* Esquerda: Passo a Passo Rápido em 3 Pílulas Claras */}
+      {/* ─── BARRA EXECUTIVA ÚNICA (NÍVEL MICHELIN · NAVEGAÇÃO DIRETA) ─── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-2xs">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setSideTab("bots")}
+            onClick={() => handleSelectBotStation("vagas")}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               sideTab === "bots"
-                ? "bg-stone-900 text-white shadow-2xs"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200/80"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
             }`}
           >
-            <span className="flex size-4 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
-              1
-            </span>
-            <span>🤖 Tirar Dúvidas (Bots IA)</span>
+            <Bot className="size-3.5 text-emerald-400" />
+            <span>1. Bancada Bots IA (Ao Vivo)</span>
           </button>
 
           <button
@@ -901,14 +1016,12 @@ export function VirtualCareerSpace({
             onClick={() => setSideTab("vagas")}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               sideTab === "vagas"
-                ? "bg-stone-900 text-white shadow-2xs"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200/80"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
             }`}
           >
-            <span className="flex size-4 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
-              2
-            </span>
-            <span>💼 Mural de Vagas ({openJobs.length})</span>
+            <Briefcase className="size-3.5 text-sky-400" />
+            <span>2. Mural de Vagas ({openJobs.length})</span>
           </button>
 
           <button
@@ -916,14 +1029,12 @@ export function VirtualCareerSpace({
             onClick={() => setSideTab("rh")}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               sideTab === "rh"
-                ? "bg-stone-900 text-white shadow-2xs"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200/80"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
             }`}
           >
-            <span className="flex size-4 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
-              3
-            </span>
-            <span>🎧 Atendimento RH ({spaceState.queueCount})</span>
+            <Headphones className="size-3.5 text-amber-400" />
+            <span>3. Mesas RH ({spaceState.queueCount})</span>
             {(spaceState.myActiveConversation ||
               spaceState.myIncomingDmRequests.length > 0) && (
               <span className="size-2 rounded-full bg-amber-400 animate-ping" />
@@ -935,27 +1046,21 @@ export function VirtualCareerSpace({
             onClick={() => setSideTab("orientacoes")}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               sideTab === "orientacoes"
-                ? "bg-stone-900 text-white shadow-2xs"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200/80"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
             }`}
           >
             <Bell className="size-3.5" />
-            <span>Onde Ver Avisos</span>
+            <span>4. Avisos do Sistema</span>
           </button>
         </div>
 
-        {/* Direita: Status Online + Como Funciona + Avatar + Toggle Homologação (Gestor) */}
         <div className="flex flex-wrap items-center gap-2">
           {isStaff && (
             <button
               type="button"
               disabled={busyAction}
               onClick={handleTogglePublicVisibility}
-              title={
-                spaceState.isPublicEnabled
-                  ? "Sala visível para candidatos. Clique para voltar ao Modo Homologação."
-                  : "Sala oculta para candidatos (Modo Homologação). Clique para liberar no portal."
-              }
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                 spaceState.isPublicEnabled
                   ? "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
@@ -979,7 +1084,7 @@ export function VirtualCareerSpace({
           <button
             type="button"
             onClick={() => setShowFullGuideModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
           >
             <HelpCircle className="size-3.5 text-blue-600" />
             <span>Como Funciona</span>
@@ -994,7 +1099,7 @@ export function VirtualCareerSpace({
               }
               setShowAvatarModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
           >
             <Sparkles className="size-3.5 text-amber-500" />
             <span>Meu Avatar</span>
@@ -1002,70 +1107,71 @@ export function VirtualCareerSpace({
         </div>
       </div>
 
-      {/* ─── GRID PRINCIPAL: MAPA LIMPO (7 COLUNAS) + CENTRAL DE CONCIERGE (5 COLUNAS) ─── */}
+      {/* ─── GRID PRINCIPAL: ESCRITÓRIO CORPORATIVO (7 COLUNAS) + PAINEL LATERAL (5 COLUNAS) ─── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 items-start">
-        {/* COLUNA ESQUERDA: MAPA INTERATIVO + BARRA COMPACTA DE SETORES & FALA (7 colunas) */}
+        {/* COLUNA ESQUERDA: PLANTA EXECUTIVA COM ATENDENTES SENTADOS + BARRA DE BALÃO PÚBLICO IA */}
         <div className="lg:col-span-7 space-y-2.5">
           <PixelOfficeCanvas
             meId={me?.id || ""}
             users={allUsersOnMap}
             bubbles={publicBubbles}
+            botBubbles={botBubbles}
+            loadingBotId={loadingBotId}
             reactions={reactions}
             activePrivatePairs={spaceState.activePrivatePairs}
             queueCount={spaceState.queueCount}
             openJobCount={openJobs.length}
-            activeBotId={sideTab === "bots" ? activeBotId : undefined}
+            activeBotId={targetBotForBubble}
             onMoveTo={moveAvatarTo}
             onSelectUser={(u) => setSelectedUser(u)}
-            onOpenArcadeQuiz={() => {
-              moveAvatarTo(SUPPORT_ROOMS.jogos.spawn.x, SUPPORT_ROOMS.jogos.spawn.y);
-              setShowArcadeModal(true);
-            }}
+            onOpenArcadeQuiz={() => setShowArcadeModal(true)}
             onOpenQueuePanel={() => {
-              moveAvatarTo(
-                SUPPORT_ROOMS.recepcao.spawn.x,
-                SUPPORT_ROOMS.recepcao.spawn.y
-              );
+              moveAvatarTo(SUPPORT_DESK_POSITIONS[1].candidate.x, SUPPORT_DESK_POSITIONS[1].candidate.y);
               setSideTab("rh");
             }}
-            onOpenJobBoard={() => {
-              setSideTab("vagas");
-            }}
-            onOpenGuidesPanel={() => {
-              setSideTab("orientacoes");
-            }}
+            onOpenJobBoard={() => setSideTab("vagas")}
+            onOpenGuidesPanel={() => setSideTab("orientacoes")}
             onSelectBot={(botId) => {
-              handleSwitchBot(botId);
-              const bot = SUPPORT_ASSISTANT_BOTS.find((b) => b.id === botId);
-              if (bot) {
-                showToast(`🤖 Conversando com ${bot.name} no painel ao lado.`);
-              }
+              handleSelectBotStation(botId);
             }}
           />
 
-          {/* Barra Compacta: Navegação de Ambientes + Mensagem na Sala */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-2xs space-y-2.5">
+          {/* ─── BARRA DE BALÃO AO VIVO (PERGUNTAR PARA O BOT IA VIA BALÃO OU FALAR NA SALA) ─── */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1">
-                {SUPPORT_ROOM_IDS.map((roomId) => {
-                  const room = SUPPORT_ROOMS[roomId];
-                  const active = currentRoom === roomId;
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-500">
+                  Enviar balão para:
+                </span>
+                {SUPPORT_ASSISTANT_BOTS.map((bot) => {
+                  const selected = targetBotForBubble === bot.id;
                   return (
                     <button
-                      key={roomId}
+                      key={bot.id}
                       type="button"
-                      onClick={() => moveAvatarTo(room.spawn.x, room.spawn.y)}
-                      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                        active
-                          ? "bg-stone-900 text-white"
-                          : "bg-stone-100 text-stone-600 hover:bg-stone-200/70"
+                      onClick={() => handleSelectBotStation(bot.id)}
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${
+                        selected
+                          ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <span>{room.icon}</span>
-                      <span>{room.shortName}</span>
+                      <Bot className="size-3" />
+                      <span>{bot.name}</span>
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setTargetBotForBubble(null)}
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${
+                    targetBotForBubble === null
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>💬 Sala Geral</span>
+                </button>
               </div>
 
               <div className="flex items-center gap-1">
@@ -1074,8 +1180,8 @@ export function VirtualCareerSpace({
                     key={emoji}
                     type="button"
                     onClick={() => handleSendQuickReaction(emoji)}
-                    className="rounded-lg border border-stone-200/80 bg-stone-50 px-1.5 py-0.5 text-xs transition hover:scale-110 hover:bg-stone-100"
-                    title="Enviar reação no mapa"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs transition hover:scale-110 hover:bg-slate-100"
+                    title="Reação rápida"
                   >
                     {emoji}
                   </button>
@@ -1083,7 +1189,27 @@ export function VirtualCareerSpace({
               </div>
             </div>
 
-            <form onSubmit={handleSendPublicBubble} className="flex items-center gap-2">
+            {/* Pílulas de 1 clique para disparar balão público para o Bot IA selecionado */}
+            {targetBotObj && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                  Perguntar em balão:
+                </span>
+                {targetBotObj.quickPrompts.map((qText) => (
+                  <button
+                    key={qText}
+                    type="button"
+                    disabled={Boolean(loadingBotId)}
+                    onClick={() => void handleAskBotViaBubble(targetBotObj.id, qText)}
+                    className="rounded-full border border-emerald-200 bg-emerald-50/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-900 transition hover:bg-emerald-600 hover:text-white disabled:opacity-50"
+                  >
+                    {qText}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={handleSendBottomBarBubble} className="flex items-center gap-2">
               {isStaff && (
                 <button
                   type="button"
@@ -1091,7 +1217,7 @@ export function VirtualCareerSpace({
                   className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-2 text-xs font-semibold transition ${
                     isAnnouncementMode
                       ? "border-blue-700 bg-blue-700 text-white"
-                      : "border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   <Megaphone className="size-3.5" />
@@ -1100,31 +1226,39 @@ export function VirtualCareerSpace({
               )}
 
               <input
+                ref={bubbleInputRef}
                 type="text"
                 value={bubbleInput}
                 onChange={(e) => setBubbleInput(e.target.value)}
                 maxLength={140}
                 placeholder={
                   isAnnouncementMode
-                    ? "Digite um comunicado oficial para toda a sala..."
-                    : `Falar abertamente em ${SUPPORT_ROOMS[currentRoom].shortName}...`
+                    ? "Digite um comunicado oficial do RH para toda a sala..."
+                    : targetBotObj
+                      ? `Pergunte via balão para ${targetBotObj.name} (todos verão sua pergunta e a resposta da IA)...`
+                      : "Digite uma mensagem aberta em balão para a sala..."
                 }
-                className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none"
+                className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
               />
 
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-stone-800"
+                disabled={Boolean(loadingBotId)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white transition disabled:opacity-50 ${
+                  targetBotObj
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-slate-900 hover:bg-slate-800"
+                }`}
               >
                 <Send className="size-3.5" />
-                <span>Falar na Sala</span>
+                <span>{targetBotObj ? "Mandar Balão p/ IA" : "Mandar Balão"}</span>
               </button>
             </form>
           </div>
 
           {/* Card de Inspeção quando clica em um Participante no Mapa */}
           {selectedUser && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm animate-in fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm animate-in fade-in">
               <div className="flex items-center gap-3">
                 <PixelAvatarSprite
                   avatar={selectedUser.avatar}
@@ -1133,10 +1267,10 @@ export function VirtualCareerSpace({
                 />
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-stone-900">
+                    <span className="text-xs font-bold text-slate-900">
                       {selectedUser.displayName}
                     </span>
-                    <span className="rounded bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-700">
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                       {selectedUser.kind === "STAFF"
                         ? "Equipe RH"
                         : selectedUser.kind === "CANDIDATE"
@@ -1144,7 +1278,7 @@ export function VirtualCareerSpace({
                           : "Visitante"}
                     </span>
                   </div>
-                  <p className="text-[11px] text-stone-500">
+                  <p className="text-[11px] text-slate-500">
                     Setor: {SUPPORT_ROOMS[selectedUser.room].name}
                   </p>
                 </div>
@@ -1159,7 +1293,7 @@ export function VirtualCareerSpace({
                           type="button"
                           disabled={busyAction}
                           onClick={() => handleRequestDm(selectedUser)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-stone-800"
+                          className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
                         >
                           <Lock className="size-3 text-amber-300" />
                           <span>Conversar no Privado</span>
@@ -1203,7 +1337,7 @@ export function VirtualCareerSpace({
                 <button
                   type="button"
                   onClick={() => setSelectedUser(null)}
-                  className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
                 >
                   <X className="size-4" />
                 </button>
@@ -1212,17 +1346,16 @@ export function VirtualCareerSpace({
           )}
         </div>
 
-        {/* COLUNA DIREITA: CONCIERGE CORPORATIVO DE 4 ABAS (5 colunas) */}
-        <div className="lg:col-span-5 flex flex-col rounded-2xl border border-stone-200 bg-white shadow-xs overflow-hidden">
-          {/* Navegação Limpa de 4 Abas */}
-          <div className="grid grid-cols-4 border-b border-stone-100 bg-stone-50/80 p-1.5 gap-1">
+        {/* COLUNA DIREITA: CENTRAL DE CONCIERGE (5 colunas) */}
+        <div className="lg:col-span-5 flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="grid grid-cols-4 border-b border-slate-100 bg-slate-50/80 p-1.5 gap-1">
             <button
               type="button"
               onClick={() => setSideTab("bots")}
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-semibold transition ${
                 sideTab === "bots"
-                  ? "bg-stone-900 text-white shadow-2xs"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <Bot className="size-3.5 shrink-0" />
@@ -1234,8 +1367,8 @@ export function VirtualCareerSpace({
               onClick={() => setSideTab("vagas")}
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-semibold transition ${
                 sideTab === "vagas"
-                  ? "bg-stone-900 text-white shadow-2xs"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <Briefcase className="size-3.5 shrink-0" />
@@ -1247,8 +1380,8 @@ export function VirtualCareerSpace({
               onClick={() => setSideTab("rh")}
               className={`relative flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-semibold transition ${
                 sideTab === "rh"
-                  ? "bg-stone-900 text-white shadow-2xs"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <Headphones className="size-3.5 shrink-0" />
@@ -1264,8 +1397,8 @@ export function VirtualCareerSpace({
               onClick={() => setSideTab("orientacoes")}
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2 px-2 text-xs font-semibold transition ${
                 sideTab === "orientacoes"
-                  ? "bg-stone-900 text-white shadow-2xs"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <Bell className="size-3.5 shrink-0" />
@@ -1273,11 +1406,10 @@ export function VirtualCareerSpace({
             </button>
           </div>
 
-          {/* ─── ABA 1: CHAT DIRETO COM OS BOTS ASSISTENTES (FOCO EM CONVERSAR SEM POLUIÇÃO) ─── */}
+          {/* ─── ABA 1: BANCADA DOS BOTS IA (SINCRONIZADO COM OS BALÕES DO MAPA) ─── */}
           {sideTab === "bots" && (
-            <div className="flex flex-col h-[500px]">
-              {/* Seletor Horizontal Compacto dos 3 Bots (Sem textos cortados!) */}
-              <div className="border-b border-stone-100 bg-stone-50/50 px-3.5 py-2.5 space-y-2">
+            <div className="flex flex-col h-[520px]">
+              <div className="border-b border-slate-100 bg-slate-50/50 px-3.5 py-2.5 space-y-2">
                 <div className="grid grid-cols-3 gap-1.5">
                   {SUPPORT_ASSISTANT_BOTS.map((bot) => {
                     const active = bot.id === activeBotId;
@@ -1286,20 +1418,20 @@ export function VirtualCareerSpace({
                       <button
                         key={bot.id}
                         type="button"
-                        onClick={() => handleSwitchBot(bot.id)}
+                        onClick={() => handleSelectBotStation(bot.id)}
                         className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition ${
                           active
-                            ? "border-stone-900 bg-white shadow-2xs ring-1 ring-stone-900"
-                            : "border-stone-200/80 bg-white/60 hover:bg-white"
+                            ? "border-emerald-600 bg-white shadow-2xs ring-1 ring-emerald-600"
+                            : "border-slate-200/80 bg-white/60 hover:bg-white"
                         }`}
                       >
                         <PixelAvatarSprite avatar={bot.avatar} kind="STAFF" size={26} />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-stone-900 leading-none">
+                          <p className="text-xs font-bold text-slate-900 leading-none">
                             {firstName}
                           </p>
-                          <p className="mt-0.5 text-[10px] font-medium text-blue-700 truncate">
-                            {bot.badge}
+                          <p className="mt-0.5 text-[10px] font-semibold text-emerald-700 truncate">
+                            {bot.roleTitle.replace("Especialista ", "")}
                           </p>
                         </div>
                       </button>
@@ -1307,16 +1439,15 @@ export function VirtualCareerSpace({
                   })}
                 </div>
 
-                {/* Seletor enxuto de vaga quando está na Clara (Bot de Vagas) */}
                 {activeBotId === "vagas" && openJobs.length > 0 && (
-                  <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-stone-500 shrink-0">
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500 shrink-0">
                       Vaga em foco:
                     </span>
                     <select
                       value={selectedBotJobId}
                       onChange={(e) => setSelectedBotJobId(e.target.value)}
-                      className="flex-1 bg-transparent text-xs font-semibold text-stone-900 focus:outline-none truncate"
+                      className="flex-1 bg-transparent text-xs font-semibold text-slate-900 focus:outline-none truncate"
                     >
                       {openJobs.map((j) => (
                         <option key={j.id} value={j.id}>
@@ -1329,14 +1460,13 @@ export function VirtualCareerSpace({
                 )}
               </div>
 
-              {/* Janela de Conversa Ampla e Limpa (Auto-Scroll) */}
               <div
                 ref={botChatContainerRef}
-                className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-[#faf9f7]"
+                className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-slate-50/40"
               >
-                <div className="flex items-center justify-between text-[11px] text-stone-400 pb-1 border-b border-stone-200/60">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pb-1 border-b border-slate-200/60">
                   <span>
-                    Conversando com <strong className="text-stone-700">{currentBot.name}</strong>
+                    Mesa ativa: <strong className="text-slate-800">{currentBot.name}</strong> (Respostas aparecem em balão no mapa)
                   </span>
                   {activeBotMessages.length > 1 && (
                     <button
@@ -1348,7 +1478,7 @@ export function VirtualCareerSpace({
                           )
                         )
                       }
-                      className="inline-flex items-center gap-1 text-stone-500 hover:text-stone-800"
+                      className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800"
                     >
                       <RotateCcw className="size-3" />
                       <span>Limpar</span>
@@ -1363,28 +1493,38 @@ export function VirtualCareerSpace({
                       m.sender === "user" ? "items-end" : "items-start"
                     }`}
                   >
+                    <span className="text-[10px] font-semibold text-slate-400 mb-0.5">
+                      {m.sender === "user" ? m.authorName || "Você" : currentBot.name}
+                    </span>
                     <div
                       className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-line ${
                         m.sender === "user"
-                          ? "bg-stone-900 text-white rounded-br-xs"
-                          : "border border-stone-200/90 bg-white text-stone-800 shadow-2xs rounded-bl-xs"
+                          ? "bg-slate-900 text-white rounded-br-xs"
+                          : "border border-emerald-200 bg-white text-slate-800 shadow-2xs rounded-bl-xs"
                       }`}
                     >
                       {m.text}
                     </div>
                   </div>
                 ))}
+
+                {loadingBotId === activeBotId && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                    <Sparkles className="size-3.5 animate-spin" />
+                    <span>{currentBot.name} está respondendo via IA no balão...</span>
+                  </div>
+                )}
               </div>
 
-              {/* Rodapé Fixo do Chat: Sugestões Rápidas em Pílulas + Campo de Digitação Sempre Visível */}
-              <div className="border-t border-stone-200 bg-white p-3 space-y-2">
+              <div className="border-t border-slate-200 bg-white p-3 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {currentBot.quickPrompts.map((prompt) => (
                     <button
                       key={prompt}
                       type="button"
-                      onClick={() => handleAskBotQuestion(prompt)}
-                      className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-stone-900 hover:bg-stone-900 hover:text-white"
+                      disabled={Boolean(loadingBotId)}
+                      onClick={() => void handleAskBotViaBubble(activeBotId, prompt)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:border-emerald-600 hover:bg-emerald-600 hover:text-white disabled:opacity-50"
                     >
                       {prompt}
                     </button>
@@ -1394,24 +1534,24 @@ export function VirtualCareerSpace({
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    handleAskBotQuestion(botInput);
+                    void handleAskBotViaBubble(activeBotId, botInput);
                   }}
                   className="flex items-center gap-2"
                 >
                   <input
-                    ref={botInputRef}
                     type="text"
                     value={botInput}
                     onChange={(e) => setBotInput(e.target.value)}
-                    placeholder={`Digite sua dúvida para ${currentBot.name.split("·")[0].trim()}...`}
-                    className="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3.5 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none"
+                    placeholder={`Perguntar via balão para ${currentBot.name.split("·")[0].trim()}...`}
+                    className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
                   />
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+                    disabled={Boolean(loadingBotId)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <Send className="size-3.5" />
-                    <span>Enviar</span>
+                    <span>Perguntar</span>
                   </button>
                 </form>
               </div>
@@ -1420,38 +1560,38 @@ export function VirtualCareerSpace({
 
           {/* ─── ABA 2: MURAL DE VAGAS CORPORATIVO ─── */}
           {sideTab === "vagas" && (
-            <div className="flex flex-col h-[500px] p-4 space-y-3 overflow-y-auto">
+            <div className="flex flex-col h-[520px] p-4 space-y-3 overflow-y-auto">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-xs font-bold text-stone-900">
-                    Oportunidades Abertas ({openJobs.length})
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Mural de Vagas Abertas ({openJobs.length})
                   </h3>
-                  <p className="text-[11px] text-stone-500">
-                    Clique em uma vaga para ler os requisitos, perguntar ao Bot ou se candidatar.
+                  <p className="text-[11px] text-slate-500">
+                    Clique em uma vaga para ver requisitos ou perguntar via balão para a IA Clara.
                   </p>
                 </div>
                 <Link
                   href={`/${companySlug}/vagas`}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-[11px] font-semibold text-stone-700 hover:bg-stone-100"
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
                 >
-                  <span>Ver todas</span>
+                  <span>Portal</span>
                   <ExternalLink className="size-3" />
                 </Link>
               </div>
 
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-stone-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={jobSearch}
                   onChange={(e) => setJobSearch(e.target.value)}
                   placeholder="Filtrar por cargo, cidade ou modalidade..."
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 pl-8 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
                 />
               </div>
 
               {filteredJobs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-xs text-stone-500">
+                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500">
                   Nenhuma vaga encontrada para o filtro informado.
                 </div>
               ) : (
@@ -1470,8 +1610,8 @@ export function VirtualCareerSpace({
                         key={job.id}
                         className={`rounded-xl border transition ${
                           isExpanded
-                            ? "border-stone-900 bg-white shadow-2xs"
-                            : "border-stone-200 bg-white hover:border-stone-300"
+                            ? "border-slate-900 bg-white shadow-2xs"
+                            : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                       >
                         <div
@@ -1491,23 +1631,23 @@ export function VirtualCareerSpace({
                               >
                                 {job.isTalentPool ? "Banco de Talentos" : "Aberta"}
                               </span>
-                              <span className="text-[11px] font-medium text-stone-500">
+                              <span className="text-[11px] font-medium text-slate-500">
                                 {formatSupportJobWorkMode(job.workMode)} ·{" "}
                                 {formatSupportJobContract(job.contract)}
                               </span>
                               {job.location && (
-                                <span className="inline-flex items-center gap-0.5 text-[11px] text-stone-500">
+                                <span className="inline-flex items-center gap-0.5 text-[11px] text-slate-500">
                                   <MapPin className="size-3" />
                                   {job.location}
                                 </span>
                               )}
                             </div>
-                            <h4 className="text-xs font-bold text-stone-900">
+                            <h4 className="text-xs font-bold text-slate-900">
                               {job.title}
                             </h4>
                           </div>
 
-                          <span className="text-stone-400 mt-1">
+                          <span className="text-slate-400 mt-1">
                             {isExpanded ? (
                               <ChevronUp className="size-4" />
                             ) : (
@@ -1517,19 +1657,19 @@ export function VirtualCareerSpace({
                         </div>
 
                         {isExpanded && (
-                          <div className="border-t border-stone-100 px-3 pb-3 pt-2.5 space-y-2.5 text-xs">
-                            <p className="text-[11px] leading-relaxed text-stone-600 whitespace-pre-line">
+                          <div className="border-t border-slate-100 px-3 pb-3 pt-2.5 space-y-2.5 text-xs">
+                            <p className="text-[11px] leading-relaxed text-slate-600 whitespace-pre-line">
                               {job.description.length > 260
                                 ? `${job.description.slice(0, 260).trim()}...`
                                 : job.description}
                             </p>
 
                             {reqBullets.length > 0 && (
-                              <div className="rounded-lg bg-stone-50 p-2.5 space-y-1">
-                                <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                              <div className="rounded-lg bg-slate-50 p-2.5 space-y-1">
+                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                   Requisitos principais:
                                 </span>
-                                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-stone-700">
+                                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-700">
                                   {reqBullets.slice(0, 4).map((req, i) => (
                                     <li key={i}>{req}</li>
                                   ))}
@@ -1544,7 +1684,7 @@ export function VirtualCareerSpace({
                                     ? `/${companySlug}/vagas/${job.id}/candidatar`
                                     : `/${companySlug}/vagas/${job.id}`
                                 }
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-stone-900 px-3 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                               >
                                 <span>Candidatar-se</span>
                                 <ExternalLink className="size-3" />
@@ -1552,11 +1692,11 @@ export function VirtualCareerSpace({
 
                               <button
                                 type="button"
-                                onClick={() => handleSwitchBot("vagas", job)}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-800 hover:bg-stone-100"
+                                onClick={() => handleSelectBotStation("vagas", job)}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100"
                               >
-                                <Bot className="size-3.5 text-blue-600" />
-                                <span>Perguntar ao Bot</span>
+                                <Bot className="size-3.5 text-emerald-700" />
+                                <span>Perguntar à IA via Balão</span>
                               </button>
                             </div>
                           </div>
@@ -1569,10 +1709,9 @@ export function VirtualCareerSpace({
             </div>
           )}
 
-          {/* ─── ABA 3: ATENDIMENTO RH UNIFICADO (FILA + CHAT PRIVADO 🔒 + PARTICIPANTES) ─── */}
+          {/* ─── ABA 3: ATENDIMENTO RH UNIFICADO (MESAS 1 A 3 + CHAT PRIVADO 🔒) ─── */}
           {sideTab === "rh" && (
-            <div className="flex flex-col h-[500px] p-4 space-y-4 overflow-y-auto">
-              {/* Convites de conversa privada recebidos */}
+            <div className="flex flex-col h-[520px] p-4 space-y-4 overflow-y-auto">
               {spaceState.myIncomingDmRequests.length > 0 && (
                 <div className="space-y-2">
                   {spaceState.myIncomingDmRequests.map((req) => (
@@ -1580,7 +1719,7 @@ export function VirtualCareerSpace({
                       key={req.id}
                       className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2"
                     >
-                      <p className="text-xs font-bold text-stone-900">
+                      <p className="text-xs font-bold text-slate-900">
                         🔒 {req.requester.displayName} convidou você para uma conversa privada
                       </p>
                       <div className="flex items-center gap-2">
@@ -1594,7 +1733,7 @@ export function VirtualCareerSpace({
                         <button
                           type="button"
                           onClick={() => handleRespondDm(req.id, false)}
-                          className="flex-1 rounded-lg bg-stone-200 py-1.5 text-xs font-bold text-stone-700"
+                          className="flex-1 rounded-lg bg-slate-200 py-1.5 text-xs font-bold text-slate-700"
                         >
                           Recusar
                         </button>
@@ -1604,21 +1743,20 @@ export function VirtualCareerSpace({
                 </div>
               )}
 
-              {/* Se houver conversa privada ativa (Balcão RH ou DM), exibe o Chat Privado 🔒 direto aqui! */}
               {spaceState.myActiveConversation ? (
-                <div className="flex flex-1 flex-col rounded-xl border border-stone-200 bg-stone-50/50 p-3">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-2.5 mb-2.5">
+                <div className="flex flex-1 flex-col rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 mb-2.5">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-stone-900">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                         <Lock className="size-3.5 text-emerald-600 shrink-0" />
                         <span className="truncate">
                           {spaceState.myActiveConversation.kind === "SERVICE"
-                            ? `Balcão ${spaceState.myActiveConversation.desk || 1} · ${spaceState.myActiveConversation.requester.displayName}`
+                            ? `Mesa RH 0${spaceState.myActiveConversation.desk || 1} · ${spaceState.myActiveConversation.requester.displayName}`
                             : `Conversa Privada · ${spaceState.myActiveConversation.requester.displayName}`}
                         </span>
                       </div>
-                      <p className="text-[10px] text-stone-500">
-                        Chat confidencial (🔒). Apenas vocês dois leem estas mensagens.
+                      <p className="text-[10px] text-slate-500">
+                        Atendimento confidencial (🔒). Apenas vocês dois leem estas mensagens.
                       </p>
                     </div>
                     <button
@@ -1634,7 +1772,7 @@ export function VirtualCareerSpace({
 
                   <div className="flex-1 space-y-2 overflow-y-auto py-2 min-h-[200px]">
                     {spaceState.activeMessages.length === 0 ? (
-                      <p className="text-center text-xs text-stone-400 py-8">
+                      <p className="text-center text-xs text-slate-400 py-8">
                         Envie uma mensagem abaixo para iniciar o atendimento.
                       </p>
                     ) : (
@@ -1647,14 +1785,14 @@ export function VirtualCareerSpace({
                               mine ? "items-end" : "items-start"
                             }`}
                           >
-                            <span className="text-[10px] font-semibold text-stone-400 mb-0.5">
+                            <span className="text-[10px] font-semibold text-slate-400 mb-0.5">
                               {m.senderName}
                             </span>
                             <div
                               className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs ${
                                 mine
-                                  ? "bg-stone-900 text-white"
-                                  : "border border-stone-200 bg-white text-stone-900"
+                                  ? "bg-slate-900 text-white"
+                                  : "border border-slate-200 bg-white text-slate-900"
                               }`}
                             >
                               {m.body}
@@ -1667,7 +1805,7 @@ export function VirtualCareerSpace({
 
                   <form
                     onSubmit={handleSendPrivateMessage}
-                    className="mt-2 flex items-center gap-2 pt-2 border-t border-stone-200"
+                    className="mt-2 flex items-center gap-2 pt-2 border-t border-slate-200"
                   >
                     <input
                       type="text"
@@ -1675,48 +1813,47 @@ export function VirtualCareerSpace({
                       onChange={(e) => setPrivateInput(e.target.value)}
                       maxLength={500}
                       placeholder="Escrever mensagem confidencial 🔒..."
-                      className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-900 focus:border-stone-900 focus:outline-none"
+                      className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-slate-900 focus:outline-none"
                     />
                     <button
                       type="submit"
-                      className="rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+                      className="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                     >
                       Enviar
                     </button>
                   </form>
                 </div>
               ) : isStaff ? (
-                /* Console de Fila do Gestor / RH */
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
-                    <h3 className="text-xs font-bold text-stone-900">
-                      🎧 Fila de Atendimento nos Balcões 1 a 3
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <h3 className="text-xs font-bold text-slate-900">
+                      🎧 Fila das Mesas Executivas RH (01 a 03)
                     </h3>
-                    <p className="mt-0.5 text-[11px] text-stone-500">
+                    <p className="mt-0.5 text-[11px] text-slate-500">
                       Chame o próximo candidato da fila para iniciar a conversa confidencial.
                     </p>
                   </div>
 
                   {spaceState.staffQueue.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-xs text-stone-400">
+                    <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400">
                       Nenhum candidato aguardando na fila neste momento.
                     </div>
                   ) : (
                     spaceState.staffQueue.map((ticket) => (
                       <div
                         key={ticket.id}
-                        className="rounded-xl border border-stone-200 bg-white p-3 space-y-2.5"
+                        className="rounded-xl border border-slate-200 bg-white p-3 space-y-2.5"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="rounded-md bg-stone-900 px-2 py-0.5 text-xs font-bold text-amber-300">
+                            <span className="rounded-md bg-slate-900 px-2 py-0.5 text-xs font-bold text-amber-300">
                               #{ticket.queueNumber}
                             </span>
                             <div>
-                              <p className="text-xs font-bold text-stone-900">
+                              <p className="text-xs font-bold text-slate-900">
                                 {ticket.requester.displayName}
                               </p>
-                              <p className="text-[10px] text-stone-500">
+                              <p className="text-[10px] text-slate-500">
                                 Assunto: {ticket.topic}
                               </p>
                             </div>
@@ -1730,9 +1867,9 @@ export function VirtualCareerSpace({
                               type="button"
                               disabled={busyAction}
                               onClick={() => handleCallTicket(ticket.id, deskNum)}
-                              className="rounded-lg bg-stone-900 py-1.5 text-[11px] font-semibold text-white hover:bg-stone-800 disabled:opacity-50"
+                              className="rounded-lg bg-slate-900 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                             >
-                              Chamar B{deskNum}
+                              Mesa 0{deskNum}
                             </button>
                           ))}
                         </div>
@@ -1741,14 +1878,13 @@ export function VirtualCareerSpace({
                   )}
                 </div>
               ) : (
-                /* Visão Limpa do Candidato para Retirar Senha */
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-stone-200 bg-stone-50 p-3.5">
-                    <h3 className="text-xs font-bold text-stone-900">
-                      🎧 Falar Individualmente com um Recrutador (1:1)
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <h3 className="text-xs font-bold text-slate-900">
+                      🎧 Atendimento Humano 1:1 (Mesas RH 01 a 03)
                     </h3>
-                    <p className="mt-1 text-[11px] leading-relaxed text-stone-600">
-                      Retire uma senha gratuita. Quando o recrutador chamar seu número para o Balcão 1, 2 ou 3, sua conversa privada (🔒) abrirá aqui mesmo.
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                      Retire uma senha gratuita. Quando o recrutador chamar seu número para a Mesa 01, 02 ou 03, sua conversa privada (🔒) abrirá aqui mesmo.
                     </p>
                   </div>
 
@@ -1757,7 +1893,7 @@ export function VirtualCareerSpace({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900">
                         Sua Senha na Fila
                       </span>
-                      <p className="text-3xl font-black text-stone-900">
+                      <p className="text-3xl font-black text-slate-900">
                         #{spaceState.myWaitingTicket.queueNumber}
                       </p>
                       <p className="text-xs font-semibold text-amber-900">
@@ -1777,7 +1913,7 @@ export function VirtualCareerSpace({
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      <label className="block text-xs font-semibold text-stone-700">
+                      <label className="block text-xs font-semibold text-slate-700">
                         Qual é o assunto do seu atendimento?
                       </label>
                       <div className="grid grid-cols-1 gap-1.5">
@@ -1788,8 +1924,8 @@ export function VirtualCareerSpace({
                             onClick={() => setSelectedTopic(t.id)}
                             className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${
                               selectedTopic === t.id
-                                ? "border-stone-900 bg-stone-900 text-white"
-                                : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                             }`}
                           >
                             <span>{t.icon}</span>
@@ -1802,9 +1938,9 @@ export function VirtualCareerSpace({
                         type="button"
                         disabled={busyAction}
                         onClick={handleJoinQueue}
-                        className="w-full rounded-xl bg-stone-900 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-stone-800 disabled:opacity-50"
+                        className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-slate-800 disabled:opacity-50"
                       >
-                        🎫 Retirar Senha de Atendimento RH
+                        🎫 Retirar Senha para Mesa RH
                       </button>
                     </div>
                   )}
@@ -1812,11 +1948,11 @@ export function VirtualCareerSpace({
               )}
 
               {/* Lista Compacta de Pessoas Online na Sala */}
-              <div className="pt-3 border-t border-stone-100 space-y-2">
+              <div className="pt-3 border-t border-slate-100 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-stone-700 flex items-center gap-1.5">
-                    <Users className="size-3.5 text-stone-400" />
-                    <span>Pessoas na Sala ({allUsersOnMap.length})</span>
+                  <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <Users className="size-3.5 text-slate-400" />
+                    <span>Participantes na Sala ({allUsersOnMap.length})</span>
                   </span>
                 </div>
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -1824,15 +1960,15 @@ export function VirtualCareerSpace({
                     <div
                       key={u.participantId}
                       onClick={() => setSelectedUser(u)}
-                      className="flex items-center justify-between rounded-xl border border-stone-200/80 bg-stone-50/60 px-2.5 py-1.5 cursor-pointer hover:bg-stone-100"
+                      className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/60 px-2.5 py-1.5 cursor-pointer hover:bg-slate-100"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <PixelAvatarSprite avatar={u.avatar} kind={u.kind} size={24} />
-                        <span className="truncate text-xs font-semibold text-stone-900">
+                        <span className="truncate text-xs font-semibold text-slate-900">
                           {u.displayName} {u.participantId === me?.id && "(Você)"}
                         </span>
                       </div>
-                      <span className="text-[10px] font-medium text-stone-500">
+                      <span className="text-[10px] font-medium text-slate-500">
                         {SUPPORT_ROOMS[u.room].shortName}
                       </span>
                     </div>
@@ -1840,9 +1976,8 @@ export function VirtualCareerSpace({
                 </div>
               </div>
 
-              {/* Ocorrências pendentes (apenas Gestor / Admin) */}
               {isStaff && spaceState.staffOpenReports.length > 0 && (
-                <div className="pt-2 border-t border-stone-200 space-y-2">
+                <div className="pt-2 border-t border-slate-200 space-y-2">
                   <h4 className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
                     <ShieldAlert className="size-3.5" />
                     <span>Ocorrências ({spaceState.staffOpenReports.length})</span>
@@ -1870,7 +2005,7 @@ export function VirtualCareerSpace({
                             const next = await resolveReportAction(companySlug, rep.id);
                             setSpaceState(next);
                           }}
-                          className="ml-auto rounded bg-stone-800 px-2 py-0.5 text-[10px] font-bold text-white"
+                          className="ml-auto rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white"
                         >
                           Arquivar
                         </button>
@@ -1884,12 +2019,12 @@ export function VirtualCareerSpace({
 
           {/* ─── ABA 4: ONDE ACOMPANHAR AVISOS NO SISTEMA ─── */}
           {sideTab === "orientacoes" && (
-            <div className="flex flex-col h-[500px] p-4 space-y-3 overflow-y-auto">
+            <div className="flex flex-col h-[520px] p-4 space-y-3 overflow-y-auto">
               <div>
-                <h3 className="text-xs font-bold text-stone-900">
+                <h3 className="text-xs font-bold text-slate-900">
                   🔔 Onde Acompanhar Avisos e Etapas no Sistema
                 </h3>
-                <p className="mt-0.5 text-[11px] text-stone-500">
+                <p className="mt-0.5 text-[11px] text-slate-500">
                   Veja como saber quando seu currículo avançou ou quando o RH enviou uma solicitação:
                 </p>
               </div>
@@ -1898,7 +2033,7 @@ export function VirtualCareerSpace({
                 {CANDIDATE_SYSTEM_GUIDES.map((guide) => (
                   <div
                     key={guide.id}
-                    className="rounded-xl border border-stone-200 bg-stone-50/50 p-3 space-y-1.5"
+                    className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
@@ -1908,7 +2043,7 @@ export function VirtualCareerSpace({
                         <button
                           type="button"
                           onClick={() => setSideTab("rh")}
-                          className="text-[11px] font-semibold text-stone-900 underline"
+                          className="text-[11px] font-semibold text-slate-900 underline"
                         >
                           {guide.ctaLabel} →
                         </button>
@@ -1921,15 +2056,15 @@ export function VirtualCareerSpace({
                                 ? `/${companySlug}/minhas-candidaturas`
                                 : `/${companySlug}/vagas`
                           }
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-stone-900 underline"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-900 underline"
                         >
                           <span>{guide.ctaLabel}</span>
                           <ExternalLink className="size-3" />
                         </Link>
                       )}
                     </div>
-                    <h4 className="text-xs font-bold text-stone-900">{guide.title}</h4>
-                    <p className="text-[11px] leading-relaxed text-stone-600">
+                    <h4 className="text-xs font-bold text-slate-900">{guide.title}</h4>
+                    <p className="text-[11px] leading-relaxed text-slate-600">
                       {guide.description}
                     </p>
                   </div>
@@ -1940,67 +2075,67 @@ export function VirtualCareerSpace({
         </div>
       </div>
 
-      {/* ─── MODAL "COMO FUNCIONA EM 3 PASSOS" (MANUAL LIMPO E DIRETO) ─── */}
+      {/* ─── MODAL "COMO FUNCIONA EM 3 PASSOS" ─── */}
       {showFullGuideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl border border-stone-200 bg-white p-6 shadow-2xl space-y-5">
-            <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <h2 className="text-base font-bold text-stone-900">
-                  Como funciona o Espaço de Suporte & Carreiras
+                <h2 className="text-base font-bold text-slate-900">
+                  Como funciona o Escritório Corporativo de Carreiras
                 </h2>
-                <p className="text-xs text-stone-500">
-                  Guia rápido em 3 passos para aproveitar todos os recursos da sala.
+                <p className="text-xs text-slate-500">
+                  Guia rápido em 3 passos para interagir com os Bots IA, consultar vagas e falar com o RH.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowFullGuideModal(false)}
-                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
               >
                 <X className="size-5" />
               </button>
             </div>
 
             <div className="space-y-3">
-              <div className="flex gap-3 rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-xs font-bold text-white">
+              <div className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">
                   1
                 </span>
                 <div>
-                  <h3 className="text-xs font-bold text-stone-900">
-                    Tire Dúvidas Imediatas com os Bots IA (Aba &ldquo;Bots IA&rdquo;)
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Clique em um Bot IA na Bancada Direita e Pergunte via Balão
                   </h3>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600">
-                    Escolha entre <strong>Clara</strong> (dúvidas sobre as vagas abertas), <strong>Heitor</strong> (como acompanhar avisos e status no sistema) ou <strong>Helena</strong> (currículo PDF). Basta clicar nas perguntas sugeridas ou digitar no campo inferior.
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+                    Ao clicar nas mesas de <strong>Clara (IA Vagas)</strong>, <strong>Heitor (IA Sistema)</strong> ou <strong>Helena (IA Currículo)</strong>, você pode enviar sua dúvida em balão. Todos na sala veem sua pergunta e o Bot responde ao vivo via IA com um balão sobre a mesa!
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3 rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-xs font-bold text-white">
+              <div className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">
                   2
                 </span>
                 <div>
-                  <h3 className="text-xs font-bold text-stone-900">
-                    Consulte o Mural de Vagas (Aba &ldquo;Vagas&rdquo;)
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Consulte o Mural Corporativo de Vagas
                   </h3>
                   <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600">
-                    Veja todas as vagas abertas da <strong>{companyName}</strong>, leia os requisitos e clique em <strong>Candidatar-se</strong> ou <strong>Perguntar ao Bot</strong>.
+                    Clique no painel <strong>Mural de Vagas Abertas</strong> na parede superior (ou na aba <strong>Vagas</strong>) para ler requisitos e se candidatar.
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3 rounded-xl border border-stone-200 bg-stone-50/70 p-3.5">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-xs font-bold text-white">
+              <div className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">
                   3
                 </span>
                 <div>
-                  <h3 className="text-xs font-bold text-stone-900">
-                    Fale 1:1 com o RH ou Acompanhe Avisos (Abas &ldquo;RH&rdquo; e &ldquo;Avisos&rdquo;)
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Atendimento Confidencial nas Mesas RH (01 a 03) & Avisos
                   </h3>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600">
-                    Precisa falar com um recrutador humano? Retire uma senha na aba <strong>RH</strong>. E para saber se avançou no processo seletivo, acompanhe sempre o <strong>Sino de Notificações</strong> e a página <strong>Minhas Candidaturas</strong>.
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+                    Na ala esquerda ficam as 3 mesas de atendimento humano do RH (com cadeado privado 🔒). E para acompanhar convites de entrevista no sistema, consulte o <strong>Sino de Notificações</strong> e <strong>Minhas Candidaturas</strong>.
                   </p>
                 </div>
               </div>
@@ -2010,7 +2145,7 @@ export function VirtualCareerSpace({
               <button
                 type="button"
                 onClick={() => setShowFullGuideModal(false)}
-                className="rounded-xl bg-stone-900 px-5 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+                className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 Entendi, começar agora
               </button>
@@ -2021,33 +2156,33 @@ export function VirtualCareerSpace({
 
       {/* ─── MODAL DE CREDENCIAL & AVATAR ─── */}
       {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
           <form
             onSubmit={handleEnterSpace}
-            className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h2 className="text-base font-bold text-stone-900">
-                  Identificação na Sala · {companyName}
+                <h2 className="text-base font-bold text-slate-900">
+                  Credencial de Acesso · {companyName}
                 </h2>
-                <p className="text-xs text-stone-500">
-                  Personalize seu avatar para acessar os Bots, Mural de Vagas e Suporte RH.
+                <p className="text-xs text-slate-500">
+                  Configure seu perfil para conversar com os Bots IA e acessar as Mesas RH.
                 </p>
               </div>
               {me && (
                 <button
                   type="button"
                   onClick={() => setShowAvatarModal(false)}
-                  className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
                 >
                   <X className="size-5" />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-stone-50 p-3.5">
-              <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white">
+            <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
                 <PixelAvatarSprite
                   avatar={avatarDraft}
                   kind={spaceState.viewerRole}
@@ -2055,7 +2190,7 @@ export function VirtualCareerSpace({
                 />
               </div>
               <div className="flex-1 space-y-1.5">
-                <label className="block text-xs font-bold text-stone-800">
+                <label className="block text-xs font-bold text-slate-800">
                   Seu Nome
                 </label>
                 <input
@@ -2066,14 +2201,14 @@ export function VirtualCareerSpace({
                   value={displayNameInput}
                   onChange={(e) => setDisplayNameInput(e.target.value)}
                   placeholder="Ex.: Mariana Silva..."
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-900 focus:border-stone-900 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 focus:border-slate-900 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-2.5 text-xs">
               <div>
-                <span className="font-semibold text-stone-700 block mb-1">Tom de pele:</span>
+                <span className="font-semibold text-slate-700 block mb-1">Tom de pele:</span>
                 <div className="flex gap-2">
                   {SKIN_TONES.map((color) => (
                     <button
@@ -2083,8 +2218,8 @@ export function VirtualCareerSpace({
                       style={{ backgroundColor: color }}
                       className={`size-6 rounded-full border ${
                         avatarDraft.skin === color
-                          ? "border-stone-950 scale-110 ring-2 ring-stone-900"
-                          : "border-stone-300"
+                          ? "border-slate-950 scale-110 ring-2 ring-slate-900"
+                          : "border-slate-300"
                       }`}
                     />
                   ))}
@@ -2093,7 +2228,7 @@ export function VirtualCareerSpace({
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <span className="font-semibold text-stone-700 block mb-1">Cabelo:</span>
+                  <span className="font-semibold text-slate-700 block mb-1">Cabelo:</span>
                   <div className="flex flex-wrap gap-1">
                     {HAIR_STYLES.map((style) => (
                       <button
@@ -2102,8 +2237,8 @@ export function VirtualCareerSpace({
                         onClick={() => setAvatarDraft((d) => ({ ...d, hair: style }))}
                         className={`rounded-md border px-2 py-1 text-[11px] font-semibold capitalize ${
                           avatarDraft.hair === style
-                            ? "border-stone-900 bg-stone-900 text-white"
-                            : "border-stone-200 bg-stone-50 text-stone-700"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-slate-50 text-slate-700"
                         }`}
                       >
                         {style}
@@ -2113,7 +2248,7 @@ export function VirtualCareerSpace({
                 </div>
 
                 <div>
-                  <span className="font-semibold text-stone-700 block mb-1">Acessório:</span>
+                  <span className="font-semibold text-slate-700 block mb-1">Acessório:</span>
                   <div className="flex flex-wrap gap-1">
                     {ACCESSORIES.map((acc) => (
                       <button
@@ -2124,8 +2259,8 @@ export function VirtualCareerSpace({
                         }
                         className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${
                           avatarDraft.accessory === acc
-                            ? "border-stone-900 bg-stone-900 text-white"
-                            : "border-stone-200 bg-stone-50 text-stone-700"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-slate-50 text-slate-700"
                         }`}
                       >
                         {acc === "none" && "Nenhum"}
@@ -2140,7 +2275,7 @@ export function VirtualCareerSpace({
 
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <span className="font-semibold text-stone-700 block mb-1">Cor Cabelo:</span>
+                  <span className="font-semibold text-slate-700 block mb-1">Cor Cabelo:</span>
                   <div className="flex flex-wrap gap-1">
                     {HAIR_COLORS.map((c) => (
                       <button
@@ -2150,8 +2285,8 @@ export function VirtualCareerSpace({
                         style={{ backgroundColor: c }}
                         className={`size-4 rounded-full border ${
                           avatarDraft.hairColor === c
-                            ? "ring-2 ring-stone-900 scale-110"
-                            : "border-stone-300"
+                            ? "ring-2 ring-slate-900 scale-110"
+                            : "border-slate-300"
                         }`}
                       />
                     ))}
@@ -2159,7 +2294,7 @@ export function VirtualCareerSpace({
                 </div>
 
                 <div>
-                  <span className="font-semibold text-stone-700 block mb-1">Camisa:</span>
+                  <span className="font-semibold text-slate-700 block mb-1">Camisa:</span>
                   <div className="flex flex-wrap gap-1">
                     {SHIRT_COLORS.map((c) => (
                       <button
@@ -2169,8 +2304,8 @@ export function VirtualCareerSpace({
                         style={{ backgroundColor: c }}
                         className={`size-4 rounded-full border ${
                           avatarDraft.shirt === c
-                            ? "ring-2 ring-stone-900 scale-110"
-                            : "border-stone-300"
+                            ? "ring-2 ring-slate-900 scale-110"
+                            : "border-slate-300"
                         }`}
                       />
                     ))}
@@ -2178,7 +2313,7 @@ export function VirtualCareerSpace({
                 </div>
 
                 <div>
-                  <span className="font-semibold text-stone-700 block mb-1">Calça:</span>
+                  <span className="font-semibold text-slate-700 block mb-1">Calça:</span>
                   <div className="flex flex-wrap gap-1">
                     {PANTS_COLORS.map((c) => (
                       <button
@@ -2188,8 +2323,8 @@ export function VirtualCareerSpace({
                         style={{ backgroundColor: c }}
                         className={`size-4 rounded-full border ${
                           avatarDraft.pants === c
-                            ? "ring-2 ring-stone-900 scale-110"
-                            : "border-stone-300"
+                            ? "ring-2 ring-slate-900 scale-110"
+                            : "border-slate-300"
                         }`}
                       />
                     ))}
@@ -2198,15 +2333,15 @@ export function VirtualCareerSpace({
               </div>
             </div>
 
-            <label className="flex items-start gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 cursor-pointer">
+            <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={rulesAccepted}
                 onChange={(e) => setRulesAccepted(e.target.checked)}
-                className="mt-0.5 size-4 rounded border-stone-400 accent-stone-900"
+                className="mt-0.5 size-4 rounded border-slate-400 accent-slate-900"
               />
-              <span className="text-[11px] leading-snug text-stone-700">
-                Concordo em manter comunicação cordial e não compartilhar dados sensíveis (CPF/RG) no chat aberto da sala.
+              <span className="text-[11px] leading-snug text-slate-700">
+                Concordo em manter comunicação cordial e não compartilhar dados sensíveis (CPF/RG) nos balões abertos da sala.
               </span>
             </label>
 
@@ -2219,7 +2354,7 @@ export function VirtualCareerSpace({
             <button
               type="submit"
               disabled={entering || !rulesAccepted}
-              className="w-full rounded-xl bg-stone-900 py-2.5 text-xs font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
+              className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
               {entering ? "Entrando..." : "Confirmar e Entrar"}
             </button>
@@ -2229,19 +2364,19 @@ export function VirtualCareerSpace({
 
       {/* ─── MODAL DO SIMULADO DE ENTREVISTA ─── */}
       {showArcadeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="size-5 text-blue-600" />
-                <h3 className="text-sm font-bold text-stone-900">
+                <h3 className="text-sm font-bold text-slate-900">
                   Simulado Rápido de Entrevista
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowArcadeModal(false)}
-                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
               >
                 <X className="size-5" />
               </button>
@@ -2252,11 +2387,11 @@ export function VirtualCareerSpace({
               if (!q) return null;
               return (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-stone-500">
+                  <p className="text-xs font-semibold text-slate-500">
                     Questão {quizIndex + 1} de {CAREER_ARCADE_QUIZ.length} · Pontos:{" "}
-                    <span className="font-bold text-stone-900">{quizScore}</span>
+                    <span className="font-bold text-slate-900">{quizScore}</span>
                   </p>
-                  <p className="text-sm font-bold text-stone-900">{q.question}</p>
+                  <p className="text-sm font-bold text-slate-900">{q.question}</p>
 
                   <div className="space-y-2">
                     {q.options.map((opt, idx) => {
@@ -2273,12 +2408,12 @@ export function VirtualCareerSpace({
                           }}
                           className={`w-full rounded-xl border p-3 text-left text-xs font-semibold transition ${
                             quizSelected === null
-                              ? "border-stone-200 bg-stone-50 hover:border-stone-900"
+                              ? "border-slate-200 bg-slate-50 hover:border-slate-900"
                               : isCorrect
                                 ? "border-emerald-500 bg-emerald-50 text-emerald-900"
                                 : chosen
                                   ? "border-rose-400 bg-rose-50 text-rose-900"
-                                  : "border-stone-200 bg-stone-50 opacity-60"
+                                  : "border-slate-200 bg-slate-50 opacity-60"
                           }`}
                         >
                           {opt}
@@ -2288,7 +2423,7 @@ export function VirtualCareerSpace({
                   </div>
 
                   {quizSelected !== null && (
-                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-800 space-y-2">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 space-y-2">
                       <p>💡 {q.tip}</p>
                       <button
                         type="button"
@@ -2296,7 +2431,7 @@ export function VirtualCareerSpace({
                           setQuizSelected(null);
                           setQuizIndex((i) => (i + 1) % CAREER_ARCADE_QUIZ.length);
                         }}
-                        className="w-full rounded-lg bg-stone-900 py-2 text-xs font-semibold text-white"
+                        className="w-full rounded-lg bg-slate-900 py-2 text-xs font-semibold text-white"
                       >
                         Próxima Questão →
                       </button>
@@ -2311,10 +2446,10 @@ export function VirtualCareerSpace({
 
       {/* ─── MODAL DE REPORTE DE CONDUTA ─── */}
       {reportModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <form
             onSubmit={handleReportSubmit}
-            className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-5 shadow-xl space-y-3"
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl space-y-3"
           >
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-rose-800">
@@ -2323,7 +2458,7 @@ export function VirtualCareerSpace({
               <button
                 type="button"
                 onClick={() => setReportModalUser(null)}
-                className="text-stone-400 hover:text-stone-700"
+                className="text-slate-400 hover:text-slate-700"
               >
                 <X className="size-4" />
               </button>
@@ -2336,7 +2471,7 @@ export function VirtualCareerSpace({
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
               placeholder="Descreva brevemente o ocorrido..."
-              className="w-full rounded-xl border border-stone-200 p-2.5 text-xs"
+              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs"
             />
             <button
               type="submit"

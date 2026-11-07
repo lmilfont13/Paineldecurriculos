@@ -25,59 +25,59 @@ export interface SupportRoomDef {
 export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
   atendimento: {
     id: "atendimento",
-    name: "Balcões de Atendimento RH",
-    shortName: "Atendimento RH",
-    description: "Atendimento individual e confidencial (1:1) com recrutadores.",
+    name: "Ala de Atendimento RH (Mesas 1 a 3)",
+    shortName: "Mesas RH",
+    description: "Atendimento individual 1:1 com recrutadores sentados nas mesas.",
     icon: "🎧",
-    bounds: { xMin: 4, xMax: 45, yMin: 6, yMax: 47 },
-    spawn: { x: 26, y: 29 },
+    bounds: { xMin: 4, xMax: 35, yMin: 10, yMax: 94 },
+    spawn: { x: 26, y: 54 },
   },
   recepcao: {
     id: "recepcao",
-    name: "Recepção & Mural de Vagas",
-    shortName: "Recepção & Vagas",
+    name: "Recepção Executiva & Mural de Vagas",
+    shortName: "Recepção Central",
     description: "Consulte o mural de vagas abertas, retire senha e veja orientações.",
     icon: "🏢",
-    bounds: { xMin: 34, xMax: 68, yMin: 36, yMax: 76 },
-    spawn: { x: 49, y: 55 },
+    bounds: { xMin: 36, xMax: 64, yMin: 10, yMax: 62 },
+    spawn: { x: 50, y: 52 },
   },
   cafe: {
     id: "cafe",
-    name: "Lounge Corporativo & Assistentes",
-    shortName: "Lounge & Bots",
-    description: "Tire dúvidas com os assistentes virtuais e faça networking profissional.",
+    name: "Bancada de Assistentes IA",
+    shortName: "Bancada Bots IA",
+    description: "Converse via balão de fala com os Bots IA sentados nas mesas.",
     icon: "🤖",
-    bounds: { xMin: 55, xMax: 96, yMin: 6, yMax: 47 },
-    spawn: { x: 74, y: 33 },
+    bounds: { xMin: 65, xMax: 96, yMin: 10, yMax: 94 },
+    spawn: { x: 74, y: 54 },
   },
   jogos: {
     id: "jogos",
     name: "Espaço Preparação & Simulado",
-    shortName: "Simulado & Dicas",
+    shortName: "Simulado",
     description: "Simulado rápido de entrevista e boas práticas para processos seletivos.",
     icon: "🎯",
-    bounds: { xMin: 4, xMax: 39, yMin: 52, yMax: 95 },
-    spawn: { x: 23, y: 78 },
+    bounds: { xMin: 36, xMax: 49, yMin: 63, yMax: 94 },
+    spawn: { x: 43, y: 82 },
   },
   diretoria: {
     id: "diretoria",
-    name: "Sala Executiva & Entrevistas",
-    shortName: "Sala Executiva",
-    description: "Ambiente reservado para alinhamentos com gestores e liderança.",
+    name: "Lounge Executivo & Avisos",
+    shortName: "Lounge Executivo",
+    description: "Ambiente reservado para alinhamentos e consulta de avisos.",
     icon: "🏛️",
-    bounds: { xMin: 65, xMax: 96, yMin: 52, yMax: 95 },
-    spawn: { x: 82, y: 76 },
+    bounds: { xMin: 50, xMax: 64, yMin: 63, yMax: 94 },
+    spawn: { x: 57, y: 82 },
   },
 };
 
-/** Posições fixas dos 3 balcões de atendimento no mapa isométrico */
+/** Posições fixas das 3 Mesas Executivas de Atendimento RH na Ala Esquerda */
 export const SUPPORT_DESK_POSITIONS: Record<
   number,
   { staff: { x: number; y: number }; candidate: { x: number; y: number } }
 > = {
-  1: { staff: { x: 10, y: 25 }, candidate: { x: 16, y: 30 } },
-  2: { staff: { x: 15, y: 19 }, candidate: { x: 21, y: 24 } },
-  3: { staff: { x: 21, y: 14 }, candidate: { x: 27, y: 19 } },
+  1: { staff: { x: 18, y: 27 }, candidate: { x: 18, y: 39 } },
+  2: { staff: { x: 18, y: 55 }, candidate: { x: 18, y: 67 } },
+  3: { staff: { x: 18, y: 81 }, candidate: { x: 18, y: 92 } },
 };
 
 export const SKIN_TONES = [
@@ -398,6 +398,7 @@ export interface SupportAssistantBotDef {
   greeting: string;
   x: number;
   y: number;
+  visitorSpot: { x: number; y: number };
   room: SupportRoomId;
   avatar: AvatarConfig;
   quickPrompts: string[];
@@ -406,15 +407,16 @@ export interface SupportAssistantBotDef {
 export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
   {
     id: "vagas",
-    name: "Clara · Bot Vagas",
+    name: "Clara · IA Vagas",
     roleTitle: "Especialista nas Vagas Abertas",
-    badge: "Vagas",
+    badge: "Mesa IA 01 · Vagas",
     shortSpecialty: "Requisitos, modalidade, local e contrato de cada vaga.",
     greeting:
-      "Olá! Sou a Clara, assistente virtual de vagas. Escolha uma vaga abaixo ou clique em uma pergunta rápida para ver requisitos, local e como se candidatar.",
-    x: 52,
-    y: 50,
-    room: "recepcao",
+      "Olá! Sou a Clara, IA especialista em vagas. Clique em mim no mapa ou envie um balão para tirar dúvidas ao vivo sobre qualquer vaga aberta!",
+    x: 82,
+    y: 27,
+    visitorSpot: { x: 82, y: 39 },
+    room: "cafe",
     avatar: {
       skin: "#f3c6a0",
       hair: "coque",
@@ -432,15 +434,16 @@ export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
   },
   {
     id: "avisos",
-    name: "Heitor · Bot Avisos",
-    roleTitle: "Especialista em Etapas & Sistema",
-    badge: "Avisos",
+    name: "Heitor · IA Sistema",
+    roleTitle: "Especialista em Avisos & Etapas",
+    badge: "Mesa IA 02 · Avisos",
     shortSpecialty: "Onde acompanhar avisos do RH, status e pré-entrevista.",
     greeting:
-      "Olá! Sou o Heitor. Posso mostrar onde você recebe avisos do RH no sistema, como acompanhar o status da sua inscrição e como funciona a fila de atendimento.",
-    x: 32,
-    y: 35,
-    room: "atendimento",
+      "Olá! Sou o Heitor, IA do sistema. Mande um balão para mim e explico na hora onde acompanhar os avisos do RH e o status da sua candidatura!",
+    x: 82,
+    y: 55,
+    visitorSpot: { x: 82, y: 67 },
+    room: "cafe",
     avatar: {
       skin: "#e0a370",
       hair: "curto",
@@ -458,14 +461,15 @@ export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
   },
   {
     id: "curriculo",
-    name: "Helena · Bot Currículo",
+    name: "Helena · IA Currículo",
     roleTitle: "Especialista em PDF & Cadastro",
-    badge: "Currículo",
+    badge: "Mesa IA 03 · Currículo",
     shortSpecialty: "Formato PDF (até 5 MB), reaproveitamento e LGPD.",
     greeting:
-      "Olá! Sou a Helena. Tiro dúvidas sobre o envio do currículo em PDF (até 5 MB), dicas para destacar sua experiência e segurança dos seus dados (LGPD).",
-    x: 74,
-    y: 38,
+      "Olá! Sou a Helena, IA de triagem e currículo. Pergunte por balão sobre o formato PDF (até 5 MB), dicas de estrutura e LGPD!",
+    x: 82,
+    y: 81,
+    visitorSpot: { x: 82, y: 92 },
     room: "cafe",
     avatar: {
       skin: "#8d5524",

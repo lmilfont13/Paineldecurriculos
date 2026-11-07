@@ -8,6 +8,7 @@ import {
   reportParticipantSchema,
   requestTicketSchema,
   sendSupportMessageSchema,
+  type AssistantBotId,
   type AvatarConfig,
   type SupportSpaceStateDTO,
 } from "@/server/models/support.model";
@@ -15,6 +16,7 @@ import { getSessionUser } from "@/server/services/auth.service";
 import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
 import {
+  askSupportBotAi,
   callServiceTicketToDesk,
   closeSupportConversation,
   enterSupportSpace,
@@ -224,5 +226,19 @@ export async function toggleSupportSpacePublicVisibilityAction(
   revalidatePath("/", "layout");
   return getSupportSpaceState(actor);
 }
+
+export async function askSupportBotAiAction(
+  slug: string,
+  input: {
+    botId: AssistantBotId;
+    question: string;
+    selectedJobId?: string | null;
+    companyName: string;
+  }
+): Promise<{ bubbleText: string; fullReply: string; botName: string }> {
+  const actor = await resolveViewerActor(slug);
+  return askSupportBotAi(actor, input);
+}
+
 
 
