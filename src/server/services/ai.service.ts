@@ -680,6 +680,7 @@ export async function analyzeApplication(
 ): Promise<{ score: number } | null> {
   const application = await findApplicationById(applicationId);
   if (!application) return null;
+  if (application.hasImpediment) return null;
 
   const answersText = buildAnswersText(application.answers);
   if (!application.resumeUrl && !hasMaterial("", answersText)) {
@@ -793,6 +794,7 @@ export async function runTriageWithTracking(
 ): Promise<void> {
   const application = await findApplicationById(applicationId);
   if (!application) return;
+  if (application.hasImpediment) return;
 
   const runId =
     options.runId ??

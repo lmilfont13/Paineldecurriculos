@@ -134,3 +134,4 @@ export async function getRetailAndMarketNews(): Promise<NewsTickerItem[]> {
   cachedNews = { items: DEFAULT_RETAIL_NEWS, timestamp: now };
   return DEFAULT_RETAIL_NEWS;
 }
+

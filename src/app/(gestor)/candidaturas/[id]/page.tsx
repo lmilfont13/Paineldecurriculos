@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DecisionBlock } from "@/components/gestor/decision-block";
+import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
 import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
 import { extractStandbyReason } from "@/server/models/standby.model";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
@@ -246,6 +247,13 @@ export default async function CandidaturaDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {!app.hasImpediment && (
+              <ImpedimentToggle
+                applicationId={app.id}
+                candidateName={app.name}
+                hasImpediment={false}
+              />
+            )}
             <WhatsAppQuickButton
               candidateName={app.name}
               candidatePhone={app.phone}
@@ -263,6 +271,42 @@ export default async function CandidaturaDetailPage({
           </div>
         </div>
       </header>
+
+      {app.hasImpediment && (
+        <section className="mt-4 rounded-2xl bg-black p-5 text-white shadow-lg border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-700 text-lg">
+              ⚠️
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-red-950 border border-red-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-red-400">
+                  TARJA PRETA ATIVA
+                </span>
+                <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+                  Impedimento de Contratação
+                </h2>
+              </div>
+              <p className="mt-1 text-xs text-zinc-300">
+                {app.impedimentReason
+                  ? `Justificativa: ${app.impedimentReason}`
+                  : "Candidato bloqueado para avanço em entrevistas, aprovação e reanálise da IA."}
+                {app.impedimentAt && (
+                  <span className="text-zinc-500 text-[11px]">
+                    {" · "}Registrado em {formatAppliedAt(app.impedimentAt, true)}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <ImpedimentToggle
+            applicationId={app.id}
+            candidateName={app.name}
+            hasImpediment={true}
+            impedimentReason={app.impedimentReason}
+          />
+        </section>
+      )}
 
       {app.otherApplications.length > 0 && (
         <section className="mt-4 rounded-2xl border border-[#f0e3c8] bg-[#fdfaf3] p-4 text-[13px] text-[#57534e] sm:px-6">
@@ -361,7 +405,7 @@ export default async function CandidaturaDetailPage({
 
             {(app.aiState === "FAILED" || app.aiState === "NO_RESUME" || app.aiState === "DONE") && (
               <div className="mt-4">
-                <ReanalyzeButton applicationId={app.id} />
+                <ReanalyzeButton applicationId={app.id} hasImpediment={app.hasImpediment ?? false} />
               </div>
             )}
 
@@ -589,6 +633,7 @@ export default async function CandidaturaDetailPage({
             hasAccount={Boolean(app.candidateId)}
             interview={interview}
             queue={app.queue}
+            hasImpediment={app.hasImpediment ?? false}
           />
 
           {(app.preRegistered || !app.resumeUrl) && intake && (

@@ -38,6 +38,7 @@ import {
   updateAgentRun,
   updateApplicationAi,
   updateApplicationStatus,
+  updateApplicationImpediment,
   updateInterview,
   updateInfoRequest,
   findOtherApplicationsByEmail,
@@ -211,6 +212,12 @@ export async function setApplicationStatus(
 ) {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return null;
+
+  // Candidato com impedimento de contratação (Tarja Preta) não pode ir para Entrevista nem Aprovado
+  if (application.hasImpediment && (status === "INTERVIEW" || status === "APPROVED")) {
+    return null;
+  }
+
   const updated = await updateApplicationStatus(id, status);
 
   if (options.standbyReason && status === "STANDBY") {
@@ -500,6 +507,7 @@ export async function requestReanalysis(
 ): Promise<{ ok: boolean }> {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return { ok: false };
+  if (application.hasImpediment) return { ok: false };
   await updateApplicationAi(id, { aiState: "WAITING" });
   enqueueTriage(id);
   return { ok: true };
@@ -559,6 +567,7 @@ export async function scheduleInterview(
 ): Promise<{ ok: boolean }> {
   const application = await getCompanyApplication(companyId, id);
   if (!application) return { ok: false };
+  if (application.hasImpediment) return { ok: false };
 
   const wasInterview = application.status === "INTERVIEW";
   await updateInterview(id, {
@@ -1527,5 +1536,27 @@ export async function importStandbyToJob(
     });
   }
   return result;
+}
+
+/**
+ * Ativa ou desativa o impedimento de contratação (Tarja Preta) do candidato.
+ * Decisão manual exclusiva do gestor (Regra 2), com validação de tenant (Regra 1).
+ * Bloqueia reanálise pela IA e avanço para entrevista/aprovação.
+ */
+export async function toggleApplicationImpediment(
+  companyId: string,
+  applicationId: string,
+  hasImpediment: boolean,
+  reason?: string | null
+): Promise<{ ok: boolean; hasImpediment: boolean; reason?: string | null; error?: string }> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application) {
+    return { ok: false, hasImpediment: false, error: "Candidatura não encontrada." };
+  }
+
+  const cleanReason = reason?.trim() || null;
+  await updateApplicationImpediment(applicationId, hasImpediment, cleanReason);
+
+  return { ok: true, hasImpediment, reason: cleanReason };
 }
 

@@ -183,3 +183,4 @@ export function NewsTicker({
     </div>
   );
 }
+

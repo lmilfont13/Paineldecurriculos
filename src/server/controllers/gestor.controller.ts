@@ -106,10 +106,11 @@ export async function getCandidaturasPageData(jobId?: string) {
   );
 
   // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado que
-  // haviam ficado como NO_RESUME, FAILED ou com leitura inválida.
+  // haviam ficado como NO_RESUME, FAILED ou com leitura inválida (exceto se houver impedimento de contratação).
   const stuck = applications
     .filter(
       (a) =>
+        !a.hasImpediment &&
         a.resumeUrl &&
         (a.aiState === "NO_RESUME" ||
           a.aiState === "FAILED" ||
@@ -193,6 +194,9 @@ export async function getBuscarCvsData() {
       hasCnh: app.hasCnh,
       isPcd: app.isPcd,
       pcdDetails: app.pcdDetails,
+      hasImpediment: app.hasImpediment ?? false,
+      impedimentReason: app.impedimentReason ?? null,
+      impedimentAt: app.impedimentAt ? app.impedimentAt.toISOString() : null,
     };
   });
 
@@ -208,10 +212,11 @@ export async function getVagaDetailData(jobId: string) {
     await listCompanyApplications(user.companyId, jobId)
   );
 
-  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado da vaga
+  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado da vaga (exceto se houver impedimento de contratação)
   const stuck = applications
     .filter(
       (a) =>
+        !a.hasImpediment &&
         a.resumeUrl &&
         (a.aiState === "NO_RESUME" ||
           a.aiState === "FAILED" ||
@@ -247,6 +252,7 @@ export async function getCandidaturaDetail(id: string) {
   // Se a candidatura tem currículo anexado mas ficou sem leitura do arquivo
   // (ex.: PDF em imagem da Catho antes do OCR visual), dispara a análise ao abrir.
   const needsVisualOcrRetry =
+    !application.hasImpediment &&
     Boolean(application.resumeUrl) &&
     (application.aiState === "NO_RESUME" ||
       application.aiState === "FAILED" ||

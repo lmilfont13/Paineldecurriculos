@@ -18,3 +18,4 @@ describe("news-ticker.model", () => {
     expect(news[0].title).toBeTruthy();
   });
 });
+

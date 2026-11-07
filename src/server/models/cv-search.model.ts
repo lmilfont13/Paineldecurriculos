@@ -43,6 +43,9 @@ export type CandidateCvCard = {
   hasCnh?: string | null;
   isPcd?: boolean;
   pcdDetails?: string | null;
+  hasImpediment?: boolean;
+  impedimentReason?: string | null;
+  impedimentAt?: string | null;
 };
 
 export type CvSearchFilters = {

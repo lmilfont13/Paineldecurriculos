@@ -255,6 +255,8 @@ export default async function VagaHubPage({
           createdAt: person.createdAt.toISOString(),
           photoUrl: person.photoUrl,
           age: ages[person.id] ?? null,
+          hasImpediment: person.hasImpediment ?? false,
+          impedimentReason: person.impedimentReason ?? null,
         }))}
       />
 

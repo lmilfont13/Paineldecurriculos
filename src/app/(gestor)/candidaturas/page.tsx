@@ -73,6 +73,9 @@ export default async function CandidaturasPage({
           }))
         : null,
       tenureRisk: tenure?.classificacaoRisco ?? null,
+      hasImpediment: app.hasImpediment ?? false,
+      impedimentReason: app.impedimentReason ?? null,
+      impedimentAt: app.impedimentAt ? app.impedimentAt.toISOString() : null,
     };
   });
 

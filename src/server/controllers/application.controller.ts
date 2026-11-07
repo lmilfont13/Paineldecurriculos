@@ -63,6 +63,7 @@ import {
   scheduleInterview,
   sendManagerMessage,
   setApplicationStatus,
+  toggleApplicationImpediment,
   importStandbyToJob,
   submitApplication,
   type CandidateSummary,
@@ -131,7 +132,7 @@ export async function scheduleInterviewAction(
     },
     channels
   );
-  if (!result.ok) return { error: "Candidatura não encontrada." };
+  if (!result.ok) return { error: (result as { error?: string }).error || "Candidatura não encontrada." };
   try {
     const app = await getCompanyApplication(user.companyId, applicationId);
     await createAuditLog({
@@ -408,6 +409,55 @@ export async function setApplicationStatusAction(
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
   if (updated) revalidatePath(`/vagas/${updated.jobId}`);
+}
+
+/**
+ * Ativa ou desativa impedimento de contratação (Tarja Preta) do candidato.
+ * Decisão manual exclusiva do gestor (Regra 2), com validação de tenant (Regra 1).
+ */
+export async function toggleApplicationImpedimentAction(
+  applicationId: string,
+  hasImpediment: boolean,
+  reason?: string
+): Promise<{ ok: boolean; hasImpediment: boolean; reason?: string | null; error?: string }> {
+  const user = await requireManager();
+  const result = await toggleApplicationImpediment(
+    user.companyId,
+    applicationId,
+    hasImpediment,
+    reason
+  );
+
+  if (result.ok) {
+    runInBackground("auditoria de impedimento", async () => {
+      try {
+        const app = await getCompanyApplication(user.companyId, applicationId);
+        await createAuditLog({
+          companyId: user.companyId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          action: hasImpediment
+            ? "CANDIDATURA_IMPEDIMENTO_ATIVADO"
+            : "CANDIDATURA_IMPEDIMENTO_REMOVIDO",
+          entityType: "CANDIDATURA",
+          entityId: applicationId,
+          entityLabel: app?.name,
+          metadata: {
+            hasImpediment,
+            reason: result.reason,
+          },
+        });
+      } catch {
+        /* auditoria nunca bloqueia a ação principal */
+      }
+    });
+  }
+
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/candidaturas");
+  revalidatePath("/painel");
+  return result;
 }
 
 /** Resgata um candidato do Stand-by para uma vaga aberta específica. */

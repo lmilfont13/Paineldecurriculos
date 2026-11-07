@@ -38,6 +38,13 @@ export async function moveApplication(
   const application = await getCompanyApplication(companyId, applicationId);
   if (!application) return { ok: false, error: "Candidatura não encontrada." };
 
+  if (application.hasImpediment && (status === "INTERVIEW" || status === "APPROVED")) {
+    return {
+      ok: false,
+      error: "Candidato possui impedimento de contratação ativo (Tarja Preta) e não pode ser movido para Entrevista ou Aprovado.",
+    };
+  }
+
   const updated = await setApplicationStatus(companyId, applicationId, status, {
     communicate: notice.mode === "standard",
   });

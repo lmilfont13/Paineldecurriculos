@@ -887,6 +887,12 @@ export function BuscarCvsView({
                           >
                             {item.name}
                           </Link>
+                          {item.hasImpediment && (
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
+                              <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                              <span>Tarja Preta</span>
+                            </span>
+                          )}
                           {item.aiLevel && (
                             <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${levelBadgeClass}`}>
                               {item.aiLevel}
@@ -1036,6 +1042,12 @@ export function BuscarCvsView({
                                 {item.name}
                               </Link>
                             </h2>
+                            {item.hasImpediment && (
+                              <span className="rounded bg-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm inline-flex items-center gap-1.5" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
+                                <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                                <span>Tarja Preta · Impedimento</span>
+                              </span>
+                            )}
                             {item.isPcd && (
                               <span className="rounded-md bg-purple-100 border border-purple-300 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">
                                 ♿ PCD

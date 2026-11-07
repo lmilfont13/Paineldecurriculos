@@ -500,6 +500,21 @@ export function updateManagerNotes(id: string, managerNotes: string | null) {
   return prisma.application.update({ where: { id }, data: { managerNotes } });
 }
 
+export function updateApplicationImpediment(
+  id: string,
+  hasImpediment: boolean,
+  reason: string | null
+) {
+  return prisma.application.update({
+    where: { id },
+    data: {
+      hasImpediment,
+      impedimentReason: hasImpediment ? reason : null,
+      impedimentAt: hasImpediment ? new Date() : null,
+    },
+  });
+}
+
 /** Combina (ou remarca) a conversa da candidatura. */
 export function updateInterview(
   id: string,
@@ -711,6 +726,7 @@ export function findUnevaluatedApplications(
     where: {
       companyId,
       isDemo: false,
+      hasImpediment: false,
       ...(jobId ? { jobId } : {}),
       ...(applicationIds && applicationIds.length > 0
         ? { id: { in: applicationIds } }

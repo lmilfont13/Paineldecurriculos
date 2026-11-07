@@ -11,3 +11,4 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Falha ao carregar notícias" }, { status: 500 });
   }
 }
+

@@ -281,7 +281,7 @@ export function CandidaturasTable({
   }
 
   /** Quem está na triagem e já atingiu a nota mínima da própria vaga (respeita os filtros da tela). */
-  const readyToPass = filtered.filter((r) => r.status === "PENDING" && meetsMinimum(r));
+  const readyToPass = filtered.filter((r) => r.status === "PENDING" && !r.hasImpediment && meetsMinimum(r));
 
   function passAllMeetingMinimum() {
     if (!window.confirm(`Passar ${readyToPass.length} candidato${readyToPass.length === 1 ? "" : "s"} que atingiram a nota mínima para "Em análise"?`)) return;
@@ -289,7 +289,19 @@ export function CandidaturasTable({
   }
 
   function runBulk(newStatus: AppStatusKey, only?: string[]) {
-    const ids = only ?? [...selected];
+    const rawIds = only ?? [...selected];
+    const blocked = rawIds.filter((id) => rows.find((r) => r.id === id)?.hasImpediment);
+    const ids =
+      newStatus === "INTERVIEW" || newStatus === "APPROVED"
+        ? rawIds.filter((id) => !rows.find((r) => r.id === id)?.hasImpediment)
+        : rawIds;
+
+    if (ids.length === 0 && blocked.length > 0) {
+      setToast("Candidato(s) possuem impedimento de contratação (Tarja Preta) e não podem avançar para Entrevista ou Aprovação.");
+      setConfirm(null);
+      return;
+    }
+
     setConfirm(null);
     startTransition(async () => {
       // A ação aceita até 100 por chamada: manda em lotes para não deixar ninguém de fora.
@@ -297,8 +309,12 @@ export function CandidaturasTable({
       for (let i = 0; i < ids.length; i += 100) {
         updated += (await bulkSetApplicationStatusAction(ids.slice(i, i + 100), newStatus)).updated;
       }
+      const blockedMsg =
+        blocked.length > 0 && (newStatus === "INTERVIEW" || newStatus === "APPROVED")
+          ? ` (${blocked.length} bloqueado${blocked.length === 1 ? "" : "s"} por Tarja Preta)`
+          : "";
       setToast(
-        `${updated} candidato${updated === 1 ? "" : "s"} movido${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}".`
+        `${updated} candidato${updated === 1 ? "" : "s"} movido${updated === 1 ? "" : "s"} para "${appStatusLabels[newStatus]}"${blockedMsg}.`
       );
       setSelected(new Set());
     });
@@ -388,6 +404,7 @@ export function CandidaturasTable({
     () =>
       scoped.filter(
         (r) =>
+          !r.hasImpediment &&
           (r.aiScore === null || r.aiState === "FAILED" || r.aiState === "WAITING") &&
           r.aiState !== "NO_RESUME"
       ).length,
@@ -732,6 +749,15 @@ export function CandidaturasTable({
                       className="size-16 shrink-0 rounded-full bg-[#1c1917] text-lg font-bold text-white flex items-center justify-center object-cover"
                     />
                     <p className="mt-3 line-clamp-2 text-center text-[13px] font-semibold text-[#0a0a0a] leading-snug">{row.name}</p>
+                    {row.hasImpediment && (
+                      <span
+                        className="mt-1.5 inline-flex items-center gap-1.5 rounded bg-black px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        title={row.impedimentReason ? `Motivo do impedimento: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
+                      >
+                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span>Tarja Preta</span>
+                      </span>
+                    )}
                     {row.age != null && (
                       <p
                         className="mt-0.5 text-center text-[10px] text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100"
@@ -888,6 +914,15 @@ export function CandidaturasTable({
                       </span>
                     )}
                     {row.name}
+                    {row.hasImpediment && (
+                      <span
+                        className="ml-1.5 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        title={row.impedimentReason ? `Motivo do impedimento: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
+                      >
+                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span>Tarja Preta</span>
+                      </span>
+                    )}
                     {row.preRegistered && (
                       <span className="ml-1.5 rounded-full bg-[#fff7e6] px-1.5 py-0.5 align-middle text-[10px] font-medium text-[#a16207]">
                         Cadastro incompleto

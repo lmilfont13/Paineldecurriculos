@@ -213,6 +213,7 @@ export function DecisionBlock({
   hasAccount,
   interview,
   queue,
+  hasImpediment = false,
 }: {
   applicationId: string;
   status: AppStatusKey;
@@ -227,6 +228,7 @@ export function DecisionBlock({
     nextId: string | null;
     nextPendingId: string | null;
   };
+  hasImpediment?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<string | null>(null);
@@ -240,6 +242,10 @@ export function DecisionBlock({
   const closed = status === "APPROVED" || status === "REJECTED";
 
   function apply(to: AppStatusKey, standbyReason?: string) {
+    if (hasImpediment && (to === "INTERVIEW" || to === "APPROVED")) {
+      setToast("Candidato possui impedimento de contratação (Tarja Preta) e não pode avançar para Entrevista ou Aprovação.");
+      return;
+    }
     startTransition(async () => {
       await setApplicationStatusAction(applicationId, to, standbyReason);
       setLastMoved(to);
@@ -338,21 +344,28 @@ export function DecisionBlock({
           ) : (
             <>
               Nenhum horário combinado ainda.
-              <button
-                type="button"
-                onClick={() => setScheduling(true)}
-                className="text-[12px] font-medium underline"
-                style={{ color: "var(--brand-primary)" }}
-              >
-                marcar agora
-              </button>
+              {!hasImpediment && (
+                <button
+                  type="button"
+                  onClick={() => setScheduling(true)}
+                  className="text-[12px] font-medium underline"
+                  style={{ color: "var(--brand-primary)" }}
+                >
+                  marcar agora
+                </button>
+              )}
             </>
           )}
         </p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        {next && (
+        {hasImpediment && (next?.to === "INTERVIEW" || next?.to === "APPROVED") ? (
+          <div className="flex items-center gap-2 rounded-xl bg-black px-4 py-2 text-xs font-bold text-white shadow-sm">
+            <span className="size-2 rounded-full bg-red-500 animate-pulse" />
+            <span>Tarja Preta: Bloqueado para {appStatusLabels[next.to]}</span>
+          </div>
+        ) : next ? (
           <button
             type="button"
             disabled={pending}
@@ -367,8 +380,8 @@ export function DecisionBlock({
           >
             {pending ? "Salvando…" : next.label}
           </button>
-        )}
-        {status === "PENDING" && (
+        ) : null}
+        {status === "PENDING" && !hasImpediment && (
           <button
             type="button"
             disabled={pending}
@@ -378,7 +391,7 @@ export function DecisionBlock({
             Chamar direto para entrevista
           </button>
         )}
-        {status === "SHORTLISTED" && (
+        {status === "SHORTLISTED" && !hasImpediment && (
           <button
             type="button"
             disabled={pending}

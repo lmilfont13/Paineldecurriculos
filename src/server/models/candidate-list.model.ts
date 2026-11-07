@@ -37,6 +37,10 @@ export type CandidaturaRow = {
   tenureMedian?: string | null;
   tenureCompanies?: { empresa: string; duracaoFormatada: string; periodo: string; meses?: number }[] | null;
   tenureRisk?: "BAIXO" | "MEDIO" | "ALTO" | "NEUTRO" | null;
+  /** Impedimento de contratação (Tarja Preta manual pelo gestor). */
+  hasImpediment?: boolean;
+  impedimentReason?: string | null;
+  impedimentAt?: string | null;
 };
 
 export type StageKey = AppStatusKey | "ALL";
