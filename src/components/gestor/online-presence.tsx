@@ -328,7 +328,51 @@ export function OnlineCounterBadge({
         });
       }
       setSessions(list);
+
+      // Notifica o Estúdio DJ e outros componentes do painel com os candidatos online em tempo real
+      if (typeof window !== "undefined") {
+        const cands = list
+          .filter((s) => s.role === "candidato")
+          .map((c) => ({
+            key: c.key,
+            name: c.name,
+            path: c.path,
+            isRegistered: c.isRegistered,
+            lastSeen: Date.now(),
+          }));
+        (window as any).__triagem_online_candidates = cands;
+        window.dispatchEvent(
+          new CustomEvent("triagem:online-candidates", { detail: cands })
+        );
+      }
     };
+
+    const handleCandidatesRequest = () => {
+      const state = channel.presenceState<PresencePayload>();
+      const cands: any[] = [];
+      for (const [key, presences] of Object.entries(state)) {
+        const first = presences[0];
+        if (first && first.role === "candidato") {
+          cands.push({
+            key,
+            name: first.name,
+            path: first.path || "/",
+            isRegistered: first.isRegistered,
+            lastSeen: Date.now(),
+          });
+        }
+      }
+      if (typeof window !== "undefined") {
+        (window as any).__triagem_online_candidates = cands;
+        window.dispatchEvent(
+          new CustomEvent("triagem:online-candidates", { detail: cands })
+        );
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("triagem:request-online-candidates", handleCandidatesRequest);
+    }
 
     channel
       .on("presence", { event: "sync" }, syncCounts)
@@ -345,6 +389,9 @@ export function OnlineCounterBadge({
       });
 
     return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("triagem:request-online-candidates", handleCandidatesRequest);
+      }
       void channel.unsubscribe();
     };
   }, [slug, userName]);

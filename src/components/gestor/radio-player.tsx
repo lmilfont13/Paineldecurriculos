@@ -240,16 +240,40 @@ export function GestorRadioPlayer({
     }
   }, []);
 
-  // Limpeza de sessões inativas (após 10s sem sinal)
+  // Sincronização direta dos Candidatos Online com o OnlineCounterBadge da aplicação
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = Date.now();
-      setOnlineCandidates((prev) =>
-        prev.filter((c) => !c.lastSeen || now - c.lastSeen < 10000)
-      );
-    }, 3500);
-    return () => clearInterval(timer);
+    if (typeof window === "undefined") return;
+
+    const current = (window as any).__triagem_online_candidates;
+    if (Array.isArray(current) && current.length > 0) {
+      setOnlineCandidates(current);
+    }
+
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (Array.isArray(customEvent.detail)) {
+        setOnlineCandidates(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("triagem:online-candidates", handleSync);
+    window.dispatchEvent(new CustomEvent("triagem:request-online-candidates"));
+
+    return () => {
+      window.removeEventListener("triagem:online-candidates", handleSync);
+    };
   }, []);
+
+  // Quando o modal do Estúdio DJ abre, solicita os candidatos online mais recentes
+  useEffect(() => {
+    if (configOpen && typeof window !== "undefined") {
+      const current = (window as any).__triagem_online_candidates;
+      if (Array.isArray(current) && current.length > 0) {
+        setOnlineCandidates(current);
+      }
+      window.dispatchEvent(new CustomEvent("triagem:request-online-candidates"));
+    }
+  }, [configOpen]);
 
   // 2. Conexão Supabase Realtime para sincronização remota entre navegadores/dispositivos
   useEffect(() => {
@@ -2040,7 +2064,7 @@ export function GestorRadioPlayer({
                           </span>
                         </div>
 
-                        {/* Card do Nome Digitado (se preenchido e diferente de all) */}
+                        {/* Card do Nome Digitado (se preenchido e não houver match exato na lista) */}
                         {customCandidateInput.trim() && (
                           <div
                             onClick={() => setSelectedCandidate(customCandidateInput.trim())}
@@ -2066,15 +2090,34 @@ export function GestorRadioPlayer({
                         )}
 
                         {/* Lista de candidatos online detectados */}
-                        {onlineCandidates.length === 0 && !customCandidateInput.trim() ? (
-                          <div className="p-4 text-center text-xs text-stone-500 space-y-1">
-                            <p className="font-semibold text-stone-700">Nenhum candidato na lista de presença neste segundo.</p>
-                            <p className="text-[11px] text-stone-500">
-                              Você pode digitar <strong>Vanessa</strong> na caixa de busca acima para chamá-la no ar com áudio personalizado!
-                            </p>
-                          </div>
-                        ) : (
-                          onlineCandidates.map((cand, idx) => {
+                        {(() => {
+                          const query = customCandidateInput.trim().toLowerCase();
+                          const listToShow = query
+                            ? onlineCandidates.filter(
+                                (c) =>
+                                  (c.name && c.name.toLowerCase().includes(query)) ||
+                                  (c.path && c.path.toLowerCase().includes(query))
+                              )
+                            : onlineCandidates;
+
+                          if (listToShow.length === 0) {
+                            return (
+                              <div className="p-4 text-center text-xs text-stone-500 space-y-1">
+                                <p className="font-semibold text-stone-700">
+                                  {query
+                                    ? `Nenhum candidato online encontrado com "${customCandidateInput.trim()}".`
+                                    : "Nenhum candidato na lista de presença neste segundo."}
+                                </p>
+                                <p className="text-[11px] text-stone-500">
+                                  {query
+                                    ? "Você pode transmitir para o nome digitado usando o card acima!"
+                                    : "Quando candidatos acessarem vagas ou perfil, aparecerão automaticamente aqui."}
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          return listToShow.map((cand, idx) => {
                             const name = cand.name || `Candidato #${idx + 1}`;
                             const isSelected = selectedCandidate.toLowerCase() === name.toLowerCase();
 
@@ -2113,8 +2156,8 @@ export function GestorRadioPlayer({
                                 </span>
                               </div>
                             );
-                          })
-                        )}
+                          });
+                        })()}
                       </div>
                     </div>
 
