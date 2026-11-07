@@ -104,6 +104,42 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
     audioUrl: "/audio/music/silverr7 - World Hold On - (320 Kbps) (2).mp3",
   },
   {
+    id: "natanzinho-lima-sonho-de-amor",
+    title: "Sonho de Amor (Cortando Chão Teresina PI)",
+    artist: "Natanzinho Lima",
+    audioUrl: "/audio/music/Natanzinho Lima - Sonho de Amor - Cortando Chão Teresina PI.mp3",
+  },
+  {
+    id: "wesley-safadao-eclipse-total",
+    title: "Eclipse Total (Meu Forró É Mundo)",
+    artist: "Wesley Safadão e Silvânia Aquino",
+    audioUrl: "/audio/music/Wesley Safadão e Silvânia Aquino - Eclipse Total - Meu Forró É Mundo.mp3",
+  },
+  {
+    id: "ze-vaqueiro-flash",
+    title: "Flash",
+    artist: "Zé Vaqueiro",
+    audioUrl: "/audio/music/Ze vaqueiro Flash - Flash ze vaqueiro.mp3",
+  },
+  {
+    id: "music-1-1",
+    title: "Deep House Session I",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (1).mp3",
+  },
+  {
+    id: "music-1-4",
+    title: "Melodic Session I",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (4).mp3",
+  },
+  {
+    id: "music-1-5",
+    title: "Melodic Session II",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (5).mp3",
+  },
+  {
     id: "music-1-6",
     title: "Deep Progressive Session I",
     artist: "Rádio Tárguet Selection",
@@ -120,6 +156,30 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
     title: "Deep Progressive Session III",
     artist: "Rádio Tárguet Selection",
     audioUrl: "/audio/music/Music 1 (8).mp3",
+  },
+  {
+    id: "music-1-9",
+    title: "Progressive Session IV",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (9).mp3",
+  },
+  {
+    id: "music-1-10",
+    title: "Progressive Session V",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (10).mp3",
+  },
+  {
+    id: "music-1-11",
+    title: "Progressive Session VI",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (11).mp3",
+  },
+  {
+    id: "music-1-12",
+    title: "Progressive Session VII",
+    artist: "Rádio Tárguet Selection",
+    audioUrl: "/audio/music/Music 1 (12).mp3",
   },
   {
     id: "track-1",

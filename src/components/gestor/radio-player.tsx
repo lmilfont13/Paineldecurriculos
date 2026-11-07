@@ -104,6 +104,34 @@ function formatTimer(totalSecs: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+function normalizeAudioUrl(url: string): string {
+  if (!url) return "";
+  try {
+    return decodeURIComponent(url).trim();
+  } catch {
+    return url.trim();
+  }
+}
+
+function areSameAudioUrls(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const normA = normalizeAudioUrl(a);
+  const normB = normalizeAudioUrl(b);
+  return normA === normB || normA.endsWith(normB) || normB.endsWith(normA);
+}
+
+function safeAudioUrl(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  try {
+    return encodeURI(decodeURI(url));
+  } catch {
+    return url;
+  }
+}
+
 export function GestorRadioPlayer({
   initialStation,
   canManage = false,
@@ -639,38 +667,85 @@ export function GestorRadioPlayer({
     }
   }, [volume, muted, liveBroadcastSpot]);
 
-  // Transição suave entre músicas (Crossfade rádio FM de 1.2s)
+  // Transição suave entre músicas (Crossfade rádio FM com fallback de streaming)
   const fadeTransitionToTrack = useCallback(
     (nextAudioUrl: string, onDone?: () => void) => {
       const audio = audioRef.current;
       if (!audio) return;
-      const currentSrc = audio.currentSrc || audio.src;
-      if (currentSrc.endsWith(nextAudioUrl) || currentSrc === nextAudioUrl) {
+      const currentSrc = audio.currentSrc || audio.src || "";
+      const isSame = areSameAudioUrls(currentSrc, nextAudioUrl);
+
+      if (isSame && !audio.paused && playing) {
         onDone?.();
         return;
       }
 
-      if (!playing || !crossfadeEnabled) {
-        audio.src = nextAudioUrl;
-        audio.play().catch(() => {});
-        onDone?.();
+      setError(null);
+      setLoading(true);
+      const safeUrl = safeAudioUrl(nextAudioUrl);
+
+      const playDirectly = () => {
+        audio.src = safeUrl;
+        audio.volume = muted ? 0 : volume;
+        audio
+          .play()
+          .then(() => {
+            setPlaying(true);
+            setLoading(false);
+            onDone?.();
+          })
+          .catch((err) => {
+            console.warn("Falha ao tocar áudio via safeUrl, tentando fallbacks:", err);
+            const unencoded = normalizeAudioUrl(nextAudioUrl);
+            audio.src = unencoded;
+            audio
+              .play()
+              .then(() => {
+                setPlaying(true);
+                setLoading(false);
+                onDone?.();
+              })
+              .catch(() => {
+                const fileName = nextAudioUrl.replace(/^\/audio\/music\//i, "");
+                const streamUrl = `/api/radio/stream-track?file=${encodeURIComponent(fileName)}`;
+                audio.src = streamUrl;
+                audio
+                  .play()
+                  .then(() => {
+                    setPlaying(true);
+                    setLoading(false);
+                    onDone?.();
+                  })
+                  .catch(() => {
+                    setPlaying(false);
+                    setLoading(false);
+                    setError("Não foi possível reproduzir este arquivo de áudio.");
+                  });
+              });
+          });
+      };
+
+      if (!playing || !crossfadeEnabled || isSame) {
+        playDirectly();
         return;
       }
 
-      // Fade-out suave (600ms) -> Troca -> Fade-in suave (600ms)
+      // Fade-out suave (400ms) -> Troca -> Fade-in suave (400ms)
       const baseVol = muted ? 0 : volume;
       let step = 0;
-      const totalSteps = 6;
+      const totalSteps = 4;
       const interval = setInterval(() => {
         step++;
         const factor = Math.max(0, (totalSteps - step) / totalSteps);
         if (audio) audio.volume = baseVol * factor;
         if (step >= totalSteps) {
           clearInterval(interval);
-          audio.src = nextAudioUrl;
+          audio.src = safeUrl;
           audio
             .play()
             .then(() => {
+              setPlaying(true);
+              setLoading(false);
               let inStep = 0;
               const inInterval = setInterval(() => {
                 inStep++;
@@ -680,16 +755,77 @@ export function GestorRadioPlayer({
                   clearInterval(inInterval);
                   onDone?.();
                 }
-              }, 100);
+              }, 80);
             })
             .catch(() => {
               if (audio) audio.volume = baseVol;
+              playDirectly();
             });
         }
-      }, 100);
+      }, 80);
     },
     [crossfadeEnabled, muted, playing, volume]
   );
+
+  // Executa ou pausa uma faixa clicada diretamente na Fila
+  const handlePlayTrack = async (idx: number, track: RadioTrack) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setError(null);
+
+    // Se já é a faixa atual e está tocando: pausa
+    if (isPlaylistMode && playing && trackIndex === idx) {
+      audio.pause();
+      setPlaying(false);
+      return;
+    }
+
+    setTrackIndex(idx);
+
+    const currentSrc = audio.currentSrc || audio.src || "";
+    const isSame = areSameAudioUrls(currentSrc, track.audioUrl);
+
+    if (isSame && audio.src) {
+      try {
+        audio.volume = muted ? 0 : volume;
+        await audio.play();
+        setPlaying(true);
+        setLoading(false);
+        broadcastTrackChange(idx, track);
+        return;
+      } catch (err) {
+        console.warn("Tentando retomar com fadeTransition:", err);
+      }
+    }
+
+    setLoading(true);
+    fadeTransitionToTrack(track.audioUrl, () => {
+      setPlaying(true);
+      setLoading(false);
+    });
+    broadcastTrackChange(idx, track);
+  };
+
+  // Toca imediatamente uma música selecionada no Catálogo
+  const playCatalogTrackNow = (track: RadioTrack) => {
+    const existingIndex = playlistTracks.findIndex(
+      (t) => t.id === track.id || areSameAudioUrls(t.audioUrl, track.audioUrl)
+    );
+
+    if (existingIndex !== -1) {
+      void handlePlayTrack(existingIndex, playlistTracks[existingIndex]);
+    } else {
+      const nextList = [track, ...playlistTracks];
+      setPlaylistTracks(nextList);
+      setTrackIndex(0);
+      void persistPlaylistTracks(nextList);
+      fadeTransitionToTrack(track.audioUrl, () => {
+        setPlaying(true);
+        setLoading(false);
+      });
+      broadcastTrackChange(0, track);
+    }
+  };
 
   const togglePlay = async () => {
     const audio = audioRef.current;
@@ -708,14 +844,27 @@ export function GestorRadioPlayer({
         ? currentTrack?.audioUrl || DEFAULT_MUSIC_CATALOG[0].audioUrl
         : current.url;
 
-      if (!audio.src || !audio.src.endsWith(targetSrc)) {
-        audio.src = targetSrc;
+      const currentSrc = audio.currentSrc || audio.src || "";
+      if (!audio.src || !areSameAudioUrls(currentSrc, targetSrc)) {
+        audio.src = safeAudioUrl(targetSrc);
       }
+      audio.volume = muted ? 0 : volume;
       await audio.play();
       setPlaying(true);
     } catch {
-      setPlaying(false);
-      setError("Não foi possível conectar à rádio. Tente outra estação.");
+      // Fallback
+      try {
+        const targetSrc = isPlaylistMode
+          ? currentTrack?.audioUrl || DEFAULT_MUSIC_CATALOG[0].audioUrl
+          : current.url;
+        audio.src = normalizeAudioUrl(targetSrc);
+        audio.volume = muted ? 0 : volume;
+        await audio.play();
+        setPlaying(true);
+      } catch {
+        setPlaying(false);
+        setError("Não foi possível reproduzir esta faixa. Tente outra música.");
+      }
     } finally {
       setLoading(false);
     }
@@ -2044,12 +2193,8 @@ export function GestorRadioPlayer({
 
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setTrackIndex(idx);
-                                  fadeTransitionToTrack(track.audioUrl);
-                                  broadcastTrackChange(idx, track);
-                                }}
-                                title="Tocar esta faixa agora"
+                                onClick={() => void handlePlayTrack(idx, track)}
+                                title={isCurrentPlaying ? "Pausar esta faixa" : "Tocar esta faixa agora"}
                                 className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition ${
                                   isCurrentPlaying
                                     ? "bg-[#1c1917] text-white"
@@ -2223,14 +2368,24 @@ export function GestorRadioPlayer({
                                 {track.artist}
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => addTrackToQueue(track)}
-                              title="Adicionar à fila"
-                              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-900 hover:text-white transition active:scale-95"
-                            >
-                              <Plus className="size-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => playCatalogTrackNow(track)}
+                                title="Tocar esta música agora"
+                                className="flex size-7 items-center justify-center rounded-lg bg-[#0a0a0a] text-white hover:bg-stone-800 transition active:scale-95"
+                              >
+                                <Play className="size-3 translate-x-[0.5px] fill-current" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => addTrackToQueue(track)}
+                                title="Adicionar à fila"
+                                className="flex size-7 items-center justify-center rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-900 hover:text-white transition active:scale-95"
+                              >
+                                <Plus className="size-3.5" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

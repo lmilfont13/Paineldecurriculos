@@ -50,8 +50,6 @@ next-env.d.ts
 .env*.local
 
 # Áudios locais não catalogados
-public/audio/music/*Trance Remix Set*
-public/audio/music/*Fernweh*
-public/audio/music/*Sadrican*
+
 
 scratch/

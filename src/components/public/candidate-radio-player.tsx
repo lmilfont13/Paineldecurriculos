@@ -29,6 +29,34 @@ import {
 const STORAGE_KEY_CANDIDATE_VOLUME = "triagem:candidate:radio:volume";
 const STORAGE_KEY_CANDIDATE_PAUSED = "triagem:candidate:radio:paused";
 
+function normalizeAudioUrl(url: string): string {
+  if (!url) return "";
+  try {
+    return decodeURIComponent(url).trim();
+  } catch {
+    return url.trim();
+  }
+}
+
+function areSameAudioUrls(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const normA = normalizeAudioUrl(a);
+  const normB = normalizeAudioUrl(b);
+  return normA === normB || normA.endsWith(normB) || normB.endsWith(normA);
+}
+
+function safeAudioUrl(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  try {
+    return encodeURI(decodeURI(url));
+  } catch {
+    return url;
+  }
+}
+
 export function CandidateRadioPlayer({
   station,
   companyName,
@@ -171,11 +199,13 @@ export function CandidateRadioPlayer({
   const fadeTransitionToTrack = useCallback((nextAudioUrl: string) => {
     const audio = audioRef.current;
     if (!audio) return;
-    const currentSrc = audio.currentSrc || audio.src;
-    if (currentSrc.endsWith(nextAudioUrl) || currentSrc === nextAudioUrl) return;
+    const currentSrc = audio.currentSrc || audio.src || "";
+    if (areSameAudioUrls(currentSrc, nextAudioUrl)) return;
+
+    const safeUrl = safeAudioUrl(nextAudioUrl);
 
     if (!playingRef.current) {
-      audio.src = nextAudioUrl;
+      audio.src = safeUrl;
       return;
     }
 
@@ -189,7 +219,7 @@ export function CandidateRadioPlayer({
       if (audio) audio.volume = baseVol * factor;
       if (step >= totalSteps) {
         clearInterval(interval);
-        audio.src = nextAudioUrl;
+        audio.src = safeUrl;
         audio.play().then(() => {
           let inStep = 0;
           const inInterval = setInterval(() => {
@@ -198,7 +228,12 @@ export function CandidateRadioPlayer({
             if (audio) audio.volume = baseVol * inFactor;
             if (inStep >= totalSteps) clearInterval(inInterval);
           }, 80);
-        }).catch(() => {});
+        }).catch(() => {
+          // Fallback para rota de streaming
+          const fileName = nextAudioUrl.replace(/^\/audio\/music\//i, "");
+          audio.src = `/api/radio/stream-track?file=${encodeURIComponent(fileName)}`;
+          audio.play().catch(() => {});
+        });
       }
     }, 80);
   }, [muted, volume]);
