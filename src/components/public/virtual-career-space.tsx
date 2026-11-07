@@ -46,6 +46,7 @@ import {
 import { PixelAvatarSprite } from "./pixel-avatar";
 import {
   PixelOfficeCanvas,
+  StructuredBotReplyContent,
   type MapPresenceUser,
   type PublicBubbleItem,
   type ReactionFloatingItem,
@@ -1134,6 +1135,13 @@ export function VirtualCareerSpace({
             onSelectBot={(botId) => {
               handleSelectBotStation(botId);
             }}
+            onDismissBotBubble={(botId) => {
+              setBotBubbles((prev) => {
+                const next = { ...prev };
+                delete next[botId];
+                return next;
+              });
+            }}
           />
 
           {/* ─── BARRA DE BALÃO AO VIVO (PERGUNTAR PARA O BOT IA VIA BALÃO OU FALAR NA SALA) ─── */}
@@ -1497,13 +1505,17 @@ export function VirtualCareerSpace({
                       {m.sender === "user" ? m.authorName || "Você" : currentBot.name}
                     </span>
                     <div
-                      className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-line ${
+                      className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
                         m.sender === "user"
-                          ? "bg-slate-900 text-white rounded-br-xs"
+                          ? "bg-slate-900 text-white rounded-br-xs whitespace-pre-line"
                           : "border border-emerald-200 bg-white text-slate-800 shadow-2xs rounded-bl-xs"
                       }`}
                     >
-                      {m.text}
+                      {m.sender === "bot" ? (
+                        <StructuredBotReplyContent text={m.text} />
+                      ) : (
+                        m.text
+                      )}
                     </div>
                   </div>
                 ))}

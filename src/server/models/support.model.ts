@@ -70,14 +70,14 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
   },
 };
 
-/** Posições fixas das 3 Mesas Executivas de Atendimento RH na Ala Esquerda */
+/** Posições fixas das 3 Mesas Executivas de Atendimento RH na Bancada Sul (Lado a Lado, sem sobreposição) */
 export const SUPPORT_DESK_POSITIONS: Record<
   number,
   { staff: { x: number; y: number }; candidate: { x: number; y: number } }
 > = {
-  1: { staff: { x: 18, y: 27 }, candidate: { x: 18, y: 39 } },
-  2: { staff: { x: 18, y: 55 }, candidate: { x: 18, y: 67 } },
-  3: { staff: { x: 18, y: 81 }, candidate: { x: 18, y: 92 } },
+  1: { staff: { x: 20, y: 82 }, candidate: { x: 20, y: 60 } },
+  2: { staff: { x: 50, y: 82 }, candidate: { x: 50, y: 60 } },
+  3: { staff: { x: 80, y: 82 }, candidate: { x: 80, y: 60 } },
 };
 
 export const SKIN_TONES = [
@@ -412,10 +412,10 @@ export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
     badge: "Mesa IA 01 · Vagas",
     shortSpecialty: "Requisitos, modalidade, local e contrato de cada vaga.",
     greeting:
-      "Olá! Sou a Clara, IA especialista em vagas. Clique em mim no mapa ou envie um balão para tirar dúvidas ao vivo sobre qualquer vaga aberta!",
-    x: 82,
-    y: 27,
-    visitorSpot: { x: 82, y: 39 },
+      "Olá! Sou a Clara, IA especialista em vagas.\n• Pergunte sobre vagas abertas, requisitos ou contrato.\n• Clique na minha mesa para enviar um balão público para toda a sala!",
+    x: 20,
+    y: 26,
+    visitorSpot: { x: 13, y: 56 },
     room: "cafe",
     avatar: {
       skin: "#f3c6a0",
@@ -439,10 +439,10 @@ export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
     badge: "Mesa IA 02 · Avisos",
     shortSpecialty: "Onde acompanhar avisos do RH, status e pré-entrevista.",
     greeting:
-      "Olá! Sou o Heitor, IA do sistema. Mande um balão para mim e explico na hora onde acompanhar os avisos do RH e o status da sua candidatura!",
-    x: 82,
-    y: 55,
-    visitorSpot: { x: 82, y: 67 },
+      "Olá! Sou o Heitor, IA do sistema.\n• Explico onde ver avisos no Sino de Notificações.\n• Ensino como consultar etapas em Minhas Candidaturas e usar a Senha RH.",
+    x: 50,
+    y: 26,
+    visitorSpot: { x: 33, y: 56 },
     room: "cafe",
     avatar: {
       skin: "#e0a370",
@@ -466,10 +466,10 @@ export const SUPPORT_ASSISTANT_BOTS: SupportAssistantBotDef[] = [
     badge: "Mesa IA 03 · Currículo",
     shortSpecialty: "Formato PDF (até 5 MB), reaproveitamento e LGPD.",
     greeting:
-      "Olá! Sou a Helena, IA de triagem e currículo. Pergunte por balão sobre o formato PDF (até 5 MB), dicas de estrutura e LGPD!",
-    x: 82,
-    y: 81,
-    visitorSpot: { x: 82, y: 92 },
+      "Olá! Sou a Helena, IA de triagem e currículo.\n• Tire dúvidas sobre o formato PDF (máx. 5 MB).\n• Saiba como reaproveitar seu currículo salvo e como protegemos seus dados (LGPD).",
+    x: 80,
+    y: 26,
+    visitorSpot: { x: 87, y: 56 },
     room: "cafe",
     avatar: {
       skin: "#8d5524",
@@ -620,39 +620,39 @@ export function generateAssistantBotReply(params: {
     q.includes("oportunidades")
   ) {
     if (regularJobs.length === 0) {
-      return `No momento a ${companyName} está recebendo cadastros pelo nosso Banco de Talentos. Você pode acessar a aba "Mural de Vagas" ao lado para cadastrar seu currículo em PDF e ficar no radar da equipe de RH!`;
+      return `Vagas na ${companyName}:\n• Recebendo currículos pelo Banco de Talentos.\n• Acesse a aba Vagas ao lado para enviar seu PDF.`;
     }
     const listText = regularJobs
-      .slice(0, 6)
+      .slice(0, 5)
       .map(
         (j) =>
           `• ${j.title} (${formatSupportJobWorkMode(j.workMode)} · ${formatSupportJobContract(j.contract)}${j.location ? ` · ${j.location}` : ""})`
       )
       .join("\n");
-    return `Atualmente temos ${regularJobs.length} ${regularJobs.length === 1 ? "vaga aberta" : "vagas abertas"} na ${companyName}:\n${listText}\n\nSelecione qualquer uma delas no seletor acima ou na aba "Mural de Vagas" para ver todos os requisitos e se candidatar.`;
+    return `Temos ${regularJobs.length} ${regularJobs.length === 1 ? "vaga aberta" : "vagas abertas"} na ${companyName}:\n${listText}\n👉 Clique na aba Vagas ao lado para ver requisitos e se candidatar.`;
   }
 
   // Bot de Vagas ou pergunta sobre vaga selecionada
   if (botId === "vagas") {
     if (q.includes("banco de talentos")) {
       return talentPoolJob
-        ? `O Banco de Talentos da ${companyName} está ativo! Caso não encontre uma vaga exata para seu perfil hoje, você pode enviar seu currículo em PDF pelo Banco de Talentos no Mural de Vagas. Quando surgir uma oportunidade compatível, o RH entrará em contato.`
-        : `Você pode se candidatar diretamente às vagas abertas no Mural de Vagas. Seu perfil e currículo em PDF ficam salvos para futuras oportunidades na ${companyName}.`;
+        ? `Banco de Talentos ${companyName}:\n• Ativo para todos os perfis profissionais.\n• Envie seu currículo em PDF na aba Vagas.\n• O RH entra em contato assim que abrir vaga compatível.`
+        : `Cadastro de Perfil na ${companyName}:\n• Candidate-se diretamente às vagas abertas na aba Vagas.\n• Seu currículo em PDF fica salvo no seu perfil para novas oportunidades.`;
     }
 
     if (selectedJob) {
-      const meta = `${formatSupportJobWorkMode(selectedJob.workMode)} · Contrato ${formatSupportJobContract(selectedJob.contract)}${selectedJob.location ? ` · Local: ${selectedJob.location}` : ""}`;
+      const meta = `${formatSupportJobWorkMode(selectedJob.workMode)} · ${formatSupportJobContract(selectedJob.contract)}${selectedJob.location ? ` · ${selectedJob.location}` : ""}`;
       if (q.includes("requisito") || q.includes("exig") || q.includes("precisa")) {
         const reqs = selectedJob.requirements?.trim()
           ? selectedJob.requirements
               .split("\n")
               .map((l) => l.replace(/^[-•*]\s*/, "").trim())
               .filter(Boolean)
-              .slice(0, 6)
+              .slice(0, 4)
               .map((l) => `• ${l}`)
               .join("\n")
-          : "Os requisitos detalhados estão descritos na página da vaga. Recomendo anexar seu currículo em PDF atualizado destacando suas experiências na área.";
-        return `Requisitos para a vaga de **${selectedJob.title}** (${meta}):\n${reqs}\n\nPara se inscrever, clique em "Candidatar-se" no card da vaga no Mural.`;
+          : "• Consulte a descrição detalhada na aba Vagas.\n• Anexe seu currículo em PDF atualizado (até 5 MB).";
+        return `Requisitos — ${selectedJob.title} (${meta}):\n${reqs}\n👉 Clique em Candidatar-se na aba Vagas.`;
       }
 
       if (
@@ -663,46 +663,46 @@ export function generateAssistantBotReply(params: {
         q.includes("presencial") ||
         q.includes("hibrido")
       ) {
-        return `A vaga **${selectedJob.title}** opera no modelo **${formatSupportJobWorkMode(selectedJob.workMode)}**, com regime de contratação **${formatSupportJobContract(selectedJob.contract)}**${selectedJob.location ? ` e localização base em **${selectedJob.location}**` : ""}.`;
+        return `Detalhes da vaga ${selectedJob.title}:\n• Modalidade: ${formatSupportJobWorkMode(selectedJob.workMode)}\n• Contrato: ${formatSupportJobContract(selectedJob.contract)}\n• Local: ${selectedJob.location || "Conforme descrição da vaga"}`;
       }
 
       const shortDesc =
-        selectedJob.description.length > 260
-          ? `${selectedJob.description.slice(0, 260).trim()}...`
+        selectedJob.description.length > 140
+          ? `${selectedJob.description.slice(0, 140).trim()}...`
           : selectedJob.description;
-      return `Sobre a vaga **${selectedJob.title}** (${meta}):\n${shortDesc}\n\n${selectedJob.requirements ? `Principais requisitos: ${selectedJob.requirements.split("\n").filter(Boolean).slice(0, 3).join("; ")}.` : "Clique em 'Ver Detalhes / Candidatar' no Mural de Vagas para concluir sua inscrição em 4 passos rápidos."}`;
+      return `Resumo — ${selectedJob.title}:\n• Regime: ${meta}\n• Sobre: ${shortDesc}\n👉 Veja todos os detalhes na aba Vagas ao lado.`;
     }
 
     return regularJobs.length > 0
-      ? `Temos ${regularJobs.length} vagas abertas no momento! Selecione uma vaga na caixa acima para que eu possa detalhar os requisitos, local de trabalho e regime de contratação específicos dela.`
-      : `Consulte a aba "Mural de Vagas" para acessar nosso Banco de Talentos e enviar seu currículo em PDF.`;
+      ? `Temos ${regularJobs.length} vagas abertas no momento:\n• Selecione uma vaga na aba Bots IA ou Vagas ao lado.\n• Posso detalhar requisitos, contrato e local de trabalho.`
+      : `Consulte a aba Vagas ao lado para enviar seu currículo em PDF no Banco de Talentos.`;
   }
 
   // Bot de Avisos & Sistema
   if (botId === "avisos") {
     if (q.includes("pre-entrevista") || q.includes("pre entrevista") || q.includes("documento")) {
-      return `A **Pré-Entrevista** é uma etapa complementar solicitada pelo gestor quando seu perfil avança. Você receberá um aviso no sino de **Notificações** e verá um botão destacado em **Minhas Candidaturas** para preencher os dados com total segurança e sigilo (LGPD).`;
+      return `Etapa de Pré-Entrevista:\n• Solicitada pelo RH quando seu perfil avança para entrevista.\n• O alerta chega no Sino de Notificações (topo da tela).\n• O formulário seguro abre dentro de Minhas Candidaturas.`;
     }
     if (q.includes("senha") || q.includes("balcao") || q.includes("fila") || q.includes("rh")) {
-      return `Para falar individualmente com um recrutador aqui na sala:\n1. Abra a aba **Atendimento RH**;\n2. Escolha o assunto e clique em **Retirar Senha**;\n3. Quando o recrutador chamar sua senha para o Balcão 1, 2 ou 3, sua conversa privada (🔒) abrirá automaticamente.`;
+      return `Como falar 1:1 com um Recrutador RH:\n• 1. Abra a aba RH no painel à direita.\n• 2. Escolha o assunto e clique em Retirar Senha.\n• 3. Ao ser chamado para a Mesa 01, 02 ou 03, o chat privado (🔒) abre na hora.`;
     }
     if (q.includes("status") || q.includes("andamento") || q.includes("etapa")) {
-      return `Você acompanha o status de todas as suas inscrições na página **Minhas Candidaturas** (menu superior). Lá cada vaga mostra em qual etapa você está: *Em Análise*, *Pré-selecionado*, *Contratado* ou *Processo Encerrado*.`;
+      return `Como consultar o status da sua inscrição:\n• Acesse Minhas Candidaturas no menu superior.\n• Veja a etapa atual: Em Análise, Pré-selecionado ou Contratado.\n• Qualquer mudança gera alerta imediato no Sino de Notificações.`;
     }
-    return `Todos os avisos oficiais da ${companyName} ficam centralizados em dois lugares no portal:\n• **Sino de Notificações** (no topo da página): alertas de novas mensagens e mudanças de fase;\n• **Minhas Candidaturas**: histórico completo de cada vaga e eventuais solicitações de pré-entrevista.\nAlém disso, enviamos cópia dos avisos importantes para o seu e-mail cadastrado.`;
+    return `Onde acompanhar os avisos oficiais da ${companyName}:\n• Sino de Notificações (topo): alertas de avanço de etapa e recados do RH.\n• Minhas Candidaturas: linha do tempo de cada vaga e Pré-Entrevista.\n• E-mail cadastrado: cópia automática dos comunicados importantes.`;
   }
 
   // Bot de Currículo & Triagem
   if (q.includes("lgpd") || q.includes("dados") || q.includes("segur") || q.includes("cpf")) {
-    return `Seus dados são protegidos segundo a **LGPD**. No espaço público nunca peça ou informe CPF/RG. Dados sensíveis de pré-entrevista só são solicitados em formulário criptografado próprio dentro de **Minhas Candidaturas** e ficam mascarados no sistema.`;
+    return `Proteção de Dados e LGPD:\n• Nunca informe CPF ou RG no balão público da sala.\n• Dados complementares só são pedidos em Minhas Candidaturas com criptografia.\n• Seus documentos são visíveis apenas aos recrutadores autorizados.`;
   }
   if (q.includes("toda vaga") || q.includes("reaproveitar") || q.includes("salvo")) {
-    return `Ao fazer login como candidato, seu currículo em PDF e seus dados básicos ficam salvos no seu perfil! Assim, ao se candidatar a uma nova vaga da ${companyName}, você pode reaproveitar o PDF já enviado ou anexar uma versão atualizada.`;
+    return `Reaproveitamento de Currículo:\n• Seu PDF fica salvo automaticamente na sua conta de candidato.\n• Ao se inscrever em nova vaga, você reaproveita o PDF com 1 clique ou envia outro atualizado.`;
   }
   if (q.includes("destacar") || q.includes("dica") || q.includes("estrutura")) {
-    return `Para um currículo em PDF claro e eficiente:\n• Use um arquivo PDF com texto selecionável (evite fotos escaneadas);\n• Destaque suas experiências mais recentes, tecnologias/habilidades e resultados alcançados;\n• Não é necessário incluir número de RG ou CPF no arquivo do currículo.`;
+    return `Boas práticas para o seu Currículo PDF:\n• Use PDF com texto selecionável (evite foto escaneada).\n• Destaque experiências recentes, conquistas e habilidades técnicas.\n• Mantenha o arquivo enxuto (limite máximo de 5 MB).`;
   }
-  return `O envio de currículo no portal aceita exclusivamente arquivos no formato **PDF com até 5 MB**. Certifique-se de que o texto do PDF seja legível (não apenas imagem) para facilitar a leitura pelos recrutadores da ${companyName}.`;
+  return `Regras de envio de Currículo na ${companyName}:\n• Formato aceito: exclusivamente arquivo PDF.\n• Tamanho máximo: até 5 MB por arquivo.\n• Prefira PDF com texto selecionável para facilitar a leitura pelo RH.`;
 }
 
 export interface QuizQuestion {

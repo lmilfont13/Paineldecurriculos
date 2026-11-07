@@ -937,7 +937,7 @@ export async function askSupportBotAi(
       `Regras do sistema Triagem: O candidato acompanha avisos no Sino de Notificações (menu topo), vê etapas em "Minhas Candidaturas" e preenche Pré-Entrevista quando solicitado pelo RH. Currículo deve ser PDF até 5 MB. Atendimento humano 1:1 é feito retirando senha para as Mesas RH 1, 2 ou 3.`,
       `Vagas abertas da empresa hoje:\n${jobsSummary}`,
       focusedJobContext,
-      `Responda em português brasileiro executivo, prestativo e direto, em no máximo 2 frases curtas (até 170 caracteres no primeiro parágrafo) para caber em um balão de fala acima da sua mesa no escritório virtual.`,
+      `FORMATO OBRIGATÓRIO DA RESPOSTA (muito importante para leitura rápida):\n- NÃO use asteriscos (**) nem markdown.\n- Comece com 1 frase curta de título.\n- Em seguida, organize as informações em 2 ou 3 tópicos curtos, um por linha, começando com "• ".\n- Máximo de 220 caracteres no total.`,
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -946,19 +946,27 @@ export async function askSupportBotAi(
       await geminiGenerate({
         system: systemPrompt,
         prompt: `Pergunta do candidato na sala ao vivo: "${cleanQuestion}"`,
-        maxTokens: 200,
+        maxTokens: 220,
         companyId: actor.companyId,
       })
     )
       .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/\*\*/g, "")
       .trim();
 
     if (aiText && aiText.length >= 8) {
+      // Se a IA mandou "1. ...; 2. ..." na mesma linha, quebra em tópicos legíveis
+      const normalizedAi = aiText
+        .replace(/:\s*(\d+\.)/g, ":\n• $1")
+        .replace(/;\s*(\d+\.)/g, "\n• $1")
+        .replace(/\s+•\s+/g, "\n• ");
       const compactBubble =
-        aiText.length > 165 ? `${aiText.slice(0, 162).trim()}...` : aiText;
+        normalizedAi.length > 230
+          ? `${normalizedAi.slice(0, 227).trim()}...`
+          : normalizedAi;
       return {
         bubbleText: compactBubble,
-        fullReply: aiText,
+        fullReply: normalizedAi,
         botName: bot.name,
       };
     }
@@ -966,14 +974,13 @@ export async function askSupportBotAi(
     // Usa fallback determinístico abaixo se a chave de IA não estiver ativa ou falhar
   }
 
-  const compactFallback =
-    fallbackReply.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  const cleanFallback = fallbackReply.replace(/\*\*/g, "").trim();
   return {
     bubbleText:
-      compactFallback.length > 165
-        ? `${compactFallback.slice(0, 162).trim()}...`
-        : compactFallback,
-    fullReply: fallbackReply,
+      cleanFallback.length > 230
+        ? `${cleanFallback.slice(0, 227).trim()}...`
+        : cleanFallback,
+    fullReply: cleanFallback,
     botName: bot.name,
   };
 }
