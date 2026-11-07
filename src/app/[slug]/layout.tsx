@@ -6,6 +6,7 @@ import {
   getActiveRadioStation,
   getActiveRadioPlaylist,
   getActiveRadioSpotInterval,
+  getActiveRadioSpots,
 } from "@/server/services/message-template.service";
 import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.service";
 import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
@@ -47,11 +48,12 @@ export default async function TenantLayout({
   const company = await getTenant(slug);
   if (!company) notFound();
   const candidate = await getPublicSession();
-  const [radioStation, spotsEnabled, customPlaylist, spotIntervalMinutes] = await Promise.all([
+  const [radioStation, spotsEnabled, customPlaylist, spotIntervalMinutes, customSpots] = await Promise.all([
     getActiveRadioStation(company.id),
     isTargetRadioSpotsEnabled(company.id),
     getActiveRadioPlaylist(company.id),
     getActiveRadioSpotInterval(company.id),
+    getActiveRadioSpots(company.id),
   ]);
 
   return (
@@ -66,9 +68,11 @@ export default async function TenantLayout({
         station={radioStation}
         companyName={company.name}
         companySlug={company.slug}
+        candidateName={candidate?.name}
         spotsEnabled={spotsEnabled}
         playlist={customPlaylist}
         spotIntervalMinutes={spotIntervalMinutes}
+        spots={customSpots}
       />
     </div>
   );

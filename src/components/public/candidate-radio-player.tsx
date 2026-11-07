@@ -31,19 +31,24 @@ export function CandidateRadioPlayer({
   station,
   companyName,
   companySlug,
+  candidateName,
   spotsEnabled = true,
   playlist,
   spotIntervalMinutes = 0,
+  spots,
 }: {
   station?: RadioStation | null;
   companyName?: string;
   companySlug?: string;
+  candidateName?: string | null;
   spotsEnabled?: boolean;
   playlist?: RadioTrack[];
   spotIntervalMinutes?: number;
+  spots?: RadioSpot[];
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
+  const sfxAudioRef = useRef<HTMLAudioElement | null>(null);
   const spotTimerRef = useRef<NodeJS.Timeout | null>(null);
   const spotIndexRef = useRef<number>(0);
   const playedSongsCountRef = useRef<number>(0);
@@ -58,6 +63,14 @@ export function CandidateRadioPlayer({
     playlist && playlist.length > 0 ? playlist : TARGET_PLAYLIST_TRACKS
   );
 
+  const [activeSpotsList, setActiveSpotsList] = useState<RadioSpot[]>(
+    spots && spots.length > 0 ? spots : TARGET_RADIO_SPOTS
+  );
+
+  useEffect(() => {
+    if (spots && spots.length > 0) setActiveSpotsList(spots);
+  }, [spots]);
+
   const [trackIndex, setTrackIndex] = useState(0);
   const currentTrack: RadioTrack =
     playlistTracks[trackIndex % (playlistTracks.length || 1)] ?? TARGET_PLAYLIST_TRACKS[0];
@@ -70,6 +83,7 @@ export function CandidateRadioPlayer({
   const [minimized, setMinimized] = useState(false);
   const [activeSpot, setActiveSpot] = useState<RadioSpot | null>(null);
   const [liveBroadcastNote, setLiveBroadcastNote] = useState<string | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = useState<string | null>(null);
 
   // Refs de estado para callbacks assíncronos e Realtime estável
   const playingRef = useRef(playing);
@@ -140,13 +154,52 @@ export function CandidateRadioPlayer({
     }
   }, [muted, volume]);
 
+  // Função para transição suave entre músicas (Crossfade rádio FM)
+  const fadeTransitionToTrack = useCallback((nextAudioUrl: string) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const currentSrc = audio.currentSrc || audio.src;
+    if (currentSrc.endsWith(nextAudioUrl) || currentSrc === nextAudioUrl) return;
+
+    if (!playingRef.current) {
+      audio.src = nextAudioUrl;
+      return;
+    }
+
+    // Crossfade: Fade-out suave (800ms) -> Troca fonte -> Fade-in suave (800ms)
+    const baseVol = muted ? 0 : volume;
+    let step = 0;
+    const totalSteps = 8;
+    const interval = setInterval(() => {
+      step++;
+      const factor = Math.max(0, (totalSteps - step) / totalSteps);
+      if (audio) audio.volume = baseVol * factor;
+      if (step >= totalSteps) {
+        clearInterval(interval);
+        audio.src = nextAudioUrl;
+        audio.play().then(() => {
+          let inStep = 0;
+          const inInterval = setInterval(() => {
+            inStep++;
+            const inFactor = inStep / totalSteps;
+            if (audio) audio.volume = baseVol * inFactor;
+            if (inStep >= totalSteps) clearInterval(inInterval);
+          }, 80);
+        }).catch(() => {});
+      }
+    }, 80);
+  }, [muted, volume]);
+
   // Função para tocar um spot institucional com ducking suave da rádio
   const playSpot = useCallback(
     (chosenSpot?: RadioSpot) => {
-      if (!spotsEnabled || !TARGET_RADIO_SPOTS.length) return;
+      if (!spotsEnabled) return;
+      const validSpots = activeSpotsList.filter((s) => s.enabled !== false);
+      if (!validSpots.length) return;
+
       const spot =
         chosenSpot ??
-        TARGET_RADIO_SPOTS[spotIndexRef.current % TARGET_RADIO_SPOTS.length];
+        validSpots[spotIndexRef.current % validSpots.length];
       spotIndexRef.current += 1;
 
       setActiveSpot(spot);
@@ -164,7 +217,7 @@ export function CandidateRadioPlayer({
         });
       }
     },
-    [finishSpot, muted, spotsEnabled, volume]
+    [activeSpotsList, finishSpot, muted, spotsEnabled, volume]
   );
 
   // Pular o spot atual
@@ -232,29 +285,11 @@ export function CandidateRadioPlayer({
         setTimeout(() => setLiveBroadcastNote(null), 4000);
       }
 
-      const audio = audioRef.current;
-      if (audio && payload.track?.audioUrl) {
-        const currentSrc = audio.currentSrc || audio.src;
-        const isSame =
-          currentSrc.endsWith(payload.track.audioUrl) || currentSrc === payload.track.audioUrl;
-        const isAudioPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
-        const shouldPlay = playingRef.current || isAudioPlaying;
-
-        if (!isSame) {
-          audio.src = payload.track.audioUrl;
-          if (shouldPlay) {
-            audio.play().then(() => {
-              setPlaying(true);
-            }).catch(() => {});
-          }
-        } else if (shouldPlay && audio.paused) {
-          audio.play().then(() => {
-            setPlaying(true);
-          }).catch(() => {});
-        }
+      if (payload.track?.audioUrl) {
+        fadeTransitionToTrack(payload.track.audioUrl);
       }
     },
-    []
+    [fadeTransitionToTrack]
   );
 
   const handleStationChangeReceived = useCallback(
@@ -264,34 +299,15 @@ export function CandidateRadioPlayer({
       setLiveBroadcastNote(`📻 Estação sintonizada: ${payload.station.name}`);
       setTimeout(() => setLiveBroadcastNote(null), 4000);
 
-      const audio = audioRef.current;
-      if (audio) {
-        const nextSrc =
-          payload.station.url === "playlist:target"
-            ? (payload.track?.audioUrl || playlistTracksRef.current[0]?.audioUrl || TARGET_PLAYLIST_TRACKS[0].audioUrl)
-            : payload.station.url;
-        if (nextSrc) {
-          const currentSrc = audio.currentSrc || audio.src;
-          const isSame = currentSrc.endsWith(nextSrc) || currentSrc === nextSrc;
-          const isAudioPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
-          const shouldPlay = playingRef.current || isAudioPlaying;
-
-          if (!isSame) {
-            audio.src = nextSrc;
-            if (shouldPlay) {
-              audio.play().then(() => {
-                setPlaying(true);
-              }).catch(() => {});
-            }
-          } else if (shouldPlay && audio.paused) {
-            audio.play().then(() => {
-              setPlaying(true);
-            }).catch(() => {});
-          }
-        }
+      const nextSrc =
+        payload.station.url === "playlist:target"
+          ? (payload.track?.audioUrl || playlistTracksRef.current[0]?.audioUrl || TARGET_PLAYLIST_TRACKS[0].audioUrl)
+          : payload.station.url;
+      if (nextSrc) {
+        fadeTransitionToTrack(nextSrc);
       }
     },
-    []
+    [fadeTransitionToTrack]
   );
 
   const handlePlaylistSyncReceived = useCallback(
@@ -304,6 +320,98 @@ export function CandidateRadioPlayer({
       }
     },
     []
+  );
+
+  const handleSpotsSyncReceived = useCallback(
+    (payload?: { spots?: RadioSpot[] }) => {
+      if (Array.isArray(payload?.spots) && payload.spots.length > 0) {
+        setActiveSpotsList(payload.spots);
+      }
+    },
+    []
+  );
+
+  const handlePlaySfxReceived = useCallback(
+    (payload?: { sfxUrl?: string; name?: string }) => {
+      if (!payload?.sfxUrl) return;
+      if (sfxAudioRef.current) {
+        sfxAudioRef.current.src = payload.sfxUrl;
+        sfxAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
+        sfxAudioRef.current.play().catch(() => {});
+      }
+    },
+    [muted, volume]
+  );
+
+  const handleLiveAnnouncementReceived = useCallback(
+    (payload?: { message?: string; audioUrl?: string }) => {
+      if (!payload?.message) return;
+      setLiveAnnouncement(payload.message);
+      setTimeout(() => setLiveAnnouncement(null), 12000);
+
+      if (payload.audioUrl && spotAudioRef.current) {
+        setActiveSpot({
+          id: "live-announcement",
+          title: "🎙️ Recado ao Vivo",
+          subtitle: payload.message,
+          audioUrl: payload.audioUrl,
+        });
+        if (audioRef.current) {
+          audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
+        }
+        spotAudioRef.current.src = payload.audioUrl;
+        spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
+        spotAudioRef.current.play().catch(() => finishSpot());
+      }
+    },
+    [finishSpot, muted, volume]
+  );
+
+  const handleLiveShoutoutReceived = useCallback(
+    (payload?: {
+      targetCandidateName?: string;
+      message?: string;
+      audioUrl?: string;
+      broadcastMode?: "all" | "private";
+    }) => {
+      if (!payload?.message) return;
+      const myName = (candidateName || "").trim().toLowerCase();
+      const targetName = (payload.targetCandidateName || "").trim().toLowerCase();
+      const isTargetedToMe = Boolean(
+        myName && targetName && (myName.includes(targetName) || targetName.includes(myName))
+      );
+      const isBroadcastToAll = payload.broadcastMode !== "private" || !payload.targetCandidateName;
+
+      // Se o recado for direcionado para mim ou para todos na rádio
+      if (isTargetedToMe || isBroadcastToAll) {
+        setLiveAnnouncement(
+          isTargetedToMe
+            ? `🌟 Mensagem Especial no Ar para você: "${payload.message}"`
+            : `🎙️ Recado da Rádio para ${payload.targetCandidateName || "você"}: "${payload.message}"`
+        );
+        setTimeout(() => setLiveAnnouncement(null), 16000);
+
+        if (payload.audioUrl && spotAudioRef.current) {
+          setActiveSpot({
+            id: "live-shoutout",
+            title: isTargetedToMe
+              ? `🌟 Alô Especial para ${candidateName}`
+              : `🎙️ Alô no Ar para ${payload.targetCandidateName || "Candidatos"}`,
+            subtitle: payload.message,
+            audioUrl: payload.audioUrl,
+          });
+
+          // Ducking suave da música
+          if (audioRef.current) {
+            audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
+          }
+          spotAudioRef.current.src = payload.audioUrl;
+          spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.3);
+          spotAudioRef.current.play().catch(() => finishSpot());
+        }
+      }
+    },
+    [candidateName, finishSpot, muted, volume]
   );
 
   // Escuta transmissões ao vivo da Rádio Tarhget via BroadcastChannel (local) e Supabase Realtime (remoto)
@@ -323,6 +431,14 @@ export function CandidateRadioPlayer({
           handleStationChangeReceived(data);
         } else if (data.type === "playlist_sync") {
           handlePlaylistSyncReceived(data);
+        } else if (data.type === "spots_sync") {
+          handleSpotsSyncReceived(data);
+        } else if (data.type === "play_sfx") {
+          handlePlaySfxReceived(data);
+        } else if (data.type === "live_announcement") {
+          handleLiveAnnouncementReceived(data);
+        } else if (data.type === "live_shoutout") {
+          handleLiveShoutoutReceived(data);
         }
       };
     }
@@ -350,6 +466,10 @@ export function CandidateRadioPlayer({
           .on("broadcast", { event: "track_change" }, (e: any) => handleTrackChangeReceived(e.payload))
           .on("broadcast", { event: "station_change" }, (e: any) => handleStationChangeReceived(e.payload))
           .on("broadcast", { event: "playlist_sync" }, (e: any) => handlePlaylistSyncReceived(e.payload))
+          .on("broadcast", { event: "spots_sync" }, (e: any) => handleSpotsSyncReceived(e.payload))
+          .on("broadcast", { event: "play_sfx" }, (e: any) => handlePlaySfxReceived(e.payload))
+          .on("broadcast", { event: "live_announcement" }, (e: any) => handleLiveAnnouncementReceived(e.payload))
+          .on("broadcast", { event: "live_shoutout" }, (e: any) => handleLiveShoutoutReceived(e.payload))
           .subscribe();
       }
     }
@@ -366,6 +486,10 @@ export function CandidateRadioPlayer({
     handleTrackChangeReceived,
     handleStationChangeReceived,
     handlePlaylistSyncReceived,
+    handleSpotsSyncReceived,
+    handlePlaySfxReceived,
+    handleLiveAnnouncementReceived,
+    handleLiveShoutoutReceived,
   ]);
 
   // Quando uma faixa da playlist termina, avança normalmente para a próxima
@@ -552,12 +676,40 @@ export function CandidateRadioPlayer({
         onError={() => finishSpot()}
       />
 
+      {/* Áudio terciário para efeitos sonoros rápidos (SFX) */}
+      <audio
+        ref={sfxAudioRef}
+        preload="none"
+      />
+
       {/* Dock Flutuante Persistente em Todas as Telas do Candidato */}
       <aside
         aria-label="Rádio da Empresa"
         className="fixed bottom-4 inset-x-3 sm:inset-x-6 z-40 max-w-xl mx-auto"
       >
         <div className="relative overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all hover:border-[#0a0a0a]/20 sm:p-3.5">
+          {/* Notificação Especial VIP de Alô / Recado no Ar */}
+          {liveAnnouncement && (
+            <div className="mb-2.5 rounded-xl border border-amber-500/60 bg-gradient-to-r from-amber-500/25 via-amber-400/20 to-orange-500/25 p-2.5 shadow-md animate-in slide-in-from-bottom-2">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-950 uppercase tracking-wider">
+                  <span className="size-2 rounded-full bg-red-600 animate-ping" />
+                  <span>🎙️ Recado Exclusivo no Ar</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLiveAnnouncement(null)}
+                  className="text-stone-400 hover:text-stone-800 text-xs font-bold px-1"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs font-bold text-stone-900 leading-snug">
+                {liveAnnouncement}
+              </p>
+            </div>
+          )}
+
           {/* Notificação de Transmissão ao Vivo */}
           {liveBroadcastNote && (
             <div className="mb-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-2 py-1 text-center text-[10px] font-bold text-amber-900 animate-pulse">

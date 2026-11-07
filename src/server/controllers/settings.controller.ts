@@ -10,9 +10,15 @@ import {
   setActiveRadioPlaylist,
   getActiveRadioSpotInterval,
   setActiveRadioSpotInterval,
+  getActiveRadioSpots,
+  setActiveRadioSpots,
   getMusicCatalog,
 } from "@/server/services/message-template.service";
-import type { RadioTrack } from "@/server/models/radio.model";
+import type { RadioSpot, RadioTrack } from "@/server/models/radio.model";
+import {
+  generateRadioSpotService,
+  type GenerateSpotInput,
+} from "@/server/services/radio-spot.service";
 import { isCandidateAiRadarEnabled, setCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
 import { revalidatePath } from "next/cache";
 
@@ -269,6 +275,39 @@ export async function saveRadioSpotIntervalAction(minutes: number): Promise<{ ok
     return res;
   }
   return { ok: false };
+}
+
+/** Lê os spots e vinhetas configurados para a empresa. */
+export async function getRadioSpotsAction(): Promise<RadioSpot[]> {
+  const user = await getSessionUser();
+  const companyId = user && !isAdmin(user) ? user.companyId : null;
+  return getActiveRadioSpots(companyId);
+}
+
+/** Salva os spots e vinhetas escolhidos pelo gestor (ativos, inativos, novos). */
+export async function saveRadioSpotsAction(spots: RadioSpot[]): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  if (isAdmin(user)) {
+    const res = await setActiveRadioSpots(null, spots);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  if (isManager(user)) {
+    const res = await setActiveRadioSpots(user.companyId, spots);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  return { ok: false };
+}
+
+/** Gera uma nova vinheta de rádio personalizada com IA (Nível Michelin). */
+export async function generateRadioSpotAction(
+  input: GenerateSpotInput
+): Promise<{ ok: boolean; spot?: RadioSpot; error?: string }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Usuário não autenticado." };
+  return generateRadioSpotService(input);
 }
 
 

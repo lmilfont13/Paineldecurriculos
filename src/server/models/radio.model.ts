@@ -11,6 +11,8 @@ export interface RadioSpot {
   subtitle: string;
   audioUrl: string;
   durationSeconds?: number;
+  enabled?: boolean;
+  isCustom?: boolean;
 }
 
 export interface RadioTrack {

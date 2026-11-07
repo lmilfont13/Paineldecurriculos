@@ -1,6 +1,11 @@
 import "server-only";
 
-import { DEFAULT_MUSIC_CATALOG, type RadioTrack } from "@/server/models/radio.model";
+import {
+  DEFAULT_MUSIC_CATALOG,
+  TARGET_RADIO_SPOTS,
+  type RadioSpot,
+  type RadioTrack,
+} from "@/server/models/radio.model";
 import {
   fillTemplate,
   subjectKey,
@@ -10,11 +15,13 @@ import {
 import {
   findRadioPlaylistRaw,
   findRadioSpotIntervalRaw,
+  findRadioSpotsRaw,
   findRadioStationRaw,
   findTemplate,
   findTemplatesByCompany,
   saveRadioPlaylistRaw,
   saveRadioSpotIntervalRaw,
+  saveRadioSpotsRaw,
   saveRadioStationRaw,
   saveTemplate,
 } from "@/server/repositories/message-template.repository";
@@ -184,5 +191,51 @@ export async function setActiveRadioSpotInterval(
 ): Promise<{ ok: boolean }> {
   const safeMinutes = Math.max(0, Math.min(120, Math.round(minutes)));
   await saveRadioSpotIntervalRaw(companyId, String(safeMinutes));
+  return { ok: true };
+}
+
+/** Lê os spots/vinhetas da rádio configurados para a empresa (incluindo ativos, desativados ou criados). */
+export async function getActiveRadioSpots(
+  companyId?: string | null
+): Promise<RadioSpot[]> {
+  try {
+    const raw = await findRadioSpotsRaw(companyId);
+    if (!raw) return TARGET_RADIO_SPOTS;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((s: any) => ({
+        id: String(s.id || "").slice(0, 100),
+        title: String(s.title || "Vinheta").slice(0, 100),
+        subtitle: String(s.subtitle || "").slice(0, 150),
+        audioUrl: String(s.audioUrl || "").slice(0, 500),
+        durationSeconds: typeof s.durationSeconds === "number" ? s.durationSeconds : undefined,
+        enabled: s.enabled !== false,
+        isCustom: Boolean(s.isCustom),
+      }));
+    }
+    return TARGET_RADIO_SPOTS;
+  } catch {
+    return TARGET_RADIO_SPOTS;
+  }
+}
+
+/** Salva a lista de spots/vinhetas da rádio selecionada pelo gestor. */
+export async function setActiveRadioSpots(
+  companyId: string | null,
+  spots: RadioSpot[]
+): Promise<{ ok: boolean }> {
+  if (!Array.isArray(spots) || spots.length === 0) {
+    return { ok: false };
+  }
+  const clean: RadioSpot[] = spots.map((s) => ({
+    id: String(s.id).slice(0, 100),
+    title: String(s.title || "Vinheta").trim().slice(0, 100),
+    subtitle: String(s.subtitle || "").trim().slice(0, 150),
+    audioUrl: String(s.audioUrl).trim().slice(0, 500),
+    durationSeconds: typeof s.durationSeconds === "number" ? Math.max(1, Math.min(120, s.durationSeconds)) : undefined,
+    enabled: s.enabled !== false,
+    isCustom: Boolean(s.isCustom),
+  }));
+  await saveRadioSpotsRaw(companyId, JSON.stringify(clean));
   return { ok: true };
 }
