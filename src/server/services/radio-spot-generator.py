@@ -9,9 +9,8 @@ import re
 async def generate_spot(title: str, script: str, voice: str = "pt-BR-AntonioNeural", sfx_preset: str = "raio-trovao"):
     import edge_tts
     
-    # Normalização fonética da marca para pronúncia impecável de rádio
-    # "Tár-guet" evita que o sintetizador leia "tardjet" ou "target" americanizado
-    script_clean = re.sub(r'\bTarh?get\b', 'Tár-guet', script, flags=re.IGNORECASE)
+    # Normalização fonética da marca para pronúncia impecável de rádio ("Tárguet", como "target"/alvo em inglês)
+    script_clean = re.sub(r'\b(Tarh?get|Tár-guet|Targuet)\b', 'Tárguet', script, flags=re.IGNORECASE)
     
     spot_id = f"custom-spot-{int(time.time())}"
     os.makedirs("public/audio/spots", exist_ok=True)

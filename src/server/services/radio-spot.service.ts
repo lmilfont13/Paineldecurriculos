@@ -73,7 +73,7 @@ async function synthesizeNeuralSpeechBuffer(
   try {
     const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
     const clean = script
-      .replace(/\bTarh?get\b/gi, "Tár-guet")
+      .replace(/\b(Tarh?get|Tár-guet|Targuet)\b/gi, "Tárguet")
       .replace(/\s+/g, " ")
       .trim();
 

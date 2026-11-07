@@ -14,8 +14,8 @@ export function playVoiceSpeech(
     return false;
   }
 
-  // Normalização fonética da marca para pronúncia impecável em português
-  const cleanText = text.replace(/\bTarh?get\b/gi, "Tárguet");
+  // Normalização fonética da marca para pronúncia impecável ("Tárguet", como "target"/alvo em inglês)
+  const cleanText = text.replace(/\b(Tarh?get|Tár-guet|Targuet)\b/gi, "Tárguet");
 
   // Se já estiver falando, cancela a fala anterior
   if (window.speechSynthesis.speaking) {
