@@ -16,8 +16,8 @@ export function stageNotification(
     case "SHORTLISTED":
       return {
         type: "STAGE_CHANGED",
-        title: "Você passou da primeira fase",
-        body: `Sua candidatura para ${jobTitle} avançou na ${companyName}. O próximo passo é a conversa; você é avisado por aqui.`,
+        title: "Perfil em avaliação",
+        body: "O seu currículo encontra-se agora em análise. Avisaremos por aqui assim que avançarmos para a próxima etapa.",
       };
     case "INTERVIEW":
       return {

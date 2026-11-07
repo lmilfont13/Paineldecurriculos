@@ -19,7 +19,31 @@ export interface RadioTrack {
   audioUrl: string;
 }
 
-export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
+export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
+  {
+    id: "rufus-du-sol-innerbloom",
+    title: "Innerbloom (CYRIL Remix)",
+    artist: "RÜFÜS DU SOL",
+    audioUrl: "/audio/music/RÜFÜS DU SOL - Innerbloom (CYRIL Remix) - (320 Kbps).mp3",
+  },
+  {
+    id: "tinlicker-fractal",
+    title: "Fractal",
+    artist: "Tinlicker",
+    audioUrl: "/audio/music/Tinlicker - Fractal - (320 Kbps).mp3",
+  },
+  {
+    id: "tiesto-in-my-memory",
+    title: "In My Memory (Miss Cyanna Deep Remix)",
+    artist: "Tiësto",
+    audioUrl: "/audio/music/Tiesto - In My Memory (Miss Cyanna Deep Remix) _ Trance Anthem - (320 Kbps).mp3",
+  },
+  {
+    id: "tinlicker-diamonds",
+    title: "Diamonds (Further Than I Ever Was)",
+    artist: "Tinlicker & The Boxer Rebellion",
+    audioUrl: "/audio/music/Tinlicker & The Boxer Rebellion - Diamonds (Further Than I Ever Was) - (192 Kbps).mp3",
+  },
   {
     id: "track-1",
     title: "Days Like These",
@@ -39,6 +63,8 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
     audioUrl: "/audio/music/target-track-3.mp3",
   },
 ];
+
+export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = DEFAULT_MUSIC_CATALOG;
 
 export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   {

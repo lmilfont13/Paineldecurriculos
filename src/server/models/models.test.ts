@@ -486,11 +486,14 @@ describe("tons da marca Tarhget", () => {
 });
 
 describe("etapa 'Em análise'", () => {
-  it("avisa o candidato no portal, sem citar nota nem análise", async () => {
+  it("avisa o candidato no portal, sem citar nota nem IA", async () => {
     const { stageNotification } = await import("@/server/models/notification.model");
     const n = stageNotification("SHORTLISTED", "Empresa", "Vendedor");
-    expect(n?.title).toBe("Você passou da primeira fase");
-    expect(n?.body).not.toMatch(/bnotab|bIAb|análise/i);
+    expect(n?.title).toBe("Perfil em avaliação");
+    expect(n?.body).toBe(
+      "O seu currículo encontra-se agora em análise. Avisaremos por aqui assim que avançarmos para a próxima etapa."
+    );
+    expect(n?.body).not.toMatch(/\bnota\b|\bIA\b/i);
   });
 
   it("tem rótulo para o gestor", async () => {

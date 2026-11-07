@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createClient } from "@/lib/supabase/client";
 import {
   CURATED_STATIONS,
   TARGET_PLAYLIST_TRACKS,
@@ -29,11 +30,15 @@ const STORAGE_KEY_CANDIDATE_PAUSED = "triagem:candidate:radio:paused";
 export function CandidateRadioPlayer({
   station,
   companyName,
+  companySlug,
   spotsEnabled = true,
+  playlist,
 }: {
   station?: RadioStation | null;
   companyName?: string;
+  companySlug?: string;
   spotsEnabled?: boolean;
+  playlist?: RadioTrack[];
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spotAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -45,9 +50,13 @@ export function CandidateRadioPlayer({
   const currentStation = station ?? CURATED_STATIONS[0];
   const isPlaylistMode = currentStation.url === "playlist:target";
 
+  const [playlistTracks, setPlaylistTracks] = useState<RadioTrack[]>(
+    playlist && playlist.length > 0 ? playlist : TARGET_PLAYLIST_TRACKS
+  );
+
   const [trackIndex, setTrackIndex] = useState(0);
   const currentTrack: RadioTrack =
-    TARGET_PLAYLIST_TRACKS[trackIndex % TARGET_PLAYLIST_TRACKS.length];
+    playlistTracks[trackIndex % (playlistTracks.length || 1)] ?? TARGET_PLAYLIST_TRACKS[0];
 
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -153,8 +162,60 @@ export function CandidateRadioPlayer({
 
   // Avançar para a próxima música da playlist
   const nextTrack = useCallback(() => {
-    setTrackIndex((prev) => (prev + 1) % TARGET_PLAYLIST_TRACKS.length);
-  }, []);
+    if (!isPlaylistMode || playlistTracks.length === 0) return;
+    setTrackIndex((prev) => (prev + 1) % playlistTracks.length);
+  }, [isPlaylistMode, playlistTracks.length]);
+
+  // Sincroniza playlist quando fornecida externamente
+  useEffect(() => {
+    if (playlist && playlist.length > 0) {
+      setPlaylistTracks(playlist);
+    }
+  }, [playlist]);
+
+  // Escuta transmissões ao vivo da Rádio Tarhget via Supabase Realtime
+  useEffect(() => {
+    if (!companySlug) return;
+    let supabase: ReturnType<typeof createClient> | null = null;
+    try {
+      supabase = createClient();
+    } catch {
+      return;
+    }
+
+    const channel = supabase.channel(`radio:${companySlug}`);
+    channel
+      .on("broadcast", { event: "play_spot" }, (e) => {
+        const payload = e.payload as { spotId?: string; audioUrl?: string; title?: string };
+        const found = TARGET_RADIO_SPOTS.find(
+          (s) => s.id === payload?.spotId || s.audioUrl === payload?.audioUrl
+        );
+        if (found) {
+          playSpot(found);
+        } else if (payload?.audioUrl) {
+          playSpot({
+            id: payload.spotId || "spot-live",
+            title: payload.title || "Tarhget no Ar",
+            subtitle: "Vinheta Oficial",
+            audioUrl: payload.audioUrl,
+          });
+        }
+      })
+      .on("broadcast", { event: "playlist_sync" }, (e) => {
+        const payload = e.payload as { tracks?: RadioTrack[]; trackIndex?: number };
+        if (Array.isArray(payload?.tracks) && payload.tracks.length > 0) {
+          setPlaylistTracks(payload.tracks);
+        }
+        if (typeof payload?.trackIndex === "number") {
+          setTrackIndex(payload.trackIndex);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      void channel.unsubscribe();
+    };
+  }, [companySlug, playSpot]);
 
   // Quando uma faixa da playlist termina
   const handleTrackEnded = () => {

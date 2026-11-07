@@ -15,7 +15,13 @@ describe("stageMovePreview", () => {
   });
 
   it("passou da triagem: só aviso no site; voltar para triagem: nada", () => {
-    expect(stageMovePreview("SHORTLISTED", ctx)).toMatchObject({ email: null, site: { title: "Você passou da primeira fase" } });
+    expect(stageMovePreview("SHORTLISTED", ctx)).toMatchObject({
+      email: null,
+      site: {
+        title: "Perfil em avaliação",
+        body: "O seu currículo encontra-se agora em análise. Avisaremos por aqui assim que avançarmos para a próxima etapa.",
+      },
+    });
     expect(stageMovePreview("PENDING", ctx)).toEqual({ email: null, site: null });
   });
 });

@@ -3,7 +3,14 @@
 import { runModelTrial, type ModelTrialResult } from "@/server/services/model-trial.service";
 import { getSessionUser, isAdmin, isManager } from "@/server/services/auth.service";
 import { isPrimaryCompanyAdmin } from "@/server/services/user.service";
-import { setActiveRadioStation, type RadioStationConfig } from "@/server/services/message-template.service";
+import {
+  setActiveRadioStation,
+  type RadioStationConfig,
+  getActiveRadioPlaylist,
+  setActiveRadioPlaylist,
+  getMusicCatalog,
+} from "@/server/services/message-template.service";
+import type { RadioTrack } from "@/server/models/radio.model";
 import { isCandidateAiRadarEnabled, setCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
 import { revalidatePath } from "next/cache";
 
@@ -203,6 +210,35 @@ export async function saveRadioStationAction(station: RadioStationConfig): Promi
   }
   if (isManager(user)) {
     const res = await setActiveRadioStation(user.companyId, station);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  return { ok: false };
+}
+
+/** Lê o catálogo de músicas disponíveis (da pasta local e padrão). */
+export async function getMusicCatalogAction(): Promise<RadioTrack[]> {
+  return getMusicCatalog();
+}
+
+/** Lê a playlist / fila ativa da Rádio Tarhget. */
+export async function getRadioPlaylistAction(): Promise<RadioTrack[]> {
+  const user = await getSessionUser();
+  const companyId = user && !isAdmin(user) ? user.companyId : null;
+  return getActiveRadioPlaylist(companyId);
+}
+
+/** Salva a playlist / fila personalizada da Rádio Tarhget. */
+export async function saveRadioPlaylistAction(tracks: RadioTrack[]): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  if (isAdmin(user)) {
+    const res = await setActiveRadioPlaylist(null, tracks);
+    revalidatePath("/", "layout");
+    return res;
+  }
+  if (isManager(user)) {
+    const res = await setActiveRadioPlaylist(user.companyId, tracks);
     revalidatePath("/", "layout");
     return res;
   }

@@ -58,8 +58,8 @@ export function CandidateApplicationTimeline({
       icon: Check,
     },
     {
-      title: "Em análise",
-      subtitle: status === "SHORTLISTED" ? "Perfil selecionado" : "Avaliação do RH",
+      title: "Em avaliação",
+      subtitle: status === "SHORTLISTED" ? "Perfil em análise" : "Avaliação do RH",
       icon: Sparkles,
     },
     {
@@ -83,7 +83,7 @@ export function CandidateApplicationTimeline({
         </div>
         <span className="text-[11px] font-medium text-[#78716c]">
           {status === "PENDING" && "Currículo em triagem"}
-          {status === "SHORTLISTED" && "Você avançou para análise detalhada!"}
+          {status === "SHORTLISTED" && "O seu currículo encontra-se agora em análise."}
           {status === "INTERVIEW" && "Fase de entrevistas"}
           {status === "APPROVED" && "Contratação aprovada 🎉"}
           {status === "REJECTED" && "Currículo mantido no Banco de Dados"}

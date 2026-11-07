@@ -53,8 +53,9 @@ export function getStepDetails(from: string | null, to: string): StepInfo {
   switch (to) {
     case "SHORTLISTED":
       return {
-        label: "Em análise",
-        description: "Seu currículo foi selecionado na triagem inicial e está em análise detalhada pela equipe.",
+        label: "Perfil em avaliação",
+        description:
+          "O seu currículo encontra-se agora em análise. Avisaremos por aqui assim que avançarmos para a próxima etapa.",
         icon: Sparkles,
         badgeBg: "bg-blue-50 border-blue-200",
         badgeText: "text-blue-800",
@@ -104,8 +105,9 @@ export function getStepDetails(from: string | null, to: string): StepInfo {
     case "PENDING":
     default:
       return {
-        label: "Em análise",
-        description: "Seu perfil está sendo avaliado pela equipe de recrutamento.",
+        label: "Perfil em avaliação",
+        description:
+          "O seu currículo encontra-se agora em análise. Avisaremos por aqui assim que avançarmos para a próxima etapa.",
         icon: Sparkles,
         badgeBg: "bg-blue-50 border-blue-200",
         badgeText: "text-blue-800",
