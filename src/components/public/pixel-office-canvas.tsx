@@ -46,6 +46,7 @@ interface PixelOfficeCanvasProps {
   activePrivatePairs: ActivePrivatePairDTO[];
   queueCount: number;
   openJobCount: number;
+  activeBotId?: AssistantBotId;
   onMoveTo: (x: number, y: number) => void;
   onSelectUser: (user: MapPresenceUser) => void;
   onOpenArcadeQuiz: () => void;
@@ -56,12 +57,9 @@ interface PixelOfficeCanvasProps {
 }
 
 /**
- * Mapa Isométrico Corporativo com 5 setores integrados e 3 Bots Assistentes:
- * 1. Sup. Esquerda: Balcões de Atendimento RH (Atendimento Individual 1:1)
- * 2. Centro: Recepção, Mural de Vagas & Totem de Senhas
- * 3. Sup. Direita: Lounge Corporativo & Bots Assistentes 24h
- * 4. Inf. Esquerda: Espaço Preparação & Simulado de Entrevista
- * 5. Inf. Direita: Sala Executiva & Guia de Avisos do Sistema
+ * Planta Isométrica Limpa (Nível Michelin):
+ * Sem botões gigantes sobrepostos. Apenas indicadores discretos nas zonas,
+ * os 3 Bots Assistentes bem espaçados e os participantes em tempo real.
  */
 export function PixelOfficeCanvas({
   meId,
@@ -71,6 +69,7 @@ export function PixelOfficeCanvas({
   activePrivatePairs,
   queueCount,
   openJobCount,
+  activeBotId,
   onMoveTo,
   onSelectUser,
   onOpenArcadeQuiz,
@@ -79,15 +78,14 @@ export function PixelOfficeCanvas({
   onOpenGuidesPanel,
   onSelectBot,
 }: PixelOfficeCanvasProps) {
-  const [activeBotTip, setActiveBotTip] = useState<AssistantBotId | null>("vagas");
   const [clickRipple, setClickRipple] = useState<{ x: number; y: number; id: number } | null>(
     null
   );
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(93, Math.max(7, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(92, Math.max(12, ((e.clientY - rect.top) / rect.height) * 100));
+    const x = Math.min(92, Math.max(8, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(90, Math.max(16, ((e.clientY - rect.top) / rect.height) * 100));
     const rx = Math.round(x * 10) / 10;
     const ry = Math.round(y * 10) / 10;
     setClickRipple({ x: rx, y: ry, id: Date.now() });
@@ -116,9 +114,9 @@ export function PixelOfficeCanvas({
   return (
     <div
       onClick={handleCanvasClick}
-      className="relative aspect-[16/9] min-h-[450px] w-full cursor-pointer select-none overflow-hidden rounded-2xl border border-slate-300 bg-slate-950 shadow-lg"
+      className="relative aspect-[16/10] min-h-[420px] w-full cursor-pointer select-none overflow-hidden rounded-2xl border border-stone-200/90 bg-slate-950 shadow-sm"
     >
-      {/* ─── CENÁRIO ISOMÉTRICO DO ESCRITÓRIO CORPORATIVO ─── */}
+      {/* ─── CENÁRIO ISOMÉTRICO DO ESCRITÓRIO ─── */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/virtual-office-isometric.jpg"
@@ -127,18 +125,18 @@ export function PixelOfficeCanvas({
         className="pointer-events-none absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]"
       />
 
-      {/* Vinheta corporativa sutil nas bordas para leitura limpa do HUD */}
+      {/* Vinheta suave apenas nas extremidades */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, rgba(15,23,42,0.04) 55%, rgba(15,23,42,0.58) 100%)",
+            "radial-gradient(circle at 50% 50%, transparent 65%, rgba(15,23,42,0.45) 100%)",
         }}
       />
 
       {/* ─── LINHAS CONECTANDO DUPLAS EM ATENDIMENTO PRIVADO 🔒 ─── */}
       <svg
-        viewBox="0 0 1000 562.5"
+        viewBox="0 0 1000 625"
         preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full z-10"
         aria-hidden
@@ -151,20 +149,20 @@ export function PixelOfficeCanvas({
             <g key={pair.conversationId}>
               <line
                 x1={u1.x * 10}
-                y1={u1.y * 5.625 - 16}
+                y1={u1.y * 6.25 - 16}
                 x2={u2.x * 10}
-                y2={u2.y * 5.625 - 16}
+                y2={u2.y * 6.25 - 16}
                 stroke="#0f172a"
-                strokeWidth="6"
+                strokeWidth="5"
                 strokeLinecap="round"
               />
               <line
                 x1={u1.x * 10}
-                y1={u1.y * 5.625 - 16}
+                y1={u1.y * 6.25 - 16}
                 x2={u2.x * 10}
-                y2={u2.y * 5.625 - 16}
+                y2={u2.y * 6.25 - 16}
                 stroke="#38bdf8"
-                strokeWidth="3"
+                strokeWidth="2.5"
                 strokeDasharray="8 6"
                 strokeLinecap="round"
               />
@@ -178,11 +176,11 @@ export function PixelOfficeCanvas({
         <span
           key={clickRipple.id}
           style={{ left: `${clickRipple.x}%`, top: `${clickRipple.y}%` }}
-          className="pointer-events-none absolute z-10 h-4 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-sky-400 bg-sky-400/30 animate-ping"
+          className="pointer-events-none absolute z-10 h-3.5 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-white/30 animate-ping"
         />
       )}
 
-      {/* ─── INDICADORES INTERATIVOS DOS 3 BALCÕES DE ATENDIMENTO RH ─── */}
+      {/* ─── INDICADORES COMPACTOS DOS 3 BALCÕES DE RH (SEM SOBREPOSIÇÃO) ─── */}
       {[1, 2, 3].map((deskNum) => {
         const pos = SUPPORT_DESK_POSITIONS[deskNum];
         const occupiedBy = occupiedDesks.get(deskNum);
@@ -193,27 +191,28 @@ export function PixelOfficeCanvas({
             onClick={(e) => {
               e.stopPropagation();
               onMoveTo(pos.candidate.x, pos.candidate.y);
+              onOpenQueuePanel();
             }}
-            style={{ left: `${pos.staff.x}%`, top: `${pos.staff.y - 7}%` }}
-            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold shadow-sm transition hover:scale-105 ${
+            style={{ left: `${pos.staff.x}%`, top: `${pos.staff.y - 5}%` }}
+            className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-xs transition hover:scale-105 ${
               occupiedBy
-                ? "border-amber-300 bg-amber-500 text-slate-950"
-                : "border-slate-700 bg-slate-900/90 text-sky-200 hover:bg-slate-800"
+                ? "border-amber-300 bg-amber-400 text-slate-950"
+                : "border-white/25 bg-slate-900/85 text-white backdrop-blur-xs hover:bg-slate-900"
             }`}
             title={
               occupiedBy
                 ? `Balcão ${deskNum}: Em atendimento (${occupiedBy})`
-                : `Ir até o Balcão ${deskNum}`
+                : `Balcão de Atendimento RH ${deskNum}`
             }
           >
             <span>{occupiedBy ? "🔒" : "🎧"}</span>
-            <span>Balcão {deskNum}</span>
+            <span>B{deskNum}</span>
           </button>
         );
       })}
 
-      {/* ─── ESTAÇÕES CORPORATIVAS INTERATIVAS NO MAPA ─── */}
-      {/* 1. Balcões de Atendimento RH (Sup. Esquerda) */}
+      {/* ─── 4 ATALHOS DE CANTO ULTRA-LIMPOS E SEM COLISÃO ─── */}
+      {/* Canto Superior Esquerdo: Atendimento RH */}
       <button
         type="button"
         onClick={(e) => {
@@ -221,113 +220,81 @@ export function PixelOfficeCanvas({
           onMoveTo(SUPPORT_ROOMS.atendimento.spawn.x, SUPPORT_ROOMS.atendimento.spawn.y);
           onOpenQueuePanel();
         }}
-        className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:border-sky-400 hover:bg-slate-900"
+        className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-md transition hover:bg-slate-900"
       >
-        <span className="flex size-5 items-center justify-center rounded bg-sky-500/20 text-xs">
-          🎧
-        </span>
-        <span>Atendimento RH · Balcões 1 a 3</span>
+        <span>🎧</span>
+        <span>Atendimento RH</span>
+        {queueCount > 0 && (
+          <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-slate-950">
+            {queueCount}
+          </span>
+        )}
       </button>
 
-      {/* 2. Mural de Vagas Abertas (Topo Central) */}
+      {/* Canto Superior Direito: Mural de Vagas */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          onMoveTo(44, 42);
           onOpenJobBoard();
         }}
-        className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-blue-400/50 bg-blue-950/95 px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:scale-[1.02] hover:bg-blue-900"
+        className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-md transition hover:bg-slate-900"
       >
-        <span>📋 Mural de Vagas Abertas</span>
-        <span className="rounded bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-          {openJobCount} {openJobCount === 1 ? "oportunidade" : "oportunidades"}
+        <span>💼</span>
+        <span>Mural de Vagas</span>
+        <span className="rounded-full bg-emerald-400 px-1.5 text-[10px] font-bold text-slate-950">
+          {openJobCount}
         </span>
       </button>
 
-      {/* 3. Bots Assistentes & Tira-Dúvidas (Sup. Direita) */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveTo(SUPPORT_ROOMS.cafe.spawn.x, SUPPORT_ROOMS.cafe.spawn.y);
-          onSelectBot("vagas");
-        }}
-        className="absolute right-3 top-3 z-20 flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md backdrop-blur-xs transition hover:border-emerald-400 hover:bg-slate-900"
-      >
-        <span className="flex size-5 items-center justify-center rounded bg-emerald-500/20 text-xs">
-          🤖
-        </span>
-        <span>Assistentes Virtuais · Tira-Dúvidas</span>
-      </button>
-
-      {/* 4. Totem Central da Recepção (Retirar Senha) */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenQueuePanel();
-        }}
-        className="absolute left-[50%] top-[44%] z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-lg border border-amber-400/70 bg-slate-900/95 px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur-xs transition hover:scale-105 hover:border-amber-300"
-      >
-        <span className="text-amber-300">🎫</span>
-        <span>Recepção · Retirar Senha RH</span>
-        <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-950">
-          {queueCount} na fila
-        </span>
-      </button>
-
-      {/* 5. Simulado de Entrevista & Dicas (Inf. Esquerda) */}
+      {/* Canto Inferior Esquerdo: Simulado Rápido */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           onOpenArcadeQuiz();
         }}
-        className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 shadow-md backdrop-blur-xs transition hover:border-indigo-400 hover:bg-slate-900"
+        className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-md transition hover:bg-slate-900"
       >
         <span>🎯</span>
-        <span>Simulado de Entrevista & Boas Práticas</span>
+        <span>Simulado de Entrevista</span>
       </button>
 
-      {/* 6. Central de Avisos & Acompanhamento no Sistema (Inf. Direita) */}
+      {/* Canto Inferior Direito: Guia de Avisos */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          onMoveTo(SUPPORT_ROOMS.diretoria.spawn.x, SUPPORT_ROOMS.diretoria.spawn.y);
           onOpenGuidesPanel();
         }}
-        className="absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 shadow-md backdrop-blur-xs transition hover:border-sky-400 hover:bg-slate-900"
+        className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-900/85 px-3 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-md transition hover:bg-slate-900"
       >
         <span>🔔</span>
-        <span>Como Acompanhar Avisos no Sistema</span>
+        <span>Onde Ver Avisos</span>
       </button>
 
-      {/* ─── BOTS ASSISTENTES CORPORATIVOS (VAGAS, AVISOS DO SISTEMA, CURRÍCULO) ─── */}
-      {SUPPORT_ASSISTANT_BOTS.map((bot) => (
-        <MapAvatarNode
-          key={`bot_${bot.id}`}
-          id={`bot_${bot.id}`}
-          displayName={bot.name}
-          kind="STAFF"
-          avatar={bot.avatar}
-          x={bot.x}
-          y={bot.y}
-          isAmbientNpc
-          bubbleText={
-            activeBotTip === bot.id
-              ? `${bot.shortSpecialty} (Clique para perguntar)`
-              : null
-          }
-          reactionEmoji="🤖"
-          onSelect={() => {
-            onMoveTo(Math.min(90, bot.x + 5), Math.min(90, bot.y + 4));
-            setActiveBotTip(bot.id);
-            onSelectBot(bot.id);
-          }}
-        />
-      ))}
+      {/* ─── BOTS ASSISTENTES ESPECIALISTAS (POSICIONADOS SEM SOBREPOSIÇÃO E SEM BALÃO GIGANTE) ─── */}
+      {SUPPORT_ASSISTANT_BOTS.map((bot) => {
+        const isSelected = activeBotId === bot.id;
+        return (
+          <MapAvatarNode
+            key={`bot_${bot.id}`}
+            id={`bot_${bot.id}`}
+            displayName={bot.name}
+            kind="STAFF"
+            avatar={bot.avatar}
+            x={bot.x}
+            y={bot.y}
+            isAmbientNpc
+            isMe={isSelected}
+            reactionEmoji="🤖"
+            onSelect={() => {
+              onMoveTo(Math.min(88, bot.x + 5), Math.min(88, bot.y + 4));
+              onSelectBot(bot.id);
+            }}
+          />
+        );
+      })}
 
       {/* ─── PARTICIPANTES ONLINE EM TEMPO REAL ─── */}
       {users.map((u) => {
