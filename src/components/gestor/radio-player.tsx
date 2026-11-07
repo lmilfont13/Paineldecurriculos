@@ -145,10 +145,11 @@ export function GestorRadioPlayer({
   const [configOpen, setConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"fila" | "spots" | "alo" | "estacao">("fila");
 
-  // Candidatos Online via Supabase Presence
+  // Candidatos Online via Supabase Presence + Local BroadcastChannel
   const [onlineCandidates, setOnlineCandidates] = useState<
-    Array<{ key: string; name?: string; path?: string; isRegistered?: boolean }>
+    Array<{ key: string; name?: string; path?: string; isRegistered?: boolean; lastSeen?: number }>
   >([]);
+  const [customCandidateInput, setCustomCandidateInput] = useState<string>("");
 
   // Estúdio de Alô no Ar & Recados aos Candidatos Online
   const [selectedCandidate, setSelectedCandidate] = useState<string>("all");
@@ -196,15 +197,55 @@ export function GestorRadioPlayer({
   // Conecta ao Supabase Realtime e BroadcastChannel para sincronização instantânea
   const resolvedSlug = companySlug && companySlug !== "__admin__" ? companySlug : "global";
 
-  // 1. BroadcastChannel instantâneo para sincronia entre abas locais no mesmo navegador
+  // 1. BroadcastChannel instantâneo para sincronia de comandos e detecção imediata de abas de candidatos
   useEffect(() => {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      localChannelRef.current = new BroadcastChannel("triagem_radio_sync");
+      const bc = new BroadcastChannel("triagem_radio_sync");
+      localChannelRef.current = bc;
+
+      bc.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        if (data.type === "candidate_presence_ping") {
+          setOnlineCandidates((prev) => {
+            const now = Date.now();
+            const key = data.key || `bc_${data.name || "visitante"}`;
+            const idx = prev.findIndex((c) => c.key === key);
+            const item = {
+              key,
+              name: data.name,
+              path: data.path,
+              isRegistered: Boolean(data.name),
+              lastSeen: now,
+            };
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = item;
+              return copy;
+            }
+            return [item, ...prev];
+          });
+        } else if (data.type === "candidate_presence_bye") {
+          setOnlineCandidates((prev) => prev.filter((c) => c.key !== data.key));
+        }
+      };
+
       return () => {
-        localChannelRef.current?.close();
+        bc.close();
         localChannelRef.current = null;
       };
     }
+  }, []);
+
+  // Limpeza de sessões inativas (após 10s sem sinal)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setOnlineCandidates((prev) =>
+        prev.filter((c) => !c.lastSeen || now - c.lastSeen < 10000)
+      );
+    }, 3500);
+    return () => clearInterval(timer);
   }, []);
 
   // 2. Conexão Supabase Realtime para sincronização remota entre navegadores/dispositivos
@@ -239,44 +280,62 @@ export function GestorRadioPlayer({
     }
   }, [resolvedSlug]);
 
-  // 3. Rastreamento dos Candidatos Online em tempo real via Presence
+  // 3. Rastreamento dos Candidatos Online em tempo real via Presence (escuta canal do tenant + global)
   useEffect(() => {
     try {
       const supabase = createClient();
-      const presenceKey = `dj-${Date.now()}`;
-      const ch = supabase.channel(`online:${resolvedSlug}`, {
-        config: { presence: { key: presenceKey } },
-      });
+      const channels: any[] = [];
+      const chNames = [`online:${resolvedSlug}`];
+      if (resolvedSlug !== "global") {
+        chNames.push("online:global");
+      }
 
-      ch.on("presence", { event: "sync" }, () => {
-        const state = ch.presenceState<{
-          role: "candidato" | "equipe";
-          name?: string;
-          path?: string;
-          isRegistered?: boolean;
-        }>();
+      for (const name of chNames) {
+        const ch = supabase.channel(name, {
+          config: { presence: { key: `dj-${Date.now()}` } },
+        });
 
-        const list: Array<{ key: string; name?: string; path?: string; isRegistered?: boolean }> =
-          [];
-        for (const [key, presences] of Object.entries(state)) {
-          for (const p of presences) {
-            if (p.role === "candidato") {
-              list.push({
-                key,
-                name: p.name,
-                path: p.path,
-                isRegistered: p.isRegistered,
-              });
+        ch.on("presence", { event: "sync" }, () => {
+          const state = ch.presenceState<{
+            role: "candidato" | "equipe";
+            name?: string;
+            path?: string;
+            isRegistered?: boolean;
+          }>();
+
+          setOnlineCandidates((prev) => {
+            const map = new Map<
+              string,
+              { key: string; name?: string; path?: string; isRegistered?: boolean; lastSeen?: number }
+            >();
+            for (const item of prev) {
+              map.set(item.key, item);
             }
-          }
-        }
-        setOnlineCandidates(list);
-      });
+            for (const [key, presences] of Object.entries(state)) {
+              for (const p of presences) {
+                if (p.role === "candidato") {
+                  map.set(key, {
+                    key,
+                    name: p.name,
+                    path: p.path,
+                    isRegistered: p.isRegistered,
+                    lastSeen: Date.now(),
+                  });
+                }
+              }
+            }
+            return Array.from(map.values());
+          });
+        });
 
-      ch.subscribe();
+        ch.subscribe();
+        channels.push(ch);
+      }
 
       return () => {
-        void ch.unsubscribe();
+        for (const ch of channels) {
+          void ch.unsubscribe();
+        }
       };
     } catch {
       // Supabase opcional
@@ -785,17 +844,19 @@ export function GestorRadioPlayer({
     }
   };
 
-  // Transmitir Alô no Ar Personalizado para Candidato Online
+  // Transmitir Alô no Ar Personalizado para Candidato Online (Nível Michelin)
   const sendPersonalizedShoutout = async () => {
     if (!shoutoutMessage.trim()) return;
     setSendingShoutout(true);
     try {
-      const isAll = selectedCandidate === "all";
-      const targetName = isAll ? "" : selectedCandidate;
+      const explicitTarget = customCandidateInput.trim();
+      const targetName = explicitTarget || (selectedCandidate === "all" ? "" : selectedCandidate);
+      const isAll = !targetName;
+      const shoutoutTimestamp = Date.now();
 
-      // 1. Gera áudio com masterização Michelin
+      // 1. Gera áudio com masterização Michelin usando a voz rigorosamente escolhida
       const res = await generateRadioSpotAction({
-        title: isAll ? "Recado Especial no Ar" : `Alô Especial para ${selectedCandidate}`,
+        title: isAll ? "Recado Especial no Ar" : `Alô Especial para ${targetName}`,
         script: shoutoutMessage,
         voice: shoutoutVoice,
         sfxPreset: "acolhimento-suave",
@@ -803,14 +864,14 @@ export function GestorRadioPlayer({
 
       const audioUrl = res.ok && res.spot?.audioUrl ? res.spot.audioUrl : undefined;
 
-      // 2. Transmite instantaneamente via BroadcastChannel
+      // 2. Transmite instantaneamente via BroadcastChannel com timestamp para deduplicação
       localChannelRef.current?.postMessage({
         type: "live_shoutout",
         targetCandidateName: targetName,
         message: shoutoutMessage,
         audioUrl,
         broadcastMode: isAll ? "all" : "private",
-        timestamp: Date.now(),
+        timestamp: shoutoutTimestamp,
       });
 
       // 3. Transmite via Supabase Realtime
@@ -823,21 +884,39 @@ export function GestorRadioPlayer({
             message: shoutoutMessage,
             audioUrl,
             broadcastMode: isAll ? "all" : "private",
-            timestamp: Date.now(),
+            timestamp: shoutoutTimestamp,
           },
         });
       }
 
-      // 4. Toca no retorno do estúdio do DJ
+      // 4. Toca no retorno do estúdio do DJ com DUCKING suave da música de fundo (sem sobreposição!)
       if (audioUrl && spotAudioRef.current) {
+        spotAudioRef.current.pause();
+        spotAudioRef.current.currentTime = 0;
         spotAudioRef.current.src = audioUrl;
         spotAudioRef.current.volume = muted ? 0 : volume;
-        spotAudioRef.current.play().catch(() => {});
+
+        setLiveBroadcastSpot({
+          id: `shoutout-${shoutoutTimestamp}`,
+          title: `🎙️ Alô no Ar para ${targetName || "Candidatos"}`,
+          subtitle: shoutoutMessage,
+          audioUrl,
+        });
+
+        // Ducking imediato na música da rádio para 12%
+        if (audioRef.current) {
+          audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
+        }
+
+        spotAudioRef.current.play().catch(() => {
+          setLiveBroadcastSpot(null);
+          if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+        });
       }
 
       setSentShoutout(true);
       setBroadcastNotification(
-        `🎙️ Alô no ar transmitido com sucesso para ${isAll ? "todos os candidatos" : selectedCandidate}!`
+        `🎙️ Alô no ar transmitido com sucesso para ${isAll ? "todos os candidatos" : targetName}!`
       );
       setTimeout(() => {
         setSentShoutout(false);
@@ -1762,7 +1841,7 @@ export function GestorRadioPlayer({
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Coluna Esquerda: Candidatos Conectados Agora */}
+                    {/* Coluna Esquerda: Candidatos Conectados Agora + Campo de Busca/Nome */}
                     <div className="lg:col-span-5 flex flex-col gap-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
@@ -1775,17 +1854,51 @@ export function GestorRadioPlayer({
                         </span>
                       </div>
 
+                      {/* Campo Direto para Buscar ou Digitar o Nome (ex: Vanessa) */}
+                      <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 shadow-2xs">
+                        <Search className="size-4 text-amber-700 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Digitar nome da candidata (ex: Vanessa)..."
+                          value={customCandidateInput}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomCandidateInput(val);
+                            if (val.trim()) {
+                              setSelectedCandidate(val.trim());
+                            } else {
+                              setSelectedCandidate("all");
+                            }
+                          }}
+                          className="flex-1 bg-transparent text-xs font-bold text-stone-900 placeholder:text-stone-400 placeholder:font-normal outline-none"
+                        />
+                        {customCandidateInput && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomCandidateInput("");
+                              setSelectedCandidate("all");
+                            }}
+                            className="text-stone-400 hover:text-stone-700"
+                            title="Limpar nome"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-100 shadow-xs max-h-[380px] overflow-y-auto">
                         {/* Opção para Todos os Candidatos */}
                         <div
                           onClick={() => {
+                            setCustomCandidateInput("");
                             setSelectedCandidate("all");
                             setShoutoutMessage(
                               "Atenção a todos os candidatos conectados na rádio Tarhget! Nossa equipe de RH deseja um dia excelente e muito sucesso na sua trajetória profissional. Voltem sempre ao nosso portal!"
                             );
                           }}
                           className={`flex items-center justify-between p-3 cursor-pointer transition ${
-                            selectedCandidate === "all"
+                            selectedCandidate === "all" && !customCandidateInput.trim()
                               ? "bg-amber-500/15 border-l-4 border-amber-600 font-medium"
                               : "hover:bg-stone-50"
                           }`}
@@ -1808,23 +1921,52 @@ export function GestorRadioPlayer({
                           </span>
                         </div>
 
-                        {/* Lista individual */}
-                        {onlineCandidates.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-stone-500">
-                            Nenhum candidato identificado navegando no momento. Você ainda pode transmitir para &quot;Todos os Candidatos&quot; ou testar o locutor!
+                        {/* Card do Nome Digitado (se preenchido e diferente de all) */}
+                        {customCandidateInput.trim() && (
+                          <div
+                            onClick={() => setSelectedCandidate(customCandidateInput.trim())}
+                            className="flex items-center justify-between p-3 cursor-pointer bg-amber-500/15 border-l-4 border-amber-600 font-medium"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-bold">
+                                👤
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-stone-900 truncate">
+                                  {customCandidateInput.trim()}
+                                </p>
+                                <p className="text-[10px] text-amber-800">
+                                  Candidata Selecionada para Alô no Ar
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                              Alvo
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Lista de candidatos online detectados */}
+                        {onlineCandidates.length === 0 && !customCandidateInput.trim() ? (
+                          <div className="p-4 text-center text-xs text-stone-500 space-y-1">
+                            <p className="font-semibold text-stone-700">Nenhum candidato na lista de presença neste segundo.</p>
+                            <p className="text-[11px] text-stone-500">
+                              Você pode digitar <strong>Vanessa</strong> na caixa de busca acima para chamá-la no ar com áudio personalizado!
+                            </p>
                           </div>
                         ) : (
                           onlineCandidates.map((cand, idx) => {
-                            const name = cand.name || `Candidato Sintonizado #${idx + 1}`;
-                            const isSelected = selectedCandidate === name;
+                            const name = cand.name || `Candidato #${idx + 1}`;
+                            const isSelected = selectedCandidate.toLowerCase() === name.toLowerCase();
 
                             return (
                               <div
                                 key={cand.key}
                                 onClick={() => {
                                   setSelectedCandidate(name);
+                                  setCustomCandidateInput(cand.name || "");
                                   setShoutoutMessage(
-                                    `Olá ${name}! A equipe da Tarhget viu que você está por aqui. Seja muito bem-vindo ao nosso portal e conte conosco para o seu crescimento profissional!`
+                                    `Olá ${name}! A equipe da Tarhget viu que você está por aqui. Seja muito bem-vinda ao nosso portal e conte conosco para o seu crescimento profissional!`
                                   );
                                 }}
                                 className={`flex items-center justify-between p-3 cursor-pointer transition ${
@@ -1834,7 +1976,7 @@ export function GestorRadioPlayer({
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-900 text-xs font-bold">
+                                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold">
                                     <User className="size-4" />
                                   </span>
                                   <div className="min-w-0">
@@ -1846,7 +1988,8 @@ export function GestorRadioPlayer({
                                     </p>
                                   </div>
                                 </div>
-                                <span className="text-[10px] font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                   Online
                                 </span>
                               </div>
@@ -1858,83 +2001,113 @@ export function GestorRadioPlayer({
 
                     {/* Coluna Direita: Estúdio de Criação do Alô & Envio */}
                     <div className="lg:col-span-7 flex flex-col gap-4 bg-white rounded-xl border border-stone-200 p-5 shadow-xs">
-                      <div>
-                        <h4 className="text-xs font-bold text-stone-900 flex items-center justify-between">
-                          <span>Texto do Alô no Ar</span>
-                          <span className="text-[10px] text-stone-500 font-normal">
-                            Destinatário:{" "}
-                            <strong className="text-amber-700">
-                              {selectedCandidate === "all" ? "Todos os Ouvintes" : selectedCandidate}
-                            </strong>
-                          </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-100">
+                        <h4 className="text-xs font-bold text-stone-900">
+                          Texto do Alô no Ar
                         </h4>
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1 text-xs font-bold text-amber-950">
+                          <span>Destinatário:</span>
+                          <span className="text-amber-800">
+                            {customCandidateInput.trim()
+                              ? `👤 ${customCandidateInput.trim()}`
+                              : selectedCandidate === "all"
+                                ? "📢 Todos os Ouvintes"
+                                : `👤 ${selectedCandidate}`}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Roteiros Estratégicos Prontos (1-Click) */}
                       <div>
-                        <span className="text-[11px] font-semibold text-stone-600 block mb-1.5">
+                        <span className="text-[11px] font-semibold text-stone-600 block mb-2">
                           💡 Sugestões Estratégicas de Acolhimento & Retenção:
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={() => {
-                              const cand = selectedCandidate === "all" ? "todos" : selectedCandidate;
+                              const target = customCandidateInput.trim() || (selectedCandidate === "all" ? "amigos" : selectedCandidate);
                               setShoutoutMessage(
-                                `Atenção ${cand}! A equipe de atração de talentos viu sua chegada. Seja muito bem-vindo ao nosso portal e sinta-se em casa. Acreditamos no seu potencial!`
+                                `Atenção ${target}! A equipe de atração de talentos viu sua chegada. Seja muito bem-vindo ao nosso portal e sinta-se em casa. Acreditamos no seu potencial!`
                               );
                             }}
-                            className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-stone-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
                           >
-                            🌟 Boas-Vindas & Acolhimento
+                            <span className="font-bold block text-stone-900 mb-0.5">🌟 Boas-Vindas & Acolhimento</span>
+                            <span className="text-stone-500 line-clamp-1">&quot;Atenção {customCandidateInput.trim() || "candidato"}! Seja bem-vindo...&quot;</span>
                           </button>
+
                           <button
                             type="button"
                             onClick={() => {
-                              const cand = selectedCandidate === "all" ? "amigos" : selectedCandidate;
+                              const target = customCandidateInput.trim() || (selectedCandidate === "all" ? "amigos" : selectedCandidate);
                               setShoutoutMessage(
-                                `Passando no ar da rádio Tarhget para desejar um dia espetacular e muito produtivo para ${cand}! Curta a seleção musical e foque no seu futuro!`
+                                `Passando no ar da rádio Tarhget para desejar um dia espetacular e muito produtivo para ${target}! Curta a seleção musical e foque no seu futuro!`
                               );
                             }}
-                            className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-stone-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
                           >
-                            ☀️ Energia & Ótimo Dia
+                            <span className="font-bold block text-stone-900 mb-0.5">☀️ Energia & Ótimo Dia</span>
+                            <span className="text-stone-500 line-clamp-1">&quot;Passando no ar para desejar um dia espetacular para {customCandidateInput.trim() || "você"}...&quot;</span>
                           </button>
+
                           <button
                             type="button"
                             onClick={() => {
-                              const cand = selectedCandidate === "all" ? "candidatos" : selectedCandidate;
+                              const target = customCandidateInput.trim() || (selectedCandidate === "all" ? "candidatos" : selectedCandidate);
                               setShoutoutMessage(
-                                `Dica de ouro da nossa equipe para ${cand}: conte suas experiências reais e mantenha seu currículo atualizado. Estamos sempre em busca de talentos como você!`
+                                `Dica de ouro da nossa equipe para ${target}: conte suas experiências reais e mantenha seu currículo atualizado. Estamos sempre em busca de talentos como você!`
                               );
                             }}
-                            className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-stone-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
                           >
-                            💡 Dica dos Recrutadores
+                            <span className="font-bold block text-stone-900 mb-0.5">💡 Dica dos Recrutadores</span>
+                            <span className="text-stone-500 line-clamp-1">&quot;Dica de ouro da nossa equipe para {customCandidateInput.trim() || "você"}...&quot;</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const target = customCandidateInput.trim() || (selectedCandidate === "all" ? "candidatos" : selectedCandidate);
+                              setShoutoutMessage(
+                                `Aviso especial para ${target}: parabéns por dar esse passo na sua carreira! Nosso portal de vagas é atualizado diariamente, volte sempre!`
+                              );
+                            }}
+                            className="text-left rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950 transition"
+                          >
+                            <span className="font-bold block text-stone-900 mb-0.5">🚀 Incentivo & Retorno</span>
+                            <span className="text-stone-500 line-clamp-1">&quot;Parabéns pelo passo na carreira, volte sempre...&quot;</span>
                           </button>
                         </div>
                       </div>
 
                       {/* Textarea do Alô */}
-                      <textarea
-                        rows={3}
-                        value={shoutoutMessage}
-                        onChange={(e) => setShoutoutMessage(e.target.value)}
-                        placeholder="Digite o recado ao vivo..."
-                        className="w-full rounded-xl border border-stone-300 p-3 text-xs text-stone-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
-                      />
+                      <div>
+                        <label className="text-[11px] font-semibold text-stone-600 block mb-1">
+                          Mensagem que o Locutor irá Falar no Ar:
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={shoutoutMessage}
+                          onChange={(e) => setShoutoutMessage(e.target.value)}
+                          placeholder="Digite o recado ao vivo..."
+                          className="w-full rounded-xl border border-stone-300 p-3 text-xs text-stone-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 leading-relaxed"
+                        />
+                      </div>
 
                       {/* Opções de Voz de Estúdio */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-stone-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-stone-100">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-stone-700">Voz do Locutor:</span>
+                          <span className="text-xs font-semibold text-stone-700 whitespace-nowrap">Voz do Locutor:</span>
                           <select
                             value={shoutoutVoice}
-                            onChange={(e) => setNewSpotVoice(e.target.value)}
+                            onChange={(e) => setShoutoutVoice(e.target.value)}
                             className="h-8 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-900 outline-none focus:border-amber-600"
                           >
                             <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Voz Grave & Marcante)</option>
-                            <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Acolhedora)</option>
+                            <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Calorosa & Acolhedora)</option>
+                            <option value="pt-BR-FranciscaNeural">🎙️ Francisca Comercial (Voz Dinâmica & Fluida)</option>
+                            <option value="pt-BR-FabioNeural">🎙️ Fábio Jovem (Voz Amigável & Descontraída)</option>
                           </select>
                         </div>
 
@@ -1942,7 +2115,7 @@ export function GestorRadioPlayer({
                           type="button"
                           onClick={sendPersonalizedShoutout}
                           disabled={sendingShoutout || !shoutoutMessage.trim()}
-                          className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-amber-700 active:scale-95 disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-amber-700 active:scale-95 disabled:opacity-50 shrink-0"
                         >
                           {sendingShoutout ? (
                             <Loader2 className="size-4 animate-spin" />
@@ -1956,7 +2129,11 @@ export function GestorRadioPlayer({
                               ? "Alô Transmitido com Sucesso!"
                               : sendingShoutout
                                 ? "Masterizando & Transmitindo..."
-                                : "🔴 Transmitir Alô no Ar com Áudio & Nome"}
+                                : customCandidateInput.trim()
+                                  ? `🔴 Transmitir Alô no Ar para ${customCandidateInput.trim()}`
+                                  : selectedCandidate !== "all"
+                                    ? `🔴 Transmitir Alô no Ar para ${selectedCandidate}`
+                                    : "🔴 Transmitir Alô Geral no Ar"}
                           </span>
                         </button>
                       </div>

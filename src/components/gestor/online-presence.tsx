@@ -118,7 +118,85 @@ export function PublicPresenceTracker({
   candidateName?: string | null;
 }) {
   const pathname = usePathname();
+  const [effectiveName, setEffectiveName] = useState<string>(() => {
+    if (candidateName?.trim()) return candidateName.trim();
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("triagem:candidate:name") || "";
+    }
+    return "";
+  });
 
+  // Atualiza nome se a prop do servidor mudar
+  useEffect(() => {
+    if (candidateName?.trim()) {
+      setEffectiveName(candidateName.trim());
+      try {
+        localStorage.setItem("triagem:candidate:name", candidateName.trim());
+      } catch {}
+    }
+  }, [candidateName]);
+
+  // Escuta inputs do formulário de candidatura (ex: nome do candidato digitado pela Vanessa)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const detectName = (e: Event) => {
+      const target = e.target as HTMLInputElement | null;
+      if (!target || !target.value) return;
+      const attr = `${target.name} ${target.id} ${target.placeholder || ""}`.toLowerCase();
+      if (attr.includes("nome") || attr.includes("name")) {
+        const val = target.value.trim();
+        if (val.length >= 2 && val !== effectiveName) {
+          try {
+            localStorage.setItem("triagem:candidate:name", val);
+          } catch {}
+          setEffectiveName(val);
+        }
+      }
+    };
+
+    document.addEventListener("input", detectName);
+    document.addEventListener("change", detectName);
+    return () => {
+      document.removeEventListener("input", detectName);
+      document.removeEventListener("change", detectName);
+    };
+  }, [effectiveName]);
+
+  // 1. Transmite presença via Local BroadcastChannel (sincronia imediata entre abas abertas)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+    const bc = new BroadcastChannel("triagem_radio_sync");
+    const presenceKey = getTabPresenceKey();
+
+    const sendPing = () => {
+      bc.postMessage({
+        type: "candidate_presence_ping",
+        key: presenceKey,
+        role: "candidato",
+        name: effectiveName || undefined,
+        path: pathname,
+        slug,
+        timestamp: Date.now(),
+      });
+    };
+
+    sendPing();
+    const interval = setInterval(sendPing, 3000);
+
+    return () => {
+      clearInterval(interval);
+      try {
+        bc.postMessage({
+          type: "candidate_presence_bye",
+          key: presenceKey,
+          timestamp: Date.now(),
+        });
+        bc.close();
+      } catch {}
+    };
+  }, [effectiveName, pathname, slug]);
+
+  // 2. Transmite presença via Supabase Realtime (canal do tenant + canal global)
   useEffect(() => {
     if (!slug) return;
     let supabase: ReturnType<typeof createClient> | null = null;
@@ -129,26 +207,42 @@ export function PublicPresenceTracker({
     }
 
     const presenceKey = getTabPresenceKey();
-    const channel = supabase.channel(`online:${slug}`, {
+    const channels: any[] = [];
+
+    const tenantCh = supabase.channel(`online:${slug}`, {
       config: { presence: { key: presenceKey } },
     });
+    channels.push(tenantCh);
 
-    channel.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel.track({
-          role: "candidato",
-          path: pathname,
-          name: candidateName || undefined,
-          isRegistered: Boolean(candidateName),
-          timestamp: Date.now(),
-        } satisfies PresencePayload);
-      }
-    });
+    if (slug !== "global") {
+      const globalCh = supabase.channel("online:global", {
+        config: { presence: { key: presenceKey } },
+      });
+      channels.push(globalCh);
+    }
+
+    const payload: PresencePayload = {
+      role: "candidato",
+      path: pathname,
+      name: effectiveName || undefined,
+      isRegistered: Boolean(effectiveName),
+      timestamp: Date.now(),
+    };
+
+    for (const ch of channels) {
+      ch.subscribe(async (status: string) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track(payload);
+        }
+      });
+    }
 
     return () => {
-      void channel.unsubscribe();
+      for (const ch of channels) {
+        void ch.unsubscribe();
+      }
     };
-  }, [slug, pathname, candidateName]);
+  }, [slug, pathname, effectiveName]);
 
   return null;
 }

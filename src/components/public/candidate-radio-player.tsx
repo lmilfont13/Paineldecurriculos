@@ -249,10 +249,29 @@ export function CandidateRadioPlayer({
     }
   }, [station]);
 
+  // Prevenção de reproduções sobrepostas / duplicadas (BroadcastChannel + Realtime)
+  const processedAudioEventsRef = useRef<Map<string, number>>(new Map());
+
+  const shouldProcessAudioEvent = useCallback((key: string): boolean => {
+    const now = Date.now();
+    const last = processedAudioEventsRef.current.get(key);
+    if (last && now - last < 10000) {
+      return false; // Ignora duplicatas recebidas de múltiplos canais simultâneos
+    }
+    processedAudioEventsRef.current.set(key, now);
+    for (const [k, t] of processedAudioEventsRef.current.entries()) {
+      if (now - t > 30000) processedAudioEventsRef.current.delete(k);
+    }
+    return true;
+  }, []);
+
   // Callbacks de sincronização em tempo real (estáveis para Realtime e BroadcastChannel)
   const handleSpotReceived = useCallback(
-    (payload?: { spotId?: string; audioUrl?: string; title?: string; subtitle?: string }) => {
+    (payload?: { spotId?: string; audioUrl?: string; title?: string; subtitle?: string; timestamp?: number }) => {
       if (!payload) return;
+      const dedupeKey = `spot_${payload.spotId || ""}_${payload.audioUrl || ""}`;
+      if (!shouldProcessAudioEvent(dedupeKey)) return;
+
       const found = TARGET_RADIO_SPOTS.find(
         (s) => s.id === payload.spotId || s.audioUrl === payload.audioUrl
       );
@@ -267,7 +286,7 @@ export function CandidateRadioPlayer({
         });
       }
     },
-    [playSpot]
+    [playSpot, shouldProcessAudioEvent]
   );
 
   const handleTrackChangeReceived = useCallback(
@@ -332,20 +351,28 @@ export function CandidateRadioPlayer({
   );
 
   const handlePlaySfxReceived = useCallback(
-    (payload?: { sfxUrl?: string; name?: string }) => {
+    (payload?: { sfxUrl?: string; name?: string; timestamp?: number }) => {
       if (!payload?.sfxUrl) return;
+      const dedupeKey = `sfx_${payload.sfxUrl}_${payload.timestamp || ""}`;
+      if (!shouldProcessAudioEvent(dedupeKey)) return;
+
       if (sfxAudioRef.current) {
+        sfxAudioRef.current.pause();
+        sfxAudioRef.current.currentTime = 0;
         sfxAudioRef.current.src = payload.sfxUrl;
         sfxAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
         sfxAudioRef.current.play().catch(() => {});
       }
     },
-    [muted, volume]
+    [muted, shouldProcessAudioEvent, volume]
   );
 
   const handleLiveAnnouncementReceived = useCallback(
-    (payload?: { message?: string; audioUrl?: string }) => {
+    (payload?: { message?: string; audioUrl?: string; timestamp?: number }) => {
       if (!payload?.message) return;
+      const dedupeKey = `announcement_${payload.audioUrl || ""}_${payload.message}_${payload.timestamp || ""}`;
+      if (!shouldProcessAudioEvent(dedupeKey)) return;
+
       setLiveAnnouncement(payload.message);
       setTimeout(() => setLiveAnnouncement(null), 12000);
 
@@ -357,14 +384,16 @@ export function CandidateRadioPlayer({
           audioUrl: payload.audioUrl,
         });
         if (audioRef.current) {
-          audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
+          audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
         }
+        spotAudioRef.current.pause();
+        spotAudioRef.current.currentTime = 0;
         spotAudioRef.current.src = payload.audioUrl;
         spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
         spotAudioRef.current.play().catch(() => finishSpot());
       }
     },
-    [finishSpot, muted, volume]
+    [finishSpot, muted, shouldProcessAudioEvent, volume]
   );
 
   const handleLiveShoutoutReceived = useCallback(
@@ -373,9 +402,15 @@ export function CandidateRadioPlayer({
       message?: string;
       audioUrl?: string;
       broadcastMode?: "all" | "private";
+      timestamp?: number;
     }) => {
       if (!payload?.message) return;
-      const myName = (candidateName || "").trim().toLowerCase();
+      const dedupeKey = `shoutout_${payload.audioUrl || ""}_${payload.message}_${payload.timestamp || ""}`;
+      if (!shouldProcessAudioEvent(dedupeKey)) return;
+
+      const myStoredName =
+        typeof window !== "undefined" ? localStorage.getItem("triagem:candidate:name") : "";
+      const myName = (candidateName || myStoredName || "").trim().toLowerCase();
       const targetName = (payload.targetCandidateName || "").trim().toLowerCase();
       const isTargetedToMe = Boolean(
         myName && targetName && (myName.includes(targetName) || targetName.includes(myName))
@@ -395,23 +430,25 @@ export function CandidateRadioPlayer({
           setActiveSpot({
             id: "live-shoutout",
             title: isTargetedToMe
-              ? `🌟 Alô Especial para ${candidateName}`
+              ? `🌟 Alô Especial para ${candidateName || myStoredName || payload.targetCandidateName}`
               : `🎙️ Alô no Ar para ${payload.targetCandidateName || "Candidatos"}`,
             subtitle: payload.message,
             audioUrl: payload.audioUrl,
           });
 
-          // Ducking suave da música
+          // Ducking suave da música para 12%
           if (audioRef.current) {
-            audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
+            audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.12);
           }
+          spotAudioRef.current.pause();
+          spotAudioRef.current.currentTime = 0;
           spotAudioRef.current.src = payload.audioUrl;
           spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.3);
           spotAudioRef.current.play().catch(() => finishSpot());
         }
       }
     },
-    [candidateName, finishSpot, muted, volume]
+    [candidateName, finishSpot, muted, shouldProcessAudioEvent, volume]
   );
 
   // Escuta transmissões ao vivo da Rádio Tarhget via BroadcastChannel (local) e Supabase Realtime (remoto)
