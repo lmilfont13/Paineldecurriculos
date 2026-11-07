@@ -85,6 +85,15 @@ export function categorizePresence(
     };
   }
 
+  if (p.includes("/espaco")) {
+    return {
+      category: "principal",
+      categoryLabel: "No Suporte Ao Vivo",
+      screenTitle: "Na Sala Virtual de Carreiras & Suporte",
+      colorPill: "bg-emerald-100 text-emerald-900 border-emerald-300",
+    };
+  }
+
   return {
     category: "principal",
     categoryLabel: "Logado na Tela Principal",

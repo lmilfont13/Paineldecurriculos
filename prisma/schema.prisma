@@ -44,6 +44,10 @@ model Company {
   messageTemplates MessageTemplate[]
   interviewEvaluations InterviewEvaluation[]
   referrers            Referrer[]
+  supportParticipants  SupportParticipant[]
+  supportConversations SupportConversation[]
+  supportMessages      SupportMessage[]
+  supportReports       SupportReport[]
 }
 
 model User {
@@ -541,4 +545,127 @@ model Referrer {
 
   @@unique([companyId, code])
   @@index([companyId])
+}
+
+// ─── Espaço de Carreiras ao Vivo (suporte online com avatares) ───────────────
+
+enum SupportParticipantKind {
+  /// Visitante anônimo (apelido + avatar). Só fala no balão público e com o RH.
+  GUEST
+  /// Candidato logado.
+  CANDIDATE
+  /// Gestor da empresa ou admin da plataforma.
+  STAFF
+}
+
+enum SupportConversationKind {
+  /// Atendimento com a equipe (fila + balcão).
+  SERVICE
+  /// Conversa privada entre dois candidatos cadastrados.
+  DM
+}
+
+enum SupportConversationStatus {
+  /// SERVICE: na fila. DM: convite aguardando resposta.
+  WAITING
+  ACTIVE
+  CLOSED
+  /// DM: convite recusado.
+  DECLINED
+}
+
+/// Pessoa dentro do Espaço de uma empresa. Visitantes são identificados por um
+/// cookie httpOnly (só o hash fica aqui); candidatos e equipe, pela sessão.
+model SupportParticipant {
+  id            String                 @id @default(cuid())
+  companyId     String
+  kind          SupportParticipantKind
+  displayName   String
+  /// { skin, hair, hairColor, shirt, pants } — ver support.model.ts
+  avatar        Json                   @default("{}")
+  candidateId   String?
+  userId        String?
+  /// sha256 do segredo do cookie do visitante.
+  secretHash    String?
+  /// Chave secreta do canal de avisos pessoais (nunca é exibida a terceiros).
+  inboxKey      String                 @unique
+  mutedUntil    DateTime?
+  bannedAt      DateTime?
+  lastMessageAt DateTime?
+  createdAt     DateTime               @default(now())
+  lastSeenAt    DateTime               @default(now())
+
+  company        Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requested      SupportConversation[] @relation("SupportRequester")
+  responded      SupportConversation[] @relation("SupportResponder")
+  messages       SupportMessage[]
+  reportsMade    SupportReport[]       @relation("SupportReporter")
+  reportsAgainst SupportReport[]       @relation("SupportTarget")
+
+  @@unique([companyId, candidateId])
+  @@unique([companyId, userId])
+  @@index([companyId])
+}
+
+/// Conversa privada: atendimento (SERVICE) ou candidato↔candidato (DM).
+model SupportConversation {
+  id          String                    @id @default(cuid())
+  companyId   String
+  kind        SupportConversationKind
+  status      SupportConversationStatus @default(WAITING)
+  /// SERVICE: assunto escolhido ao pegar a senha (VAGA | CANDIDATURA | TECNICO | OUTRO).
+  topic       String?
+  /// SERVICE: número da senha no dia.
+  queueNumber Int?
+  /// SERVICE: balcão em que está sendo atendido (1..3).
+  desk        Int?
+  requesterId String
+  responderId String?
+  createdAt   DateTime                  @default(now())
+  startedAt   DateTime?
+  closedAt    DateTime?
+
+  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requester SupportParticipant  @relation("SupportRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  responder SupportParticipant? @relation("SupportResponder", fields: [responderId], references: [id], onDelete: SetNull)
+  messages  SupportMessage[]
+
+  @@index([companyId, kind, status])
+  @@index([requesterId])
+  @@index([responderId])
+}
+
+/// Mensagem de uma conversa privada. Balões públicos não são gravados.
+model SupportMessage {
+  id             String   @id @default(cuid())
+  companyId      String
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime @default(now())
+
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       SupportParticipant  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+/// Denúncia feita por alguém no Espaço; a equipe resolve.
+model SupportReport {
+  id         String    @id @default(cuid())
+  companyId  String
+  reporterId String
+  targetId   String
+  reason     String
+  /// Trecho do balão que motivou a denúncia (o que o denunciante viu).
+  excerpt    String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  company  Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reporter SupportParticipant @relation("SupportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  target   SupportParticipant @relation("SupportTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, resolvedAt])
 }
