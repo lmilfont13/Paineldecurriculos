@@ -240,3 +240,12 @@ export const CURATED_STATIONS: RadioStation[] = [
     url: "https://live.hunter.fm/pop2k_high",
   },
 ];
+
+
+export type RadioPlaybackMode = "auto" | "manual";
+
+export interface RadioControlState {
+  playbackMode: RadioPlaybackMode; // "auto" = Rotação contínua automática | "manual" = Só toca o que eu quiser
+  isBroadcasting: boolean; // true = No ar para os candidatos | false = Fora do ar
+  activeTrackId?: string;
+}

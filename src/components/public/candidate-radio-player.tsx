@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { playVoiceSpeech } from "@/lib/audio-speech";
+import { NewsTicker } from "@/components/common/news-ticker";
 import {
   CURATED_STATIONS,
   TARGET_PLAYLIST_TRACKS,
@@ -86,6 +87,8 @@ export function CandidateRadioPlayer({
   const [activeSpot, setActiveSpot] = useState<RadioSpot | null>(null);
   const [liveBroadcastNote, setLiveBroadcastNote] = useState<string | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState<string | null>(null);
+  const [isBroadcastOnline, setIsBroadcastOnline] = useState<boolean>(true);
+  const [remotePlaybackMode, setRemotePlaybackMode] = useState<"auto" | "manual">("auto");
 
   // Refs de estado para callbacks assíncronos e Realtime estável
   const playingRef = useRef(playing);
@@ -376,6 +379,28 @@ export function CandidateRadioPlayer({
     []
   );
 
+  const handleBroadcastStateReceived = useCallback(
+    (payload?: { isBroadcasting?: boolean; playbackMode?: "auto" | "manual"; trackId?: string }) => {
+      if (!payload) return;
+      if (typeof payload.isBroadcasting === "boolean") {
+        setIsBroadcastOnline(payload.isBroadcasting);
+        if (!payload.isBroadcasting) {
+          if (audioRef.current) audioRef.current.pause();
+          if (spotAudioRef.current) spotAudioRef.current.pause();
+          setPlaying(false);
+          setLiveBroadcastNote("🔴 Rádio temporariamente fora do ar pelo estúdio.");
+        } else {
+          setLiveBroadcastNote("🟢 Rádio no ar transmitindo ao vivo!");
+          setTimeout(() => setLiveBroadcastNote(null), 3500);
+        }
+      }
+      if (payload.playbackMode) {
+        setRemotePlaybackMode(payload.playbackMode);
+      }
+    },
+    []
+  );
+
   const handlePlaySfxReceived = useCallback(
     (payload?: { sfxUrl?: string; name?: string; timestamp?: number }) => {
       if (!payload?.sfxUrl) return;
@@ -521,6 +546,8 @@ export function CandidateRadioPlayer({
           handleLiveAnnouncementReceived(data);
         } else if (data.type === "live_shoutout") {
           handleLiveShoutoutReceived(data);
+        } else if (data.type === "radio_broadcast_state") {
+          handleBroadcastStateReceived(data);
         }
       };
     }
@@ -552,6 +579,7 @@ export function CandidateRadioPlayer({
           .on("broadcast", { event: "play_sfx" }, (e: any) => handlePlaySfxReceived(e.payload))
           .on("broadcast", { event: "live_announcement" }, (e: any) => handleLiveAnnouncementReceived(e.payload))
           .on("broadcast", { event: "live_shoutout" }, (e: any) => handleLiveShoutoutReceived(e.payload))
+          .on("broadcast", { event: "radio_broadcast_state" }, (e: any) => handleBroadcastStateReceived(e.payload))
           .subscribe();
       }
     }
@@ -578,6 +606,11 @@ export function CandidateRadioPlayer({
   const handleTrackEnded = () => {
     if (!isPlaylistMode) return;
     playedSongsCountRef.current += 1;
+    if (remotePlaybackMode === "manual") {
+      // Modo sob comando do gestor ("Só toca o que eu quiser"): termina a faixa e aguarda comando
+      setPlaying(false);
+      return;
+    }
     nextTrack();
   };
 
@@ -769,6 +802,7 @@ export function CandidateRadioPlayer({
         aria-label="Rádio da Empresa"
         className="fixed bottom-4 inset-x-3 sm:inset-x-6 z-40 max-w-xl mx-auto"
       >
+        <div className="mb-2"><NewsTicker variant="compact" /></div>
         <div className="relative overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all hover:border-[#0a0a0a]/20 sm:p-3.5">
           {/* Notificação Especial VIP de Alô / Recado no Ar */}
           {liveAnnouncement && (
@@ -820,16 +854,6 @@ export function CandidateRadioPlayer({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                {isPlaylistMode && (
-                  <button
-                    type="button"
-                    onClick={nextTrack}
-                    title="Próxima música"
-                    className="p-1.5 text-[#71717a] hover:text-[#0a0a0a]"
-                  >
-                    <SkipForward className="size-3.5" />
-                  </button>
-                )}
 
                 <button
                   type="button"
@@ -883,10 +907,17 @@ export function CandidateRadioPlayer({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 ring-1 ring-emerald-200">
-                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        RÁDIO NO AR
-                      </span>
+                      {isBroadcastOnline ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          RÁDIO NO AR
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[9px] font-bold text-stone-600 ring-1 ring-stone-200">
+                          <span className="size-1.5 rounded-full bg-stone-400" />
+                          TRANSMISSÃO PAUSADA
+                        </span>
+                      )}
                       <span className="truncate text-[10px] text-[#71717a]">
                         {companyName || "Empresa"} · {currentStation.name}
                       </span>
@@ -913,18 +944,7 @@ export function CandidateRadioPlayer({
                     </div>
                   )}
 
-                  {/* Botão de Próxima Música (disponível no modo playlist) */}
-                  {isPlaylistMode && (
-                    <button
-                      type="button"
-                      onClick={nextTrack}
-                      title="Pular para a próxima música"
-                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 text-[11px] font-medium text-[#27272a] transition hover:bg-[#f4f4f5] active:scale-95"
-                    >
-                      <SkipForward className="size-3 text-[#71717a]" />
-                      <span>Próxima</span>
-                    </button>
-                  )}
+
 
                   {/* Mutar / Volume */}
                   <div className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 shadow-2xs">

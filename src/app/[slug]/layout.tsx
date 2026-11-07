@@ -10,6 +10,7 @@ import {
 } from "@/server/services/message-template.service";
 import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.service";
 import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
+import { NewsTicker } from "@/components/common/news-ticker";
 import { CandidateSentimentWidget } from "@/components/public/candidate-sentiment-widget";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
@@ -64,6 +65,7 @@ export default async function TenantLayout({
     >
       <AttributionTracker />
       <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
+      <NewsTicker variant="bar" />
       {children}
       <CandidateRadioPlayer
         station={radioStation}

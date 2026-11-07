@@ -40,6 +40,7 @@ import { createPortal } from "react-dom";
 
 import { createClient } from "@/lib/supabase/client";
 import { playVoiceSpeech, stopVoiceSpeech } from "@/lib/audio-speech";
+import { NewsTicker } from "@/components/common/news-ticker";
 import {
   generateRadioSpotAction,
   getMusicCatalogAction,
@@ -150,6 +151,19 @@ export function GestorRadioPlayer({
   const [volume, setVolume] = useState(0.5);
   const [muted, setMuted] = useState(false);
   const [crossfadeEnabled, setCrossfadeEnabled] = useState(true);
+  const [playbackMode, setPlaybackMode] = useState<"auto" | "manual">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("triagem:gestor:radio:mode") as "auto" | "manual") || "auto";
+    }
+    return "auto";
+  });
+  const [isBroadcasting, setIsBroadcasting] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const val = localStorage.getItem("triagem:gestor:radio:broadcasting");
+      return val !== "false";
+    }
+    return true;
+  });
 
   // Spots / Vinhetas gerenciadas
   const [spotsList, setSpotsList] = useState<RadioSpot[]>(() => {
@@ -400,6 +414,55 @@ export function GestorRadioPlayer({
   }, [resolvedSlug]);
 
   // Funções de transmissão ao vivo para a área do candidato
+  const broadcastBroadcastState = useCallback((isOnline: boolean, mode: "auto" | "manual", trackId?: string) => {
+    const payload = {
+      type: "radio_broadcast_state",
+      isBroadcasting: isOnline,
+      playbackMode: mode,
+      trackId,
+      timestamp: Date.now(),
+    };
+    try {
+      localChannelRef.current?.postMessage(payload);
+    } catch {}
+    for (const ch of realtimeChannelsRef.current) {
+      ch?.send?.({
+        type: "broadcast",
+        event: "radio_broadcast_state",
+        payload,
+      }).catch?.(() => {});
+    }
+  }, []);
+
+  const togglePlaybackMode = (mode: "auto" | "manual") => {
+    setPlaybackMode(mode);
+    try {
+      localStorage.setItem("triagem:gestor:radio:mode", mode);
+    } catch {}
+    broadcastBroadcastState(isBroadcasting, mode, currentTrack?.id);
+    setBroadcastNotification(
+      mode === "auto"
+        ? "📻 Modo Automático ativado: playlist toca continuamente."
+        : "🎛️ Modo Sob Comando ativado: a rádio só toca o que você disparar."
+    );
+    setTimeout(() => setBroadcastNotification(null), 4000);
+  };
+
+  const toggleBroadcasting = () => {
+    const next = !isBroadcasting;
+    setIsBroadcasting(next);
+    try {
+      localStorage.setItem("triagem:gestor:radio:broadcasting", String(next));
+    } catch {}
+    broadcastBroadcastState(next, playbackMode, currentTrack?.id);
+    setBroadcastNotification(
+      next
+        ? "🟢 Transmissão Aberta: Rádio no ar para todos os candidatos."
+        : "🔴 Transmissão Interrompida: Rádio pausada para todos os candidatos."
+    );
+    setTimeout(() => setBroadcastNotification(null), 4000);
+  };
+
   const broadcastTrackChange = useCallback((newIndex: number, track: RadioTrack) => {
     if (!track) return;
 
@@ -1499,7 +1562,12 @@ export function GestorRadioPlayer({
         preload="none"
         onEnded={() => {
           if (isPlaylistMode) {
-            playNextTrack();
+            if (playbackMode === "auto") {
+              playNextTrack();
+            } else {
+              setPlaying(false);
+              broadcastBroadcastState(isBroadcasting, "manual", undefined);
+            }
           }
         }}
         onPlaying={() => {
@@ -1599,6 +1667,16 @@ export function GestorRadioPlayer({
             />
             <span className="truncate text-[11px] font-semibold text-[#0a0a0a]">
               {isPlaylistMode ? "Rádio Tarhget" : current.name}
+            </span>
+            <span
+              className={`ml-1 rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
+                playbackMode === "auto"
+                  ? "bg-[#eaf1fb] text-[#2f5fa8]"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+              title={playbackMode === "auto" ? "Modo Automático: Rotação contínua" : "Modo Sob Comando: Só toca o que você disparar"}
+            >
+              {playbackMode === "auto" ? "Auto" : "Comando"}
             </span>
           </div>
           <p className="truncate text-[10px] text-[#71717a]">
@@ -1758,6 +1836,72 @@ export function GestorRadioPlayer({
             </div>
 
             {/* Menu de Abas Superior no padrão do sistema */}
+            <div className="border-b border-[#e4e4e7] bg-white px-6 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-[#71717a] uppercase tracking-wider">
+                    Controle da Transmissão:
+                  </span>
+                  
+                  {/* Interruptor de Transmissão Geral */}
+                  <button
+                    type="button"
+                    onClick={toggleBroadcasting}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                      isBroadcasting
+                        ? "border-[#c3e6cb] bg-[#f4faf6] text-[#155724] hover:bg-[#e4f6ec]"
+                        : "border-[#f5c6cb] bg-[#fff5f5] text-[#721c24] hover:bg-[#fbeae8]"
+                    }`}
+                    title="Controla se os candidatos conseguem ouvir a rádio no portal"
+                  >
+                    <span className={`size-2 rounded-full ${isBroadcasting ? "bg-[#1f7a4d] animate-pulse" : "bg-[#c23b3b]"}`} />
+                    <span>{isBroadcasting ? "Transmissão Aberta (No ar p/ candidatos)" : "Transmissão Pausada (Fora do ar)"}</span>
+                  </button>
+
+                  {/* Seletor de Modo de Reprodução */}
+                  <div className="inline-flex items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => togglePlaybackMode("auto")}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                        playbackMode === "auto"
+                          ? "bg-white text-[#0a0a0a] shadow-xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                      title="Modo Automático: a rádio toca a fila continuamente"
+                    >
+                      ⚡ Automático (Auto DJ)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePlaybackMode("manual")}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                        playbackMode === "manual"
+                          ? "bg-white text-[#0a0a0a] shadow-xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                      title="Modo Sob Comando: só toca a faixa ou vinheta que você clicar"
+                    >
+                      🎛️ Sob Comando ("Só toca o que eu quiser")
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-[#71717a]">
+                  {playbackMode === "manual" ? (
+                    <span className="font-semibold text-amber-700">Modo Manual: a faixa para ao terminar e aguarda seu comando.</span>
+                  ) : (
+                    <span>Modo Automático: playlist contínua em rotação.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Letreiro de Notícias de Varejo e Economia no Estúdio */}
+              <div className="mt-2.5">
+                <NewsTicker variant="compact" />
+              </div>
+            </div>
+
             <div className="flex items-center gap-1 border-b border-[#e4e4e7] bg-white px-6 text-xs overflow-x-auto">
               <button
                 type="button"
