@@ -100,12 +100,12 @@ export async function findRadioPlaylistRaw(companyId?: string | null): Promise<s
   return latest?.body ?? null;
 }
 
-/** Salva a playlist personalizada da Rádio Tarhget. */
+/** Salva a playlist personalizada da Rádio Tárguet. */
 export async function saveRadioPlaylistRaw(companyId: string | null, body: string): Promise<void> {
   if (companyId) {
     await prisma.messageTemplate.upsert({
       where: { companyId_subjectKey: { companyId, subjectKey: RADIO_PLAYLIST_KEY } },
-      create: { companyId, subject: "Playlist Rádio Tarhget", subjectKey: RADIO_PLAYLIST_KEY, body },
+      create: { companyId, subject: "Playlist Rádio Tárguet", subjectKey: RADIO_PLAYLIST_KEY, body },
       update: { body },
     });
     return;
@@ -114,7 +114,7 @@ export async function saveRadioPlaylistRaw(companyId: string | null, body: strin
   for (const c of companies) {
     await prisma.messageTemplate.upsert({
       where: { companyId_subjectKey: { companyId: c.id, subjectKey: RADIO_PLAYLIST_KEY } },
-      create: { companyId: c.id, subject: "Playlist Rádio Tarhget", subjectKey: RADIO_PLAYLIST_KEY, body },
+      create: { companyId: c.id, subject: "Playlist Rádio Tárguet", subjectKey: RADIO_PLAYLIST_KEY, body },
       update: { body },
     });
   }
@@ -179,7 +179,7 @@ export async function saveRadioSpotsRaw(companyId: string | null, body: string):
   if (companyId) {
     await prisma.messageTemplate.upsert({
       where: { companyId_subjectKey: { companyId, subjectKey: RADIO_SPOTS_LIST_KEY } },
-      create: { companyId, subject: "Spots da Rádio Tarhget", subjectKey: RADIO_SPOTS_LIST_KEY, body },
+      create: { companyId, subject: "Spots da Rádio Tárguet", subjectKey: RADIO_SPOTS_LIST_KEY, body },
       update: { body },
     });
     return;
@@ -188,7 +188,7 @@ export async function saveRadioSpotsRaw(companyId: string | null, body: string):
   for (const c of companies) {
     await prisma.messageTemplate.upsert({
       where: { companyId_subjectKey: { companyId: c.id, subjectKey: RADIO_SPOTS_LIST_KEY } },
-      create: { companyId: c.id, subject: "Spots da Rádio Tarhget", subjectKey: RADIO_SPOTS_LIST_KEY, body },
+      create: { companyId: c.id, subject: "Spots da Rádio Tárguet", subjectKey: RADIO_SPOTS_LIST_KEY, body },
       update: { body },
     });
   }

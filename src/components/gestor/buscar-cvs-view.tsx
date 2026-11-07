@@ -901,6 +901,14 @@ export function BuscarCvsView({
                         </div>
                         <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-[#71717a]">
                           <span className="truncate">{item.desiredRole || item.aiProfile || item.job.title}</span>
+                          {item.allJobs && item.allJobs.length > 1 && (
+                            <span
+                              className="rounded bg-[#f4f4f5] px-1 py-0.2 text-[9px] font-semibold text-[#52525b] shrink-0"
+                              title={`Também em: ${item.allJobs.filter((j) => j !== item.job.title).join(", ")}`}
+                            >
+                              +{item.allJobs.length - 1}
+                            </span>
+                          )}
                           {(item.neighborhood || item.city) && (
                             <>
                               <span>•</span>
@@ -1095,9 +1103,17 @@ export function BuscarCvsView({
                               </span>
                             ) : null}
                             <span>•</span>
-                            <span className="flex items-center gap-1">
+                            <span
+                              className="flex items-center gap-1"
+                              title={item.allJobs && item.allJobs.length > 1 ? `Candidaturas unificadas nesta pessoa: ${item.allJobs.join(" • ")}` : undefined}
+                            >
                               <Briefcase className="size-3 text-[#a1a1aa]" />
-                              {item.job.title}
+                              <span>{item.job.title}</span>
+                              {item.allJobs && item.allJobs.length > 1 && (
+                                <span className="rounded bg-[#f4f4f5] px-1.5 py-0.5 text-[10px] font-semibold text-[#52525b]">
+                                  +{item.allJobs.length - 1} {item.allJobs.length === 2 ? "outra vaga" : "outras vagas"}
+                                </span>
+                              )}
                             </span>
                           </div>
 

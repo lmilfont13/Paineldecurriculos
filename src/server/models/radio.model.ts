@@ -106,25 +106,25 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
   {
     id: "music-1-6",
     title: "Deep Progressive Session I",
-    artist: "Rádio Tarhget Selection",
+    artist: "Rádio Tárguet Selection",
     audioUrl: "/audio/music/Music 1 (6).mp3",
   },
   {
     id: "music-1-7",
     title: "Deep Progressive Session II",
-    artist: "Rádio Tarhget Selection",
+    artist: "Rádio Tárguet Selection",
     audioUrl: "/audio/music/Music 1 (7).mp3",
   },
   {
     id: "music-1-8",
     title: "Deep Progressive Session III",
-    artist: "Rádio Tarhget Selection",
+    artist: "Rádio Tárguet Selection",
     audioUrl: "/audio/music/Music 1 (8).mp3",
   },
   {
     id: "track-1",
     title: "Days Like These",
-    artist: "Tarhget Chill Beats",
+    artist: "Tárguet Chill Beats",
     audioUrl: "/audio/music/target-track-1.mp3",
   },
   {
@@ -136,7 +136,7 @@ export const DEFAULT_MUSIC_CATALOG: RadioTrack[] = [
   {
     id: "track-3",
     title: "Summer Sunset",
-    artist: "Tarhget Acoustic Vibe",
+    artist: "Tárguet Acoustic Vibe",
     audioUrl: "/audio/music/target-track-3.mp3",
   },
 ];
@@ -146,7 +146,7 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = DEFAULT_MUSIC_CATALOG;
 export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   {
     id: "spot-raio-1",
-    title: "Rádio Tarhget FM — Abertura Oficial",
+    title: "Rádio Tárguet FM — Abertura Oficial",
     subtitle: "Transição FM · Voz Francisca HD Animada + Trilha",
     audioUrl: "/audio/spots/target-spot-raio-1.mp3?v=3",
     durationSeconds: 10,
@@ -154,7 +154,7 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   },
   {
     id: "spot-raio-2",
-    title: "Tarhget no Ar — Sintonia de Talentos",
+    title: "Tárguet no Ar — Sintonia de Talentos",
     subtitle: "Transição FM · Voz Antônio FM Dinâmica + Trilha",
     audioUrl: "/audio/spots/target-spot-raio-2.mp3?v=3",
     durationSeconds: 9,
@@ -186,7 +186,7 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   },
   {
     id: "spot-conecta",
-    title: "Tarhget Conecta — Grandes Empresas",
+    title: "Tárguet Conecta — Grandes Empresas",
     subtitle: "Transição FM · Voz Antônio FM Dinâmica + Trilha",
     audioUrl: "/audio/spots/target-spot-conecta.mp3?v=3",
     durationSeconds: 9,
@@ -205,7 +205,7 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
 export const CURATED_STATIONS: RadioStation[] = [
   {
     id: "target-exclusive",
-    name: "Rádio Tarhget",
+    name: "Rádio Tárguet",
     genre: "Músicas Selecionadas + Spots IA",
     url: "playlist:target",
   },

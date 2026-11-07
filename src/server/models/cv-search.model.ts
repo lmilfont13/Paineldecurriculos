@@ -46,6 +46,9 @@ export type CandidateCvCard = {
   hasImpediment?: boolean;
   impedimentReason?: string | null;
   impedimentAt?: string | null;
+  candidateId?: string | null;
+  cpf?: string | null;
+  allJobs?: string[];
 };
 
 export type CvSearchFilters = {
@@ -702,8 +705,34 @@ export function sortCandidates(
   });
 }
 
+function cleanDigits(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.replace(/\D/g, "");
+}
+
+function cleanEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const e = email.trim().toLowerCase();
+  if (!e.includes("@")) return null;
+  if (e.includes("conta-excluida") || e.includes("anonymized") || e.includes("deleted-user")) return null;
+  return e;
+}
+
+function cleanName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const n = normalizeText(name);
+  const parts = n.split(" ").filter((p) => p.length >= 2);
+  if (parts.length >= 2 && n.length >= 5) {
+    return n;
+  }
+  return null;
+}
+
 /** Fica com a candidatura de maior nota (sem nota perde); empate: a mais recente. */
 function betterApplication(a: CandidateCvCard, b: CandidateCvCard): CandidateCvCard {
+  if (Boolean(a.resumeUrl) !== Boolean(b.resumeUrl)) {
+    return a.resumeUrl ? a : b;
+  }
   const sa = a.aiScore ?? -1;
   const sb = b.aiScore ?? -1;
   if (sa !== sb) return sa > sb ? a : b;
@@ -711,16 +740,125 @@ function betterApplication(a: CandidateCvCard, b: CandidateCvCard): CandidateCvC
 }
 
 /**
- * Uma entrada por pessoa: quem se candidatou a várias vagas aparece uma vez só
- * (identificada pelo e-mail). Conta excluída (e-mail sem "@") nunca é juntada.
+ * Uma entrada por pessoa na busca de currículos (Base Aberta de Talentos):
+ * Quem se candidatou a várias vagas ou possui múltiplos registros aparece uma vez só.
+ * Identifica a mesma pessoa de forma inteligente via:
+ * 1. candidateId (conta de usuário logado)
+ * 2. CPF (dígitos limpos)
+ * 3. E-mail (normalizado)
+ * 4. Telefone (DDD + dígitos)
+ * 5. Arquivo de currículo (resumeUrl)
+ * 6. Nome completo idêntico (normalizado com >= 2 palavras)
+ *
+ * Mescla os dados mais completos e mantém a melhor candidatura como referência.
  */
 export function dedupeCandidatesByPerson(candidates: CandidateCvCard[]): CandidateCvCard[] {
-  const byPerson = new Map<string, CandidateCvCard>();
-  for (const c of candidates) {
-    const email = c.email.trim().toLowerCase();
-    const key = email.includes("@") ? email : `id:${c.id}`;
-    const current = byPerson.get(key);
-    byPerson.set(key, current ? betterApplication(current, c) : c);
+  const n = candidates.length;
+  if (n <= 1) return candidates;
+
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(i: number): number {
+    if (parent[i] === i) return i;
+    parent[i] = find(parent[i]);
+    return parent[i];
   }
-  return [...byPerson.values()];
+  function union(i: number, j: number) {
+    const rootI = find(i);
+    const rootJ = find(j);
+    if (rootI !== rootJ) parent[rootI] = rootJ;
+  }
+
+  const keyToIdx = new Map<string, number>();
+
+  for (let i = 0; i < n; i++) {
+    const c = candidates[i];
+    const keys: string[] = [];
+
+    if (c.candidateId && typeof c.candidateId === "string" && c.candidateId.trim()) {
+      keys.push(`cand:${c.candidateId.trim()}`);
+    }
+    const cpfDigits = cleanDigits(c.cpf);
+    if (cpfDigits.length >= 11) {
+      keys.push(`cpf:${cpfDigits}`);
+    }
+    const email = cleanEmail(c.email);
+    if (email) {
+      keys.push(`email:${email}`);
+    }
+    const phoneDigits = cleanDigits(c.phone);
+    if (phoneDigits.length >= 10) {
+      keys.push(`phone:${phoneDigits.slice(-10)}`);
+    }
+    if (c.resumeUrl && typeof c.resumeUrl === "string" && c.resumeUrl.trim()) {
+      keys.push(`resume:${c.resumeUrl.trim().toLowerCase()}`);
+    }
+    const name = cleanName(c.name);
+    if (name) {
+      keys.push(`name:${name}`);
+    }
+
+    if (keys.length === 0) {
+      keys.push(`id:${c.id}`);
+    }
+
+    for (const k of keys) {
+      const existing = keyToIdx.get(k);
+      if (existing !== undefined) {
+        union(i, existing);
+      } else {
+        keyToIdx.set(k, i);
+      }
+    }
+  }
+
+  const groups = new Map<number, CandidateCvCard[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(candidates[i]);
+  }
+
+  const result: CandidateCvCard[] = [];
+  for (const group of groups.values()) {
+    let best = group[0];
+    for (let j = 1; j < group.length; j++) {
+      best = betterApplication(best, group[j]);
+    }
+
+    const allJobs = Array.from(new Set(group.map((g) => g.job.title).filter(Boolean)));
+
+    let merged: CandidateCvCard = {
+      ...best,
+      allJobs,
+    };
+
+    for (const item of group) {
+      if (item === best) continue;
+      merged = {
+        ...merged,
+        photoUrl: merged.photoUrl || item.photoUrl,
+        resumeUrl: merged.resumeUrl || item.resumeUrl,
+        resumeText: merged.resumeText || item.resumeText,
+        phone: merged.phone || item.phone,
+        birthDate: merged.birthDate || item.birthDate,
+        age: merged.age ?? item.age,
+        city: merged.city || item.city,
+        neighborhood: merged.neighborhood || item.neighborhood,
+        hasImpediment: merged.hasImpediment || item.hasImpediment,
+        impedimentReason: merged.impedimentReason || item.impedimentReason,
+        education: merged.education || item.education,
+        languages: merged.languages || item.languages,
+        salaryExpectation: merged.salaryExpectation || item.salaryExpectation,
+        desiredRole: merged.desiredRole || item.desiredRole,
+        workPreference: merged.workPreference || item.workPreference,
+        availability: merged.availability || item.availability,
+        hasCnh: merged.hasCnh || item.hasCnh,
+        isPcd: merged.isPcd || item.isPcd,
+        pcdDetails: merged.pcdDetails || item.pcdDetails,
+      };
+    }
+    result.push(merged);
+  }
+
+  return result;
 }

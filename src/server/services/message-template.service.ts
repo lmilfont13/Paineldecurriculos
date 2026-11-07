@@ -138,7 +138,7 @@ export function parseTrackFromFilename(fileName: string): RadioTrack {
     .trim();
 
   const parts = base.split(/\s+-\s+/);
-  const artist = parts.length > 1 ? parts[0].trim() : "Rádio Tarhget";
+  const artist = parts.length > 1 ? parts[0].trim() : "Rádio Tárguet";
   const title = parts.length > 1 ? parts.slice(1).join(" - ").trim() : base;
   const id = `file-${fileName
     .toLowerCase()
@@ -150,7 +150,7 @@ export function parseTrackFromFilename(fileName: string): RadioTrack {
   return {
     id,
     title: title.slice(0, 80) || fileName,
-    artist: artist.slice(0, 80) || "Rádio Tarhget",
+    artist: artist.slice(0, 80) || "Rádio Tárguet",
     audioUrl,
   };
 }
@@ -180,7 +180,7 @@ export async function getMusicCatalog(): Promise<RadioTrack[]> {
   }
 }
 
-/** Lê a playlist da Rádio Tarhget configurada para a empresa ou catálogo completo. */
+/** Lê a playlist da Rádio Tárguet configurada para a empresa ou catálogo completo. */
 export async function getActiveRadioPlaylist(
   companyId?: string | null
 ): Promise<RadioTrack[]> {
@@ -193,7 +193,7 @@ export async function getActiveRadioPlaylist(
       const savedTracks: RadioTrack[] = parsed.map((item) => ({
         id: String(item.id || item.audioUrl),
         title: String(item.title || "Música").slice(0, 80),
-        artist: String(item.artist || "Rádio Tarhget").slice(0, 80),
+        artist: String(item.artist || "Rádio Tárguet").slice(0, 80),
         audioUrl: String(item.audioUrl),
       }));
       // Se a fila salva tinha apenas as 10 músicas antigas padrão, anexa automaticamente as novas faixas da pasta
@@ -212,7 +212,7 @@ export async function getActiveRadioPlaylist(
   }
 }
 
-/** Salva a playlist da Rádio Tarhget configurada pelo gestor. */
+/** Salva a playlist da Rádio Tárguet configurada pelo gestor. */
 export async function setActiveRadioPlaylist(
   companyId: string | null,
   tracks: RadioTrack[]
@@ -223,7 +223,7 @@ export async function setActiveRadioPlaylist(
   const clean: RadioTrack[] = tracks.map((t) => ({
     id: String(t.id || t.audioUrl).slice(0, 120),
     title: String(t.title || "Música").trim().slice(0, 80),
-    artist: String(t.artist || "Rádio Tarhget").trim().slice(0, 80),
+    artist: String(t.artist || "Rádio Tárguet").trim().slice(0, 80),
     audioUrl: String(t.audioUrl).trim().slice(0, 500),
   }));
   await saveRadioPlaylistRaw(companyId, JSON.stringify(clean));
@@ -290,7 +290,13 @@ export async function getActiveRadioSpots(
           };
         })
         // Remove qualquer vinheta customizada cujo base64 tenha sido truncado no passado (< 600 chars)
-        .filter((s) => !s.audioUrl.startsWith("data:audio/") || s.audioUrl.length > 1000);
+        // e expurga vinhetas de teste legadas ("ola" ou vazias)
+        .filter((s) => {
+          const t = s.title.trim().toLowerCase();
+          if (t === "ola" || t === "olá" || s.id === "ola" || s.id === "olá") return false;
+          if (s.audioUrl.startsWith("data:audio/") && s.audioUrl.length <= 1000) return false;
+          return true;
+        });
     }
     return TARGET_RADIO_SPOTS;
   } catch {

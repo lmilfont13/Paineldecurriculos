@@ -309,7 +309,7 @@ export function CandidateRadioPlayer({
       } else if (payload.audioUrl) {
         playSpot({
           id: payload.spotId || "spot-live",
-          title: payload.title || "Rádio Tarhget no Ar",
+          title: payload.title || "Rádio Tárguet no Ar",
           subtitle: payload.subtitle || "Vinheta Oficial",
           audioUrl: payload.audioUrl,
         });
@@ -322,14 +322,14 @@ export function CandidateRadioPlayer({
     (payload?: { trackIndex?: number; track?: RadioTrack }) => {
       if (!payload) return;
 
-      // Sincroniza modo Rádio Tarhget imediatamente
+      // Sincroniza modo Rádio Tárguet imediatamente
       setCurrentStation((prev) => (prev.url === "playlist:target" ? prev : CURATED_STATIONS[0]));
 
       if (typeof payload.trackIndex === "number") {
         setTrackIndex(payload.trackIndex);
       }
       if (payload.track?.title) {
-        setLiveBroadcastNote(`🎵 No Ar: ${payload.track.title} • ${payload.track.artist || "Rádio Tarhget"}`);
+        setLiveBroadcastNote(`🎵 No Ar: ${payload.track.title} • ${payload.track.artist || "Rádio Tárguet"}`);
         setTimeout(() => setLiveBroadcastNote(null), 4000);
       }
 
@@ -474,7 +474,7 @@ export function CandidateRadioPlayer({
         isTargetedToMe
           ? `🌟 Mensagem Especial no Ar para você: "${payload.message}"`
           : payload.targetCandidateName
-            ? `🎙️ Alô no Ar da Rádio Tarhget para ${payload.targetCandidateName}: "${payload.message}"`
+            ? `🎙️ Alô no Ar da Rádio Tárguet para ${payload.targetCandidateName}: "${payload.message}"`
             : `🎙️ Recado Geral da Rádio: "${payload.message}"`
       );
       setTimeout(() => setLiveAnnouncement(null), 16000);
@@ -521,7 +521,7 @@ export function CandidateRadioPlayer({
     [candidateName, finishSpot, muted, shouldProcessAudioEvent, volume]
   );
 
-  // Escuta transmissões ao vivo da Rádio Tarhget via BroadcastChannel (local) e Supabase Realtime (remoto)
+  // Escuta transmissões ao vivo da Rádio Tárguet via BroadcastChannel (local) e Supabase Realtime (remoto)
   useEffect(() => {
     // 1. Canal local BroadcastChannel: sincronização instantânea sem atraso entre abas abertas
     let bc: BroadcastChannel | null = null;

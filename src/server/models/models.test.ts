@@ -444,7 +444,7 @@ describe("entrevista", () => {
   });
 });
 
-describe("tons da marca Tarhget", () => {
+describe("tons da marca Tárguet", () => {
   it("mistura cores nos extremos e no meio", () => {
     expect(mixHex("#811201", "#000000", 0)).toBe("#811201");
     expect(mixHex("#811201", "#000000", 1)).toBe("#000000");
@@ -473,9 +473,9 @@ describe("tons da marca Tarhget", () => {
 
   it("a página de carreiras exige nome, título e cor válida", () => {
     const base = {
-      name: "Tarhget",
+      name: "Tárguet",
       heroTitle: "Trabalhe com a gente",
-      heroSubtitle: "Vagas abertas da Tarhget.",
+      heroSubtitle: "Vagas abertas da Tárguet.",
       aboutText: "",
       primaryColor: "#811201",
     };

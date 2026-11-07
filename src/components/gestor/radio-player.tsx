@@ -119,10 +119,10 @@ export function GestorRadioPlayer({
   const localChannelRef = useRef<BroadcastChannel | null>(null);
   const realtimeChannelsRef = useRef<any[]>([]);
 
-  // Normaliza o nome oficial da Rádio Tarhget
+  // Normaliza o nome oficial da Rádio Tárguet
   const normalizeStation = useCallback((st: RadioStation): RadioStation => {
     if (st.url === "playlist:target") {
-      return { ...st, name: "Rádio Tarhget", genre: "Músicas Selecionadas + Spots IA" };
+      return { ...st, name: "Rádio Tárguet", genre: "Músicas Selecionadas + Spots IA" };
     }
     return st;
   }, []);
@@ -139,7 +139,7 @@ export function GestorRadioPlayer({
   const [current, setCurrent] = useState<RadioStation>(defaultStation);
   const isPlaylistMode = current.url === "playlist:target";
 
-  // Fila de reprodução da Rádio Tarhget
+  // Fila de reprodução da Rádio Tárguet
   const [playlistTracks, setPlaylistTracks] = useState<RadioTrack[]>(DEFAULT_MUSIC_CATALOG);
   const [trackIndex, setTrackIndex] = useState(0);
   const currentTrack: RadioTrack =
@@ -199,7 +199,7 @@ export function GestorRadioPlayer({
   // Estúdio de Alô no Ar & Recados aos Candidatos Online
   const [selectedCandidate, setSelectedCandidate] = useState<string>("all");
   const [shoutoutMessage, setShoutoutMessage] = useState<string>(
-    "Olá! A equipe da Tarhget viu que você está por aqui. Seja muito bem-vindo ao nosso portal e tenha um excelente dia!"
+    "Olá! A equipe da Tárguet viu que você está por aqui. Seja muito bem-vindo ao nosso portal e tenha um excelente dia!"
   );
   const [shoutoutVoice, setShoutoutVoice] = useState<string>("pt-BR-FranciscaNeural");
   const [sendingShoutout, setSendingShoutout] = useState(false);
@@ -1037,7 +1037,7 @@ export function GestorRadioPlayer({
     setGeneratingSpot(true);
     try {
       const res = await generateRadioSpotAction({
-        title: newSpotTitle.trim() || "Nova Vinheta Tarhget",
+        title: newSpotTitle.trim() || "Nova Vinheta Tárguet",
         script: newSpotScript.trim(),
         voice: newSpotVoice,
         sfxPreset: newSpotSfx,
@@ -1502,7 +1502,7 @@ export function GestorRadioPlayer({
     const newTrack: RadioTrack = {
       id: `custom-${Date.now()}`,
       title: customTitle.trim(),
-      artist: customArtist.trim() || "Rádio Tarhget",
+      artist: customArtist.trim() || "Rádio Tárguet",
       audioUrl: customUrl.trim(),
     };
     addTrackToQueue(newTrack);
@@ -1666,7 +1666,7 @@ export function GestorRadioPlayer({
               style={playing ? { color: "var(--brand-primary, #1c1917)" } : undefined}
             />
             <span className="truncate text-[11px] font-semibold text-[#0a0a0a]">
-              {isPlaylistMode ? "Rádio Tarhget" : current.name}
+              {isPlaylistMode ? "Rádio Tárguet" : current.name}
             </span>
             <span
               className={`ml-1 rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
@@ -1689,7 +1689,7 @@ export function GestorRadioPlayer({
                     ? `${currentTrack?.title} • ${currentTrack?.artist}${spotIntervalMinutes > 0 ? ` • Spot em ${formatTimer(nextSpotSeconds)}` : ""}`
                     : `Ao vivo • ${current.genre}${spotIntervalMinutes > 0 ? ` • Spot em ${formatTimer(nextSpotSeconds)}` : ""}`
                   : isPlaylistMode
-                    ? `${playlistTracks.length} faixas • Rádio Tarhget${spotIntervalMinutes > 0 ? ` • A cada ${spotIntervalMinutes}m` : ""}`
+                    ? `${playlistTracks.length} faixas • Rádio Tárguet${spotIntervalMinutes > 0 ? ` • A cada ${spotIntervalMinutes}m` : ""}`
                     : current.genre}
           </p>
         </div>
@@ -1976,7 +1976,7 @@ export function GestorRadioPlayer({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white rounded-xl border border-stone-200 p-4 shadow-xs">
                       <div>
                         <h3 className="text-sm font-bold text-stone-900">
-                          Fila de Reprodução da Rádio Tarhget
+                          Fila de Reprodução da Rádio Tárguet
                         </h3>
                         <p className="text-xs text-stone-500">
                           Ordem das faixas que tocam automaticamente no ar para os candidatos
@@ -2186,7 +2186,7 @@ export function GestorRadioPlayer({
                       </form>
                     </div>
 
-                    {/* Catálogo Curado de Músicas Tarhget */}
+                    {/* Catálogo Curado de Músicas Tárguet */}
                     <div className="bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs flex-1 flex flex-col">
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <h4 className="text-xs font-bold text-[#0a0a0a] flex items-center gap-1.5">
@@ -2502,7 +2502,7 @@ export function GestorRadioPlayer({
                             setCustomCandidateInput("");
                             setSelectedCandidate("all");
                             setShoutoutMessage(
-                              "Atenção a todos os candidatos conectados na rádio Tarhget! Nossa equipe de RH deseja um dia excelente e muito sucesso na sua trajetória profissional. Voltem sempre ao nosso portal!"
+                              "Atenção a todos os candidatos conectados na rádio Tárguet! Nossa equipe de RH deseja um dia excelente e muito sucesso na sua trajetória profissional. Voltem sempre ao nosso portal!"
                             );
                           }}
                           className={`flex items-center justify-between p-3 cursor-pointer transition ${
@@ -2593,7 +2593,7 @@ export function GestorRadioPlayer({
                                   setSelectedCandidate(name);
                                   setCustomCandidateInput(cand.name || "");
                                   setShoutoutMessage(
-                                    `Olá ${name}! A equipe da Tarhget viu que você está por aqui. Seja muito bem-vinda ao nosso portal e conte conosco para o seu crescimento profissional!`
+                                    `Olá ${name}! A equipe da Tárguet viu que você está por aqui. Seja muito bem-vinda ao nosso portal e conte conosco para o seu crescimento profissional!`
                                   );
                                 }}
                                 className={`flex items-center justify-between p-3 cursor-pointer transition ${
@@ -2669,7 +2669,7 @@ export function GestorRadioPlayer({
                             onClick={() => {
                               const target = customCandidateInput.trim() || (selectedCandidate === "all" ? "amigos" : selectedCandidate);
                               setShoutoutMessage(
-                                `Passando no ar da rádio Tarhget para desejar um dia espetacular e muito produtivo para ${target}! Curta a seleção musical e foque no seu futuro!`
+                                `Passando no ar da rádio Tárguet para desejar um dia espetacular e muito produtivo para ${target}! Curta a seleção musical e foque no seu futuro!`
                               );
                             }}
                             className="text-left rounded-lg border border-[#e4e4e7] bg-white p-2.5 text-[11px] font-medium text-[#52525b] hover:border-[#0a0a0a] hover:bg-[#fafaf9] transition"

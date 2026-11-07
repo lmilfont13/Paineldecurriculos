@@ -229,14 +229,14 @@ export async function getMusicCatalogAction(): Promise<RadioTrack[]> {
   return getMusicCatalog();
 }
 
-/** Lê a playlist / fila ativa da Rádio Tarhget. */
+/** Lê a playlist / fila ativa da Rádio Tárguet. */
 export async function getRadioPlaylistAction(): Promise<RadioTrack[]> {
   const user = await getSessionUser();
   const companyId = user && !isAdmin(user) ? user.companyId : null;
   return getActiveRadioPlaylist(companyId);
 }
 
-/** Salva a playlist / fila personalizada da Rádio Tarhget. */
+/** Salva a playlist / fila personalizada da Rádio Tárguet. */
 export async function saveRadioPlaylistAction(tracks: RadioTrack[]): Promise<{ ok: boolean }> {
   const user = await getSessionUser();
   if (!user) return { ok: false };
@@ -299,6 +299,18 @@ export async function saveRadioSpotsAction(spots: RadioSpot[]): Promise<{ ok: bo
     return res;
   }
   return { ok: false };
+}
+
+/** Exclui permanentemente uma vinheta para a empresa/gestor ativo. */
+export async function deleteRadioSpotAction(spotId: string): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false };
+  const companyId = !isAdmin(user) ? user.companyId : null;
+  const current = await getActiveRadioSpots(companyId);
+  const remaining = current.filter((s) => s.id !== spotId);
+  const res = await setActiveRadioSpots(companyId, remaining);
+  revalidatePath("/", "layout");
+  return res;
 }
 
 /** Gera uma nova vinheta de rádio personalizada com IA (Nível Michelin). */

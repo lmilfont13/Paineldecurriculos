@@ -1,6 +1,6 @@
 /**
  * Modelo e curadoria de notícias do mercado de varejo e principais notícias do dia
- * para o letreiro digital (News Ticker) da Rádio Tarhget e Portal do Candidato.
+ * para o letreiro digital (News Ticker) da Rádio Tárguet e Portal do Candidato.
  */
 
 export type NewsTickerCategory = "VAREJO" | "ECONOMIA" | "MERCADO" | "EMPREGOS";

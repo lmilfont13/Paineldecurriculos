@@ -29,6 +29,7 @@ import {
   extractAgeFromText,
   extractNeighborhoodFromText,
   extractCandidateSkills,
+  dedupeCandidatesByPerson,
   type CandidateCvCard,
 } from "@/server/models/cv-search.model";
 import { withPhotoUrls } from "@/server/services/resume-photo.service";
@@ -156,6 +157,8 @@ export async function getBuscarCvsData() {
 
     return {
       id: app.id,
+      candidateId: app.candidateId ?? null,
+      cpf: app.cpf ?? null,
       name: titleCasePt(app.name),
       email: app.email,
       phone: app.phone,
@@ -200,7 +203,7 @@ export async function getBuscarCvsData() {
     };
   });
 
-  return { candidates, jobs: await listCompanyJobs(user.companyId) };
+  return { candidates: dedupeCandidatesByPerson(candidates), jobs: await listCompanyJobs(user.companyId) };
 }
 
 /** Hub da vaga: o processo inteiro em um lugar (funil, sinais, critérios). */

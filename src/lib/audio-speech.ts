@@ -1,5 +1,5 @@
 /**
- * Utilitário de Síntese de Fala de Alta Fidelidade para a Rádio Tarhget
+ * Utilitário de Síntese de Fala de Alta Fidelidade para a Rádio Tárguet
  * Permite reproduzir a locução ao vivo diretamente no navegador com controle
  * de tom (grave FM / comercial), velocidade, pronúncia fonética e seleção de vozes pt-BR.
  */
