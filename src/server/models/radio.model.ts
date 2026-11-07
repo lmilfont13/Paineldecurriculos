@@ -23,7 +23,7 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
   {
     id: "track-1",
     title: "Days Like These",
-    artist: "Target Chill Beats",
+    artist: "Tarhget Chill Beats",
     audioUrl: "/audio/music/target-track-1.mp3",
   },
   {
@@ -35,7 +35,7 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
   {
     id: "track-3",
     title: "Summer Sunset",
-    artist: "Target Acoustic Vibe",
+    artist: "Tarhget Acoustic Vibe",
     audioUrl: "/audio/music/target-track-3.mp3",
   },
 ];
@@ -43,13 +43,13 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = [
 export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   {
     id: "spot-1-boas-vindas",
-    title: "Target Conecta",
+    title: "Tarhget Conecta",
     subtitle: "Boas-vindas & Inspiração",
     audioUrl: "/audio/spots/target-spot-1.mp3",
   },
   {
     id: "spot-2-dica-curriculo",
-    title: "Dica Target",
+    title: "Dica Tarhget",
     subtitle: "Destaque seu perfil na triagem",
     audioUrl: "/audio/spots/target-spot-2.mp3",
   },
@@ -64,7 +64,7 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
 export const CURATED_STATIONS: RadioStation[] = [
   {
     id: "target-exclusive",
-    name: "Rádio Target (Playlist Oficial)",
+    name: "Rádio Tarhget",
     genre: "Músicas Selecionadas + Spots IA",
     url: "playlist:target",
   },

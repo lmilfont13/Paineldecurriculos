@@ -409,14 +409,14 @@ export function GestorRadioPlayer({
               ))}
             </select>
 
-            {/* Atalho com 1 clique para ativar ou voltar para a Rádio Target Oficial */}
+            {/* Atalho com 1 clique para ativar ou voltar para a Rádio Tarhget */}
             {current.url !== "playlist:target" && (
               <button
                 type="button"
                 onClick={() => selectStationAsAdmin(CURATED_STATIONS[0])}
                 className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-800 bg-stone-900 px-2 py-1 text-[10px] font-bold text-white shadow-xs transition hover:bg-black active:scale-98"
               >
-                <span>Usar Rádio Target (Playlist Oficial)</span>
+                <span>Usar Rádio Tarhget</span>
               </button>
             )}
           </div>
