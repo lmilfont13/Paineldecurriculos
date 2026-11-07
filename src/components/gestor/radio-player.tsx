@@ -73,6 +73,29 @@ interface RadioBrowserResult {
 }
 
 const STORAGE_KEY_VOLUME = "triagem:radio:volume";
+const STORAGE_KEY_DELETED_SPOTS = "triagem:radio:deleted_spots";
+const STORAGE_KEY_SPOTS_CACHE = "triagem:radio:spots_cache";
+
+function readDeletedSpotIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DELETED_SPOTS);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr.map(String)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDeletedSpotIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY_DELETED_SPOTS, JSON.stringify(Array.from(ids)));
+  } catch {
+    // Ignora erro de storage
+  }
+}
 
 function formatTimer(totalSecs: number): string {
   const m = Math.floor(Math.max(0, totalSecs) / 60);
@@ -129,19 +152,23 @@ export function GestorRadioPlayer({
   const [crossfadeEnabled, setCrossfadeEnabled] = useState(true);
 
   // Spots / Vinhetas gerenciadas
-  const [spotsList, setSpotsList] = useState<RadioSpot[]>(TARGET_RADIO_SPOTS);
+  const [spotsList, setSpotsList] = useState<RadioSpot[]>(() => {
+    const deleted = readDeletedSpotIds();
+    return TARGET_RADIO_SPOTS.filter((s) => !deleted.has(s.id));
+  });
   const [previewingSpotId, setPreviewingSpotId] = useState<string | null>(null);
   const [liveBroadcastSpot, setLiveBroadcastSpot] = useState<RadioSpot | null>(null);
   const [savingSpots, setSavingSpots] = useState(false);
   const [savedSpots, setSavedSpots] = useState(false);
   const [previewingShoutout, setPreviewingShoutout] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const needsTransitionOutroRef = useRef<boolean>(false);
 
-  // Modal de Criação de Vinheta com IA Michelin
+  // Modal de Criação de Vinheta com IA
   const [showNewSpotModal, setShowNewSpotModal] = useState(false);
   const [newSpotTitle, setNewSpotTitle] = useState("");
   const [newSpotScript, setNewSpotScript] = useState("");
-  const [newSpotVoice, setNewSpotVoice] = useState("pt-BR-AntonioNeural");
+  const [newSpotVoice, setNewSpotVoice] = useState("pt-BR-FranciscaNeural");
   const [newSpotSfx, setNewSpotSfx] = useState("raio-trovao");
   const [generatingSpot, setGeneratingSpot] = useState(false);
 
@@ -160,7 +187,7 @@ export function GestorRadioPlayer({
   const [shoutoutMessage, setShoutoutMessage] = useState<string>(
     "Olá! A equipe da Tarhget viu que você está por aqui. Seja muito bem-vindo ao nosso portal e tenha um excelente dia!"
   );
-  const [shoutoutVoice, setShoutoutVoice] = useState<string>("pt-BR-AntonioNeural");
+  const [shoutoutVoice, setShoutoutVoice] = useState<string>("pt-BR-FranciscaNeural");
   const [sendingShoutout, setSendingShoutout] = useState(false);
   const [sentShoutout, setSentShoutout] = useState(false);
 
@@ -442,8 +469,13 @@ export function GestorRadioPlayer({
         if (catalog && catalog.length > 0) {
           setMusicCatalog(catalog);
         }
-        if (savedSpots && savedSpots.length > 0) {
-          setSpotsList(savedSpots);
+        if (Array.isArray(savedSpots)) {
+          const deleted = readDeletedSpotIds();
+          const filtered = savedSpots.filter((s) => !deleted.has(s.id));
+          setSpotsList(filtered);
+          if (filtered.length !== savedSpots.length) {
+            void saveRadioSpotsAction(filtered);
+          }
         }
         if (typeof savedInterval === "number") {
           setSpotIntervalMinutes(savedInterval);
@@ -702,35 +734,87 @@ export function GestorRadioPlayer({
     }
   };
 
-  // Pré-visualizar vinheta no fone local
+  // Toca efeito de transição de rádio FM (entrada ou saída)
+  const playFmTransitionSfx = useCallback(
+    (direction: "in" | "out") => {
+      const sfx = sfxAudioRef.current;
+      if (!sfx || muted) return;
+      sfx.src =
+        direction === "in"
+          ? "/audio/sfx/sfx-fm-transition-in.mp3"
+          : "/audio/sfx/sfx-fm-transition-out.mp3";
+      sfx.volume = Math.min(1, volume * 0.9);
+      sfx.play().catch(() => {});
+    },
+    [muted, volume]
+  );
+
+  // Pré-visualizar vinheta no fone local (com transição de rádio se for vinheta sem SFX embutido)
   const toggleSpotPreview = (spot: RadioSpot) => {
     const audio = spotAudioRef.current;
     if (!audio) return;
     if (previewingSpotId === spot.id) {
       audio.pause();
       setPreviewingSpotId(null);
+      needsTransitionOutroRef.current = false;
+      if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
       return;
     }
-    audio.src = spot.audioUrl;
-    audio
-      .play()
-      .then(() => {
-        setPreviewingSpotId(spot.id);
-      })
-      .catch(() => setPreviewingSpotId(null));
+
+    if (audioRef.current) {
+      audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.16);
+    }
+
+    const useTransitionOverlay = !spot.hasEmbeddedSfx;
+    needsTransitionOutroRef.current = useTransitionOverlay;
+
+    if (useTransitionOverlay) {
+      playFmTransitionSfx("in");
+      setPreviewingSpotId(spot.id);
+      setTimeout(() => {
+        if (!spotAudioRef.current) return;
+        spotAudioRef.current.src = spot.audioUrl;
+        spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.2);
+        spotAudioRef.current.play().catch(() => setPreviewingSpotId(null));
+      }, 280);
+    } else {
+      audio.src = spot.audioUrl;
+      audio.volume = muted ? 0 : Math.min(1, volume * 1.2);
+      audio
+        .play()
+        .then(() => {
+          setPreviewingSpotId(spot.id);
+        })
+        .catch(() => setPreviewingSpotId(null));
+    }
   };
 
   // Disparar Vinheta no Ar AO VIVO para os Candidatos
   const broadcastSpotLive = (spot: RadioSpot) => {
     const audio = spotAudioRef.current;
+    const useTransitionOverlay = !spot.hasEmbeddedSfx;
+    needsTransitionOutroRef.current = useTransitionOverlay;
+
     if (audio) {
-      audio.src = spot.audioUrl;
-      audio
-        .play()
-        .then(() => {
-          setLiveBroadcastSpot(spot);
-        })
-        .catch(() => {});
+      if (useTransitionOverlay) {
+        playFmTransitionSfx("in");
+        setLiveBroadcastSpot(spot);
+        setTimeout(() => {
+          if (!spotAudioRef.current) return;
+          spotAudioRef.current.src = spot.audioUrl;
+          spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.2);
+          spotAudioRef.current.play().catch(() => {});
+        }, 280);
+      } else {
+        audio.src = spot.audioUrl;
+        audio.volume = muted ? 0 : Math.min(1, volume * 1.2);
+        audio
+          .play()
+          .then(() => {
+            setLiveBroadcastSpot(spot);
+          })
+          .catch(() => {});
+      }
     }
 
     // 1. Transmissão instantânea local entre abas
@@ -740,6 +824,7 @@ export function GestorRadioPlayer({
       title: spot.title,
       subtitle: spot.subtitle,
       audioUrl: spot.audioUrl,
+      hasEmbeddedSfx: spot.hasEmbeddedSfx,
       timestamp: Date.now(),
     });
 
@@ -753,11 +838,12 @@ export function GestorRadioPlayer({
           title: spot.title,
           subtitle: spot.subtitle,
           audioUrl: spot.audioUrl,
+          hasEmbeddedSfx: spot.hasEmbeddedSfx,
         },
       });
     }
 
-    setBroadcastNotification(`🔴 Vinheta "${spot.title}" transmitida no ar!`);
+    setBroadcastNotification(`Vinheta "${spot.title}" transmitida no ar!`);
     setTimeout(() => setBroadcastNotification(null), 4000);
   };
 
@@ -784,22 +870,60 @@ export function GestorRadioPlayer({
       });
     }
 
-    setBroadcastNotification(`⚡ Efeito sonoro "${sfxLabel}" disparado no ar!`);
+    setBroadcastNotification(`Efeito sonoro "${sfxLabel}" disparado no ar!`);
     setTimeout(() => setBroadcastNotification(null), 3000);
   };
 
-  // Ativar / desativar vinheta na rotação automática
+  // Sincroniza e salva spots no servidor e abas conectadas
+  const persistSpotsList = useCallback(async (nextSpots: RadioSpot[]) => {
+    try {
+      await saveRadioSpotsAction(nextSpots);
+      localChannelRef.current?.postMessage({
+        type: "spots_sync",
+        spots: nextSpots,
+        timestamp: Date.now(),
+      });
+      for (const ch of realtimeChannelsRef.current) {
+        ch.send({
+          type: "broadcast",
+          event: "spots_sync",
+          payload: { spots: nextSpots },
+        });
+      }
+    } catch {
+      // Ignora erro de rede
+    }
+  }, []);
+
+  // Ativar / desativar vinheta na rotação automática (salva imediatamente)
   const toggleSpotEnabled = (spotId: string) => {
-    setSpotsList((prev) =>
-      prev.map((s) =>
+    setSpotsList((prev) => {
+      const next = prev.map((s) =>
         s.id === spotId ? { ...s, enabled: s.enabled === false ? true : false } : s
-      )
-    );
+      );
+      void persistSpotsList(next);
+      return next;
+    });
   };
 
-  // Apagar vinheta da lista
+  // Apagar vinheta da lista permanentemente (nunca retorna)
   const deleteSpot = (spotId: string) => {
-    setSpotsList((prev) => prev.filter((s) => s.id !== spotId));
+    if (previewingSpotId === spotId && spotAudioRef.current) {
+      spotAudioRef.current.pause();
+      setPreviewingSpotId(null);
+    }
+    const deleted = readDeletedSpotIds();
+    deleted.add(spotId);
+    writeDeletedSpotIds(deleted);
+
+    setSpotsList((prev) => {
+      const next = prev.filter((s) => s.id !== spotId);
+      void persistSpotsList(next);
+      return next;
+    });
+
+    setBroadcastNotification("Vinheta excluída permanentemente.");
+    setTimeout(() => setBroadcastNotification(null), 3000);
   };
 
   // Salvar configuração dos spots e sincronizar com ouvintes
@@ -835,8 +959,9 @@ export function GestorRadioPlayer({
 
   // Restaurar spots oficiais padrão
   const restoreDefaultSpots = async () => {
+    writeDeletedSpotIds(new Set());
     setSpotsList(TARGET_RADIO_SPOTS);
-    await saveRadioSpotsAction(TARGET_RADIO_SPOTS);
+    await persistSpotsList(TARGET_RADIO_SPOTS);
     setBroadcastNotification("Vinhetas oficiais padrão restauradas!");
     setTimeout(() => setBroadcastNotification(null), 3500);
   };
@@ -1219,13 +1344,20 @@ export function GestorRadioPlayer({
         ref={spotAudioRef}
         preload="none"
         onEnded={() => {
+          if (needsTransitionOutroRef.current) {
+            needsTransitionOutroRef.current = false;
+            playFmTransitionSfx("out");
+          }
           setPreviewingSpotId(null);
           setPreviewingShoutout(false);
           setPreviewLoading(false);
           setLiveBroadcastSpot(null);
-          if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+          setTimeout(() => {
+            if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+          }, 450);
         }}
         onError={() => {
+          needsTransitionOutroRef.current = false;
           setPreviewingSpotId(null);
           setPreviewingShoutout(false);
           setPreviewLoading(false);
@@ -2231,10 +2363,10 @@ export function GestorRadioPlayer({
                               onChange={(e) => setShoutoutVoice(e.target.value)}
                               className="h-8 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-xs font-semibold text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                             >
-                              <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Voz Grave & Marcante)</option>
-                              <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Calorosa & Acolhedora)</option>
-                              <option value="pt-BR-FranciscaNeural">🎙️ Francisca Comercial (Voz Dinâmica & Fluida)</option>
-                              <option value="pt-BR-FabioNeural">🎙️ Fábio Jovem (Voz Amigável & Descontraída)</option>
+                              <option value="pt-BR-FranciscaNeural">🎙️ Francisca FM (Comercial & Ultra Animada)</option>
+                              <option value="pt-BR-ThalitaMultilingualNeural">🎙️ Thalita HD (Ultra Realista & Acolhedora)</option>
+                              <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Locutor Impacto & Energia)</option>
+                              <option value="pt-BR-FabioNeural">🎙️ Lucas FM (Jovem & Dinâmico)</option>
                             </select>
                           </div>
 
@@ -2499,8 +2631,10 @@ export function GestorRadioPlayer({
                       onChange={(e) => setNewSpotVoice(e.target.value)}
                       className="w-full rounded-xl border border-[#e4e4e7] bg-white p-2.5 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                     >
-                      <option value="pt-BR-AntonioNeural">Antônio (Voz Masculina)</option>
-                      <option value="pt-BR-ThalitaNeural">Thalita (Voz Feminina)</option>
+                      <option value="pt-BR-FranciscaNeural">Francisca FM (Comercial & Ultra Animada)</option>
+                      <option value="pt-BR-ThalitaMultilingualNeural">Thalita HD (Ultra Realista & Acolhedora)</option>
+                      <option value="pt-BR-AntonioNeural">Antônio FM (Locutor Impacto & Energia)</option>
+                      <option value="pt-BR-FabioNeural">Lucas FM (Jovem & Dinâmico)</option>
                     </select>
                   </div>
 

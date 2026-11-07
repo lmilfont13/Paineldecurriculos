@@ -65,11 +65,12 @@ export function CandidateRadioPlayer({
   );
 
   const [activeSpotsList, setActiveSpotsList] = useState<RadioSpot[]>(
-    spots && spots.length > 0 ? spots : TARGET_RADIO_SPOTS
+    Array.isArray(spots) ? spots : TARGET_RADIO_SPOTS
   );
+  const needsTransitionOutroRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (spots && spots.length > 0) setActiveSpotsList(spots);
+    if (Array.isArray(spots)) setActiveSpotsList(spots);
   }, [spots]);
 
   const [trackIndex, setTrackIndex] = useState(0);
@@ -149,10 +150,18 @@ export function CandidateRadioPlayer({
 
   // Função para restaurar o som da rádio e limpar o spot ativo
   const finishSpot = useCallback(() => {
-    setActiveSpot(null);
-    if (audioRef.current) {
-      audioRef.current.volume = muted ? 0 : volume;
+    if (needsTransitionOutroRef.current && sfxAudioRef.current && !muted) {
+      needsTransitionOutroRef.current = false;
+      sfxAudioRef.current.src = "/audio/sfx/sfx-fm-transition-out.mp3";
+      sfxAudioRef.current.volume = Math.min(1, volume * 0.9);
+      sfxAudioRef.current.play().catch(() => {});
     }
+    setActiveSpot(null);
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.volume = muted ? 0 : volume;
+      }
+    }, 350);
   }, [muted, volume]);
 
   // Função para transição suave entre músicas (Crossfade rádio FM)
@@ -210,7 +219,23 @@ export function CandidateRadioPlayer({
         audioRef.current.volume = muted ? 0 : Math.max(0, volume * 0.15);
       }
 
-      if (spotAudioRef.current) {
+      const useTransitionOverlay = !spot.hasEmbeddedSfx;
+      needsTransitionOutroRef.current = useTransitionOverlay;
+
+      if (useTransitionOverlay && sfxAudioRef.current && !muted) {
+        sfxAudioRef.current.src = "/audio/sfx/sfx-fm-transition-in.mp3";
+        sfxAudioRef.current.volume = Math.min(1, volume * 0.9);
+        sfxAudioRef.current.play().catch(() => {});
+        setTimeout(() => {
+          if (spotAudioRef.current) {
+            spotAudioRef.current.src = spot.audioUrl;
+            spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
+            spotAudioRef.current.play().catch(() => {
+              finishSpot();
+            });
+          }
+        }, 280);
+      } else if (spotAudioRef.current) {
         spotAudioRef.current.src = spot.audioUrl;
         spotAudioRef.current.volume = muted ? 0 : Math.min(1, volume * 1.25);
         spotAudioRef.current.play().catch(() => {
@@ -344,7 +369,7 @@ export function CandidateRadioPlayer({
 
   const handleSpotsSyncReceived = useCallback(
     (payload?: { spots?: RadioSpot[] }) => {
-      if (Array.isArray(payload?.spots) && payload.spots.length > 0) {
+      if (Array.isArray(payload?.spots)) {
         setActiveSpotsList(payload.spots);
       }
     },

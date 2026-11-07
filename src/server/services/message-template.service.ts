@@ -194,24 +194,40 @@ export async function setActiveRadioSpotInterval(
   return { ok: true };
 }
 
-/** Lê os spots/vinhetas da rádio configurados para a empresa (incluindo ativos, desativados ou criados). */
+/** Lê os spots/vinhetas da rádio configurados para a empresa (incluindo ativos, desativados, criados ou lista vazia se o gestor apagou todos). */
 export async function getActiveRadioSpots(
   companyId?: string | null
 ): Promise<RadioSpot[]> {
   try {
     const raw = await findRadioSpotsRaw(companyId);
-    if (!raw) return TARGET_RADIO_SPOTS;
+    if (raw === null || raw === undefined) return TARGET_RADIO_SPOTS;
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((s: any) => ({
-        id: String(s.id || "").slice(0, 100),
-        title: String(s.title || "Vinheta").slice(0, 100),
-        subtitle: String(s.subtitle || "").slice(0, 150),
-        audioUrl: String(s.audioUrl || "").slice(0, 500),
-        durationSeconds: typeof s.durationSeconds === "number" ? s.durationSeconds : undefined,
-        enabled: s.enabled !== false,
-        isCustom: Boolean(s.isCustom),
-      }));
+    if (Array.isArray(parsed)) {
+      const defaultById = new Map(TARGET_RADIO_SPOTS.map((d) => [d.id, d]));
+      return parsed
+        .map((s: any) => {
+          const id = String(s.id || "").slice(0, 100);
+          const def = defaultById.get(id);
+          const rawUrl = String(s.audioUrl || "").slice(0, 500_000);
+          return {
+            id,
+            title: def && !s.isCustom ? def.title : String(s.title || "Vinheta").slice(0, 100),
+            subtitle: def && !s.isCustom ? def.subtitle : String(s.subtitle || "").slice(0, 150),
+            audioUrl: def && !s.isCustom ? def.audioUrl : rawUrl,
+            durationSeconds:
+              def && !s.isCustom
+                ? def.durationSeconds
+                : typeof s.durationSeconds === "number"
+                  ? s.durationSeconds
+                  : undefined,
+            enabled: s.enabled !== false,
+            isCustom: Boolean(s.isCustom),
+            sfxPreset: s.sfxPreset ? String(s.sfxPreset).slice(0, 60) : undefined,
+            hasEmbeddedSfx: def && !s.isCustom ? true : Boolean(s.hasEmbeddedSfx),
+          };
+        })
+        // Remove qualquer vinheta customizada cujo base64 tenha sido truncado no passado (< 600 chars)
+        .filter((s) => !s.audioUrl.startsWith("data:audio/") || s.audioUrl.length > 1000);
     }
     return TARGET_RADIO_SPOTS;
   } catch {
@@ -219,22 +235,27 @@ export async function getActiveRadioSpots(
   }
 }
 
-/** Salva a lista de spots/vinhetas da rádio selecionada pelo gestor. */
+/** Salva a lista de spots/vinhetas da rádio selecionada pelo gestor (permite lista vazia quando todas são excluídas). */
 export async function setActiveRadioSpots(
   companyId: string | null,
   spots: RadioSpot[]
 ): Promise<{ ok: boolean }> {
-  if (!Array.isArray(spots) || spots.length === 0) {
+  if (!Array.isArray(spots)) {
     return { ok: false };
   }
   const clean: RadioSpot[] = spots.map((s) => ({
     id: String(s.id).slice(0, 100),
     title: String(s.title || "Vinheta").trim().slice(0, 100),
     subtitle: String(s.subtitle || "").trim().slice(0, 150),
-    audioUrl: String(s.audioUrl).trim().slice(0, 500),
-    durationSeconds: typeof s.durationSeconds === "number" ? Math.max(1, Math.min(120, s.durationSeconds)) : undefined,
+    audioUrl: String(s.audioUrl).trim().slice(0, 500_000),
+    durationSeconds:
+      typeof s.durationSeconds === "number"
+        ? Math.max(1, Math.min(120, s.durationSeconds))
+        : undefined,
     enabled: s.enabled !== false,
     isCustom: Boolean(s.isCustom),
+    sfxPreset: s.sfxPreset ? String(s.sfxPreset).slice(0, 60) : undefined,
+    hasEmbeddedSfx: Boolean(s.hasEmbeddedSfx),
   }));
   await saveRadioSpotsRaw(companyId, JSON.stringify(clean));
   return { ok: true };

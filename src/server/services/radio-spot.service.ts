@@ -1,7 +1,13 @@
 import "server-only";
 
+import { execFile } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import type { RadioSpot } from "@/server/models/radio.model";
+
+const execFileAsync = promisify(execFile);
 
 export interface GenerateSpotInput {
   title: string;
@@ -10,24 +16,80 @@ export interface GenerateSpotInput {
   sfxPreset?: string;
 }
 
+interface VoiceProfile {
+  azureVoice: string;
+  rate: string;
+  pitch: string;
+  label: string;
+}
+
 /**
- * Sintetizador de Voz Neural Humana de Estúdio (Nível Michelin).
- * Utiliza o motor Microsoft Azure Speech / Edge Neural em TypeScript puro,
- * funcionando com 100% de confiabilidade em Vercel Serverless e ambientes locais.
+ * Resolve o perfil de voz neural para locução de rádio FM ultra-realista e animada.
+ * Garante nomes válidos no catálogo Microsoft Edge Neural TTS (evitando fallback robótico).
  */
-async function synthesizeNeuralSpeech(
+export function resolveBroadcastVoiceProfile(voiceChoice?: string): VoiceProfile {
+  const v = (voiceChoice || "pt-BR-FranciscaNeural").trim();
+
+  if (v.includes("Francisca")) {
+    return {
+      azureVoice: "pt-BR-FranciscaNeural",
+      rate: "+16%",
+      pitch: "+3Hz",
+      label: "Francisca FM (Comercial & Ultra Animada)",
+    };
+  }
+  if (v.includes("Thalita")) {
+    return {
+      azureVoice: "pt-BR-ThalitaMultilingualNeural",
+      rate: "+14%",
+      pitch: "+2Hz",
+      label: "Thalita HD (Ultra Realista & Acolhedora)",
+    };
+  }
+  if (v.includes("Fabio") || v.includes("Jovem")) {
+    return {
+      azureVoice: "pt-BR-AntonioNeural",
+      rate: "+18%",
+      pitch: "+5Hz",
+      label: "Lucas FM (Jovem & Dinâmico)",
+    };
+  }
+  return {
+    azureVoice: "pt-BR-AntonioNeural",
+    rate: "+15%",
+    pitch: "+2Hz",
+    label: "Antônio FM (Locutor Impacto & Energia)",
+  };
+}
+
+/**
+ * Sintetizador de Voz Neural Humana de Estúdio (96kbps HD) com prosódia animada de rádio FM.
+ */
+async function synthesizeNeuralSpeechBuffer(
   script: string,
-  voice: string = "pt-BR-AntonioNeural"
-): Promise<string | null> {
+  profile: VoiceProfile
+): Promise<Buffer | null> {
+  let ttsInstance: any = null;
   try {
     const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
-    // Normalização fonética da marca para pronúncia impecável em português
-    const clean = script.replace(/\bTarh?get\b/gi, "Tár-guet");
-    const tts = new MsEdgeTTS();
+    const clean = script
+      .replace(/\bTarh?get\b/gi, "Tár-guet")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    // Formato MP3 broadcast 24kHz / 48kbps (alta fidelidade e tamanho leve)
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(clean);
+    const tts = new MsEdgeTTS();
+    ttsInstance = tts;
+
+    await tts.setMetadata(
+      profile.azureVoice,
+      OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3
+    );
+
+    const { audioStream } = tts.toStream(clean, {
+      rate: profile.rate,
+      pitch: profile.pitch,
+      volume: "+15%",
+    });
 
     const chunks: Buffer[] = [];
     audioStream.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -38,109 +100,167 @@ async function synthesizeNeuralSpeech(
     });
 
     if (chunks.length > 0) {
-      const full = Buffer.concat(chunks);
-      return `data:audio/mpeg;base64,${full.toString("base64")}`;
+      return Buffer.concat(chunks);
     }
   } catch (err: any) {
-    console.warn("[radio-spot] Falha no sintetizador neural MsEdgeTTS:", err.message);
+    console.warn("[radio-spot] Falha no sintetizador neural MsEdgeTTS:", err?.message);
+  } finally {
+    try {
+      ttsInstance?.close?.();
+    } catch {
+      // Ignora erro ao fechar socket
+    }
   }
   return null;
 }
 
-/** Fallback secundário via Google TTS se o WebSocket neural estiver inacessível */
-async function synthesizeWebTtsAudio(script: string): Promise<string | null> {
+/**
+ * Quando ffmpeg está disponível no ambiente, masteriza a locução com:
+ * - Efeito de transição FM de entrada (sfx-fm-transition-in.mp3)
+ * - Trilha musical de fundo com ducking (corte de médios para destacar a voz)
+ * - Equalização + Compressão broadcast FM na voz
+ * - Efeito de transição FM de saída (sfx-fm-transition-out.mp3)
+ */
+async function tryMasterWithFfmpeg(
+  voiceBuffer: Buffer,
+  sfxPreset: string = "raio-trovao"
+): Promise<{ buffer: Buffer; durationSeconds: number } | null> {
+  const tmpId = `spot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const tmpVoice = path.join(os.tmpdir(), `${tmpId}_vox.mp3`);
+  const tmpOut = path.join(os.tmpdir(), `${tmpId}_master.mp3`);
+
   try {
-    const clean = script.replace(/\bTarh?get\b/gi, "Tár-guet");
-    const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
-    const chunks: Buffer[] = [];
+    await fs.writeFile(tmpVoice, voiceBuffer);
 
-    for (const s of sentences) {
-      const trimmed = s.trim();
-      if (!trimmed) continue;
-      const subParts = trimmed.length > 180 ? trimmed.match(/.{1,180}(\s|$)/g) || [trimmed] : [trimmed];
-      for (const part of subParts) {
-        const p = part.trim();
-        if (!p) continue;
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(p)}&tl=pt-BR&client=tw-ob`;
-        const res = await fetch(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-          },
-        });
-        if (res.ok) {
-          const buf = Buffer.from(await res.arrayBuffer());
-          chunks.push(buf);
-        }
-      }
-    }
+    const sfxIn = path.resolve(process.cwd(), "public/audio/sfx/sfx-fm-transition-in.mp3");
+    const sfxOut = path.resolve(process.cwd(), "public/audio/sfx/sfx-fm-transition-out.mp3");
+    const bedFile =
+      sfxPreset === "acolhimento-suave"
+        ? path.resolve(
+            process.cwd(),
+            "public/audio/music/Tinlicker & Helsloot - Because You Move Me - (256 Kbps).mp3"
+          )
+        : path.resolve(
+            process.cwd(),
+            "public/audio/music/Tinlicker - Fractal - (320 Kbps).mp3"
+          );
 
-    if (chunks.length > 0) {
-      const full = Buffer.concat(chunks);
-      return `data:audio/mpeg;base64,${full.toString("base64")}`;
-    }
-  } catch (err) {
-    console.error("[radio-spot] Falha no Web TTS fallback:", err);
+    const { stdout: durStdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      tmpVoice,
+    ]);
+
+    const voiceDur = parseFloat(durStdout.trim()) || 5.5;
+    const totalDur = +(voiceDur + 1.35).toFixed(2);
+    const outroStartMs = Math.round((voiceDur + 0.35) * 1000);
+    const fadeOutStart = +(totalDur - 0.55).toFixed(2);
+
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-i",
+      sfxIn,
+      "-ss",
+      "48",
+      "-t",
+      String(totalDur),
+      "-i",
+      bedFile,
+      "-i",
+      tmpVoice,
+      "-i",
+      sfxOut,
+      "-filter_complex",
+      `[0:a]volume=0.95[intro];` +
+        `[1:a]afade=t=in:st=0:d=0.25,afade=t=out:st=${fadeOutStart}:d=0.55,equalizer=f=1200:width_type=h:width=1600:g=-4,volume=0.22[bed];` +
+        `[2:a]highpass=f=75,equalizer=f=110:width_type=h:width=90:g=3.5,equalizer=f=3500:width_type=h:width=1500:g=3,equalizer=f=9500:width_type=h:width=2000:g=4,acompressor=threshold=-16dB:ratio=4:attack=5:release=50:makeup=5dB,aecho=0.8:0.75:18:0.12,adelay=420|420,volume=1.55[vox];` +
+        `[3:a]adelay=${outroStartMs}|${outroStartMs},volume=0.90[outro];` +
+        `[intro][bed][vox][outro]amix=inputs=4:duration=longest:normalize=0,alimiter=limit=0.95`,
+      "-ar",
+      "44100",
+      "-ac",
+      "2",
+      "-b:a",
+      "128k",
+      tmpOut,
+    ]);
+
+    const mastered = await fs.readFile(tmpOut);
+    return {
+      buffer: mastered,
+      durationSeconds: Math.max(3, Math.round(totalDur)),
+    };
+  } catch {
+    return null;
+  } finally {
+    await fs.unlink(tmpVoice).catch(() => {});
+    await fs.unlink(tmpOut).catch(() => {});
   }
-  return null;
 }
 
 export async function generateRadioSpotService(
   input: GenerateSpotInput
 ): Promise<{ ok: boolean; spot?: RadioSpot; error?: string }> {
-  const title = input.title.trim().slice(0, 100) || "Vinheta Personalizada";
+  const title = input.title.trim().slice(0, 100) || "Vinheta Rádio FM";
   const script = input.script.trim().slice(0, 1000);
-  const voice = input.voice?.trim() || "pt-BR-AntonioNeural";
+  const sfxPreset = input.sfxPreset?.trim() || "raio-trovao";
 
   if (!script) {
     return { ok: false, error: "O texto da vinheta não pode estar em branco." };
   }
 
-  // 1. Gera áudio com Voz Neural Humana Profissional (Microsoft Azure Neural)
-  let audioDataUri = await synthesizeNeuralSpeech(script, voice);
+  const profile = resolveBroadcastVoiceProfile(input.voice);
 
-  // 2. Fallback secundário se necessário
-  if (!audioDataUri) {
-    audioDataUri = await synthesizeWebTtsAudio(script);
-  }
+  // 1. Sintetiza voz neural humana com prosódia animada de rádio FM
+  const voiceBuffer = await synthesizeNeuralSpeechBuffer(script, profile);
 
-  if (audioDataUri) {
-    const spotId = `custom-spot-${Date.now()}`;
-    let finalAudioUrl = audioDataUri;
-
-    // Se o ambiente permitir gravação em disco (desenvolvimento local), persiste como arquivo estático
-    if (audioDataUri.startsWith("data:audio/mpeg;base64,")) {
-      try {
-        const fs = await import("node:fs/promises");
-        const base64Data = audioDataUri.replace(/^data:audio\/mpeg;base64,/, "");
-        const fileName = `${spotId}.mp3`;
-        const filePath = path.resolve(process.cwd(), "public/audio/spots", fileName);
-        await fs.writeFile(filePath, Buffer.from(base64Data, "base64"));
-        finalAudioUrl = `/audio/spots/${fileName}`;
-      } catch {
-        // Mantém a data URI caso o sistema de arquivos seja somente-leitura (Vercel)
-      }
-    }
-
-    const voiceLabel = voice.includes("Antonio")
-      ? "Antônio FM (Voz Grave & Marcante)"
-      : voice.includes("Thalita")
-        ? "Thalita Executiva (Voz Calorosa & Acolhedora)"
-        : voice.includes("Francisca")
-          ? "Francisca Comercial (Voz Dinâmica & Fluida)"
-          : "Fábio Jovem (Voz Amigável & Descontraída)";
-
-    const spot: RadioSpot = {
-      id: spotId,
-      title,
-      subtitle: `Locução Humana Neural — ${voiceLabel}`,
-      audioUrl: finalAudioUrl,
-      durationSeconds: Math.max(3, Math.round(script.split(" ").length * 0.42)),
-      enabled: true,
-      isCustom: true,
+  if (!voiceBuffer) {
+    return {
+      ok: false,
+      error: "Não foi possível sintetizar a locução neural no momento. Tente novamente.",
     };
-
-    return { ok: true, spot };
   }
 
-  return { ok: false, error: "Não foi possível sintetizar a voz profissional no momento." };
+  // 2. Tenta masterizar com efeitos de transição FM + trilha via ffmpeg (se disponível)
+  const mastered = await tryMasterWithFfmpeg(voiceBuffer, sfxPreset);
+  const finalBuffer = mastered ? mastered.buffer : voiceBuffer;
+  const hasEmbeddedSfx = Boolean(mastered);
+
+  const spotId = `custom-spot-${Date.now()}`;
+  let finalAudioUrl = `data:audio/mpeg;base64,${finalBuffer.toString("base64")}`;
+
+  // Se o ambiente local permitir gravação em public/audio/spots, salva arquivo estático também
+  try {
+    const fileName = `${spotId}.mp3`;
+    const filePath = path.resolve(process.cwd(), "public/audio/spots", fileName);
+    await fs.writeFile(filePath, finalBuffer);
+    // Mantemos data URI se for <= 350KB para funcionar tanto em serverless quanto local sem 404
+    if (finalBuffer.length > 350_000) {
+      finalAudioUrl = `/audio/spots/${fileName}`;
+    }
+  } catch {
+    // Em produção serverless (Vercel), usa data:audio/mpeg;base64 diretamente
+  }
+
+  const durationSeconds = mastered
+    ? mastered.durationSeconds
+    : Math.max(4, Math.round(script.split(/\s+/).length * 0.38) + 2);
+
+  const spot: RadioSpot = {
+    id: spotId,
+    title,
+    subtitle: `Transição FM · ${profile.label}`,
+    audioUrl: finalAudioUrl,
+    durationSeconds,
+    enabled: true,
+    isCustom: true,
+    sfxPreset,
+    hasEmbeddedSfx,
+  };
+
+  return { ok: true, spot };
 }

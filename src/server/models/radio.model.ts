@@ -13,6 +13,8 @@ export interface RadioSpot {
   durationSeconds?: number;
   enabled?: boolean;
   isCustom?: boolean;
+  sfxPreset?: string;
+  hasEmbeddedSfx?: boolean;
 }
 
 export interface RadioTrack {
@@ -90,52 +92,59 @@ export const TARGET_PLAYLIST_TRACKS: RadioTrack[] = DEFAULT_MUSIC_CATALOG;
 export const TARGET_RADIO_SPOTS: RadioSpot[] = [
   {
     id: "spot-raio-1",
-    title: "⚡ Impacto do Raio (TÁRGUET!)",
-    subtitle: "Efeito Raio, Trovão Sônico & Drop 808",
-    audioUrl: "/audio/spots/target-spot-raio-1.mp3",
-    durationSeconds: 7,
+    title: "Rádio Tarhget FM — Abertura Oficial",
+    subtitle: "Transição FM · Voz Francisca HD Animada + Trilha",
+    audioUrl: "/audio/spots/target-spot-raio-1.mp3?v=2",
+    durationSeconds: 10,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-raio-2",
-    title: "⚡ Raio ID Rápido (TÁRGUET!)",
-    subtitle: "Descarga Elétrica & Locutor Marcante",
-    audioUrl: "/audio/spots/target-spot-raio-2.mp3",
-    durationSeconds: 6,
+    title: "Tarhget no Ar — Sintonia de Talentos",
+    subtitle: "Transição FM · Voz Antônio FM Dinâmica + Trilha",
+    audioUrl: "/audio/spots/target-spot-raio-2.mp3?v=2",
+    durationSeconds: 9,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-bem-vindo-1",
-    title: "🎙️ Seja Bem-Vindo Oficial",
-    subtitle: "Acolhimento profissional de rádio FM",
-    audioUrl: "/audio/spots/target-spot-bem-vindo-1.mp3",
+    title: "Boas-Vindas ao Portal de Carreiras",
+    subtitle: "Transição FM · Voz Thalita Ultra Realista + Trilha",
+    audioUrl: "/audio/spots/target-spot-bem-vindo-1.mp3?v=2",
     durationSeconds: 10,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-bem-vindo-2",
-    title: "✨ Bem-Vindo & Inspiração",
-    subtitle: "Energia positiva e foco para o candidato",
-    audioUrl: "/audio/spots/target-spot-bem-vindo-2.mp3",
-    durationSeconds: 8,
+    title: "Energia & Sucesso na Jornada",
+    subtitle: "Transição FM · Voz Francisca HD Animada + Trilha",
+    audioUrl: "/audio/spots/target-spot-bem-vindo-2.mp3?v=2",
+    durationSeconds: 10,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-dica",
-    title: "💡 Dica de Ouro Tárguet",
-    subtitle: "Currículo objetivo e resultados reais",
-    audioUrl: "/audio/spots/target-spot-dica.mp3",
+    title: "Dica Rápida dos Recrutadores",
+    subtitle: "Transição FM · Voz Thalita Ultra Realista + Trilha",
+    audioUrl: "/audio/spots/target-spot-dica.mp3?v=2",
     durationSeconds: 11,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-conecta",
-    title: "🌐 Tárguet Conecta",
-    subtitle: "Conectando talentos a grandes empresas",
-    audioUrl: "/audio/spots/target-spot-conecta.mp3",
-    durationSeconds: 8,
+    title: "Tarhget Conecta — Grandes Empresas",
+    subtitle: "Transição FM · Voz Antônio FM Dinâmica + Trilha",
+    audioUrl: "/audio/spots/target-spot-conecta.mp3?v=2",
+    durationSeconds: 9,
+    hasEmbeddedSfx: true,
   },
   {
     id: "spot-talentos",
-    title: "🎯 Banco de Talentos",
-    subtitle: "Cadastre-se para futuras oportunidades",
-    audioUrl: "/audio/spots/target-spot-talentos.mp3",
-    durationSeconds: 7,
+    title: "Chamada Banco de Talentos",
+    subtitle: "Transição FM · Voz Francisca HD Animada + Trilha",
+    audioUrl: "/audio/spots/target-spot-talentos.mp3?v=2",
+    durationSeconds: 9,
+    hasEmbeddedSfx: true,
   },
 ];
 
