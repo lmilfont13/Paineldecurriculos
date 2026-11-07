@@ -1,7 +1,11 @@
 import "server-only";
 
 import { getTalentPoolJobId } from "@/server/services/talent-bank.service";
-import { isCandidateAiRadarEnabled } from "@/server/services/company-feature.service";
+import {
+  isCandidateAiRadarEnabled,
+  isLiveSupportSpaceEnabled,
+} from "@/server/services/company-feature.service";
+import { getSessionUser } from "@/server/services/auth.service";
 import { cache } from "react";
 
 import type { CandidateProfile } from "@/server/models/candidate.model";
@@ -190,3 +194,31 @@ export async function getPrivacyPageData(slug: string) {
   const contactEmail = await getPrivacyContactEmail(slug);
   return { company, contactEmail };
 }
+
+/**
+ * Verifica se o botão do Espaço Virtual & Suporte ao Vivo deve aparecer no cabeçalho público:
+ * - Se `isLiveSupportSpaceEnabled(companyId)` estiver ativo (`true`), aparece para todos;
+ * - Se estiver desativado (`false`, Modo Teste), aparece apenas para o Gestor da empresa ou Admin da plataforma.
+ */
+export async function isPublicLiveSupportVisible(companyId: string): Promise<{
+  visible: boolean;
+  isTestMode: boolean;
+}> {
+  try {
+    const [enabled, staffUser] = await Promise.all([
+      isLiveSupportSpaceEnabled(companyId),
+      getSessionUser(),
+    ]);
+    if (enabled) {
+      return { visible: true, isTestMode: false };
+    }
+    const isStaff =
+      Boolean(staffUser) &&
+      (staffUser!.role === "ADMIN" ||
+        (staffUser!.role === "MANAGER" && staffUser!.companyId === companyId));
+    return { visible: isStaff, isTestMode: isStaff };
+  } catch {
+    return { visible: false, isTestMode: false };
+  }
+}
+

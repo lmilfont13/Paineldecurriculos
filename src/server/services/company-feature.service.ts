@@ -17,6 +17,8 @@ import {
   saveSoundNotificationsEnabled,
   findTargetRadioSpotsEnabled,
   saveTargetRadioSpotsEnabled,
+  findLiveSupportSpaceEnabled,
+  saveLiveSupportSpaceEnabled,
 } from "@/server/repositories/company-feature.repository";
 
 export function isCandidateAiRadarEnabled(companyId: string): Promise<boolean> {
@@ -82,6 +84,15 @@ export function isTargetRadioSpotsEnabled(companyId: string): Promise<boolean> {
 export function setTargetRadioSpotsEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveTargetRadioSpotsEnabled(companyId, enabled);
 }
+
+export function isLiveSupportSpaceEnabled(companyId: string): Promise<boolean> {
+  return findLiveSupportSpaceEnabled(companyId);
+}
+
+export function setLiveSupportSpaceEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveLiveSupportSpaceEnabled(companyId, enabled);
+}
+
 
 
 

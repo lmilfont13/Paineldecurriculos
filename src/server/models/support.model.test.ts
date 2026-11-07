@@ -51,3 +51,4 @@ describe("support.model", () => {
     expect(resolveRoomFromCoords(75, 75)).toBe("diretoria");
   });
 });
+

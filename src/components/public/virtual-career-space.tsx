@@ -36,6 +36,7 @@ import {
   resolveReportAction,
   respondCandidateDmAction,
   sendPrivateSupportMessageAction,
+  toggleSupportSpacePublicVisibilityAction,
 } from "@/server/controllers/support.controller";
 import { PixelAvatarSprite } from "./pixel-avatar";
 import {
@@ -47,6 +48,8 @@ import {
 import {
   Ban,
   Check,
+  Eye,
+  EyeOff,
   Flag,
   Gamepad2,
   Headphones,
@@ -650,6 +653,28 @@ export function VirtualCareerSpace({
     }
   };
 
+  // Alternar se a sala está visível para os candidatos ou oculta em Modo Teste
+  const handleTogglePublicVisibility = async () => {
+    const nextEnabled = !spaceState.isPublicEnabled;
+    setBusyAction(true);
+    try {
+      const next = await toggleSupportSpacePublicVisibilityAction(
+        companySlug,
+        nextEnabled
+      );
+      setSpaceState(next);
+      showToast(
+        nextEnabled
+          ? "🟢 Sala LIBERADA para os candidatos no portal público!"
+          : "🔒 Sala DESATIVADA para candidatos (Modo Teste exclusivo da equipe)."
+      );
+    } catch (err: any) {
+      showToast(err?.message || "Não foi possível alterar a visibilidade.");
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
   // Lista unificada de bonequinhos no mapa (eu + remotos)
   const allUsersOnMap: MapPresenceUser[] = [
     ...(me
@@ -701,8 +726,83 @@ export function VirtualCareerSpace({
         </div>
       )}
 
-      {/* ─── BARRA DE AMBIENTES & TELETRANSPORTE RÁPIDO ─── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-200 bg-white p-2.5 shadow-xs">
+      {/* ─── CONTROLE DE VISIBILIDADE PARA CANDIDATOS (MODO TESTE VS. PÚBLICO) — EXCLUSIVO GESTOR/ADMIN ─── */}
+      {isStaff && (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 shadow-xs transition ${
+            spaceState.isPublicEnabled
+              ? "border-emerald-500 bg-emerald-950 text-emerald-50"
+              : "border-amber-400 bg-[#18181b] text-amber-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={`flex size-9 shrink-0 items-center justify-center rounded-xl border-2 border-stone-950 font-black shadow-[0_2px_0_#000] ${
+                spaceState.isPublicEnabled
+                  ? "bg-emerald-400 text-stone-950"
+                  : "bg-amber-400 text-stone-950"
+              }`}
+            >
+              {spaceState.isPublicEnabled ? (
+                <Eye className="size-4" />
+              ) : (
+                <EyeOff className="size-4" />
+              )}
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider">
+                  {spaceState.isPublicEnabled
+                    ? "🟢 Visível para Candidatos (Aberto no Portal)"
+                    : "🔒 Desativado para Candidatos (Modo Teste da Equipe)"}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                    spaceState.isPublicEnabled
+                      ? "bg-emerald-400/20 text-emerald-200 border border-emerald-400/40"
+                      : "bg-amber-400/20 text-amber-200 border border-amber-400/40"
+                  }`}
+                >
+                  {spaceState.isPublicEnabled
+                    ? "Público Ativo"
+                    : "Oculto no Portal de Vagas"}
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] opacity-85">
+                {spaceState.isPublicEnabled
+                  ? "Os candidatos já veem o botão 'Suporte & Sala Ao Vivo' no topo do portal e podem entrar."
+                  : "Enquanto desativado, os candidatos não veem o botão no portal. Você (Gestor/Admin) pode testar todos os ambientes livremente."}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={busyAction}
+            onClick={handleTogglePublicVisibility}
+            className={`inline-flex items-center gap-2 rounded-xl border-2 border-stone-950 px-4 py-2 text-xs font-black shadow-[0_3px_0_#000] transition hover:scale-[1.02] disabled:opacity-50 ${
+              spaceState.isPublicEnabled
+                ? "bg-amber-300 text-stone-950 hover:bg-amber-200"
+                : "bg-emerald-400 text-stone-950 hover:bg-emerald-300"
+            }`}
+          >
+            {spaceState.isPublicEnabled ? (
+              <>
+                <EyeOff className="size-3.5" />
+                <span>Desativar p/ Candidatos (Modo Teste)</span>
+              </>
+            ) : (
+              <>
+                <Eye className="size-3.5" />
+                <span>Liberar para Candidatos Agora</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ─── BARRA DE AMBIENTES ISOMÉTRICOS & TELETRANSPORTE RÁPIDO (HUD) ─── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 border-stone-950 bg-[#11131a] p-2.5 text-white shadow-[0_4px_0_#090a0f]">
         <div className="flex flex-wrap items-center gap-1.5">
           {SUPPORT_ROOM_IDS.map((roomId) => {
             const room = SUPPORT_ROOMS[roomId];
@@ -712,10 +812,10 @@ export function VirtualCareerSpace({
                 key={roomId}
                 type="button"
                 onClick={() => moveAvatarTo(room.spawn.x, room.spawn.y)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition ${
                   active
-                    ? "bg-stone-900 text-white shadow-xs"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                    ? "border-amber-300 bg-amber-400 text-stone-950 shadow-[0_2px_0_#000]"
+                    : "border-white/10 bg-white/5 text-stone-200 hover:bg-white/15"
                 }`}
               >
                 <span>{room.icon}</span>
@@ -726,10 +826,10 @@ export function VirtualCareerSpace({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
-            <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-extrabold text-emerald-300">
+            <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
             {allUsersOnMap.length}{" "}
-            {allUsersOnMap.length === 1 ? "pessoa na sala" : "pessoas na sala"}
+            {allUsersOnMap.length === 1 ? "online na sala" : "online na sala"}
           </span>
 
           <button
@@ -741,10 +841,10 @@ export function VirtualCareerSpace({
               }
               setShowAvatarModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-stone-50 px-3 py-1.5 text-xs font-bold text-stone-800 hover:bg-stone-100"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-amber-400/15 px-3 py-1.5 text-xs font-extrabold text-amber-200 hover:bg-amber-400/25"
           >
-            <Sparkles className="size-3.5 text-amber-600" />
-            <span>Meu Boneco</span>
+            <Sparkles className="size-3.5 text-amber-300" />
+            <span>Personalizar Boneco</span>
           </button>
         </div>
       </div>
@@ -772,6 +872,10 @@ export function VirtualCareerSpace({
                 SUPPORT_ROOMS.recepcao.spawn.y
               );
               setSideTab("rh");
+            }}
+            onGrabCoffee={() => {
+              handleSendQuickReaction("☕");
+              showToast("☕ Você pegou um café expresso fresquinho no Café & Networking!");
             }}
           />
 
@@ -1783,3 +1887,4 @@ export function VirtualCareerSpace({
     </div>
   );
 }
+

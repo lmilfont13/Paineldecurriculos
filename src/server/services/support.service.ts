@@ -38,6 +38,10 @@ import {
   updateSupportConversation,
   upsertAuthenticatedParticipant,
 } from "@/server/repositories/support.repository";
+import {
+  isLiveSupportSpaceEnabled,
+  setLiveSupportSpaceEnabled,
+} from "@/server/services/company-feature.service";
 
 export interface SupportViewerActor {
   companyId: string;
@@ -326,7 +330,10 @@ export async function getSupportSpaceState(
     : candidate?.name?.trim() || null;
 
   const meRow = await resolveCurrentParticipant(actor);
-  const openConvs = await listOpenConversationsForCompany(companyId);
+  const [openConvs, isPublicEnabled] = await Promise.all([
+    listOpenConversationsForCompany(companyId),
+    isLiveSupportSpaceEnabled(companyId).catch(() => false),
+  ]);
 
   const waitingServiceList = openConvs.filter(
     (c) => c.kind === "SERVICE" && c.status === "WAITING"
@@ -425,6 +432,7 @@ export async function getSupportSpaceState(
   }
 
   return {
+    isPublicEnabled,
     me: meRow
       ? { ...toParticipantDTO(meRow), inboxKey: meRow.inboxKey }
       : null,
@@ -819,3 +827,18 @@ export async function resolveSupportReport(
   }
   await resolveSupportReportRecord(actor.companyId, reportId);
 }
+
+export async function toggleSupportSpacePublicVisibility(
+  actor: SupportViewerActor,
+  enabled: boolean
+): Promise<boolean> {
+  if (!isStaffAuthorizedForCompany(actor.staffUser, actor.companyId)) {
+    throw new Error(
+      "Apenas o gestor da empresa ou o admin da plataforma pode ativar ou desativar a sala para candidatos."
+    );
+  }
+  await setLiveSupportSpaceEnabled(actor.companyId, Boolean(enabled));
+  return Boolean(enabled);
+}
+
+

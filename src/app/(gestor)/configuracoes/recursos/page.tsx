@@ -5,6 +5,7 @@ import {
   CompanyCandidateTimelineToggle,
   CompanyCommandPaletteToggle,
   CompanyDynamicOgToggle,
+  CompanyLiveSupportSpaceToggle,
   CompanySoundNotificationsToggle,
   CompanyTargetRadioSpotsToggle,
   CompanyUndoActionToggle,
@@ -17,6 +18,7 @@ import {
   isCandidateTimelineEnabled,
   isCommandPaletteEnabled,
   isDynamicOgEnabled,
+  isLiveSupportSpaceEnabled,
   isSoundNotificationsEnabled,
   isTargetRadioSpotsEnabled,
   isUndoActionEnabled,
@@ -40,6 +42,7 @@ export default async function RecursosSettingsPage() {
     dynamicOgEnabled,
     soundNotificationsEnabled,
     targetRadioSpotsEnabled,
+    liveSupportSpaceEnabled,
   ] = await Promise.all([
     isCandidateAiRadarEnabled(companyId),
     isWhatsappTemplatesEnabled(companyId),
@@ -49,6 +52,7 @@ export default async function RecursosSettingsPage() {
     isDynamicOgEnabled(companyId),
     isSoundNotificationsEnabled(companyId),
     isTargetRadioSpotsEnabled(companyId),
+    isLiveSupportSpaceEnabled(companyId),
   ]);
 
   return (
@@ -69,6 +73,10 @@ export default async function RecursosSettingsPage() {
           </p>
         </div>
 
+        <CompanyLiveSupportSpaceToggle
+          companyId={companyId}
+          initialEnabled={liveSupportSpaceEnabled}
+        />
         <CompanyTargetRadioSpotsToggle
           companyId={companyId}
           initialEnabled={targetRadioSpotsEnabled}

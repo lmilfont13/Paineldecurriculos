@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+let fakePublicEnabled = false;
+vi.mock("@/server/services/company-feature.service", () => ({
+  isLiveSupportSpaceEnabled: vi.fn(async () => fakePublicEnabled),
+  setLiveSupportSpaceEnabled: vi.fn(async (_companyId: string, enabled: boolean) => {
+    fakePublicEnabled = enabled;
+  }),
+}));
+
 const fakeParticipants = new Map<string, any>();
 const fakeConversations = new Map<string, any>();
 const fakeMessages: any[] = [];
@@ -173,9 +181,11 @@ import { DEFAULT_AVATAR } from "@/server/models/support.model";
 import {
   callServiceTicketToDesk,
   enterSupportSpace,
+  getSupportSpaceState,
   joinSupportQueue,
   requestCandidateDm,
   sendPrivateSupportMessage,
+  toggleSupportSpacePublicVisibility,
 } from "./support.service";
 
 describe("support.service", () => {
@@ -183,6 +193,7 @@ describe("support.service", () => {
     fakeParticipants.clear();
     fakeConversations.clear();
     fakeMessages.length = 0;
+    fakePublicEnabled = false;
   });
 
   it("permite visitante anônimo entrar na fila do RH, mas impede DM com outros candidatos", async () => {
@@ -253,4 +264,33 @@ describe("support.service", () => {
     );
     expect(msg.body).toContain("analista");
   });
+
+  it("permite ao gestor/admin desativar e ativar a sala para os candidatos (Modo Teste)", async () => {
+    const managerActor = {
+      companyId: "comp_1",
+      staffUser: {
+        id: "mgr_1",
+        name: "Gestor RH",
+        email: "rh@empresa.com",
+        role: "MANAGER" as const,
+        companyId: "comp_1",
+      },
+    };
+
+    const initialState = await getSupportSpaceState(managerActor);
+    expect(initialState.isPublicEnabled).toBe(false);
+
+    // Gestor libera para os candidatos
+    const enabled = await toggleSupportSpacePublicVisibility(managerActor, true);
+    expect(enabled).toBe(true);
+
+    const afterEnable = await getSupportSpaceState(managerActor);
+    expect(afterEnable.isPublicEnabled).toBe(true);
+
+    // Visitante não pode alterar essa configuração
+    await expect(
+      toggleSupportSpacePublicVisibility({ companyId: "comp_1" }, false)
+    ).rejects.toThrow(/gestor/i);
+  });
 });
+

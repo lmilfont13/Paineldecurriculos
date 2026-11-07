@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import {
   enterSpaceSchema,
   moderateParticipantSchema,
@@ -25,6 +26,7 @@ import {
   respondToCandidateDm,
   sendPrivateSupportMessage,
   submitSupportReport,
+  toggleSupportSpacePublicVisibility,
   type SupportViewerActor,
 } from "@/server/services/support.service";
 
@@ -212,3 +214,15 @@ export async function resolveReportAction(
   await resolveSupportReport(actor, reportId);
   return getSupportSpaceState(actor);
 }
+
+export async function toggleSupportSpacePublicVisibilityAction(
+  slug: string,
+  enabled: boolean
+): Promise<SupportSpaceStateDTO> {
+  const actor = await resolveViewerActor(slug);
+  await toggleSupportSpacePublicVisibility(actor, enabled);
+  revalidatePath("/", "layout");
+  return getSupportSpaceState(actor);
+}
+
+

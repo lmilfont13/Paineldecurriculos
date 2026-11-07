@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageCircle, Command, Check, GitCommit, History, Image as ImageIcon, Volume2, Radio } from "lucide-react";
+import { MessageCircle, Command, Check, GitCommit, History, Image as ImageIcon, Volume2, Radio, Headphones } from "lucide-react";
 import {
   toggleCompanyWhatsappTemplatesAction,
   toggleCompanyCommandPaletteAction,
@@ -10,7 +10,84 @@ import {
   toggleCompanyDynamicOgAction,
   toggleCompanySoundNotificationsAction,
   toggleCompanyTargetRadioSpotsAction,
+  toggleCompanyLiveSupportSpaceAction,
 } from "@/server/controllers/settings.controller";
+
+export function CompanyLiveSupportSpaceToggle({
+  companyId,
+  initialEnabled,
+}: {
+  companyId: string;
+  initialEnabled: boolean;
+}) {
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+
+  function handleToggle() {
+    const next = !enabled;
+    setEnabled(next);
+    startTransition(async () => {
+      const res = await toggleCompanyLiveSupportSpaceAction(companyId, next);
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        setEnabled(!next);
+      }
+    });
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-5 shadow-2xs">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Headphones className="size-4 text-amber-600" />
+            <span className="text-xs font-bold text-[#0a0a0a]">
+              Suporte ao Vivo & Espaço Virtual Visível para Candidatos
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${
+                enabled
+                  ? "bg-emerald-100 text-emerald-900"
+                  : "bg-amber-100 text-amber-900"
+              }`}
+            >
+              {enabled ? "Liberado no Portal" : "Modo Teste (Oculto p/ Candidatos)"}
+            </span>
+            {saved && (
+              <span className="flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                <Check className="size-2.5" /> Salvo
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-[#71717a]">
+            Quando desativado, o botão e a sala do Espaço de Carreiras ficam ocultos para candidatos e visitantes enquanto o Gestor e o Admin testam livremente.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          disabled={isPending}
+          onClick={handleToggle}
+          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            enabled ? "bg-emerald-600" : "bg-[#e4e4e7]"
+          } ${isPending ? "opacity-60 cursor-wait" : ""}`}
+        >
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              enabled ? "translate-x-4" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function CompanyWhatsappTemplatesToggle({
   companyId,

@@ -10,6 +10,7 @@ export const UNDO_ACTION_KEY = "__feature_undo_action__";
 export const DYNAMIC_OG_KEY = "__feature_dynamic_og__";
 export const SOUND_NOTIFICATIONS_KEY = "__feature_sound_notifications__";
 export const TARGET_RADIO_SPOTS_KEY = "__feature_target_radio_spots__";
+export const LIVE_SUPPORT_SPACE_KEY = "__feature_live_support_space__";
 
 /**
  * Lê se uma determinada feature flag está habilitada para a empresa.
@@ -131,6 +132,25 @@ export function findTargetRadioSpotsEnabled(companyId: string): Promise<boolean>
 export function saveTargetRadioSpotsEnabled(companyId: string, enabled: boolean): Promise<void> {
   return saveCompanyFeatureEnabled(companyId, TARGET_RADIO_SPOTS_KEY, "Spots e Vinhetas da Target na Rádio", enabled);
 }
+
+/**
+ * Lê se o Espaço Virtual & Suporte ao Vivo está liberado para candidatos no portal público.
+ * Por padrão inicia `false` (Modo Teste da Equipe) para que o gestor/admin teste antes de abrir ao público.
+ */
+export function findLiveSupportSpaceEnabled(companyId: string): Promise<boolean> {
+  return findCompanyFeatureEnabled(companyId, LIVE_SUPPORT_SPACE_KEY, false);
+}
+
+/** Salva preferência de visibilidade pública do Espaço Virtual & Suporte ao Vivo para candidatos. */
+export function saveLiveSupportSpaceEnabled(companyId: string, enabled: boolean): Promise<void> {
+  return saveCompanyFeatureEnabled(
+    companyId,
+    LIVE_SUPPORT_SPACE_KEY,
+    "Suporte ao Vivo & Espaço Virtual para Candidatos",
+    enabled
+  );
+}
+
 
 
 

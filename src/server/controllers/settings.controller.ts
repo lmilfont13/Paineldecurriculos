@@ -456,4 +456,20 @@ export async function toggleCompanyTargetRadioSpotsAction(
   return { ok: true };
 }
 
+/** Gestor / Super Admin · Alterna se o Suporte ao Vivo & Espaço Virtual está liberado para os candidatos. */
+export async function toggleCompanyLiveSupportSpaceAction(
+  companyId: string,
+  enabled: boolean
+): Promise<{ ok: boolean }> {
+  const user = await getSessionUser();
+  if (!user || (!isAdmin(user) && user.companyId !== companyId)) {
+    return { ok: false };
+  }
+  const { setLiveSupportSpaceEnabled } = await import("@/server/services/company-feature.service");
+  await setLiveSupportSpaceEnabled(companyId, enabled);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+
 

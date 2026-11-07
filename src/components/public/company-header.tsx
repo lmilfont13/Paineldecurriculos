@@ -4,7 +4,10 @@ import Link from "next/link";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import { logoutCandidateAction } from "@/server/controllers/candidate.controller";
-import { getUnreadCount } from "@/server/controllers/public.controller";
+import {
+  getUnreadCount,
+  isPublicLiveSupportVisible,
+} from "@/server/controllers/public.controller";
 
 export function companyInitials(name: string): string {
   return name
@@ -81,7 +84,10 @@ export async function CompanyHeader({
   showSignIn?: boolean;
   jobCount?: number;
 }) {
-  const unread = candidate ? await getUnreadCount() : 0;
+  const [unread, supportVisibility] = await Promise.all([
+    candidate ? getUnreadCount() : Promise.resolve(0),
+    isPublicLiveSupportVisible(company.id),
+  ]);
   const onBrand = tone === "brand";
 
   const link = onBrand
@@ -139,18 +145,24 @@ export async function CompanyHeader({
 
         {candidate ? (
           <nav className="flex items-center gap-1 sm:gap-2">
-            <Link
-              href={`/${company.slug}/espaco`}
-              className={
-                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-bold transition " +
-                (onBrand
-                  ? "border border-amber-300/60 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30"
-                  : "border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100")
-              }
-            >
-              <span>🎧</span>
-              <span>Suporte & Sala Ao Vivo</span>
-            </Link>
+            {supportVisibility.visible && (
+              <Link
+                href={`/${company.slug}/espaco`}
+                className={
+                  "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-bold transition " +
+                  (onBrand
+                    ? "border border-amber-300/60 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30"
+                    : "border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100")
+                }
+              >
+                <span>🎧</span>
+                <span>
+                  {supportVisibility.isTestMode
+                    ? "Sala Ao Vivo (Modo Teste)"
+                    : "Suporte & Sala Ao Vivo"}
+                </span>
+              </Link>
+            )}
             <Link
               href={`/${company.slug}/minhas-candidaturas`}
               className={`rounded-lg px-2 py-1.5 text-[13px] font-medium ${link}`}
@@ -203,18 +215,24 @@ export async function CompanyHeader({
           </nav>
         ) : !showSignIn ? null : (
           <div className="flex items-center gap-2">
-            <Link
-              href={`/${company.slug}/espaco`}
-              className={
-                "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-bold transition " +
-                (onBrand
-                  ? "border border-amber-300/60 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30"
-                  : "border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100")
-              }
-            >
-              <span>🎧</span>
-              <span>Suporte & Sala Ao Vivo</span>
-            </Link>
+            {supportVisibility.visible && (
+              <Link
+                href={`/${company.slug}/espaco`}
+                className={
+                  "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-bold transition " +
+                  (onBrand
+                    ? "border border-amber-300/60 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30"
+                    : "border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100")
+                }
+              >
+                <span>🎧</span>
+                <span>
+                  {supportVisibility.isTestMode
+                    ? "Sala Ao Vivo (Modo Teste)"
+                    : "Suporte & Sala Ao Vivo"}
+                </span>
+              </Link>
+            )}
             <Link
               href={`/${company.slug}/entrar?next=${encodeURIComponent(`/${company.slug}/minhas-candidaturas`)}&modo=entrar`}
               className={

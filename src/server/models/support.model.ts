@@ -29,8 +29,8 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     shortName: "Atendimento RH",
     description: "Converse 1 a 1 com recrutadores nos balcões privados.",
     icon: "🎧",
-    bounds: { xMin: 4, xMax: 46, yMin: 6, yMax: 48 },
-    spawn: { x: 26, y: 30 },
+    bounds: { xMin: 4, xMax: 45, yMin: 6, yMax: 47 },
+    spawn: { x: 26, y: 29 },
   },
   recepcao: {
     id: "recepcao",
@@ -38,8 +38,8 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     shortName: "Recepção",
     description: "Retire sua senha de atendimento e aguarde nos sofás.",
     icon: "🛋️",
-    bounds: { xMin: 30, xMax: 70, yMin: 30, yMax: 72 },
-    spawn: { x: 50, y: 52 },
+    bounds: { xMin: 34, xMax: 68, yMin: 36, yMax: 76 },
+    spawn: { x: 49, y: 55 },
   },
   cafe: {
     id: "cafe",
@@ -47,8 +47,8 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     shortName: "Café",
     description: "Troque ideias e experiências com outros candidatos.",
     icon: "☕",
-    bounds: { xMin: 54, xMax: 96, yMin: 6, yMax: 48 },
-    spawn: { x: 76, y: 28 },
+    bounds: { xMin: 55, xMax: 96, yMin: 6, yMax: 47 },
+    spawn: { x: 74, y: 33 },
   },
   jogos: {
     id: "jogos",
@@ -56,8 +56,8 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     shortName: "Sala de Jogos",
     description: "Fliperamas, mesa de sinuca e quiz rápido de carreira.",
     icon: "🎮",
-    bounds: { xMin: 4, xMax: 46, yMin: 52, yMax: 94 },
-    spawn: { x: 24, y: 74 },
+    bounds: { xMin: 4, xMax: 39, yMin: 52, yMax: 95 },
+    spawn: { x: 23, y: 78 },
   },
   diretoria: {
     id: "diretoria",
@@ -65,19 +65,19 @@ export const SUPPORT_ROOMS: Record<SupportRoomId, SupportRoomDef> = {
     shortName: "Diretoria",
     description: "Espaço executivo para bate-papos especiais e entrevistas.",
     icon: "🏛️",
-    bounds: { xMin: 54, xMax: 96, yMin: 52, yMax: 94 },
-    spawn: { x: 76, y: 74 },
+    bounds: { xMin: 65, xMax: 96, yMin: 52, yMax: 95 },
+    spawn: { x: 82, y: 76 },
   },
 };
 
-/** Posições fixas dos 3 balcões de atendimento no mapa */
+/** Posições fixas dos 3 balcões de atendimento no mapa isométrico */
 export const SUPPORT_DESK_POSITIONS: Record<
   number,
   { staff: { x: number; y: number }; candidate: { x: number; y: number } }
 > = {
-  1: { staff: { x: 12, y: 18 }, candidate: { x: 18, y: 24 } },
-  2: { staff: { x: 24, y: 14 }, candidate: { x: 30, y: 20 } },
-  3: { staff: { x: 36, y: 18 }, candidate: { x: 38, y: 25 } },
+  1: { staff: { x: 10, y: 25 }, candidate: { x: 16, y: 30 } },
+  2: { staff: { x: 15, y: 19 }, candidate: { x: 21, y: 24 } },
+  3: { staff: { x: 21, y: 14 }, candidate: { x: 27, y: 19 } },
 };
 
 export const SKIN_TONES = [
@@ -352,6 +352,8 @@ export interface SupportReportDTO {
 }
 
 export interface SupportSpaceStateDTO {
+  /** Se a sala está liberada para candidatos no portal público (false = Modo Teste Equipe) */
+  isPublicEnabled: boolean;
   me: (SupportParticipantDTO & { inboxKey: string }) | null;
   viewerRole: "GUEST" | "CANDIDATE" | "STAFF";
   prefillName: string | null;
@@ -413,3 +415,4 @@ export const CAREER_ARCADE_QUIZ: QuizQuestion[] = [
     tip: "Gentileza e boas trocas criam conexões valiosas para sua carreira!",
   },
 ];
+
