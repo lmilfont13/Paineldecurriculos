@@ -10,6 +10,7 @@ export interface RadioSpot {
   title: string;
   subtitle: string;
   audioUrl: string;
+  durationSeconds?: number;
 }
 
 export interface RadioTrack {
@@ -72,18 +73,21 @@ export const TARGET_RADIO_SPOTS: RadioSpot[] = [
     title: "Tarhget Conecta",
     subtitle: "Boas-vindas & Inspiração",
     audioUrl: "/audio/spots/target-spot-1.mp3",
+    durationSeconds: 12,
   },
   {
     id: "spot-2-dica-curriculo",
     title: "Dica Tarhget",
     subtitle: "Destaque seu perfil na triagem",
     audioUrl: "/audio/spots/target-spot-2.mp3",
+    durationSeconds: 14,
   },
   {
     id: "spot-3-banco-talentos",
     title: "Banco de Talentos",
     subtitle: "Cadastre-se para futuras vagas",
     audioUrl: "/audio/spots/target-spot-3.mp3",
+    durationSeconds: 17,
   },
 ];
 

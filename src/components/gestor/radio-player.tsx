@@ -59,6 +59,12 @@ interface RadioBrowserResult {
 
 const STORAGE_KEY_VOLUME = "triagem:radio:volume";
 
+function formatTimer(totalSecs: number): string {
+  const m = Math.floor(Math.max(0, totalSecs) / 60);
+  const s = Math.max(0, totalSecs) % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 export function GestorRadioPlayer({
   initialStation,
   canManage = false,
@@ -629,10 +635,10 @@ export function GestorRadioPlayer({
                 ? "Salvando rádio p/ equipe..."
                 : playing
                   ? isPlaylistMode
-                    ? `${currentTrack?.title} • ${currentTrack?.artist}`
-                    : `Ao vivo • ${current.genre}`
+                    ? `${currentTrack?.title} • ${currentTrack?.artist}${spotIntervalMinutes > 0 ? ` • Spot em ${formatTimer(nextSpotSeconds)}` : ""}`
+                    : `Ao vivo • ${current.genre}${spotIntervalMinutes > 0 ? ` • Spot em ${formatTimer(nextSpotSeconds)}` : ""}`
                   : isPlaylistMode
-                    ? `${playlistTracks.length} faixas • Rádio Oficial`
+                    ? `${playlistTracks.length} faixas • Rádio Tarhget${spotIntervalMinutes > 0 ? ` • A cada ${spotIntervalMinutes}m` : ""}`
                     : current.genre}
           </p>
         </div>
@@ -693,7 +699,7 @@ export function GestorRadioPlayer({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-[#fafaf9] py-1 text-[10px] font-semibold text-[#1c1917] transition hover:bg-stone-100"
           >
             <ListMusic className="size-3 text-amber-600" />
-            <span>Fila da Rádio ({playlistTracks.length})</span>
+            <span>Fila ({playlistTracks.length})</span>
           </button>
 
           <button
@@ -702,10 +708,12 @@ export function GestorRadioPlayer({
               setActiveTab("spots");
               setConfigOpen(true);
             }}
-            className="flex items-center gap-1 rounded-lg border border-[#e7e5e4] bg-[#fafaf9] px-2 py-1 text-[10px] font-semibold text-[#1c1917] transition hover:bg-stone-100"
+            className="flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50/60 px-2 py-1 text-[10px] font-semibold text-violet-900 transition hover:bg-violet-100"
           >
             <Sparkles className="size-3 text-violet-600" />
-            <span>Spots</span>
+            <span>
+              Spots {spotIntervalMinutes > 0 ? `⏱️ ${formatTimer(nextSpotSeconds)}` : "(Manual)"}
+            </span>
           </button>
         </div>
       )}
@@ -733,7 +741,7 @@ export function GestorRadioPlayer({
               }`}
             >
               <Sparkles className="size-3 text-violet-600" />
-              <span>Spots no Ar</span>
+              <span>Spots {spotIntervalMinutes > 0 ? `(${formatTimer(nextSpotSeconds)})` : ""}</span>
             </button>
             <button
               type="button"
@@ -988,22 +996,19 @@ export function GestorRadioPlayer({
                 </select>
 
                 {/* Status do temporizador e disparo rápido */}
-                <div className="flex items-center justify-between gap-1 pt-0.5">
-                  <div className="text-[9px] text-stone-600">
+                <div className="flex items-center justify-between gap-1 rounded-md bg-white border border-[#e4e4e7] p-1.5 shadow-xs">
+                  <div className="text-[10px] text-stone-700 flex items-center gap-1.5">
+                    <Clock className="size-3.5 text-violet-600 shrink-0" />
                     {spotIntervalMinutes > 0 ? (
-                      <span className="font-medium">
-                        ⏱️ Próximo spot em:{" "}
-                        <strong className="text-stone-900 font-mono">
-                          {Math.floor(nextSpotSeconds / 60)
-                            .toString()
-                            .padStart(2, "0")}
-                          :
-                          {(nextSpotSeconds % 60).toString().padStart(2, "0")}
+                      <span>
+                        Próximo spot em:{" "}
+                        <strong className="text-violet-950 font-mono font-bold text-[11px] bg-violet-100 px-1 py-0.5 rounded">
+                          {formatTimer(nextSpotSeconds)}
                         </strong>
                       </span>
                     ) : (
-                      <span className="text-[#71717a]">
-                        Disparo automático desligado.
+                      <span className="text-[#71717a] text-[9.5px]">
+                        Disparo automático desligado
                       </span>
                     )}
                   </div>
@@ -1012,7 +1017,7 @@ export function GestorRadioPlayer({
                     type="button"
                     onClick={triggerNextSpotNow}
                     title="Disparar a próxima vinheta agora"
-                    className="flex items-center gap-1 rounded bg-violet-900 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs transition hover:bg-violet-950 active:scale-95"
+                    className="flex items-center gap-1 rounded bg-violet-900 px-2 py-1 text-[9px] font-bold text-white shadow-xs transition hover:bg-violet-950 active:scale-95 shrink-0"
                   >
                     <Zap className="size-2.5 text-amber-300" />
                     <span>Disparar Agora</span>
@@ -1039,9 +1044,16 @@ export function GestorRadioPlayer({
                     >
                       <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[10px] font-bold text-stone-900">
-                            {spot.title}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-[10px] font-bold text-stone-900">
+                              {spot.title}
+                            </span>
+                            {spot.durationSeconds && (
+                              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[8.5px] font-bold text-violet-800 shrink-0">
+                                ⏱️ {spot.durationSeconds}s
+                              </span>
+                            )}
+                          </div>
                           <p className="truncate text-[9px] text-[#71717a]">
                             {spot.subtitle}
                           </p>
