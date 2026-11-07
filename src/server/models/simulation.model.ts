@@ -5,8 +5,8 @@
  */
 /** Quantos candidatos reais entram numa rodada da sala (cabe no tempo da função). */
 export const SIMULATION_REAL_LIMIT = 8;
-/** Pausa entre etapas com candidatos reais: dá para acompanhar sem demorar. */
-export const SIMULATION_REAL_STEP_PAUSE_MS = 700;
+/** Pausa curta entre etapas com candidatos reais para não estourar o limite de 60s da função. */
+export const SIMULATION_REAL_STEP_PAUSE_MS = 150;
 
 export type SimulationJobOption = { id: string; title: string; count: number };
 

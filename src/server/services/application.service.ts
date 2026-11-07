@@ -48,6 +48,7 @@ import {
   findApplicationsForCvSearch,
   findJobQueueSiblings,
   cloneStandbyApplicationToJob,
+  findUnevaluatedApplications,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -502,6 +503,46 @@ export async function requestReanalysis(
   await updateApplicationAi(id, { aiState: "WAITING" });
   enqueueTriage(id);
   return { ok: true };
+}
+
+/**
+ * Avalia em lote candidatos sem nota (WAITING, FAILED ou aiScore null) ou
+ * explicitamente selecionados pelo gestor. Roda em série no background com
+ * tentativas automáticas para respeitar limites de execução da função.
+ * Regra 1: valida tenant (`companyId`); Regra 2: só mexe em campos de IA.
+ */
+export async function reanalyzePendingApplications(
+  companyId: string,
+  options: { jobId?: string; applicationIds?: string[]; limit?: number } = {}
+): Promise<{ queued: number; names: string[] }> {
+  const batchLimit = Math.min(options.limit ?? 10, 15);
+  const targets = await findUnevaluatedApplications(companyId, {
+    jobId: options.jobId,
+    applicationIds: options.applicationIds,
+    limit: batchLimit,
+  });
+
+  if (targets.length === 0) {
+    return { queued: 0, names: [] };
+  }
+
+  for (const app of targets) {
+    await updateApplicationAi(app.id, { aiState: "WAITING" });
+  }
+
+  runInBackground("avaliar candidaturas pendentes em lote", async () => {
+    for (const app of targets) {
+      await runTriageWithTracking(app.id, {
+        eventName: "application/reanalyze-batch",
+        maxAttempts: 3,
+      });
+    }
+  });
+
+  return {
+    queued: targets.length,
+    names: targets.map((t) => t.name),
+  };
 }
 
 /**
@@ -1024,12 +1065,30 @@ export async function submitApplication(
 /**
  * Estado da IA de candidaturas do tenant + execuções de agente ativas, para o
  * polling leve da UI (substitui router.refresh() em loop). Aproveita a
- * consulta para rodar o watchdog de forma oportunista (no máx. 1×/min).
+ * consulta para rodar o watchdog de forma oportunista (no máx. 1×/min) e
+ * destravar automaticamente candidaturas em WAITING/FAILED quando não há runs ativos.
  */
+const lastAutoRecoverByCompany = new Map<string, number>();
+
 export async function getAiProgress(companyId: string, ids: string[]) {
   await sweepStaleAgentRunsThrottled(companyId);
   const states = ids.length > 0 ? await findAiStates(companyId, ids) : [];
   const runs = await findActiveAgentRuns(companyId);
+
+  // Se não há execuções ativas no momento mas existem candidaturas paradas em WAITING/FAILED,
+  // re-enfileira automaticamente até 3 por vez (com throttle de 45s por empresa).
+  const now = Date.now();
+  if (runs.length === 0 && now - (lastAutoRecoverByCompany.get(companyId) ?? 0) > 45_000) {
+    const hasPendingInList =
+      states.length === 0 || states.some((s) => s.aiState === "WAITING" || s.aiState === "FAILED");
+    if (hasPendingInList) {
+      lastAutoRecoverByCompany.set(companyId, now);
+      reanalyzePendingApplications(companyId, { limit: 3 }).catch((err) =>
+        console.error("[ia] falha na recuperação automática:", err)
+      );
+    }
+  }
+
   return {
     states,
     activeRuns: runs.length,

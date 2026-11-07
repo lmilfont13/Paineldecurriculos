@@ -5,6 +5,10 @@ import { ApplyWizard } from "@/components/public/apply/apply-wizard";
 import { CompanyHeader } from "@/components/public/company-header";
 import { getApplyPageData } from "@/server/controllers/public.controller";
 
+// O envio da candidatura dispara a análise de IA em background (after()):
+// reserva 60s na Vercel para leitura do PDF, OCR, nota e checklist concluírem.
+export const maxDuration = 60;
+
 export async function generateMetadata({
   params,
 }: {

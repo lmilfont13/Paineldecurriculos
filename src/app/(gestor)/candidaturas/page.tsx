@@ -18,6 +18,9 @@ import {
 
 export const metadata: Metadata = { title: "Candidatos · Triagem" };
 
+// Ações em lote (reanalisar pendentes, extrair fotos, relatórios) rodam nesta rota:
+export const maxDuration = 60;
+
 /** E3/E9 · Candidaturas com filtros e seleção em massa. */
 export default async function CandidaturasPage({
   searchParams,

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   CompanyFooter,
   CompanyHeader,
@@ -11,6 +11,7 @@ import {
   getPublicSession,
 } from "@/server/controllers/public.controller";
 import { getSupportSpaceStateAction } from "@/server/controllers/support.controller";
+import { LIVE_SUPPORT_FEATURE_ENABLED } from "@/server/models/support.model";
 
 export async function generateMetadata({
   params,
@@ -28,10 +29,16 @@ export async function generateMetadata({
 
 export default async function PublicSupportSpacePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  if (!LIVE_SUPPORT_FEATURE_ENABLED && preview !== "1") {
+    redirect(`/${slug}/vagas`);
+  }
   const data = await getJobsPageData(slug);
   if (!data) notFound();
 

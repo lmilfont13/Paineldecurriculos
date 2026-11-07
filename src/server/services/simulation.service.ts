@@ -191,7 +191,6 @@ export async function startRealTriageSimulation(
   const queue: { applicationId: string; runId: string }[] = [];
 
   for (const app of apps) {
-    await updateApplicationAi(app.id, { aiState: "WAITING" });
     const run = await createAgentRun({
       companyId,
       applicationId: app.id,
@@ -205,6 +204,7 @@ export async function startRealTriageSimulation(
   if (queue.length > 0) {
     runInBackground("sala com candidatos reais", async () => {
       for (const item of queue) {
+        await updateApplicationAi(item.applicationId, { aiState: "WAITING" });
         await runTriageWithTracking(item.applicationId, {
           eventName: "simulacao/triagem-real",
           runId: item.runId,

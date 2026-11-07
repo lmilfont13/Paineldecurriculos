@@ -5,7 +5,6 @@ import {
   Bot,
   ClipboardList,
   FolderOpen,
-  Headphones,
   LayoutDashboard,
   LogOut,
   Search,
@@ -23,7 +22,8 @@ const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
   { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
-  { href: "/suporte-ao-vivo", label: "Suporte ao Vivo", short: "Suporte", Icon: Headphones },
+  // Desativado momentaneamente para evolução futura:
+  // { href: "/suporte-ao-vivo", label: "Suporte ao Vivo", short: "Suporte", Icon: Headphones },
   { href: "/buscar-cvs", label: "Buscar CVs", short: "Buscar", Icon: Search },
   { href: "/talentos", label: "Talentos", Icon: FolderOpen },
   { href: "/agentes", label: "Agentes", Icon: Bot },
@@ -286,7 +286,7 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-8 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
     >
       {NAV.map((item) => {
         const active = isActive(pathname, item.href);

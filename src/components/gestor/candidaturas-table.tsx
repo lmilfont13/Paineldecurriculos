@@ -11,6 +11,7 @@ import {
   bulkSetApplicationStatusAction,
   deleteApplicationsAction,
   extractPhotosBulkAction,
+  reanalyzeBatchAction,
   searchCandidatesAction,
   generateCandidatesReportAction,
   type CandidateSummary,
@@ -133,6 +134,7 @@ export function CandidaturasTable({
   const [onlyPhoto, setOnlyPhoto] = useState(false);
   const [contentMatches, setContentMatches] = useState<Set<string> | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [messageOpen, setMessageOpen] = useState(false);
   const [confirm, setConfirm] = useState<AppStatusKey | null>(null);
@@ -177,6 +179,26 @@ export function CandidaturasTable({
       setToast("Não foi possível extrair as fotos agora.");
     } finally {
       setPhotoBusy(false);
+    }
+  }
+
+  async function reanalyzeBatch(ids?: string[]) {
+    setAiBusy(true);
+    try {
+      const r = await reanalyzeBatchAction({
+        applicationIds: ids,
+        jobId: !ids && jobId ? jobId : undefined,
+      });
+      setToast(
+        r.queued === 0
+          ? "Todos os candidatos com currículo já foram avaliados."
+          : `Avaliação iniciada para ${r.queued} candidato(s) em segundo plano.`
+      );
+      if (ids) setSelected(new Set());
+    } catch {
+      setToast("Não foi possível iniciar a avaliação em lote agora.");
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -354,8 +376,22 @@ export function CandidaturasTable({
     setToast(`CSV exportado (${rowsToExport.length} linhas).`);
   }
 
-  const anyAnalyzing = rows.some(
-    (r) => r.aiState === "WAITING" || r.aiState === "PROCESSING"
+  const anyAnalyzing =
+    aiBusy ||
+    rows.some(
+      (r) =>
+        r.aiState === "WAITING" ||
+        r.aiState === "PROCESSING" ||
+        r.aiState === "FAILED"
+    );
+  const unevaluatedCount = useMemo(
+    () =>
+      scoped.filter(
+        (r) =>
+          (r.aiScore === null || r.aiState === "FAILED" || r.aiState === "WAITING") &&
+          r.aiState !== "NO_RESUME"
+      ).length,
+    [scoped]
   );
   const cols =
     "grid-cols-[28px_minmax(0,1fr)_auto] md:grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_44px_72px]";
@@ -422,7 +458,20 @@ export function CandidaturasTable({
           )}
         </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {unevaluatedCount > 0 && (
+            <button
+              type="button"
+              disabled={aiBusy}
+              onClick={() => reanalyzeBatch()}
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 text-[12px] font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60"
+              title="Enfileira a análise de IA para todos os candidatos sem nota ou que falharam"
+            >
+              {aiBusy
+                ? "Avaliando pendentes…"
+                : `⚡ Avaliar sem nota (${unevaluatedCount})`}
+            </button>
+          )}
           <Link
             href="/buscar-cvs"
             className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 text-[12px] font-semibold text-amber-900 transition hover:bg-amber-100"
@@ -966,6 +1015,14 @@ export function CandidaturasTable({
             className="h-[34px] shrink-0 rounded-[10px] bg-[#c86b60]/25 px-4 text-xs font-medium text-[#f5b7b0] hover:bg-[#c86b60]/40 disabled:opacity-50"
           >
             Excluir
+          </button>
+          <button
+            type="button"
+            disabled={pending || aiBusy}
+            onClick={() => reanalyzeBatch([...selected])}
+            className="h-[34px] shrink-0 rounded-[10px] bg-emerald-500/25 px-4 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/40 disabled:opacity-50"
+          >
+            {aiBusy ? "Avaliando…" : "⚡ Avaliar com IA"}
           </button>
           <button
             type="button"

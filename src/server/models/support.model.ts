@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/**
+ * Feature flag global do módulo de Suporte ao Vivo / Espaço Virtual.
+ * Desativado momentaneamente (`false`) para evolução futura sem remover código ou rotas.
+ */
+export const LIVE_SUPPORT_FEATURE_ENABLED = false;
+
 export const SUPPORT_ROOM_IDS = [
   "recepcao",
   "atendimento",

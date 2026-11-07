@@ -57,6 +57,7 @@ import {
   requestApplicationInfo,
   correctApplicationAnswers,
   requestReanalysis,
+  reanalyzePendingApplications,
   saveInfoAnswers,
   saveManagerNotes,
   scheduleInterview,
@@ -298,6 +299,26 @@ export async function reanalyzeAction(applicationId: string): Promise<void> {
   await requestReanalysis(user.companyId, applicationId);
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/candidaturas");
+}
+
+/**
+ * Avalia em lote candidaturas sem nota (WAITING, FAILED ou aiScore null)
+ * ou as candidaturas selecionadas pelo gestor.
+ */
+export async function reanalyzeBatchAction(options?: {
+  applicationIds?: string[];
+  jobId?: string;
+}): Promise<{ queued: number; names: string[] }> {
+  const user = await requireManager();
+  const result = await reanalyzePendingApplications(user.companyId, {
+    applicationIds: options?.applicationIds?.slice(0, 15),
+    jobId: options?.jobId || undefined,
+    limit: 12,
+  });
+  revalidatePath("/candidaturas");
+  revalidatePath("/agentes");
+  revalidatePath("/painel");
+  return result;
 }
 
 /** G11 · Mudança de status em massa (E9) — cada id é validado pelo tenant. */

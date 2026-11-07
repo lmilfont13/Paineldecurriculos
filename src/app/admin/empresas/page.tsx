@@ -104,14 +104,7 @@ export default async function EmpresasPage() {
                 {company.isActive ? "Ativa" : "Suspensa"}
               </span>
               <div className="flex items-center justify-end gap-3">
-                <Link
-                  href={`/${company.slug}/espaco`}
-                  target="_blank"
-                  className="rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2.5 py-1 text-[11px] font-semibold text-[#0a0a0a] transition hover:bg-white"
-                  title="Entrar na Sala de Suporte ao Vivo como Admin"
-                >
-                  🎧 Sala
-                </Link>
+                {/* Atalho de Suporte ao Vivo desativado momentaneamente para evolução futura */}
                 <Link
                   href={`/admin/empresas/${company.id}`}
                   className="text-right text-xs font-medium text-[#71717a] transition-colors hover:text-[#0a0a0a] hover:underline group-hover:text-[#0a0a0a]"

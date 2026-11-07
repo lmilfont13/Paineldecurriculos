@@ -5,6 +5,7 @@ import { findCompanyById } from "@/server/repositories/company.repository";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "qwen/qwen3.8-27b";
+const GROQ_TEXT_FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"] as const;
 
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const CLAUDE_DEFAULT_MODEL = "claude-haiku-5-5";
@@ -153,18 +154,17 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
 
   const key = readEnv("GROQ_API_KEY");
   if (!key) {
-    if (attachments.length > 0 && readEnv("GEMINI_API_KEY")) {
+    if (!params.model && readEnv("GEMINI_API_KEY")) {
       return generateWithGemini(params);
     }
-    if (attachments.length > 0 && readEnv("ANTHROPIC_API_KEY")) {
+    if (!params.model && readEnv("ANTHROPIC_API_KEY")) {
       return generateWithClaude(CLAUDE_DEFAULT_MODEL, params);
     }
     throw new Error("GROQ_API_KEY não configurada");
   }
 
-  // Até 3 tentativas com backoff para absorver picos de 429 (limite OTPM do Groq).
-  // Somam menos que o maxDuration (60s) das páginas que chamam a IA.
-  const delays = imageAttachments.length > 0 ? [5_000, 10_000] : [12_000, 25_000];
+  // Tentativas rápidas com backoff curto para não estourar o maxDuration (60s) da Vercel.
+  const delays = [2_000, 4_000];
   let res = await callGroq(key, model, params);
 
   if (imageAttachments.length > 0 && (res.status === 400 || res.status === 422)) {
@@ -172,17 +172,31 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
   }
 
   for (const delay of delays) {
-    if (res.status !== 429) break;
+    if (res.status !== 429 && res.status < 500) break;
     await new Promise((r) => setTimeout(r, delay));
     res = await callGroq(key, model, params);
   }
 
+  // Se o modelo principal da Groq bateu rate-limit (429) ou erro em chamada de texto
+  // (e não estamos forçando um modelo específico no comparador), tenta os modelos
+  // secundários da Groq que possuem cotas independentes de TPM/RPM.
+  if (!res.ok && !params.model && imageAttachments.length === 0) {
+    for (const fallbackModel of GROQ_TEXT_FALLBACK_MODELS) {
+      if (fallbackModel === model) continue;
+      const fallbackRes = await callGroq(key, fallbackModel, params);
+      if (fallbackRes.ok) {
+        res = fallbackRes;
+        break;
+      }
+    }
+  }
+
   if (!res.ok) {
     const body = await res.text();
-    if (attachments.length > 0) {
+    if (!params.model) {
       if (readEnv("GEMINI_API_KEY")) {
         try {
-          console.error("[ia] Groq visão falhou, usando Gemini como reserva:", body.slice(0, 200));
+          console.error("[ia] Groq falhou, usando Gemini como reserva:", body.slice(0, 200));
           return await generateWithGemini(params);
         } catch (geminiErr) {
           console.error("[ia] Gemini reserva também falhou:", geminiErr);
@@ -190,7 +204,7 @@ async function generateWithGroq(model: string, params: GenerateParams): Promise<
       }
       if (readEnv("ANTHROPIC_API_KEY")) {
         try {
-          console.error("[ia] Groq visão falhou, usando Claude como reserva:", body.slice(0, 200));
+          console.error("[ia] Groq falhou, usando Claude como reserva:", body.slice(0, 200));
           return await generateWithClaude(CLAUDE_DEFAULT_MODEL, params);
         } catch (claudeErr) {
           console.error("[ia] Claude reserva também falhou:", claudeErr);

@@ -660,19 +660,74 @@ export async function findApplicationIdsByJob(companyId: string, jobId: string) 
 }
 
 /**
- * Candidaturas reais (não demonstração) para a sala de simulação: mais
- * recentes primeiro, de uma vaga ou de todas.
+ * Candidaturas reais (não demonstração) para a sala de simulação: prioriza
+ * quem ainda NÃO foi avaliado (aiScore null ou WAITING/FAILED/PROCESSING) e
+ * completa o restante com as mais recentes.
  */
-export function findRealApplicationsForSimulation(
+export async function findRealApplicationsForSimulation(
   companyId: string,
   jobId: string | null,
   limit: number
 ) {
-  return prisma.application.findMany({
-    where: { companyId, isDemo: false, ...(jobId ? { jobId } : {}) },
+  const baseWhere = { companyId, isDemo: false, ...(jobId ? { jobId } : {}) };
+  const unevaluated = await prisma.application.findMany({
+    where: {
+      ...baseWhere,
+      aiState: { not: "NO_RESUME" },
+      OR: [
+        { aiScore: null },
+        { aiState: { in: ["WAITING", "FAILED", "PROCESSING"] } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     take: limit,
     select: { id: true, name: true },
+  });
+
+  if (unevaluated.length >= limit) return unevaluated;
+
+  const rest = await prisma.application.findMany({
+    where: {
+      ...baseWhere,
+      id: { notIn: unevaluated.map((u) => u.id) },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit - unevaluated.length,
+    select: { id: true, name: true },
+  });
+
+  return [...unevaluated, ...rest];
+}
+
+/**
+ * Candidaturas reais sem nota da IA (WAITING, FAILED ou aiScore null) ou
+ * explicitamente selecionadas pelo gestor para avaliação em lote.
+ */
+export function findUnevaluatedApplications(
+  companyId: string,
+  options: { jobId?: string; applicationIds?: string[]; limit?: number } = {}
+) {
+  const { jobId, applicationIds, limit = 15 } = options;
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      isDemo: false,
+      ...(jobId ? { jobId } : {}),
+      ...(applicationIds && applicationIds.length > 0
+        ? { id: { in: applicationIds } }
+        : {
+            OR: [
+              { aiState: { in: ["WAITING", "FAILED"] } },
+              { aiScore: null, aiState: { notIn: ["NO_RESUME", "PROCESSING"] } },
+            ],
+          }),
+    },
+    orderBy: [
+      { aiScore: { sort: "asc", nulls: "first" } },
+      { createdAt: "desc" },
+    ],
+    take: limit,
+    select: { id: true, name: true, aiState: true, aiScore: true },
   });
 }
 

@@ -195,8 +195,11 @@ export async function getPrivacyPageData(slug: string) {
   return { company, contactEmail };
 }
 
+import { LIVE_SUPPORT_FEATURE_ENABLED } from "@/server/models/support.model";
+
 /**
  * Verifica se o botão do Espaço Virtual & Suporte ao Vivo deve aparecer no cabeçalho público:
+ * - Se `LIVE_SUPPORT_FEATURE_ENABLED` estiver `false` (pausado momentaneamente), permanece oculto;
  * - Se `isLiveSupportSpaceEnabled(companyId)` estiver ativo (`true`), aparece para todos;
  * - Se estiver desativado (`false`, Modo Teste), aparece apenas para o Gestor da empresa ou Admin da plataforma.
  */
@@ -204,6 +207,9 @@ export async function isPublicLiveSupportVisible(companyId: string): Promise<{
   visible: boolean;
   isTestMode: boolean;
 }> {
+  if (!LIVE_SUPPORT_FEATURE_ENABLED) {
+    return { visible: false, isTestMode: false };
+  }
   try {
     const [enabled, staffUser] = await Promise.all([
       isLiveSupportSpaceEnabled(companyId),
