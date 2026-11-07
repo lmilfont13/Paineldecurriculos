@@ -3,6 +3,7 @@
 import { Briefcase, CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, Radio, Sparkles, User, Users, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { createClient } from "@/lib/supabase/client";
 import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
@@ -292,17 +293,14 @@ export function OnlineCounterBadge({
   const [popoverTab, setPopoverTab] = useState<"presence" | "csat">("presence");
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Fecha o popover ao clicar fora
+  // Fecha ao pressionar Esc
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+    if (!isOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
     }
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
   useEffect(() => {
@@ -457,7 +455,7 @@ export function OnlineCounterBadge({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {cadastroCount > 0 ? (
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+            <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#52525b]">
               {cadastroCount} no cadastro
             </span>
           ) : candidates.length > 0 ? (
@@ -474,173 +472,155 @@ export function OnlineCounterBadge({
         </div>
       </button>
 
-      {/* Popover Detalhado com as Telas em Tempo Real & Satisfação Emojis */}
-      {isOpen && (
-        <div className="absolute bottom-[calc(100%+6px)] left-3 z-50 w-80 sm:w-96 rounded-2xl border border-[#e4e4e7] bg-white p-3.5 shadow-2xl animate-in fade-in zoom-in-95">
-          {/* Cabeçalho com Abas */}
-          <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-2.5">
-            <div className="flex items-center gap-1.5 bg-[#f4f4f5] p-0.5 rounded-xl text-[11px] font-bold">
-              <button
-                type="button"
-                onClick={() => setPopoverTab("presence")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition ${
-                  popoverTab === "presence"
-                    ? "bg-white text-stone-900 shadow-xs"
-                    : "text-stone-500 hover:text-stone-800"
-                }`}
-              >
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Presença ({total})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPopoverTab("csat")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition ${
-                  popoverTab === "csat"
-                    ? "bg-white text-amber-900 shadow-xs"
-                    : "text-stone-500 hover:text-stone-800"
-                }`}
-              >
-                <span>⭐</span>
-                <span>Satisfação Emojis</span>
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-
-          {popoverTab === "csat" ? (
-            <div className="mt-3">
-              <CandidateSentimentCard companySlug={slug} compact={false} />
-            </div>
-          ) : (
-            <>
-              {/* Vagas da empresa */}
-              <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[#e7e5e4] bg-[#fafaf9] p-2.5">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Briefcase className="size-3.5 text-[#b07818] shrink-0" />
-                  <span className="truncate text-[11px] font-medium text-[#57534e]">
-                    {activeJobsCount > 0 ? "Vagas ativas na empresa:" : "Vagas cadastradas:"}
-                  </span>
+      {/* Tela Sobreposta 100% Opaca (Sem mostrar a tela de baixo) */}
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Presença Online e Satisfação"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-[#fafaf9] p-6"
+          >
+            <div className="w-full max-w-lg rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm">
+              {/* Cabeçalho com Abas */}
+              <div className="flex items-center justify-between border-b border-[#e4e4e7] pb-3.5">
+                <div className="flex items-center gap-1.5 bg-[#f4f4f5] p-1 rounded-xl text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setPopoverTab("presence")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                      popoverTab === "presence"
+                        ? "bg-white text-[#0a0a0a] font-semibold shadow-2xs"
+                        : "text-[#71717a] hover:text-[#0a0a0a]"
+                    }`}
+                  >
+                    <span className="size-2 rounded-full bg-[#1f7a4d]" />
+                    <span>Presença ({total})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPopoverTab("csat")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                      popoverTab === "csat"
+                        ? "bg-white text-[#0a0a0a] font-semibold shadow-2xs"
+                        : "text-[#71717a] hover:text-[#0a0a0a]"
+                    }`}
+                  >
+                    <span>Satisfação</span>
+                  </button>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {jobsToday > 0 && (
-                    <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
-                      +{jobsToday} hoje
-                    </span>
-                  )}
-                  <span className="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-[#0a0a0a] shadow-xs">
-                    {activeJobsCount > 0 ? activeJobsCount : totalJobsCount}{" "}
-                    {(activeJobsCount > 0 ? activeJobsCount : totalJobsCount) === 1 ? "vaga" : "vagas"}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="flex h-8 items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-xs font-medium text-[#52525b] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                >
+                  <X className="size-3.5" />
+                  <span>Fechar</span>
+                </button>
               </div>
 
-              {/* Cards de Resumo Rápido (Apenas Candidatos, sem gestor) */}
-              <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
-                <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-2">
-                  <span className="block text-[10px] font-semibold text-rose-700">No Cadastro</span>
-                  <span className="text-base font-extrabold text-rose-950">{cadastroCount}</span>
+              {popoverTab === "csat" ? (
+                <div className="mt-4">
+                  <CandidateSentimentCard companySlug={slug} compact={false} />
                 </div>
-
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2">
-                  <span className="block text-[10px] font-semibold text-emerald-700">Tela Principal</span>
-                  <span className="text-base font-extrabold text-emerald-950">{principalCount}</span>
-                </div>
-
-                <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-2">
-                  <span className="block text-[10px] font-semibold text-purple-700">No Perfil</span>
-                  <span className="text-base font-extrabold text-purple-950">{perfilCount}</span>
-                </div>
-              </div>
-
-              {/* Lista de Sessões Ativas (Apenas Candidatos/Visitantes) */}
-              <div className="mt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
-                  Candidatos Online ({candidates.length})
-                </p>
-                <div className="mt-1.5 max-h-44 space-y-1.5 overflow-y-auto pr-1">
-                  {candidates.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-[#e4e4e7] p-4 text-center">
-                      <p className="text-xs text-[#a1a1aa]">Nenhum candidato navegando no momento.</p>
+              ) : (
+                <>
+                  {/* Vagas da empresa */}
+                  <div className="mt-4 flex items-center justify-between rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Briefcase className="size-4 text-[#71717a] shrink-0" />
+                      <span className="truncate text-xs font-medium text-[#57534e]">
+                        {activeJobsCount > 0 ? "Vagas ativas na empresa:" : "Vagas cadastradas:"}
+                      </span>
                     </div>
-                  ) : (
-                    candidates.map((s, idx) => {
-                      const isCad = s.category === "cadastro";
-                      const isPerf = s.category === "perfil";
-
-                      return (
-                        <div
-                          key={s.key || idx}
-                          className="flex items-center gap-2 rounded-lg border border-[#f4f4f5] bg-[#fafaf9] p-2 text-xs"
-                        >
-                          <div
-                            className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
-                              isCad
-                                ? "bg-rose-100 text-rose-700"
-                                : isPerf
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
-                            {isCad ? (
-                              <FileEdit className="size-3" />
-                            ) : isPerf ? (
-                              <User className="size-3" />
-                            ) : (
-                              <LayoutDashboard className="size-3" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate text-[11px] font-bold text-[#0a0a0a]">
-                                {s.name ? s.name : "Visitante (sem login)"}
-                              </span>
-                              {s.isRegistered && (
-                                <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800">
-                                  Cadastrado
-                                </span>
-                              )}
-                            </div>
-                            <span className="block truncate text-[10px] font-medium text-[#57534e]">
-                              {s.screenTitle}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Botão de rodapé para ver a Satisfação dos Candidatos */}
-              <button
-                type="button"
-                onClick={() => setPopoverTab("csat")}
-                className="mt-3 flex w-full items-center justify-between rounded-xl border border-amber-200 bg-amber-50/60 p-2 text-left transition hover:bg-amber-100/70"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-base">⭐</span>
-                  <div className="min-w-0">
-                    <span className="block text-[11px] font-bold text-amber-950 truncate">
-                      Ver Termômetro de Satisfação
-                    </span>
-                    <span className="block text-[10px] text-amber-800">
-                      Votos dos candidatos em tempo real
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {jobsToday > 0 && (
+                        <span className="rounded-md bg-[#e4f6ec] px-2 py-0.5 text-[11px] font-semibold text-[#1f7a4d]">
+                          +{jobsToday} hoje
+                        </span>
+                      )}
+                      <span className="rounded-md border border-[#e4e4e7] bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0a0a0a]">
+                        {activeJobsCount > 0 ? activeJobsCount : totalJobsCount}{" "}
+                        {(activeJobsCount > 0 ? activeJobsCount : totalJobsCount) === 1 ? "vaga" : "vagas"}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <ChevronDown className="size-3.5 text-amber-700 -rotate-90 shrink-0" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
+
+                  {/* Cards de Resumo Rápido no Padrão Neutro do Sistema */}
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-2.5">
+                      <span className="block text-[11px] font-medium text-[#71717a]">No Cadastro</span>
+                      <span className="mt-0.5 block text-base font-bold text-[#0a0a0a]">{cadastroCount}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-2.5">
+                      <span className="block text-[11px] font-medium text-[#71717a]">Tela Principal</span>
+                      <span className="mt-0.5 block text-base font-bold text-[#0a0a0a]">{principalCount}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-2.5">
+                      <span className="block text-[11px] font-medium text-[#71717a]">No Perfil</span>
+                      <span className="mt-0.5 block text-base font-bold text-[#0a0a0a]">{perfilCount}</span>
+                    </div>
+                  </div>
+
+                  {/* Lista de Sessões Ativas */}
+                  <div className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                      Candidatos Online ({candidates.length})
+                    </p>
+                    <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                      {candidates.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-[#e4e4e7] p-5 text-center">
+                          <p className="text-xs text-[#71717a]">Nenhum candidato navegando no momento.</p>
+                        </div>
+                      ) : (
+                        candidates.map((s, idx) => {
+                          const isCad = s.category === "cadastro";
+                          const isPerf = s.category === "perfil";
+
+                          return (
+                            <div
+                              key={s.key || idx}
+                              className="flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-2.5 text-xs"
+                            >
+                              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white text-[#52525b]">
+                                {isCad ? (
+                                  <FileEdit className="size-3.5" />
+                                ) : isPerf ? (
+                                  <User className="size-3.5" />
+                                ) : (
+                                  <LayoutDashboard className="size-3.5" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="truncate text-xs font-semibold text-[#0a0a0a]">
+                                    {s.name ? s.name : "Visitante (sem login)"}
+                                  </span>
+                                  {s.isRegistered && (
+                                    <span className="shrink-0 rounded bg-[#e4f6ec] px-1.5 py-0.5 text-[10px] font-medium text-[#1f7a4d]">
+                                      Cadastrado
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="block truncate text-[11px] text-[#71717a]">
+                                  {s.screenTitle}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

@@ -36,6 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { createClient } from "@/lib/supabase/client";
 import { playVoiceSpeech, stopVoiceSpeech } from "@/lib/audio-speech";
@@ -1236,7 +1237,7 @@ export function GestorRadioPlayer({
 
       {/* Alerta de Transmissão ao Vivo */}
       {broadcastNotification && (
-        <div className="mb-2 rounded-md bg-amber-500/15 px-2 py-1 text-center text-[10px] font-bold text-amber-800 animate-pulse">
+        <div className="mb-2 rounded-md border border-[#e4e4e7] bg-[#f4f4f5] px-2 py-1 text-center text-[10px] font-semibold text-[#0a0a0a]">
           {broadcastNotification}
         </div>
       )}
@@ -1333,18 +1334,18 @@ export function GestorRadioPlayer({
           className="h-1 w-9 cursor-pointer accent-[#1c1917]"
         />
 
-        {/* Botão de Abrir Estúdio DJ */}
+        {/* Botão de Abrir Estúdio da Rádio */}
         <button
           type="button"
           onClick={() => setConfigOpen(true)}
-          title="Abrir Estúdio DJ da Rádio Tarhget"
-          className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-900 hover:text-white transition active:scale-95"
+          title="Abrir configurações da Rádio"
+          className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-[#fafaf9] text-[#52525b] hover:bg-[#1c1917] hover:text-white transition"
         >
-          <Headphones className="size-3.5 text-amber-600" />
+          <Headphones className="size-3.5" />
         </button>
       </div>
 
-      {/* BOTÕES DE ACESSO RÁPIDO AO ESTÚDIO DJ */}
+      {/* BOTÕES DE ACESSO RÁPIDO À RÁDIO (PADRÃO NEUTRO DO SISTEMA) */}
       <div className="mt-2 flex gap-1 border-t border-[#f4f4f5] pt-1.5">
         <button
           type="button"
@@ -1352,9 +1353,9 @@ export function GestorRadioPlayer({
             setActiveTab("fila");
             setConfigOpen(true);
           }}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-[#fafaf9] py-1 text-[10px] font-semibold text-[#1c1917] transition hover:bg-stone-100 hover:border-amber-400 active:scale-98"
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] py-1 text-[10px] font-medium text-[#52525b] transition hover:bg-white hover:text-[#0a0a0a]"
         >
-          <ListMusic className="size-3 text-amber-600" />
+          <ListMusic className="size-3 text-[#71717a]" />
           <span>Fila ({playlistTracks.length})</span>
         </button>
 
@@ -1364,11 +1365,11 @@ export function GestorRadioPlayer({
             setActiveTab("spots");
             setConfigOpen(true);
           }}
-          className="flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50/60 px-2 py-1 text-[10px] font-semibold text-violet-900 transition hover:bg-violet-100 active:scale-98"
+          className="flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 text-[10px] font-medium text-[#52525b] transition hover:bg-white hover:text-[#0a0a0a]"
         >
-          <Sparkles className="size-3 text-violet-600" />
+          <Sparkles className="size-3 text-[#71717a]" />
           <span>
-            Spots {spotIntervalMinutes > 0 ? `⏱️ ${formatTimer(nextSpotSeconds)}` : "(Manual)"}
+            Vinhetas {spotIntervalMinutes > 0 ? `(${formatTimer(nextSpotSeconds)})` : ""}
           </span>
         </button>
 
@@ -1378,126 +1379,91 @@ export function GestorRadioPlayer({
             setActiveTab("alo");
             setConfigOpen(true);
           }}
-          className="flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-500/15 px-2 py-1 text-[10px] font-bold text-amber-900 transition hover:bg-amber-500/25 active:scale-98"
+          className="flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 text-[10px] font-medium text-[#52525b] transition hover:bg-white hover:text-[#0a0a0a]"
         >
-          <Mic className="size-3 text-amber-700" />
-          <span>Alô no Ar</span>
+          <Mic className="size-3 text-[#71717a]" />
+          <span>Recado</span>
         </button>
       </div>
 
-      {/* MODAL / ESTÚDIO DJ PROFISSIONAL FLUTUANTE (ESPAÇO OTIMIZADO) */}
-      {configOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Estúdio DJ Rádio Tarhget"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-150"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfigOpen(false);
-          }}
-        >
-          <div className="flex flex-col w-full max-w-5xl max-h-[92vh] bg-[#fafaf9] rounded-2xl shadow-2xl border border-stone-300 overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Header do Estúdio DJ */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-stone-900 text-white">
+      {/* TELA SOBREPOSTA 100% OPACA (SEM MOSTRAR A TELA DE BAIXO) */}
+      {configOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Configurações da Rádio"
+            className="fixed inset-0 z-[200] flex flex-col bg-[#fafaf9]"
+          >
+            {/* Header no padrão neutro do sistema */}
+            <div className="flex items-center justify-between border-b border-[#e4e4e7] bg-white px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500 text-stone-950 font-bold shadow-xs">
-                  <Headphones className="size-5" />
+                <div className="flex size-9 items-center justify-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] text-[#0a0a0a]">
+                  <Radio className="size-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <h2 className="text-base font-bold tracking-tight text-white">
-                      Estúdio DJ — Rádio Tarhget (Nível Michelin)
+                    <h2 className="text-base font-semibold tracking-tight text-[#0a0a0a]">
+                      Rádio da Empresa
                     </h2>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                      <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                      {playing ? "TRANSMITINDO NO AR" : "ESTÚDIO PRONTO"}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e4e4e7] bg-[#f4f4f5] px-2.5 py-0.5 text-[11px] font-medium text-[#52525b]">
+                      <span
+                        className={`size-1.5 rounded-full ${
+                          playing ? "bg-[#1f7a4d]" : "bg-[#a1a1aa]"
+                        }`}
+                      />
+                      {playing ? "Em reprodução" : "Pausada"}
                     </span>
                   </div>
-                  <p className="text-xs text-stone-400">
-                    Controle de músicas em tempo real, vinhetas masterizadas com IA e alô personalizado aos candidatos online
+                  <p className="text-xs text-[#71717a]">
+                    Gerencie a fila de músicas, vinhetas institucionais e avisos de áudio
                   </p>
                 </div>
               </div>
 
               {/* Botões do Topo: Crossfade + Fechar */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setCrossfadeEnabled((c) => !c)}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
                     crossfadeEnabled
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : "bg-stone-800 text-stone-400 hover:text-white"
+                      ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                      : "border-[#e4e4e7] bg-white text-[#71717a] hover:text-[#0a0a0a]"
                   }`}
-                  title="Transição suave de volume entre faixas (Fade-in e Fade-out)"
+                  title="Transição suave de volume entre faixas"
                 >
                   <SlidersHorizontal className="size-3.5" />
-                  <span>Crossfade {crossfadeEnabled ? "ON" : "OFF"}</span>
+                  <span>Transição suave: {crossfadeEnabled ? "Ativa" : "Inativa"}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setConfigOpen(false)}
-                  title="Fechar Estúdio DJ (Esc)"
-                  className="flex size-9 items-center justify-center rounded-xl bg-stone-800 text-stone-300 hover:bg-stone-700 hover:text-white transition"
+                  title="Fechar (Esc)"
+                  className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-medium text-[#0a0a0a] hover:bg-[#f4f4f5] transition"
                 >
-                  <X className="size-4.5" />
+                  <X className="size-4" />
+                  <span>Voltar ao painel</span>
                 </button>
               </div>
             </div>
 
-            {/* Soundboard Rápidos de Efeitos de Rádio */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-stone-950 px-6 py-2 text-xs">
-              <div className="flex items-center gap-1.5 text-stone-400 font-semibold text-[11px]">
-                <Zap className="size-3.5 text-amber-400" />
-                <span>PADS DE EFEITOS SONOROS (SFX):</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => triggerSfx("sfx-laser", "⚡ Raio Sônico")}
-                  className="rounded-md bg-stone-800 px-2.5 py-1 font-bold text-amber-300 hover:bg-amber-500 hover:text-stone-950 transition active:scale-95"
-                >
-                  ⚡ Raio Sônico
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSfx("sfx-ding", "🔔 Ding Alerta")}
-                  className="rounded-md bg-stone-800 px-2.5 py-1 font-bold text-sky-300 hover:bg-sky-400 hover:text-stone-950 transition active:scale-95"
-                >
-                  🔔 Ding Alerta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSfx("sfx-whoosh", "💨 Sweep Rádio")}
-                  className="rounded-md bg-stone-800 px-2.5 py-1 font-bold text-purple-300 hover:bg-purple-400 hover:text-stone-950 transition active:scale-95"
-                >
-                  💨 Sweep Rádio
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerSfx("sfx-subdrop", "🎯 Sub Drop 808")}
-                  className="rounded-md bg-stone-800 px-2.5 py-1 font-bold text-emerald-300 hover:bg-emerald-400 hover:text-stone-950 transition active:scale-95"
-                >
-                  🎯 Sub Drop 808
-                </button>
-              </div>
-            </div>
-
-            {/* Menu de Abas Superior */}
-            <div className="flex items-center border-b border-stone-200 bg-stone-100 px-6 gap-2 pt-2 text-xs font-semibold overflow-x-auto">
+            {/* Menu de Abas Superior no padrão do sistema */}
+            <div className="flex items-center gap-1 border-b border-[#e4e4e7] bg-white px-6 text-xs overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("fila")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 font-bold transition whitespace-nowrap ${
+                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-3 font-medium transition whitespace-nowrap ${
                   activeTab === "fila"
-                    ? "border-amber-600 text-stone-950 bg-white rounded-t-xl shadow-xs"
-                    : "border-transparent text-stone-600 hover:text-stone-900"
+                    ? "border-[#0a0a0a] text-[#0a0a0a]"
+                    : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
                 }`}
               >
-                <ListMusic className="size-4 text-amber-600" />
-                <span>Fila de Músicas & Catálogo</span>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-900 font-bold">
+                <ListMusic className="size-4" />
+                <span>Fila de Músicas</span>
+                <span className="rounded-full bg-[#f1f0ed] px-2 py-0.5 text-[11px] font-medium text-[#57534e]">
                   {playlistTracks.length}
                 </span>
               </button>
@@ -1505,32 +1471,31 @@ export function GestorRadioPlayer({
               <button
                 type="button"
                 onClick={() => setActiveTab("spots")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 font-bold transition whitespace-nowrap ${
+                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-3 font-medium transition whitespace-nowrap ${
                   activeTab === "spots"
-                    ? "border-violet-600 text-stone-950 bg-white rounded-t-xl shadow-xs"
-                    : "border-transparent text-stone-600 hover:text-stone-900"
+                    ? "border-[#0a0a0a] text-[#0a0a0a]"
+                    : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
                 }`}
               >
-                <Sparkles className="size-4 text-violet-600" />
-                <span>Spots & Vinhetas IA</span>
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] text-violet-900 font-bold">
-                  {spotsList.filter((s) => s.enabled !== false).length}/{spotsList.length} ativos
+                <Sparkles className="size-4" />
+                <span>Vinhetas</span>
+                <span className="rounded-full bg-[#f1f0ed] px-2 py-0.5 text-[11px] font-medium text-[#57534e]">
+                  {spotsList.filter((s) => s.enabled !== false).length}/{spotsList.length}
                 </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("alo")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 font-bold transition whitespace-nowrap ${
+                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-3 font-medium transition whitespace-nowrap ${
                   activeTab === "alo"
-                    ? "border-amber-600 text-stone-950 bg-white rounded-t-xl shadow-xs"
-                    : "border-transparent text-stone-600 hover:text-stone-900"
+                    ? "border-[#0a0a0a] text-[#0a0a0a]"
+                    : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
                 }`}
               >
-                <Mic className="size-4 text-amber-600" />
-                <span>Alô no Ar & Candidatos Online</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-900 font-bold">
-                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <Mic className="size-4" />
+                <span>Recado no Ar</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f0ed] px-2 py-0.5 text-[11px] font-medium text-[#57534e]">
                   {onlineCandidates.length} online
                 </span>
               </button>
@@ -1538,19 +1503,20 @@ export function GestorRadioPlayer({
               <button
                 type="button"
                 onClick={() => setActiveTab("estacao")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 font-bold transition whitespace-nowrap ${
+                className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-3 font-medium transition whitespace-nowrap ${
                   activeTab === "estacao"
-                    ? "border-stone-900 text-stone-950 bg-white rounded-t-xl shadow-xs"
-                    : "border-transparent text-stone-600 hover:text-stone-900"
+                    ? "border-[#0a0a0a] text-[#0a0a0a]"
+                    : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
                 }`}
               >
-                <Radio className="size-4 text-stone-700" />
-                <span>Rádios FM & Estações</span>
+                <Radio className="size-4" />
+                <span>Estações FM</span>
               </button>
             </div>
 
-            {/* Conteúdo com Espaço Amplo e Scroll Interno (100% Sólido) */}
+            {/* Conteúdo 100% Sólido no Padrão do Sistema */}
             <div className="flex-1 overflow-y-auto bg-[#fafaf9] p-6">
+              <div className="mx-auto max-w-5xl">
               {/* ABA 1: FILA DE MÚSICAS & CATÁLOGO */}
               {activeTab === "fila" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1578,7 +1544,7 @@ export function GestorRadioPlayer({
                           ) : savedPlaylist ? (
                             <Check className="size-3.5 text-emerald-400" />
                           ) : (
-                            <RadioTower className="size-3.5 text-amber-400" />
+                            <RadioTower className="size-3.5 text-white" />
                           )}
                           <span>
                             {savedPlaylist
@@ -1592,7 +1558,7 @@ export function GestorRadioPlayer({
                     </div>
 
                     {/* Lista das Músicas na Fila */}
-                    <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-100 shadow-xs max-h-[460px] overflow-y-auto">
+                    <div className="rounded-xl border border-[#e4e4e7] bg-white divide-y divide-[#f4f4f5] shadow-xs max-h-[460px] overflow-y-auto">
                       {playlistTracks.map((track, idx) => {
                         const isCurrentPlaying =
                           isPlaylistMode &&
@@ -1605,12 +1571,12 @@ export function GestorRadioPlayer({
                             key={`${track.id}-${idx}`}
                             className={`flex items-center justify-between p-3.5 transition ${
                               isSelectedTrack
-                                ? "bg-[#fef3c7] font-medium"
-                                : "hover:bg-stone-50"
+                                ? "bg-[#f4f4f5] font-medium"
+                                : "hover:bg-[#fafaf9]"
                             }`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-xs font-bold text-stone-700">
+                              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#f4f4f5] text-xs font-bold text-[#52525b]">
                                 {idx + 1}
                               </span>
 
@@ -1624,8 +1590,8 @@ export function GestorRadioPlayer({
                                 title="Tocar esta faixa agora"
                                 className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition ${
                                   isCurrentPlaying
-                                    ? "bg-amber-600 text-white"
-                                    : "bg-stone-100 text-stone-700 hover:bg-amber-100 hover:text-amber-900"
+                                    ? "bg-[#1c1917] text-white"
+                                    : "bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7] hover:text-[#0a0a0a]"
                                 }`}
                               >
                                 {isCurrentPlaying ? (
@@ -1636,10 +1602,10 @@ export function GestorRadioPlayer({
                               </button>
 
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-bold text-stone-900">
+                                <p className="truncate text-xs font-bold text-[#0a0a0a]">
                                   {track.title}
                                 </p>
-                                <p className="truncate text-[11px] text-stone-500">
+                                <p className="truncate text-[11px] text-[#71717a]">
                                   {track.artist}
                                 </p>
                               </div>
@@ -1651,7 +1617,7 @@ export function GestorRadioPlayer({
                                 onClick={() => moveTrackInQueue(idx, "up")}
                                 disabled={idx === 0}
                                 title="Mover para cima"
-                                className="flex size-7 items-center justify-center rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-800 disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <ArrowUp className="size-3.5" />
                               </button>
@@ -1660,7 +1626,7 @@ export function GestorRadioPlayer({
                                 onClick={() => moveTrackInQueue(idx, "down")}
                                 disabled={idx === playlistTracks.length - 1}
                                 title="Mover para baixo"
-                                className="flex size-7 items-center justify-center rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-800 disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <ArrowDown className="size-3.5" />
                               </button>
@@ -1668,7 +1634,7 @@ export function GestorRadioPlayer({
                                 type="button"
                                 onClick={() => removeTrackFromQueue(idx)}
                                 title="Remover da fila"
-                                className="flex size-7 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50 disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <Trash2 className="size-3.5" />
                               </button>
@@ -1682,9 +1648,9 @@ export function GestorRadioPlayer({
                   {/* Coluna Direita: Catálogo Completo & Adicionar Personalizada */}
                   <div className="lg:col-span-5 flex flex-col gap-4">
                     {/* Formulário: Adicionar Faixa por Link */}
-                    <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-xs">
-                      <h4 className="text-xs font-bold text-stone-900 mb-2 flex items-center gap-1.5">
-                        <Plus className="size-3.5 text-amber-600" />
+                    <div className="bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs">
+                      <h4 className="text-xs font-bold text-[#0a0a0a] mb-2 flex items-center gap-1.5">
+                        <Plus className="size-3.5 text-[#71717a]" />
                         <span>Adicionar Faixa por Link de Áudio</span>
                       </h4>
                       <form onSubmit={addCustomTrack} className="space-y-2.5">
@@ -1693,26 +1659,26 @@ export function GestorRadioPlayer({
                           placeholder="Título da Música *"
                           value={customTitle}
                           onChange={(e) => setCustomTitle(e.target.value)}
-                          className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-xs outline-none focus:border-stone-900"
+                          className="w-full rounded-lg border border-[#e4e4e7] px-3 py-1.5 text-xs outline-none focus:border-[#0a0a0a]"
                         />
                         <input
                           type="text"
                           placeholder="Artista / Produtor"
                           value={customArtist}
                           onChange={(e) => setCustomArtist(e.target.value)}
-                          className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-xs outline-none focus:border-stone-900"
+                          className="w-full rounded-lg border border-[#e4e4e7] px-3 py-1.5 text-xs outline-none focus:border-[#0a0a0a]"
                         />
                         <input
                           type="url"
                           placeholder="URL do arquivo MP3 / Stream *"
                           value={customUrl}
                           onChange={(e) => setCustomUrl(e.target.value)}
-                          className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-xs outline-none focus:border-stone-900"
+                          className="w-full rounded-lg border border-[#e4e4e7] px-3 py-1.5 text-xs outline-none focus:border-[#0a0a0a]"
                         />
                         <button
                           type="submit"
                           disabled={!customTitle.trim() || !customUrl.trim()}
-                          className="w-full rounded-lg bg-stone-900 py-1.5 text-xs font-bold text-white transition hover:bg-stone-800 disabled:opacity-50"
+                          className="w-full rounded-lg bg-[#1c1917] py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                         >
                           Adicionar à Fila do Ar
                         </button>
@@ -1720,10 +1686,10 @@ export function GestorRadioPlayer({
                     </div>
 
                     {/* Catálogo Curado de Músicas Tarhget */}
-                    <div className="bg-white rounded-xl border border-stone-200 p-4 shadow-xs flex-1 flex flex-col">
+                    <div className="bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs flex-1 flex flex-col">
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <h4 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                          <Music className="size-3.5 text-amber-600" />
+                        <h4 className="text-xs font-bold text-[#0a0a0a] flex items-center gap-1.5">
+                          <Music className="size-3.5 text-[#71717a]" />
                           <span>Catálogo Oficial Sugerido</span>
                         </h4>
                         <span className="text-[10px] text-stone-500 font-medium">
@@ -1772,26 +1738,26 @@ export function GestorRadioPlayer({
                 </div>
               )}
 
-              {/* ABA 2: SPOTS & VINHETAS NO AR (COM ESCOLHA, EXCLUSÃO E GERADOR IA) */}
+              {/* ABA 2: SPOTS & VINHETAS NO AR */}
               {activeTab === "spots" && (
                 <div className="space-y-5">
                   {/* Card de Frequência, Ações Gerais e Gerador */}
-                  <div className="rounded-xl border border-violet-200 bg-[#f5f3ff] p-4 shadow-xs">
+                  <div className="rounded-xl border border-[#e4e4e7] bg-white p-4 shadow-xs">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <Clock className="size-4 text-violet-700" />
-                          <h3 className="text-sm font-bold text-violet-950">
-                            Frequência dos Spots Institucionais & Rotação
+                          <Clock className="size-4 text-[#71717a]" />
+                          <h3 className="text-sm font-semibold text-[#0a0a0a]">
+                            Frequência das Vinhetas Institucionais
                           </h3>
                           {savingInterval && (
-                            <span className="text-xs font-semibold text-amber-700 animate-pulse">
+                            <span className="text-xs font-medium text-[#71717a]">
                               Salvando…
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-violet-800/80">
-                          Defina o intervalo automático dos spots ou acione manualmente. Marque quais vinhetas deseja manter no ar.
+                        <p className="text-xs text-[#71717a]">
+                          Defina o intervalo automático das vinhetas ou acione manualmente.
                         </p>
                       </div>
 
@@ -1800,7 +1766,7 @@ export function GestorRadioPlayer({
                           id="spot-interval"
                           value={spotIntervalMinutes}
                           onChange={(e) => handleIntervalChange(parseInt(e.target.value, 10))}
-                          className="h-8 rounded-lg border border-violet-300 bg-white px-2.5 text-xs font-semibold text-stone-900 shadow-xs outline-none focus:border-violet-600"
+                          className="h-8 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-xs font-medium text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                         >
                           <option value={0}>Apenas manual (acionar quando eu quiser)</option>
                           <option value={3}>A cada 3 minutos</option>
@@ -1815,35 +1781,34 @@ export function GestorRadioPlayer({
                           type="button"
                           onClick={triggerNextSpotNow}
                           title="Disparar a próxima vinheta agora"
-                          className="flex items-center gap-1.5 rounded-lg bg-violet-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-violet-950 active:scale-95 shrink-0"
+                          className="flex items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-3.5 py-1.5 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5] shrink-0"
                         >
-                          <Zap className="size-3.5 text-amber-300" />
+                          <Radio className="size-3.5 text-[#71717a]" />
                           <span>Disparar Agora</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => setShowNewSpotModal(true)}
-                          className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-amber-700 active:scale-95 shrink-0"
+                          className="flex items-center gap-1.5 rounded-lg bg-[#1c1917] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 shrink-0"
                         >
-                          <Sparkles className="size-3.5" />
-                          <span>✨ Criar Vinheta com IA</span>
+                          <Plus className="size-3.5" />
+                          <span>Criar Vinheta</span>
                         </button>
                       </div>
                     </div>
 
-                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-white border border-violet-200 px-3 py-2 text-xs">
-                      <div className="flex items-center gap-2 text-stone-700">
-                        <Sparkles className="size-3.5 text-violet-600" />
+                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-[#fafaf9] border border-[#e4e4e7] px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2 text-[#52525b]">
                         {spotIntervalMinutes > 0 ? (
                           <span>
-                            Próximo spot automático em:{" "}
-                            <strong className="text-violet-950 font-mono font-bold text-sm bg-violet-100 px-1.5 py-0.5 rounded">
+                            Próxima vinheta automática em:{" "}
+                            <strong className="text-[#0a0a0a] font-mono font-semibold text-xs bg-white border border-[#e4e4e7] px-1.5 py-0.5 rounded">
                               {formatTimer(nextSpotSeconds)}
                             </strong>
                           </span>
                         ) : (
-                          <span className="text-stone-500 font-medium">
+                          <span className="text-[#71717a]">
                             Disparo automático desativado. Vinhetas serão tocadas apenas quando acionadas.
                           </span>
                         )}
@@ -1853,22 +1818,22 @@ export function GestorRadioPlayer({
                         <button
                           type="button"
                           onClick={restoreDefaultSpots}
-                          className="text-[11px] font-semibold text-stone-500 hover:text-stone-900 underline"
+                          className="text-[11px] font-medium text-[#71717a] hover:text-[#0a0a0a] underline"
                         >
-                          Restaurar Vinhetas Oficiais
+                          Restaurar padrão
                         </button>
                         <button
                           type="button"
                           onClick={saveAndSyncSpots}
                           disabled={savingSpots}
-                          className="flex items-center gap-1 rounded-md bg-stone-900 px-3 py-1 text-xs font-bold text-white transition hover:bg-stone-800 disabled:opacity-50"
+                          className="flex items-center gap-1 rounded-md bg-[#1c1917] px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                         >
                           {savingSpots ? (
                             <Loader2 className="size-3 animate-spin" />
                           ) : savedSpots ? (
-                            <Check className="size-3 text-emerald-400" />
+                            <Check className="size-3" />
                           ) : null}
-                          <span>{savedSpots ? "Salvo no Ar!" : "Salvar Configuração"}</span>
+                          <span>{savedSpots ? "Salvo" : "Salvar"}</span>
                         </button>
                       </div>
                     </div>
@@ -1884,12 +1849,12 @@ export function GestorRadioPlayer({
                       return (
                         <div
                           key={spot.id}
-                          className={`flex flex-col justify-between rounded-xl border p-4 transition shadow-xs ${
+                          className={`flex flex-col justify-between rounded-xl border p-4 transition ${
                             isLive
-                              ? "border-amber-400 bg-[#fef3c7] ring-2 ring-amber-400"
+                              ? "border-[#0a0a0a] bg-white ring-1 ring-[#0a0a0a]"
                               : isEnabled
-                                ? "border-stone-200 bg-white hover:border-stone-300"
-                                : "border-stone-200 bg-stone-100 opacity-60"
+                                ? "border-[#e4e4e7] bg-white"
+                                : "border-[#e4e4e7] bg-[#fafaf9] opacity-60"
                           }`}
                         >
                           <div>
@@ -1899,61 +1864,61 @@ export function GestorRadioPlayer({
                                   type="button"
                                   onClick={() => toggleSpotEnabled(spot.id)}
                                   title={isEnabled ? "Clique para desativar da rotação" : "Clique para ativar na rotação"}
-                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition ${
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
                                     isEnabled
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                      : "bg-stone-200 text-stone-600"
+                                      ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                                      : "bg-[#f4f4f5] text-[#71717a]"
                                   }`}
                                 >
-                                  <span className={`size-1.5 rounded-full ${isEnabled ? "bg-emerald-500" : "bg-stone-400"}`} />
-                                  {isEnabled ? "Ativo no Ar" : "Pausado"}
+                                  <span className={`size-1.5 rounded-full ${isEnabled ? "bg-[#1f7a4d]" : "bg-[#a1a1aa]"}`} />
+                                  {isEnabled ? "Ativa" : "Pausada"}
                                 </button>
-                                <span className="font-bold text-stone-900 text-sm truncate">
+                                <span className="font-semibold text-[#0a0a0a] text-sm truncate">
                                   {spot.title}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-1.5 shrink-0">
                                 {spot.durationSeconds && (
-                                  <span className="rounded-md bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-900">
-                                    ⏱️ {spot.durationSeconds}s
+                                  <span className="rounded-md bg-[#f4f4f5] px-2 py-0.5 text-xs font-medium text-[#52525b]">
+                                    {spot.durationSeconds}s
                                   </span>
                                 )}
                                 <button
                                   type="button"
                                   onClick={() => deleteSpot(spot.id)}
                                   title="Apagar vinheta"
-                                  className="flex size-7 items-center justify-center rounded-md text-stone-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                                  className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition"
                                 >
                                   <Trash2 className="size-3.5" />
                                 </button>
                               </div>
                             </div>
-                            <p className="mt-1 text-xs text-stone-600">
+                            <p className="mt-1 text-xs text-[#71717a]">
                               {spot.subtitle}
                             </p>
                           </div>
 
-                          <div className="mt-4 flex items-center justify-end gap-2 border-t border-stone-100 pt-3">
+                          <div className="mt-4 flex items-center justify-end gap-2 border-t border-[#f4f4f5] pt-3">
                             <button
                               type="button"
                               onClick={() => toggleSpotPreview(spot)}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                                 isPreviewing
-                                  ? "bg-stone-900 text-white"
-                                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                                  ? "bg-[#1c1917] text-white"
+                                  : "border border-[#e4e4e7] bg-[#fafaf9] text-[#52525b] hover:bg-white hover:text-[#0a0a0a]"
                               }`}
                             >
-                              {isPreviewing ? "Parar Prévia" : "Ouvir Prévia"}
+                              {isPreviewing ? "Parar prévia" : "Ouvir prévia"}
                             </button>
 
                             <button
                               type="button"
                               onClick={() => broadcastSpotLive(spot)}
-                              className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-amber-700 active:scale-95"
+                              className="flex items-center gap-1.5 rounded-lg bg-[#1c1917] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                             >
                               <Radio className="size-3.5" />
-                              <span>🔴 Transmitir No Ar</span>
+                              <span>Transmitir no ar</span>
                             </button>
                           </div>
                         </div>
@@ -1963,21 +1928,20 @@ export function GestorRadioPlayer({
                 </div>
               )}
 
-              {/* ABA 3: ALÔ NO AR & CANDIDATOS ONLINE (NÍVEL MICHELIN) */}
+              {/* ABA 3: RECADO NO AR & CANDIDATOS ONLINE */}
               {activeTab === "alo" && (
                 <div className="space-y-6">
-                  {/* Banner de Estrategista de Rádio Tarhget (100% Sólido) */}
-                  <div className="rounded-xl border border-amber-300 bg-[#fffbeb] p-5 shadow-xs">
+                  <div className="rounded-xl border border-[#e4e4e7] bg-white p-5">
                     <div className="flex items-start gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white font-bold">
-                        <Mic className="size-5" />
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] text-[#0a0a0a]">
+                        <Mic className="size-4" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-stone-900">
-                          Alô no Ar — Conquista & Retenção de Candidatos em Tempo Real
+                        <h3 className="text-sm font-semibold text-[#0a0a0a]">
+                          Recado de Áudio no Ar para Candidatos Online
                         </h3>
-                        <p className="text-xs text-stone-700 mt-0.5 leading-relaxed">
-                          Fale o nome do candidato online e envie uma mensagem falada de estúdio profissional com voz humanizada, equalização FM e música ducking. Crie uma experiência inesquecível que faz os melhores talentos retornarem sempre ao portal da sua empresa.
+                        <p className="text-xs text-[#71717a] mt-0.5 leading-relaxed">
+                          Envie uma mensagem falada na rádio para um candidato específico ou para todos os ouvintes conectados no portal.
                         </p>
                       </div>
                     </div>
@@ -1987,19 +1951,19 @@ export function GestorRadioPlayer({
                     {/* Coluna Esquerda: Candidatos Conectados Agora + Campo de Busca/Nome */}
                     <div className="lg:col-span-5 flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                          <Users className="size-4 text-amber-600" />
+                        <h4 className="text-xs font-bold text-[#0a0a0a] flex items-center gap-1.5">
+                          <Users className="size-4 text-[#71717a]" />
                           <span>Candidatos Conectados Agora ({onlineCandidates.length})</span>
                         </h4>
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] text-[#1f7a4d] font-bold bg-[#e4f6ec] px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-[#1f7a4d] animate-pulse" />
                           Ao Vivo
                         </span>
                       </div>
 
                       {/* Campo Direto para Buscar ou Digitar o Nome (ex: Vanessa) */}
-                      <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-[#fffdf5] px-3 py-2 shadow-2xs">
-                        <Search className="size-4 text-amber-700 shrink-0" />
+                      <div className="flex items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 py-2 shadow-2xs">
+                        <Search className="size-4 text-[#71717a] shrink-0" />
                         <input
                           type="text"
                           placeholder="Digitar nome da candidata (ex: Vanessa)..."
@@ -2013,7 +1977,7 @@ export function GestorRadioPlayer({
                               setSelectedCandidate("all");
                             }
                           }}
-                          className="flex-1 bg-transparent text-xs font-bold text-stone-900 placeholder:text-stone-400 placeholder:font-normal outline-none"
+                          className="flex-1 bg-transparent text-xs font-bold text-[#0a0a0a] placeholder:text-[#a1a1aa] placeholder:font-normal outline-none"
                         />
                         {customCandidateInput && (
                           <button
@@ -2022,7 +1986,7 @@ export function GestorRadioPlayer({
                               setCustomCandidateInput("");
                               setSelectedCandidate("all");
                             }}
-                            className="text-stone-400 hover:text-stone-700"
+                            className="text-[#a1a1aa] hover:text-[#0a0a0a]"
                             title="Limpar nome"
                           >
                             <X className="size-3.5" />
@@ -2030,7 +1994,7 @@ export function GestorRadioPlayer({
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-100 shadow-xs max-h-[380px] overflow-y-auto">
+                      <div className="rounded-xl border border-[#e4e4e7] bg-white divide-y divide-[#f4f4f5] shadow-xs max-h-[380px] overflow-y-auto">
                         {/* Opção para Todos os Candidatos */}
                         <div
                           onClick={() => {
@@ -2042,24 +2006,24 @@ export function GestorRadioPlayer({
                           }}
                           className={`flex items-center justify-between p-3 cursor-pointer transition ${
                             selectedCandidate === "all" && !customCandidateInput.trim()
-                              ? "bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
-                              : "hover:bg-stone-50"
+                              ? "bg-[#f4f4f5] border-l-4 border-[#0a0a0a] font-medium"
+                              : "hover:bg-[#fafaf9]"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-white text-xs font-bold">
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1917] text-white text-xs font-bold">
                               📢
                             </span>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-stone-900">
+                              <p className="text-xs font-bold text-[#0a0a0a]">
                                 Todos os Candidatos Conectados
                               </p>
-                              <p className="text-[10px] text-stone-500">
+                              <p className="text-[10px] text-[#71717a]">
                                 Transmissão coletiva no ar
                               </p>
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-[#52525b] bg-[#f4f4f5] px-2 py-0.5 rounded-md">
                             Geral
                           </span>
                         </div>
@@ -2068,22 +2032,22 @@ export function GestorRadioPlayer({
                         {customCandidateInput.trim() && (
                           <div
                             onClick={() => setSelectedCandidate(customCandidateInput.trim())}
-                            className="flex items-center justify-between p-3 cursor-pointer bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
+                            className="flex items-center justify-between p-3 cursor-pointer bg-[#f4f4f5] border-l-4 border-[#0a0a0a] font-medium"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-bold">
+                              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1917] text-white text-xs font-bold">
                                 👤
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-stone-900 truncate">
+                                <p className="text-xs font-bold text-[#0a0a0a] truncate">
                                   {customCandidateInput.trim()}
                                 </p>
-                                <p className="text-[10px] text-amber-800">
-                                  Candidata Selecionada para Alô no Ar
+                                <p className="text-[10px] text-[#71717a]">
+                                  Candidato Selecionado para Recado no Ar
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                            <span className="text-[10px] font-bold text-[#1f7a4d] bg-[#e4f6ec] px-2 py-0.5 rounded-md">
                               Alvo
                             </span>
                           </div>
@@ -2102,13 +2066,13 @@ export function GestorRadioPlayer({
 
                           if (listToShow.length === 0) {
                             return (
-                              <div className="p-4 text-center text-xs text-stone-500 space-y-1">
-                                <p className="font-semibold text-stone-700">
+                              <div className="p-4 text-center text-xs text-[#71717a] space-y-1">
+                                <p className="font-semibold text-[#52525b]">
                                   {query
                                     ? `Nenhum candidato online encontrado com "${customCandidateInput.trim()}".`
                                     : "Nenhum candidato na lista de presença neste segundo."}
                                 </p>
-                                <p className="text-[11px] text-stone-500">
+                                <p className="text-[11px] text-[#71717a]">
                                   {query
                                     ? "Você pode transmitir para o nome digitado usando o card acima!"
                                     : "Quando candidatos acessarem vagas ou perfil, aparecerão automaticamente aqui."}
@@ -2133,25 +2097,25 @@ export function GestorRadioPlayer({
                                 }}
                                 className={`flex items-center justify-between p-3 cursor-pointer transition ${
                                   isSelected
-                                    ? "bg-[#fef3c7] border-l-4 border-amber-600 font-medium"
-                                    : "hover:bg-stone-50"
+                                    ? "bg-[#f4f4f5] border-l-4 border-[#0a0a0a] font-medium"
+                                    : "hover:bg-[#fafaf9]"
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold">
+                                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f4f4f5] text-[#0a0a0a] text-xs font-bold">
                                     <User className="size-4" />
                                   </span>
                                   <div className="min-w-0">
-                                    <p className="text-xs font-bold text-stone-900 truncate">
+                                    <p className="text-xs font-bold text-[#0a0a0a] truncate">
                                       {name}
                                     </p>
-                                    <p className="text-[10px] text-stone-500 truncate">
+                                    <p className="text-[10px] text-[#71717a] truncate">
                                       {cand.path || "Navegando no portal"}
                                     </p>
                                   </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] font-bold text-[#1f7a4d] bg-[#e4f6ec] px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <span className="size-1.5 rounded-full bg-[#1f7a4d] animate-pulse" />
                                   Online
                                 </span>
                               </div>
@@ -2162,14 +2126,14 @@ export function GestorRadioPlayer({
                     </div>
 
                     {/* Coluna Direita: Estúdio de Criação do Alô & Envio */}
-                    <div className="lg:col-span-7 flex flex-col gap-4 bg-white rounded-xl border border-stone-200 p-5 shadow-xs">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-100">
-                        <h4 className="text-xs font-bold text-stone-900">
-                          Texto do Alô no Ar
+                    <div className="lg:col-span-7 flex flex-col gap-4 bg-white rounded-xl border border-[#e4e4e7] p-5 shadow-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#f4f4f5]">
+                        <h4 className="text-xs font-bold text-[#0a0a0a]">
+                          Texto do Recado no Ar
                         </h4>
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1 text-xs font-bold text-amber-950">
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f4f5] border border-[#e4e4e7] px-3 py-1 text-xs font-bold text-[#0a0a0a]">
                           <span>Destinatário:</span>
-                          <span className="text-amber-800">
+                          <span className="text-[#52525b]">
                             {customCandidateInput.trim()
                               ? `👤 ${customCandidateInput.trim()}`
                               : selectedCandidate === "all"
@@ -2181,8 +2145,8 @@ export function GestorRadioPlayer({
 
                       {/* Roteiros Estratégicos Prontos (1-Click) */}
                       <div>
-                        <span className="text-[11px] font-semibold text-stone-600 block mb-2">
-                          💡 Sugestões Estratégicas de Acolhimento & Retenção:
+                        <span className="text-[11px] font-semibold text-[#52525b] block mb-2">
+                          Sugestões de Acolhimento & Retenção:
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <button
@@ -2193,10 +2157,10 @@ export function GestorRadioPlayer({
                                 `Atenção ${target}! A equipe de atração de talentos viu sua chegada. Seja muito bem-vindo ao nosso portal e sinta-se em casa. Acreditamos no seu potencial!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-[#e4e4e7] bg-white p-2.5 text-[11px] font-medium text-[#52525b] hover:border-[#0a0a0a] hover:bg-[#fafaf9] transition"
                           >
-                            <span className="font-bold block text-stone-900 mb-0.5">🌟 Boas-Vindas & Acolhimento</span>
-                            <span className="text-stone-500 line-clamp-1">&quot;Atenção {customCandidateInput.trim() || "candidato"}! Seja bem-vindo...&quot;</span>
+                            <span className="font-bold block text-[#0a0a0a] mb-0.5">Boas-Vindas & Acolhimento</span>
+                            <span className="text-[#71717a] line-clamp-1">&quot;Atenção {customCandidateInput.trim() || "candidato"}! Seja bem-vindo...&quot;</span>
                           </button>
 
                           <button
@@ -2207,10 +2171,10 @@ export function GestorRadioPlayer({
                                 `Passando no ar da rádio Tarhget para desejar um dia espetacular e muito produtivo para ${target}! Curta a seleção musical e foque no seu futuro!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-[#e4e4e7] bg-white p-2.5 text-[11px] font-medium text-[#52525b] hover:border-[#0a0a0a] hover:bg-[#fafaf9] transition"
                           >
-                            <span className="font-bold block text-stone-900 mb-0.5">☀️ Energia & Ótimo Dia</span>
-                            <span className="text-stone-500 line-clamp-1">&quot;Passando no ar para desejar um dia espetacular para {customCandidateInput.trim() || "você"}...&quot;</span>
+                            <span className="font-bold block text-[#0a0a0a] mb-0.5">Energia & Ótimo Dia</span>
+                            <span className="text-[#71717a] line-clamp-1">&quot;Passando no ar para desejar um dia espetacular para {customCandidateInput.trim() || "você"}...&quot;</span>
                           </button>
 
                           <button
@@ -2221,10 +2185,10 @@ export function GestorRadioPlayer({
                                 `Dica de ouro da nossa equipe para ${target}: conte suas experiências reais e mantenha seu currículo atualizado. Estamos sempre em busca de talentos como você!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-[#e4e4e7] bg-white p-2.5 text-[11px] font-medium text-[#52525b] hover:border-[#0a0a0a] hover:bg-[#fafaf9] transition"
                           >
-                            <span className="font-bold block text-stone-900 mb-0.5">💡 Dica dos Recrutadores</span>
-                            <span className="text-stone-500 line-clamp-1">&quot;Dica de ouro da nossa equipe para {customCandidateInput.trim() || "você"}...&quot;</span>
+                            <span className="font-bold block text-[#0a0a0a] mb-0.5">Dica dos Recrutadores</span>
+                            <span className="text-[#71717a] line-clamp-1">&quot;Dica de ouro da nossa equipe para {customCandidateInput.trim() || "você"}...&quot;</span>
                           </button>
 
                           <button
@@ -2235,17 +2199,17 @@ export function GestorRadioPlayer({
                                 `Aviso especial para ${target}: parabéns por dar esse passo na sua carreira! Nosso portal de vagas é atualizado diariamente, volte sempre!`
                               );
                             }}
-                            className="text-left rounded-lg border border-stone-200 bg-white p-2.5 text-[11px] font-medium text-stone-800 hover:border-amber-400 hover:bg-[#fffbeb] hover:text-amber-950 transition"
+                            className="text-left rounded-lg border border-[#e4e4e7] bg-white p-2.5 text-[11px] font-medium text-[#52525b] hover:border-[#0a0a0a] hover:bg-[#fafaf9] transition"
                           >
-                            <span className="font-bold block text-stone-900 mb-0.5">🚀 Incentivo & Retorno</span>
-                            <span className="text-stone-500 line-clamp-1">&quot;Parabéns pelo passo na carreira, volte sempre...&quot;</span>
+                            <span className="font-bold block text-[#0a0a0a] mb-0.5">Incentivo & Retorno</span>
+                            <span className="text-[#71717a] line-clamp-1">&quot;Parabéns pelo passo na carreira, volte sempre...&quot;</span>
                           </button>
                         </div>
                       </div>
 
                       {/* Textarea do Alô (100% Sólido) */}
                       <div>
-                        <label className="text-[11px] font-semibold text-stone-600 block mb-1">
+                        <label className="text-[11px] font-semibold text-[#52525b] block mb-1">
                           Mensagem que o Locutor irá Falar no Ar:
                         </label>
                         <textarea
@@ -2253,19 +2217,19 @@ export function GestorRadioPlayer({
                           value={shoutoutMessage}
                           onChange={(e) => setShoutoutMessage(e.target.value)}
                           placeholder="Digite o recado ao vivo..."
-                          className="w-full rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 leading-relaxed"
+                          className="w-full rounded-xl border border-[#e4e4e7] bg-white p-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a] leading-relaxed"
                         />
                       </div>
 
                       {/* Opções de Voz de Estúdio e Ações (Ouvir Prévia + Transmitir no Ar) */}
-                      <div className="flex flex-col gap-3 pt-3 border-t border-stone-200">
+                      <div className="flex flex-col gap-3 pt-3 border-t border-[#f4f4f5]">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-stone-700 whitespace-nowrap">Voz do Locutor:</span>
+                            <span className="text-xs font-semibold text-[#52525b] whitespace-nowrap">Voz do Locutor:</span>
                             <select
                               value={shoutoutVoice}
                               onChange={(e) => setShoutoutVoice(e.target.value)}
-                              className="h-8 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-900 outline-none focus:border-amber-600"
+                              className="h-8 rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-xs font-semibold text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                             >
                               <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Voz Grave & Marcante)</option>
                               <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Voz Calorosa & Acolhedora)</option>
@@ -2282,24 +2246,24 @@ export function GestorRadioPlayer({
                               disabled={!shoutoutMessage.trim() || sendingShoutout}
                               className={`flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition active:scale-95 disabled:opacity-50 shrink-0 ${
                                 previewingShoutout
-                                  ? "bg-stone-900 text-white shadow-md ring-2 ring-amber-400"
-                                  : "bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-300"
+                                  ? "bg-[#1c1917] text-white"
+                                  : "bg-[#fafaf9] text-[#52525b] hover:bg-[#f4f4f5] border border-[#e4e4e7]"
                               }`}
                               title="Ouvir como a locução soará antes de colocar no ar"
                             >
                               {previewLoading ? (
-                                <Loader2 className="size-4 animate-spin text-amber-600" />
+                                <Loader2 className="size-4 animate-spin text-[#52525b]" />
                               ) : previewingShoutout ? (
-                                <Pause className="size-4 text-amber-400 fill-current" />
+                                <Pause className="size-4 text-white fill-current" />
                               ) : (
-                                <Headphones className="size-4 text-stone-700" />
+                                <Headphones className="size-4 text-[#52525b]" />
                               )}
                               <span>
                                 {previewingShoutout
-                                  ? "⏹️ Parar Prévia"
+                                  ? "Parar Prévia"
                                   : previewLoading
                                     ? "Preparando..."
-                                    : "🎧 Ouvir Prévia no Fone"}
+                                    : "Ouvir Prévia"}
                               </span>
                             </button>
 
@@ -2308,7 +2272,7 @@ export function GestorRadioPlayer({
                               type="button"
                               onClick={sendPersonalizedShoutout}
                               disabled={sendingShoutout || !shoutoutMessage.trim()}
-                              className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-amber-700 active:scale-95 disabled:opacity-50 shrink-0"
+                              className="flex items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-95 disabled:opacity-50 shrink-0"
                             >
                               {sendingShoutout ? (
                                 <Loader2 className="size-4 animate-spin" />
@@ -2319,24 +2283,24 @@ export function GestorRadioPlayer({
                               )}
                               <span>
                                 {sentShoutout
-                                  ? "Alô Transmitido com Sucesso!"
+                                  ? "Recado Transmitido!"
                                   : sendingShoutout
                                     ? "Transmitindo..."
                                     : customCandidateInput.trim()
-                                      ? `🔴 Transmitir para ${customCandidateInput.trim()}`
+                                      ? `Transmitir para ${customCandidateInput.trim()}`
                                       : selectedCandidate !== "all"
-                                        ? `🔴 Transmitir para ${selectedCandidate}`
-                                        : "🔴 Transmitir Alô Geral"}
+                                        ? `Transmitir para ${selectedCandidate}`
+                                        : "Transmitir Recado Geral"}
                               </span>
                             </button>
                           </div>
                         </div>
 
                         {previewingShoutout && (
-                          <div className="flex items-center gap-2 rounded-lg bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs text-amber-950 font-semibold animate-pulse">
-                            <Headphones className="size-4 text-amber-700 shrink-0" />
+                          <div className="flex items-center gap-2 rounded-lg bg-[#fafaf9] border border-[#e4e4e7] px-3 py-1.5 text-xs text-[#52525b] font-semibold">
+                            <Headphones className="size-4 text-[#0a0a0a] shrink-0" />
                             <span>
-                              🎧 Reproduzindo prévia da mensagem no fone com atenuação da música. Ajuste o texto ou locutor como desejar antes de transmitir ao vivo!
+                              Reproduzindo prévia da mensagem no fone com atenuação da música. Ajuste o texto ou locutor antes de transmitir.
                             </span>
                           </div>
                         )}
@@ -2349,48 +2313,48 @@ export function GestorRadioPlayer({
               {/* ABA 4: SELEÇÃO DE ESTAÇÃO */}
               {activeTab === "estacao" && (
                 <div className="max-w-2xl mx-auto space-y-4">
-                  <div className="flex items-center justify-between bg-white rounded-xl border border-stone-200 p-4 shadow-xs">
+                  <div className="flex items-center justify-between bg-white rounded-xl border border-[#e4e4e7] p-4 shadow-xs">
                     <div>
-                      <h3 className="font-bold text-stone-900 text-sm">
+                      <h3 className="font-bold text-[#0a0a0a] text-sm">
                         Estação da Empresa (Configuração do Painel)
                       </h3>
-                      <p className="text-xs text-stone-500">
+                      <p className="text-xs text-[#71717a]">
                         A rádio escolhida abaixo tocará tanto para o gestor quanto para todos os candidatos
                       </p>
                     </div>
                     {savedStation && (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 animate-in fade-in">
+                      <span className="flex items-center gap-1 text-xs font-semibold text-[#1f7a4d] animate-in fade-in">
                         <Check className="size-3.5" /> Salva no servidor!
                       </span>
                     )}
                   </div>
 
                   {/* Lista de Estações Curadas */}
-                  <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white shadow-xs">
+                  <div className="divide-y divide-[#f4f4f5] rounded-xl border border-[#e4e4e7] bg-white shadow-xs">
                     {stations.map((st) => {
                       const isCurrent = current.url === st.url;
                       return (
                         <div
                           key={st.id}
                           className={`flex items-center justify-between p-3.5 transition ${
-                            isCurrent ? "bg-[#fef3c7]" : "hover:bg-stone-50"
+                            isCurrent ? "bg-[#f4f4f5]" : "hover:bg-[#fafaf9]"
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             <span
                               className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
                                 isCurrent
-                                  ? "bg-amber-500 text-stone-950 font-bold"
-                                  : "bg-stone-100 text-stone-600"
+                                  ? "bg-[#1c1917] text-white font-bold"
+                                  : "bg-[#f4f4f5] text-[#52525b]"
                               }`}
                             >
                               <Radio className="size-4" />
                             </span>
                             <div>
-                              <p className="font-bold text-stone-900 text-xs">
+                              <p className="font-bold text-[#0a0a0a] text-xs">
                                 {st.name}
                               </p>
-                              <p className="text-[11px] text-stone-500">
+                              <p className="text-[11px] text-[#71717a]">
                                 {st.genre}
                               </p>
                             </div>
@@ -2402,8 +2366,8 @@ export function GestorRadioPlayer({
                             disabled={!canManage || isCurrent}
                             className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                               isCurrent
-                                ? "bg-stone-900 text-white"
-                                : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                                ? "bg-[#1c1917] text-white"
+                                : "bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]"
                             } disabled:opacity-50`}
                           >
                             {isCurrent ? "Estação Ativa" : "Sintonizar Empresa"}
@@ -2467,126 +2431,120 @@ export function GestorRadioPlayer({
                   )}
                 </div>
               )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
-      {/* MODAL PARA CRIAÇÃO DE NOVA VINHETA COM IA MICHELIN */}
-      {showNewSpotModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Criar Vinheta com IA"
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs animate-in fade-in duration-150"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowNewSpotModal(false);
-          }}
-        >
-          <div className="flex flex-col w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-6 py-4 bg-stone-900 text-white">
-              <div className="flex items-center gap-2.5">
-                <Sparkles className="size-5 text-amber-400" />
-                <h3 className="text-sm font-bold">Criar Nova Vinheta com IA (Nível Michelin)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowNewSpotModal(false)}
-                className="text-stone-400 hover:text-white"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-xs font-bold text-stone-800 block mb-1">
-                  Título da Vinheta *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Tarhget - Conectando os Melhores Talentos"
-                  value={newSpotTitle}
-                  onChange={(e) => setNewSpotTitle(e.target.value)}
-                  className="w-full rounded-lg border border-stone-300 p-2 text-xs text-stone-900 outline-none focus:border-amber-600"
-                />
+      {/* TELA SOBREPOSTA 100% OPACA PARA CRIAÇÃO DE NOVA VINHETA */}
+      {showNewSpotModal &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Criar Vinheta"
+            className="fixed inset-0 z-[210] flex items-center justify-center bg-[#fafaf9] p-6"
+          >
+            <div className="flex flex-col w-full max-w-xl bg-white rounded-2xl shadow-sm border border-[#e4e4e7] overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4e4e7] bg-white text-[#0a0a0a]">
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="size-4 text-[#71717a]" />
+                  <h3 className="text-sm font-semibold">Criar Nova Vinheta</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSpotModal(false)}
+                  className="text-[#71717a] hover:text-[#0a0a0a]"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-stone-800 block mb-1">
-                  Texto da Locução *
-                </label>
-                <p className="text-[11px] text-stone-500 mb-2">
-                  Dica: A pronúncia correta de &quot;Tarhget&quot; é ajustada foneticamente de forma automática para som de rádio FM.
-                </p>
-                <textarea
-                  rows={4}
-                  placeholder="Digite a fala do locutor. Ex: Você está sintonizado na rádio Tarhget! O futuro da sua carreira profissional começa agora."
-                  value={newSpotScript}
-                  onChange={(e) => setNewSpotScript(e.target.value)}
-                  className="w-full rounded-lg border border-stone-300 p-2.5 text-xs text-stone-900 outline-none focus:border-amber-600"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-6 space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-stone-800 block mb-1">
-                    Voz do Locutor
+                  <label className="text-xs font-semibold text-[#0a0a0a] block mb-1">
+                    Título da Vinheta *
                   </label>
-                  <select
-                    value={newSpotVoice}
-                    onChange={(e) => setNewSpotVoice(e.target.value)}
-                    className="w-full rounded-lg border border-stone-300 bg-white p-2 text-xs text-stone-900 outline-none focus:border-amber-600"
-                  >
-                    <option value="pt-BR-AntonioNeural">🎙️ Antônio FM (Marcante & Rádio)</option>
-                    <option value="pt-BR-ThalitaNeural">🎙️ Thalita Executiva (Calorosa)</option>
-                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ex: Boas-vindas ao Portal de Vagas"
+                    value={newSpotTitle}
+                    onChange={(e) => setNewSpotTitle(e.target.value)}
+                    className="w-full rounded-xl border border-[#e4e4e7] p-2.5 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                  />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-stone-800 block mb-1">
-                    Efeito & Masterização
+                  <label className="text-xs font-semibold text-[#0a0a0a] block mb-1">
+                    Texto da Locução *
                   </label>
-                  <select
-                    value={newSpotSfx}
-                    onChange={(e) => setNewSpotSfx(e.target.value)}
-                    className="w-full rounded-lg border border-stone-300 bg-white p-2 text-xs text-stone-900 outline-none focus:border-amber-600"
-                  >
-                    <option value="raio-trovao">⚡ Raio, Trovão Sônico & Drop 808</option>
-                    <option value="laser-sweep">🚀 Laser Sweep Futurista</option>
-                    <option value="acolhimento-suave">✨ Acolhimento Suave Studio</option>
-                    <option value="comercial-limpo">📻 Locução Comercial FM Limpa</option>
-                  </select>
+                  <textarea
+                    rows={4}
+                    placeholder="Digite o texto que o locutor falará na vinheta..."
+                    value={newSpotScript}
+                    onChange={(e) => setNewSpotScript(e.target.value)}
+                    className="w-full rounded-xl border border-[#e4e4e7] p-2.5 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-[#0a0a0a] block mb-1">
+                      Voz do Locutor
+                    </label>
+                    <select
+                      value={newSpotVoice}
+                      onChange={(e) => setNewSpotVoice(e.target.value)}
+                      className="w-full rounded-xl border border-[#e4e4e7] bg-white p-2.5 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                    >
+                      <option value="pt-BR-AntonioNeural">Antônio (Voz Masculina)</option>
+                      <option value="pt-BR-ThalitaNeural">Thalita (Voz Feminina)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-[#0a0a0a] block mb-1">
+                      Estilo de Áudio
+                    </label>
+                    <select
+                      value={newSpotSfx}
+                      onChange={(e) => setNewSpotSfx(e.target.value)}
+                      className="w-full rounded-xl border border-[#e4e4e7] bg-white p-2.5 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                    >
+                      <option value="comercial-limpo">Locução Institucional Limpa</option>
+                      <option value="acolhimento-suave">Acolhimento Suave</option>
+                      <option value="laser-sweep">Transição de Rádio</option>
+                      <option value="raio-trovao">Impacto</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-2 px-6 py-4 bg-stone-50 border-t border-stone-200">
-              <button
-                type="button"
-                onClick={() => setShowNewSpotModal(false)}
-                className="rounded-lg px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-200 transition"
-              >
-                Cancelar
-              </button>
+              <div className="flex items-center justify-end gap-2 px-6 py-4 bg-[#fafaf9] border-t border-[#e4e4e7]">
+                <button
+                  type="button"
+                  onClick={() => setShowNewSpotModal(false)}
+                  className="rounded-xl border border-[#e4e4e7] bg-white px-4 py-2 text-xs font-medium text-[#52525b] hover:text-[#0a0a0a] transition"
+                >
+                  Cancelar
+                </button>
 
-              <button
-                type="button"
-                onClick={handleGenerateNewSpot}
-                disabled={generatingSpot || !newSpotScript.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-700 disabled:opacity-50"
-              >
-                {generatingSpot ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Sparkles className="size-4" />
-                )}
-                <span>{generatingSpot ? "Masterizando Áudio IA..." : "Gerar e Adicionar à Rádio"}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateNewSpot}
+                  disabled={generatingSpot || !newSpotScript.trim()}
+                  className="flex items-center gap-1.5 rounded-xl bg-[#1c1917] px-5 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {generatingSpot && <Loader2 className="size-3.5 animate-spin" />}
+                  <span>{generatingSpot ? "Gerando áudio..." : "Gerar e adicionar"}</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

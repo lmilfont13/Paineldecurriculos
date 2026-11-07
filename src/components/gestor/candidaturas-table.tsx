@@ -464,19 +464,19 @@ export function CandidaturasTable({
               type="button"
               disabled={aiBusy}
               onClick={() => reanalyzeBatch()}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 text-[12px] font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9] disabled:opacity-60"
               title="Enfileira a análise de IA para todos os candidatos sem nota ou que falharam"
             >
               {aiBusy
                 ? "Avaliando pendentes…"
-                : `⚡ Avaliar sem nota (${unevaluatedCount})`}
+                : `Avaliar sem nota (${unevaluatedCount})`}
             </button>
           )}
           <Link
             href="/buscar-cvs"
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 text-[12px] font-semibold text-amber-900 transition hover:bg-amber-100"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
           >
-            🔍 Buscar CVs
+            Buscar CVs
           </Link>
           <Link
             href="/candidaturas/novo"
@@ -1020,9 +1020,9 @@ export function CandidaturasTable({
             type="button"
             disabled={pending || aiBusy}
             onClick={() => reanalyzeBatch([...selected])}
-            className="h-[34px] shrink-0 rounded-[10px] bg-emerald-500/25 px-4 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/40 disabled:opacity-50"
+            className="h-[34px] shrink-0 rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
           >
-            {aiBusy ? "Avaliando…" : "⚡ Avaliar com IA"}
+            {aiBusy ? "Avaliando…" : "Avaliar com IA"}
           </button>
           <button
             type="button"
@@ -1070,13 +1070,13 @@ export function CandidaturasTable({
       {/* Confirmação — a ação envia e-mail e não se desfaz (H3/H5) */}
       {confirm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-[#fafaf9] p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setConfirm(null)}
         >
           <div
-            className="w-full max-w-[400px] rounded-2xl bg-white p-6 shadow-xl"
+            className="w-full max-w-[400px] rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold text-[#0a0a0a]">
@@ -1114,13 +1114,13 @@ export function CandidaturasTable({
       {/* Exclusão definitiva — confirmação obrigatória */}
       {confirmDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-[#fafaf9] p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setConfirmDelete(false)}
         >
           <div
-            className="w-full max-w-[400px] rounded-2xl bg-white p-6 shadow-xl"
+            className="w-full max-w-[400px] rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold text-[#0a0a0a]">
@@ -1171,13 +1171,13 @@ export function CandidaturasTable({
       {/* Modal do relatório gerencial */}
       {report && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-6"
+          className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-[#fafaf9] p-6"
           role="dialog"
           aria-modal="true"
           onClick={() => setReport(null)}
         >
           <div
-            className="my-8 w-full max-w-[640px] rounded-2xl bg-white shadow-xl"
+            className="my-8 w-full max-w-[640px] rounded-2xl border border-[#e4e4e7] bg-white shadow-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#e4e4e7] px-6 py-4">

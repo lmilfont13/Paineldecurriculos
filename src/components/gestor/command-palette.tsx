@@ -187,7 +187,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Barra de busca e comandos"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-16 backdrop-blur-xs sm:pt-24"
+      className="fixed inset-0 z-[200] flex items-start justify-center bg-[#fafaf9] p-4 pt-16 sm:pt-24"
       onClick={() => setOpen(false)}
     >
       <div

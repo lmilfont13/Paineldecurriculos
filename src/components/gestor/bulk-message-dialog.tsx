@@ -65,12 +65,12 @@ export function BulkMessageDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#fafaf9] p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Enviar mensagem em massa"
     >
-      <div className="max-h-[90vh] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm">
         {sent ? (
           <>
             <h2 className="text-lg font-semibold text-[#0a0a0a]">Mensagem enviada</h2>
