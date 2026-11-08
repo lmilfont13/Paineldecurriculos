@@ -16,18 +16,22 @@ export async function GET(request: Request) {
     }
 
     const decodedFile = decodeURIComponent(rawFile)
-      .replace(/^\/audio\/music\//i, "")
-      .replace(/^(\.\.[\/\\])+/, ""); // Segurança contra directory traversal
+      .replace(/^\/audio\/music\//i, "");
 
+    const safeBaseName = path.basename(decodedFile);
     const musicDir = path.resolve(process.cwd(), "public/audio/music");
-    const filePath = path.join(musicDir, decodedFile);
+    const filePath = path.resolve(musicDir, safeBaseName);
+
+    if (!filePath.startsWith(musicDir)) {
+      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+    }
 
     if (!fs.existsSync(filePath)) {
       // Tenta busca insensível a maiúsculas/minúsculas na pasta
       try {
         const files = fs.readdirSync(musicDir);
         const match = files.find(
-          (f) => f.toLowerCase() === decodedFile.toLowerCase()
+          (f) => f.toLowerCase() === safeBaseName.toLowerCase()
         );
         if (match) {
           return streamLocalFile(path.join(musicDir, match), request);
@@ -113,3 +117,4 @@ function streamLocalFile(filePath: string, request: Request): Response {
     },
   });
 }
+
