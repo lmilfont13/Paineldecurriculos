@@ -65,6 +65,7 @@ export function GoogleJobsImporter({
   const [copiedJson, setCopiedJson] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
@@ -148,6 +149,47 @@ export function GoogleJobsImporter({
     }
   };
 
+  // Ação: Publicar uma vaga individual instantaneamente no portal (1-clique)
+  const handlePublishSingle = async (job: ExternalJobCandidate) => {
+    setPublishingId(job.externalId);
+    setSearchError(null);
+    setFeedbackMessage(null);
+
+    try {
+      const res = await createSingleExternalJobAction(job);
+      if (res.ok) {
+        setFeedbackMessage(
+          `Vaga "${job.title}" publicada com sucesso! Ela já está visível para os candidatos no seu portal.`
+        );
+        // Marca como já publicada nos resultados
+        setSearchResults((prev) =>
+          prev.map((j) => (j.externalId === job.externalId ? { ...j, alreadyImported: true } : j))
+        );
+        // Atualiza a tabela de vagas ativas em tempo real
+        setJobsList((prev) => [
+          {
+            id: `pub_${Date.now()}_${job.externalId}`,
+            title: job.title,
+            employer: job.employer,
+            location: job.location,
+            source: job.source,
+            applyUrl: job.applyUrl,
+            postedLabel: job.postedLabel,
+            isPublished: true,
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      } else {
+        setSearchError(res.error || "Não foi possível publicar a vaga no portal.");
+      }
+    } catch {
+      setSearchError("Falha de conexão ao publicar a vaga no portal.");
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
   // Ação: Importar Selecionadas ou Todas do JSON
   const handleImportSelected = async () => {
     const unimported = searchResults.filter((j) => !j.alreadyImported);
@@ -177,13 +219,27 @@ export function GoogleJobsImporter({
       if (res.ok) {
         setFeedbackMessage(
           `Sucesso! ${res.imported} ${
-            res.imported === 1 ? "vaga importada" : "vagas importadas"
-          } para o mural.`
+            res.imported === 1 ? "vaga publicada" : "vagas publicadas"
+          } no seu portal público.`
         );
-        // Atualiza estado local
+        // Atualiza estado local de busca
+        const importedIdSet = new Set(toImportList.map((j) => j.externalId));
         setSearchResults((prev) =>
-          prev.map((j) => (selectedIds.has(j.externalId) ? { ...j, alreadyImported: true } : j))
+          prev.map((j) => (importedIdSet.has(j.externalId) ? { ...j, alreadyImported: true } : j))
         );
+        // Adiciona à lista de vagas ativas no portal
+        const newItems: ImportedExternalJobItem[] = toImportList.map((job) => ({
+          id: `imp_${Date.now()}_${job.externalId}`,
+          title: job.title,
+          employer: job.employer,
+          location: job.location,
+          source: job.source,
+          applyUrl: job.applyUrl,
+          postedLabel: job.postedLabel,
+          isPublished: true,
+          createdAt: new Date().toISOString(),
+        }));
+        setJobsList((prev) => [...newItems, ...prev]);
         setSelectedIds(new Set());
       } else {
         setSearchError(res.error || "Falha ao importar vagas.");
@@ -242,7 +298,21 @@ export function GoogleJobsImporter({
       });
 
       if (res.ok) {
-        setFeedbackMessage("Vaga externa adicionada com sucesso ao mural!");
+        setFeedbackMessage(`Vaga "${manualTitle.trim()}" publicada com sucesso no portal!`);
+        setJobsList((prev) => [
+          {
+            id: `man_${Date.now()}`,
+            title: manualTitle.trim(),
+            employer: manualEmployer.trim(),
+            location: manualLocation.trim() || null,
+            source: manualSource.trim() || "Google Vagas",
+            applyUrl: directUrl.trim(),
+            postedLabel: "Recém-adicionada",
+            isPublished: true,
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
         setDirectUrl("");
         setManualTitle("");
         setManualEmployer("");
@@ -433,9 +503,24 @@ export function GoogleJobsImporter({
             )}
 
             {feedbackMessage && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-600" />
-                <span>{feedbackMessage}</span>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">{feedbackMessage}</p>
+                    <p className="text-[11px] text-emerald-800">
+                      A vaga já está online e disponível para os candidatos no seu portal público.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/${companySlug}/vagas`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-800 transition shrink-0 self-start sm:self-auto"
+                >
+                  <Globe className="size-3.5" />
+                  <span>Ver no Meu Portal ↗</span>
+                </Link>
               </div>
             )}
 
@@ -553,13 +638,12 @@ export function GoogleJobsImporter({
                     return (
                       <div
                         key={job.externalId}
-                        onClick={() => !job.alreadyImported && toggleSelect(job.externalId)}
-                        className={`p-3.5 rounded-xl border text-left transition flex items-start justify-between gap-3 ${
+                        className={`p-3.5 rounded-xl border text-left transition flex flex-col sm:flex-row sm:items-start justify-between gap-3 ${
                           job.alreadyImported
-                            ? "border-emerald-200 bg-emerald-50/50 opacity-80 cursor-default"
+                            ? "border-emerald-200 bg-emerald-50/50"
                             : isSelected
-                            ? "border-blue-500 bg-blue-50/60 ring-1 ring-blue-500 cursor-pointer"
-                            : "border-[#e4e4e7] bg-white hover:bg-[#fafaf9] cursor-pointer"
+                            ? "border-blue-500 bg-blue-50/60 ring-1 ring-blue-500"
+                            : "border-[#e4e4e7] bg-white hover:bg-[#fafaf9]"
                         }`}
                       >
                         <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -567,8 +651,8 @@ export function GoogleJobsImporter({
                             type="checkbox"
                             checked={isSelected || job.alreadyImported}
                             disabled={job.alreadyImported}
-                            onChange={() => {}}
-                            className="size-4 mt-0.5 rounded border-[#e4e4e7] text-blue-600 focus:ring-blue-600"
+                            onChange={() => toggleSelect(job.externalId)}
+                            className="size-4 mt-0.5 rounded border-[#e4e4e7] text-blue-600 focus:ring-blue-600 cursor-pointer"
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -576,8 +660,9 @@ export function GoogleJobsImporter({
                                 {job.title}
                               </p>
                               {job.alreadyImported && (
-                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                                  Já Importada
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                                  <Check className="size-2.5" />
+                                  <span>No Seu Portal</span>
                                 </span>
                               )}
                               {job.source && (
@@ -600,16 +685,52 @@ export function GoogleJobsImporter({
                           </div>
                         </div>
 
-                        <a
-                          href={job.applyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition shrink-0"
-                          title="Abrir anúncio original na fonte"
-                        >
-                          <ExternalLink className="size-4" />
-                        </a>
+                        {/* Ações da Vaga: 1-clique para publicar no portal + link ao vivo */}
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {job.alreadyImported ? (
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/${companySlug}/vagas`}
+                                target="_blank"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition shadow-2xs"
+                                title="Ver vaga no seu portal público ao vivo"
+                              >
+                                <Globe className="size-3" />
+                                <span>Ver ao Vivo ↗</span>
+                              </Link>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePublishSingle(job);
+                              }}
+                              disabled={publishingId === job.externalId}
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95 disabled:opacity-50"
+                              title="Publicar esta vaga imediatamente no seu portal público"
+                            >
+                              {publishingId === job.externalId ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <Plus className="size-3.5" />
+                              )}
+                              <span>Exibir no Meu Portal</span>
+                            </button>
+                          )}
+
+                          <a
+                            href={job.applyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition shrink-0"
+                            title="Abrir anúncio original na fonte externa"
+                          >
+                            <ExternalLink className="size-4" />
+                          </a>
+                        </div>
                       </div>
                     );
                   })}
@@ -745,7 +866,7 @@ export function GoogleJobsImporter({
 
       {/* Lista de Vagas Externas Cadastradas no Portal */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-[#0a0a0a]">
               Vagas Externas Ativas no Portal ({jobsList.length})
@@ -754,6 +875,16 @@ export function GoogleJobsImporter({
               Estas oportunidades estão visíveis no mural público do seu portal para apoiar os candidatos.
             </p>
           </div>
+
+          <Link
+            href={`/${companySlug}/vagas`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+            title="Abrir o portal público de vagas em uma nova aba"
+          >
+            <Globe className="size-3.5 text-emerald-600" />
+            <span>Ver Portal Público ao Vivo ↗</span>
+          </Link>
         </div>
 
         {jobsList.length === 0 ? (

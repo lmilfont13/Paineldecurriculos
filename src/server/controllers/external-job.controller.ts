@@ -67,7 +67,7 @@ export async function importExternalJobsAction(items: ExternalJobCandidate[]) {
   const result = await importExternalJobs(user.companyId, parsed.data);
   revalidatePath("/vagas/externas");
   revalidatePath(`/${company.slug}/vagas`);
-  return { ok: true as const, ...result };
+  return { ok: true as const, ...result, publicUrl: `/${company.slug}/vagas` };
 }
 
 export async function createSingleExternalJobAction(item: ExternalJobCandidate) {
@@ -79,7 +79,7 @@ export async function createSingleExternalJobAction(item: ExternalJobCandidate) 
   const result = await importExternalJobs(user.companyId, [parsed.data]);
   revalidatePath("/vagas/externas");
   revalidatePath(`/${company.slug}/vagas`);
-  return { ok: true as const, ...result };
+  return { ok: true as const, ...result, publicUrl: `/${company.slug}/vagas` };
 }
 
 const idSchema = z.string().cuid();
