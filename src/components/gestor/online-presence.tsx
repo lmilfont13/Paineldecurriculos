@@ -9,9 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
 import { getLiveDoubtsAction, answerLiveDoubtAction } from "@/server/controllers/live-doubt.controller";
 import type { LiveDoubt } from "@/server/models/live-doubt.model";
+import { useLiveAttendance, LiveAttendanceSwitchRow } from "@/components/gestor/live-attendance-toggle";
+
+export type PresenceRole = "candidato" | "equipe" | "equipe_idle";
 
 export type PresencePayload = {
-  role: "candidato" | "equipe";
+  role: PresenceRole;
   path?: string;
   name?: string;
   isRegistered?: boolean;
@@ -22,7 +25,7 @@ export type ScreenCategory = "cadastro" | "principal" | "perfil" | "painel";
 
 export function categorizePresence(
   path?: string,
-  role: "candidato" | "equipe" = "candidato"
+  role: PresenceRole = "candidato"
 ): {
   category: ScreenCategory;
   categoryLabel: string;
@@ -33,6 +36,7 @@ export function categorizePresence(
 
   if (
     role === "equipe" ||
+    role === "equipe_idle" ||
     p.startsWith("/painel") ||
     p.startsWith("/candidaturas") ||
     p.startsWith("/buscar-cvs") ||
@@ -262,7 +266,7 @@ export function PublicPresenceTracker({
 
 type OnlineSession = {
   key: string;
-  role: "candidato" | "equipe";
+  role: PresenceRole;
   path: string;
   name?: string;
   isRegistered?: boolean;
@@ -298,6 +302,7 @@ export function OnlineCounterBadge({
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const { isAttendanceActive } = useLiveAttendance();
 
   // Carrega dúvidas e transmite presença da equipe aos candidatos
   useEffect(() => {
@@ -313,6 +318,7 @@ export function OnlineCounterBadge({
       bc = new BroadcastChannel("triagem_radio_sync");
 
       const sendAdminPing = () => {
+        if (!isAttendanceActive) return;
         bc?.postMessage({
           type: "admin_presence_ping",
           role: "equipe",
@@ -320,8 +326,13 @@ export function OnlineCounterBadge({
           timestamp: Date.now(),
         });
       };
-      sendAdminPing();
-      pingInterval = setInterval(sendAdminPing, 3000);
+
+      if (isAttendanceActive) {
+        sendAdminPing();
+        pingInterval = setInterval(sendAdminPing, 3000);
+      } else {
+        bc.postMessage({ type: "admin_presence_bye", role: "equipe", timestamp: Date.now() });
+      }
 
       bc.onmessage = (e) => {
         const data = e.data;
@@ -342,7 +353,7 @@ export function OnlineCounterBadge({
         } catch {}
       }
     };
-  }, [userName]);
+  }, [userName, isAttendanceActive]);
 
   const handleSendReply = async (doubtId: string) => {
     if (!replyText.trim() || sendingReply) return;
@@ -469,7 +480,7 @@ export function OnlineCounterBadge({
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await channel.track({
-            role: "equipe",
+            role: isAttendanceActive ? "equipe" : "equipe_idle",
             path: window.location.pathname,
             name: userName || undefined,
             isRegistered: true,
@@ -484,7 +495,7 @@ export function OnlineCounterBadge({
       }
       void channel.unsubscribe();
     };
-  }, [slug, userName]);
+  }, [slug, userName, isAttendanceActive]);
 
   const candidates = sessions.filter((s) => s.role === "candidato");
   const cadastroCount = candidates.filter((s) => s.category === "cadastro").length;
@@ -541,7 +552,11 @@ export function OnlineCounterBadge({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {pendingDoubtsCount > 0 ? (
+          {!isAttendanceActive ? (
+            <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+              Plantão OFF
+            </span>
+          ) : pendingDoubtsCount > 0 ? (
             <span className="rounded-full bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold animate-pulse">
               {pendingDoubtsCount} dúvida{pendingDoubtsCount > 1 ? "s" : ""}
             </span>
@@ -626,6 +641,11 @@ export function OnlineCounterBadge({
                   <X className="size-3.5" />
                   <span>Fechar</span>
                 </button>
+              </div>
+
+              {/* Interruptor de Atendimento Ao Vivo (Ligar/Desligar Fácil) */}
+              <div className="mt-3.5 shrink-0">
+                <LiveAttendanceSwitchRow />
               </div>
 
               {popoverTab === "csat" ? (

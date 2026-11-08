@@ -17,6 +17,7 @@ import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-
 import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 import { CommandPaletteTrigger, openCommandPalette } from "@/components/gestor/command-palette";
 import { SoundToggleControl } from "@/components/gestor/sound-notification-listener";
+import { LiveAttendanceTopbarButton } from "@/components/gestor/live-attendance-toggle";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -256,6 +257,7 @@ export function GestorTopbar({
       </span>
 
       <div className="flex items-center gap-2">
+        <LiveAttendanceTopbarButton />
         <CommandPaletteTrigger enabled={commandPaletteEnabled} />
         <SoundToggleControl enabled={soundEnabled} />
         {commandPaletteEnabled && (

@@ -74,10 +74,16 @@ export function LiveDoubtWidget({
       bc.onmessage = (e) => {
         const data = e.data;
         if (!data) return;
-        if (data.type === "admin_presence_ping" || data.role === "equipe") {
+        if (data.type === "admin_attendance_toggle") {
+          const active = Boolean(data.active);
+          setIsAdminOnline(active);
+          if (active) lastAdminPing = Date.now();
+          else lastAdminPing = 0;
+        } else if (data.type === "admin_presence_ping" || data.role === "equipe") {
           lastAdminPing = Date.now();
           setIsAdminOnline(true);
         } else if (data.type === "admin_presence_bye") {
+          lastAdminPing = 0;
           setIsAdminOnline(false);
         } else if (data.type === "doubt_answered" && data.doubt) {
           if (myDoubt && myDoubt.id === data.doubt.id) {
