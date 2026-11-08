@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dedupeExternalJobs,
+  externalJobSearchSchema,
   importExternalJobsSchema,
   isSafeHttpUrl,
   normalizeSource,
@@ -70,6 +71,11 @@ describe("external-job.model", () => {
     expect(importExternalJobsSchema.safeParse([job]).success).toBe(true);
     expect(importExternalJobsSchema.safeParse([{ ...job, applyUrl: "javascript:x" }]).success).toBe(false);
     expect(importExternalJobsSchema.safeParse([]).success).toBe(false);
+  });
+
+  it("valida schema de busca para cargo e localidade", () => {
+    expect(externalJobSearchSchema.safeParse({ query: "Vendedor", location: "São Paulo" }).success).toBe(true);
+    expect(externalJobSearchSchema.safeParse({ query: "A" }).success).toBe(false); // min 2
   });
 });
 

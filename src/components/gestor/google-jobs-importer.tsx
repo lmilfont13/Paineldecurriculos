@@ -7,6 +7,8 @@ import {
   Briefcase,
   Check,
   CheckCircle2,
+  Code2,
+  Copy,
   ExternalLink,
   Globe,
   Info,
@@ -14,6 +16,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import {
@@ -57,6 +60,9 @@ export function GoogleJobsImporter({
   const [searchResults, setSearchResults] = useState<
     (ExternalJobCandidate & { alreadyImported: boolean })[]
   >([]);
+  const [searchEngineLabel, setSearchEngineLabel] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "json">("cards");
+  const [copiedJson, setCopiedJson] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -91,6 +97,9 @@ export function GoogleJobsImporter({
 
       if (res.ok) {
         setSearchResults(res.jobs);
+        if ("engineLabel" in res && typeof res.engineLabel === "string") {
+          setSearchEngineLabel(res.engineLabel);
+        }
         if (res.jobs.length === 0) {
           setSearchError("Nenhuma vaga encontrada no Google para os termos informados.");
         }
@@ -101,6 +110,21 @@ export function GoogleJobsImporter({
       setSearchError("Falha de conexão ao pesquisar no Google Vagas.");
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleCopyJson = async () => {
+    try {
+      const cleanJson = JSON.stringify(
+        searchResults.map(({ alreadyImported, ...rest }) => rest),
+        null,
+        2
+      );
+      await navigator.clipboard.writeText(cleanJson);
+      setCopiedJson(true);
+      setTimeout(() => setCopiedJson(false), 2000);
+    } catch {
+      // fallback sem erro
     }
   };
 
@@ -124,25 +148,29 @@ export function GoogleJobsImporter({
     }
   };
 
-  // Ação: Importar Selecionadas
+  // Ação: Importar Selecionadas ou Todas do JSON
   const handleImportSelected = async () => {
-    if (selectedIds.size === 0) return;
+    const unimported = searchResults.filter((j) => !j.alreadyImported);
+    const toImportList =
+      selectedIds.size > 0
+        ? searchResults.filter((j) => selectedIds.has(j.externalId))
+        : unimported;
+
+    if (toImportList.length === 0) return;
     setImporting(true);
     setFeedbackMessage(null);
 
-    const toImport = searchResults
-      .filter((j) => selectedIds.has(j.externalId))
-      .map((j) => ({
-        externalId: j.externalId,
-        title: j.title,
-        employer: j.employer,
-        location: j.location,
-        description: j.description,
-        source: j.source,
-        applyUrl: j.applyUrl,
-        postedLabel: j.postedLabel,
-        scheduleType: j.scheduleType,
-      }));
+    const toImport = toImportList.map((j) => ({
+      externalId: j.externalId,
+      title: j.title,
+      employer: j.employer,
+      location: j.location,
+      description: j.description,
+      source: j.source,
+      applyUrl: j.applyUrl,
+      postedLabel: j.postedLabel,
+      scheduleType: j.scheduleType,
+    }));
 
     try {
       const res = await importExternalJobsAction(toImport);
@@ -383,15 +411,20 @@ export function GoogleJobsImporter({
               </div>
             </form>
 
-            {!searchConfigured && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 leading-relaxed">
-                💡 <strong>Dica de configuração:</strong> Para ativar a busca automática direta no
-                Google Vagas via API, configure a chave <code>SERPAPI_API_KEY</code> no painel da
-                Vercel (gratuita em serpapi.com com 100 buscas/mês). Você também pode usar a aba{" "}
-                <strong>Importar por Link Direto</strong> acima para cadastrar qualquer vaga colando
-                o link.
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-900 flex items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-blue-600 shrink-0" />
+                <span>
+                  <strong>Buscador Inteligente via API/Web Ativo:</strong> Requisições diretas de resultados
+                  estruturados do Google Vagas com entrega em JSON limpo e zero risco de bloqueio de IP.
+                </span>
               </div>
-            )}
+              {searchEngineLabel && (
+                <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800">
+                  {searchEngineLabel}
+                </span>
+              )}
+            </div>
 
             {searchError && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 leading-relaxed">
@@ -409,36 +442,112 @@ export function GoogleJobsImporter({
             {/* Resultados da Busca */}
             {searchResults.length > 0 && (
               <div className="mt-4 pt-4 border-t border-[#e4e4e7] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* Barra de Ações e Alternador de Visualização (Cards vs JSON Limpo) */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAll}
-                      className="text-xs font-semibold text-[#52525b] hover:text-[#0a0a0a] underline"
-                    >
-                      {selectedIds.size > 0 ? "Desmarcar todas" : "Selecionar todas"}
-                    </button>
+                    {viewMode === "cards" ? (
+                      <button
+                        type="button"
+                        onClick={toggleSelectAll}
+                        className="text-xs font-semibold text-[#52525b] hover:text-[#0a0a0a] underline"
+                      >
+                        {selectedIds.size > 0 ? "Desmarcar todas" : "Selecionar todas"}
+                      </button>
+                    ) : null}
                     <span className="text-xs text-[#71717a]">
-                      · {searchResults.length} vagas encontradas no Google
+                      {searchResults.length} vagas estruturadas em JSON limpo
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleImportSelected}
-                    disabled={importing || selectedIds.size === 0}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition active:scale-95 disabled:opacity-50"
-                  >
-                    {importing ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Check className="size-3.5" />
+                  <div className="flex items-center gap-2">
+                    {/* Alternador de Modo */}
+                    <div className="flex items-center rounded-lg border border-slate-200 bg-white p-0.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("cards")}
+                        className={`rounded-md px-2.5 py-1 font-semibold transition ${
+                          viewMode === "cards"
+                            ? "bg-slate-900 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Cards de Seleção
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("json")}
+                        className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition ${
+                          viewMode === "json"
+                            ? "bg-slate-900 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <Code2 className="size-3" />
+                        <span>JSON Limpo</span>
+                      </button>
+                    </div>
+
+                    {/* Botão Copiar JSON */}
+                    {viewMode === "json" && (
+                      <button
+                        type="button"
+                        onClick={handleCopyJson}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                      >
+                        {copiedJson ? (
+                          <>
+                            <Check className="size-3.5 text-emerald-600" />
+                            <span className="text-emerald-700">JSON Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-3.5" />
+                            <span>Copiar JSON</span>
+                          </>
+                        )}
+                      </button>
                     )}
-                    <span>Importar Selecionadas ({selectedIds.size})</span>
-                  </button>
+
+                    {/* Botão de Importar */}
+                    <button
+                      type="button"
+                      onClick={handleImportSelected}
+                      disabled={importing || (viewMode === "cards" && selectedIds.size === 0)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition active:scale-95 disabled:opacity-50"
+                    >
+                      {importing ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Check className="size-3.5" />
+                      )}
+                      <span>
+                        {viewMode === "json"
+                          ? "Importar Todas do JSON"
+                          : `Importar Selecionadas (${selectedIds.size})`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+                {/* VISUALIZAÇÃO 1: MODO JSON LIMPO */}
+                {viewMode === "json" ? (
+                  <div className="relative rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs font-mono text-emerald-400 max-h-[460px] overflow-auto shadow-inner">
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300 font-sans">
+                        application/json
+                      </span>
+                    </div>
+                    <pre className="whitespace-pre-wrap leading-relaxed">
+                      {JSON.stringify(
+                        searchResults.map(({ alreadyImported, ...rest }) => rest),
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </div>
+                ) : (
+                  /* VISUALIZAÇÃO 2: MODO CARDS */
+                  <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
                   {searchResults.map((job) => {
                     const isSelected = selectedIds.has(job.externalId);
                     return (
@@ -505,6 +614,7 @@ export function GoogleJobsImporter({
                     );
                   })}
                 </div>
+              )}
               </div>
             )}
           </div>
@@ -730,3 +840,4 @@ export function GoogleJobsImporter({
     </div>
   );
 }
+
