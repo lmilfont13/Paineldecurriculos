@@ -102,8 +102,10 @@ export function BirthdayCardButtonAndModal({
   const [displayMode, setDisplayMode] = useState<"full" | "first">("full");
   const [showAge, setShowAge] = useState<boolean>(false);
   const [customText, setCustomText] = useState<string>(
-    greetingMessage || CORPORATE_MESSAGE_TEMPLATES[0].text
+    CORPORATE_MESSAGE_TEMPLATES[0].text
   );
+  const [cardLoading, setCardLoading] = useState<boolean>(true);
+  const [cardError, setCardError] = useState<boolean>(false);
 
   // Estados de IA (Aba secundária)
   const [aiStyle, setAiStyle] = useState<BirthdayAiStyle>("luxury_gold");
@@ -128,6 +130,12 @@ export function BirthdayCardButtonAndModal({
   )}&theme=${theme}&age=${turningAge || ""}&showAge=${showAge ? "true" : "false"}&message=${encodeURIComponent(
     customText.trim()
   )}`;
+
+  // Dispara loading ao alterar opções
+  useEffect(() => {
+    setCardLoading(true);
+    setCardError(false);
+  }, [theme, displayMode, showAge, customText]);
 
   // URL da Foto/Cenário IA
   const aiImageUrl = `/api/birthday-image?name=${encodeURIComponent(
@@ -358,13 +366,45 @@ export function BirthdayCardButtonAndModal({
                   {/* Coluna Esquerda: Preview do Card em Alta Resolução */}
                   <div className="lg:col-span-6 flex flex-col items-center">
                     <div className="relative w-full max-w-[380px] aspect-square rounded-2xl overflow-hidden border border-slate-300 shadow-xl bg-slate-950 flex items-center justify-center group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={corporateCardUrl}
-                        alt={`Card de Aniversário Corporativo para ${name}`}
-                        className="w-full h-full object-cover transition duration-300"
-                      />
-                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none opacity-90">
+                      {cardLoading && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-xs text-white p-4 space-y-2">
+                          <Loader2 className="size-7 animate-spin text-amber-400" />
+                          <p className="text-xs font-semibold">Renderizando card em alta definição...</p>
+                        </div>
+                      )}
+
+                      {cardError ? (
+                        <div className="flex flex-col items-center justify-center p-6 text-center text-slate-300 space-y-2">
+                          <p className="text-xs text-rose-300">Falha ao pré-visualizar o card.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCardLoading(true);
+                              setCardError(false);
+                            }}
+                            className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] text-white hover:bg-white/20 transition"
+                          >
+                            Tentar novamente
+                          </button>
+                        </div>
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          key={corporateCardUrl}
+                          src={corporateCardUrl}
+                          alt={`Card de Aniversário Corporativo para ${name}`}
+                          className={`w-full h-full object-cover transition duration-300 ${
+                            cardLoading ? "opacity-0" : "opacity-100"
+                          }`}
+                          onLoad={() => setCardLoading(false)}
+                          onError={() => {
+                            setCardLoading(false);
+                            setCardError(true);
+                          }}
+                        />
+                      )}
+
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none opacity-90 z-20">
                         <span className="rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
                           {CORPORATE_THEMES.find((t) => t.id === theme)?.label}
                         </span>
@@ -605,7 +645,7 @@ export function BirthdayCardButtonAndModal({
                 <button
                   type="button"
                   onClick={handleCopyImage}
-                  disabled={generatingAi}
+                  disabled={generatingAi || cardLoading}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs hover:bg-slate-100 transition active:scale-95 disabled:opacity-50"
                   title="Copia a imagem para colar direto no WhatsApp Web com Ctrl+V"
                 >
@@ -631,7 +671,7 @@ export function BirthdayCardButtonAndModal({
                 <button
                   type="button"
                   onClick={handleDownload}
-                  disabled={downloading || generatingAi}
+                  disabled={downloading || generatingAi || cardLoading}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs hover:bg-slate-100 transition active:scale-95 disabled:opacity-50"
                   title="Baixar card em alta resolução PNG (1080x1080)"
                 >
