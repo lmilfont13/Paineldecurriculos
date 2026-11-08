@@ -33,7 +33,7 @@ export default async function PublicJobsPage({
   const data = await getJobsPageData(slug);
   const candidate = await getPublicSession();
   if (!data) notFound();
-  const { company, jobs, appliedJobIds } = data;
+  const { company, jobs, appliedJobIds, externalJobs } = data;
 
   return (
     <div className="min-h-screen bg-[#faf9f7]">
@@ -80,6 +80,7 @@ export default async function PublicJobsPage({
           companyName={company.name}
           loggedIn={Boolean(candidate)}
           appliedJobIds={appliedJobIds}
+          externalJobs={externalJobs}
         />
 
         <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e8e3de] bg-white p-6 md:p-7">
