@@ -733,22 +733,27 @@ export async function getCandidateResumeSignedUrl(
 /** URL assinada (10 min) para baixar o currículo do Storage privado. */
 export async function getResumeSignedUrl(
   companyId: string,
-  applicationId: string
+  applicationId: string,
+  resumeUrlOverride?: string | null
 ): Promise<string | null> {
-  const application = await getCompanyApplication(companyId, applicationId);
-  if (!application?.resumeUrl) return null;
+  let targetResumeUrl = resumeUrlOverride;
+  if (!targetResumeUrl) {
+    const application = await getCompanyApplication(companyId, applicationId);
+    targetResumeUrl = application?.resumeUrl ?? null;
+  }
+  if (!targetResumeUrl) return null;
 
   // Demo: arquivo estático de /public. Caminho relativo — a rota monta a
   // URL absoluta a partir do próprio request (não depende de
   // NEXT_PUBLIC_APP_URL estar certa).
-  if (isDemoResumePath(application.resumeUrl)) {
-    return `/${application.resumeUrl}`;
+  if (isDemoResumePath(targetResumeUrl)) {
+    return `/${targetResumeUrl}`;
   }
 
   const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(RESUMES_BUCKET)
-    .createSignedUrl(application.resumeUrl, 600);
+    .createSignedUrl(targetResumeUrl, 600);
   if (error) return null;
   return data.signedUrl;
 }

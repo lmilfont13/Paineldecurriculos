@@ -28,6 +28,7 @@ import {
   deleteCandidate,
   findCandidateByEmail,
   linkCandidateAuth,
+  syncCandidateResumeToApplications,
   updateCandidate,
 } from "@/server/repositories/candidate.repository";
 import { findUserByEmail } from "@/server/repositories/user.repository";
@@ -174,11 +175,15 @@ export async function emailBelongsToCandidate(email: string): Promise<boolean> {
 }
 
 /** Atualiza o perfil reaproveitável do candidato (CA2/CA5). */
-export function updateCandidateProfile(
+export async function updateCandidateProfile(
   candidateId: string,
   data: Parameters<typeof updateCandidate>[1]
 ) {
-  return updateCandidate(candidateId, data);
+  const result = await updateCandidate(candidateId, data);
+  if (data.resumeUrl) {
+    await syncCandidateResumeToApplications(candidateId, data.resumeUrl).catch(() => {});
+  }
+  return result;
 }
 
 /**

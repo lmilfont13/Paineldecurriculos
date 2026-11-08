@@ -10,7 +10,9 @@ export async function GET(
 ) {
   const user = await requireManager();
   const { id } = await params;
-  const url = await getResumeSignedUrl(user.companyId, id);
+  const { searchParams } = new URL(request.url);
+  const urlOverride = searchParams.get("url");
+  const url = await getResumeSignedUrl(user.companyId, id, urlOverride);
   if (!url) {
     return NextResponse.json(
       { error: "Currículo não encontrado" },

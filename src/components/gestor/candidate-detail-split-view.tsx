@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { ExternalLink, Minimize2, ZoomIn } from "lucide-react";
+import { ExternalLink, Minimize2, Sparkles, ZoomIn } from "lucide-react";
 import { CandidateQueueBar } from "@/components/gestor/candidate-queue-bar";
 
 export function CandidateDetailSplitView({
@@ -10,6 +10,8 @@ export function CandidateDetailSplitView({
   jobId,
   jobTitle,
   hasResume,
+  latestResumeUrl,
+  latestResumeSource,
   queue,
   children,
 }: {
@@ -18,6 +20,8 @@ export function CandidateDetailSplitView({
   jobId: string;
   jobTitle: string;
   hasResume: boolean;
+  latestResumeUrl?: string | null;
+  latestResumeSource?: string | null;
   queue: {
     currentPosition: number;
     total: number;
@@ -28,6 +32,12 @@ export function CandidateDetailSplitView({
   children: ReactNode;
 }) {
   const [splitView, setSplitView] = useState(false);
+  const [activeResumeVersion, setActiveResumeVersion] = useState<"current" | "latest">("current");
+
+  const effectiveResumeUrl =
+    activeResumeVersion === "latest" && latestResumeUrl
+      ? `/candidaturas/${applicationId}/cv?url=${encodeURIComponent(latestResumeUrl)}`
+      : `/candidaturas/${applicationId}/cv`;
 
   useEffect(() => {
     try {
@@ -67,13 +77,43 @@ export function CandidateDetailSplitView({
           <div className="min-w-0 lg:col-span-7 xl:col-span-6">{children}</div>
 
           <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] flex-col rounded-2xl border border-[#e4e4e7] bg-white shadow-sm overflow-hidden lg:flex lg:col-span-5 xl:col-span-6">
-            <header className="flex h-11 items-center justify-between border-b border-[#e4e4e7] bg-[#fafaf9] px-4">
-              <span className="truncate text-xs font-semibold text-[#0a0a0a]">
-                Currículo de {candidateName.split(" ")[0]}
-              </span>
-              <div className="flex items-center gap-2">
+            <header className="flex h-11 items-center justify-between border-b border-[#e4e4e7] bg-[#fafaf9] px-4 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="truncate text-xs font-semibold text-[#0a0a0a]">
+                  Currículo de {candidateName.split(" ")[0]}
+                </span>
+                {latestResumeUrl && (
+                  <div className="flex items-center gap-1 bg-[#e4e4e7]/70 p-0.5 rounded-lg text-[10px] shrink-0 font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setActiveResumeVersion("current")}
+                      className={`px-2 py-0.5 rounded-md transition ${
+                        activeResumeVersion === "current"
+                          ? "bg-white text-[#0a0a0a] font-bold shadow-2xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                    >
+                      Desta vaga
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveResumeVersion("latest")}
+                      className={`px-2 py-0.5 rounded-md transition flex items-center gap-1 ${
+                        activeResumeVersion === "latest"
+                          ? "bg-white text-sky-800 font-bold shadow-2xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                      title={`Ver currículo corrigido/recente enviado em ${latestResumeSource || "outra vaga"}`}
+                    >
+                      <Sparkles className="size-2.5 text-sky-600" />
+                      <span>Mais recente</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
                 <a
-                  href={`/candidaturas/${applicationId}/cv`}
+                  href={effectiveResumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-[#71717a] hover:bg-[#e4e4e7]/50 hover:text-[#0a0a0a]"
@@ -95,9 +135,10 @@ export function CandidateDetailSplitView({
             </header>
             <div className="relative flex-1 bg-[#525659]">
               <iframe
-                src={`/candidaturas/${applicationId}/cv#toolbar=1&navpanes=0`}
+                key={effectiveResumeUrl}
+                src={`${effectiveResumeUrl}#toolbar=1&navpanes=0`}
                 className="size-full border-0"
-                title={`Currículo original de ${candidateName}`}
+                title={`Currículo de ${candidateName}`}
               />
             </div>
           </aside>

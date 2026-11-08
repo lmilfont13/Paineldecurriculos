@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { DecisionBlock } from "@/components/gestor/decision-block";
 import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
 import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
+import { SyncResumeBanner } from "@/components/gestor/sync-resume-banner";
 import { extractStandbyReason } from "@/server/models/standby.model";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
@@ -166,6 +167,8 @@ export default async function CandidaturaDetailPage({
       jobId={app.job.id}
       jobTitle={jobLabel(app.job.title, app.job.code)}
       hasResume={Boolean(app.resumeUrl)}
+      latestResumeUrl={app.latestResumeInfo?.latestResumeUrl}
+      latestResumeSource={app.latestResumeInfo?.sourceTitle}
       queue={app.queue}
     >
       <LiveRefresh active={analyzing} applicationIds={[app.id]} />
@@ -271,6 +274,12 @@ export default async function CandidaturaDetailPage({
           </div>
         </div>
       </header>
+
+      <SyncResumeBanner
+        applicationId={app.id}
+        candidateName={app.name}
+        latestResumeInfo={app.latestResumeInfo}
+      />
 
       {app.hasImpediment && (
         <section className="mt-4 rounded-2xl bg-black p-5 text-white shadow-lg border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -57,3 +57,11 @@ export function updateCandidate(
 export function linkCandidateAuth(id: string, authId: string | null, name: string) {
   return prisma.candidate.update({ where: { id }, data: { authId, name } });
 }
+
+/** Propaga currículo atualizado no cadastro para as candidaturas abertas daquele candidato. */
+export function syncCandidateResumeToApplications(candidateId: string, resumeUrl: string) {
+  return prisma.application.updateMany({
+    where: { candidateId },
+    data: { resumeUrl, aiState: "WAITING" },
+  });
+}

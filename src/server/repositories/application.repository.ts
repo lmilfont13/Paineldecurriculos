@@ -815,9 +815,16 @@ export function completePreRegisteredApplication(
   });
 }
 
-/** Currículo anexado pelo gestor (ex.: recebido por e-mail). */
-export function updateApplicationResume(id: string, resumeUrl: string) {
-  return prisma.application.update({ where: { id }, data: { resumeUrl, aiState: "WAITING" } });
+/** Currículo anexado pelo gestor (ex.: recebido por e-mail ou sincronizado do cadastro). */
+export function updateApplicationResume(id: string, resumeUrl: string, resumeText?: string | null) {
+  return prisma.application.update({
+    where: { id },
+    data: {
+      resumeUrl,
+      ...(resumeText !== undefined ? { resumeText } : {}),
+      aiState: "WAITING",
+    },
+  });
 }
 
 /** Registra o pedido de pré-entrevista (quais perguntas e quando); reabre a resposta. */
@@ -1096,4 +1103,63 @@ export async function cloneStandbyApplicationToJob(
   });
 
   return { ok: true, applicationId: created.id, alreadyExisted: false };
+}
+
+/** Busca o currículo mais recente da mesma pessoa (outras vagas ou cadastro de perfil). */
+export async function findLatestPersonResumeInfo(
+  companyId: string,
+  email: string,
+  candidateId?: string | null,
+  currentResumeUrl?: string | null
+) {
+  // 1. Verifica se há currículo atualizado no perfil do candidato
+  if (candidateId) {
+    const cand = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { resumeUrl: true, updatedAt: true },
+    });
+    if (cand?.resumeUrl && cand.resumeUrl !== currentResumeUrl) {
+      return {
+        resumeUrl: cand.resumeUrl,
+        resumeText: null,
+        sourceTitle: "Cadastro do Perfil",
+        updatedAt: cand.updatedAt,
+      };
+    }
+  }
+
+  // 2. Busca em outras candidaturas da mesma pessoa na empresa
+  const others = await prisma.application.findMany({
+    where: {
+      companyId,
+      isDemo: false,
+      OR: [
+        { email: { equals: email.trim(), mode: "insensitive" } },
+        ...(candidateId ? [{ candidateId }] : []),
+      ],
+      resumeUrl: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      resumeUrl: true,
+      resumeText: true,
+      createdAt: true,
+      job: { select: { title: true, code: true } },
+    },
+  });
+
+  const newer = others.find((o) => o.resumeUrl && o.resumeUrl !== currentResumeUrl);
+  if (newer && newer.resumeUrl) {
+    return {
+      resumeUrl: newer.resumeUrl,
+      resumeText: newer.resumeText,
+      sourceTitle: `${newer.job.title}${newer.job.code ? ` #${newer.job.code}` : ""}`,
+      sourceApplicationId: newer.id,
+      updatedAt: newer.createdAt,
+    };
+  }
+
+  return null;
 }

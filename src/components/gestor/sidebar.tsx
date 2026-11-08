@@ -3,6 +3,7 @@
 import {
   Briefcase,
   Bot,
+  Cake,
   ClipboardList,
   FolderOpen,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 import { CommandPaletteTrigger, openCommandPalette } from "@/components/gestor/command-palette";
 import { SoundToggleControl } from "@/components/gestor/sound-notification-listener";
 import { LiveAttendanceTopbarButton } from "@/components/gestor/live-attendance-toggle";
+import { BirthdayReminderBadge } from "@/components/gestor/birthday-reminder-badge";
 
 const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const NAV = [
   // { href: "/suporte-ao-vivo", label: "Suporte ao Vivo", short: "Suporte", Icon: Headphones },
   { href: "/buscar-cvs", label: "Buscar CVs", short: "Buscar", Icon: Search },
   { href: "/talentos", label: "Talentos", Icon: FolderOpen },
+  { href: "/aniversariantes", label: "Aniversariantes", short: "Aniversários", Icon: Cake },
   { href: "/agentes", label: "Agentes", Icon: Bot },
   { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList, secondary: true },
   { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings, secondary: true },
@@ -257,6 +260,7 @@ export function GestorTopbar({
       </span>
 
       <div className="flex items-center gap-2">
+        <BirthdayReminderBadge />
         <LiveAttendanceTopbarButton />
         <CommandPaletteTrigger enabled={commandPaletteEnabled} />
         <SoundToggleControl enabled={soundEnabled} />

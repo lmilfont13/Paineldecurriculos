@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Cake, ChevronRight, MessageCircle } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getPainelData } from "@/server/controllers/gestor.controller";
+import { getCompanyBirthdaysAction } from "@/server/controllers/birthday.controller";
 import { formatWaiting } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
@@ -58,6 +60,8 @@ function FunnelBar({
 export default async function PainelPage() {
   const { userName, companyName, publicUrl, stats, priority, jobs } =
     await getPainelData();
+  const birthdayData = await getCompanyBirthdaysAction().catch(() => null);
+  const birthdaysToday = birthdayData?.today ?? [];
   const firstName = userName.split(" ")[0];
 
   // Primeiro uso (nenhuma vaga ainda): induz a criar a vaga, sem mostrar zeros.
@@ -174,6 +178,81 @@ export default async function PainelPage() {
             Revisar e publicar
           </span>
         </Link>
+      )}
+
+      {/* Lembrete de Aniversariantes de Hoje */}
+      {birthdaysToday.length > 0 && (
+        <section className="mt-8 overflow-hidden rounded-2xl border border-amber-300 bg-linear-to-r from-amber-50 via-orange-50/50 to-amber-50/30 p-6 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                <Cake className="size-5" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-[#0a0a0a]">
+                    Aniversariantes de Hoje! 🎉
+                  </h2>
+                  <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {birthdaysToday.length}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-[#71717a]">
+                  Fortaleça o vínculo com seus talentos enviando uma mensagem personalizada de parabéns pelo WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/aniversariantes"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 text-xs font-semibold text-amber-900 shadow-2xs hover:bg-amber-50 transition"
+            >
+              <span>Ver todos os aniversariantes</span>
+              <ChevronRight className="size-3.5 text-amber-700" />
+            </Link>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {birthdaysToday.map((person) => (
+              <div
+                key={person.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-white/95 p-3.5 shadow-2xs backdrop-blur-xs"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <CandidateAvatar
+                    name={person.name}
+                    photoUrl={person.photoUrl}
+                    className="size-9 shrink-0 rounded-full border border-amber-200 bg-[#1c1917] text-xs font-bold text-white"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-[#0a0a0a]">
+                      {person.name}
+                    </p>
+                    <p className="truncate text-[11px] font-medium text-amber-800">
+                      Completando {person.turningAge} anos 🎂
+                    </p>
+                    <p className="truncate text-[10px] text-[#71717a]">
+                      {person.jobTitle}
+                    </p>
+                  </div>
+                </div>
+
+                {person.whatsappUrl && (
+                  <a
+                    href={person.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-2xs hover:bg-emerald-700 transition"
+                    title={`Mandar parabéns para ${person.name} no WhatsApp`}
+                  >
+                    <MessageCircle className="size-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* A fila: o único número que muda o que o gestor faz agora */}
