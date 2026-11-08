@@ -94,5 +94,105 @@ describe("buildTalentDashboardData", () => {
     expect(data.highlights).toHaveLength(3);
     expect(data.highlights[0].name).toBe("Maria Júlia");
   });
+
+  it("deduplica candidaturas da mesma pessoa para que não apareça repetida no ranking nem nas estatísticas", () => {
+    const candidates: RawCandidateForDashboard[] = [
+      {
+        id: "app-1",
+        name: "Viviane Vasconcelos",
+        email: "viviane@exemplo.com",
+        phone: "(85) 98888-1111",
+        age: 32,
+        aiScore: 95,
+        aiProfile: "Função Operacional",
+        aiLevel: "Operacional",
+        aiTenure: null, // Sem data
+        createdAt: new Date("2026-01-01"),
+      },
+      {
+        id: "app-2",
+        name: "Viviane Vasconcelos",
+        email: "viviane@exemplo.com",
+        phone: "(85) 98888-1111",
+        age: 32,
+        aiScore: 95,
+        aiProfile: "Promotor de Vendas",
+        aiLevel: "Pleno",
+        aiTenure: {
+          tempoMedioMeses: 31,
+          empresas: [{ empresa: "São Braz", cargo: "Promotora", meses: 31 }],
+        },
+        createdAt: new Date("2026-02-01"),
+      },
+      {
+        id: "app-3",
+        name: "Francisco Felicio Gomes Filho",
+        email: "francisco1@exemplo.com",
+        phone: "85999992222",
+        age: 44,
+        aiScore: 95,
+        aiProfile: "Função Operacional",
+        createdAt: new Date("2026-01-02"),
+      },
+      {
+        id: "app-4",
+        name: "Francisco Felicio Gomes Filho",
+        email: "francisco2@exemplo.com",
+        phone: "85999992222",
+        age: 44,
+        aiScore: 95,
+        aiProfile: "Promotor de Vendas",
+        aiLevel: "Pleno",
+        aiTenure: {
+          tempoMedioMeses: 25,
+          empresas: [{ empresa: "MRH", cargo: "Promotor", meses: 25 }],
+        },
+        createdAt: new Date("2026-02-02"),
+      },
+      {
+        id: "app-5",
+        name: "Fellipe Vieira Diniz",
+        email: "fellipe@exemplo.com",
+        phone: "85977773333",
+        age: 37,
+        aiScore: 95,
+        aiProfile: "Promotor de Vendas",
+        createdAt: new Date("2026-01-10"),
+      },
+      {
+        id: "app-6",
+        name: "Fellipe Vieira Diniz",
+        email: "fellipe@exemplo.com",
+        phone: "85977773333",
+        age: 37,
+        aiScore: 95,
+        aiProfile: "Promotor de Vendas",
+        createdAt: new Date("2026-01-15"),
+      },
+    ];
+
+    const data = buildTalentDashboardData("Empresa Teste", candidates);
+
+    // Total de pessoas físicas deve ser 3 (Viviane, Francisco, Fellipe) e não 6 candidaturas
+    expect(data.totals.candidates).toBe(3);
+
+    // No ranking de destaques, cada pessoa aparece estritamente uma vez
+    expect(data.highlights).toHaveLength(3);
+    const names = data.highlights.map((h) => h.name);
+    expect(new Set(names).size).toBe(3);
+
+    // Viviane deve ter herdado o melhor perfil ("Promotor de Vendas" com tenure "2 anos e 7m")
+    const viviane = data.highlights.find((h) => h.name.includes("Viviane"));
+    expect(viviane).toBeDefined();
+    expect(viviane?.role).toBe("Promotor de Vendas");
+    expect(viviane?.level).toBe("Pleno");
+    expect(viviane?.tenureFormatted).toContain("2 anos e 7m");
+
+    // Francisco deve ter herdado o perfil "Promotor de Vendas" e empresa MRH
+    const francisco = data.highlights.find((h) => h.name.includes("Francisco"));
+    expect(francisco).toBeDefined();
+    expect(francisco?.role).toBe("Promotor de Vendas");
+    expect(francisco?.topCompany).toBe("MRH");
+  });
 });
 

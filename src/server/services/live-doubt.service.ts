@@ -92,3 +92,4 @@ export async function answerLiveDoubtService(params: {
     return { ok: false, error: err?.message || "Erro ao responder dúvida" };
   }
 }
+

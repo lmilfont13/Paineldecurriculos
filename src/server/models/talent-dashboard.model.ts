@@ -4,7 +4,14 @@
  * estabilidade profissional e ranking dos melhores candidatos da base.
  */
 
-import { calculateAge, extractAgeFromText, extractBirthDateFromText } from "@/server/models/cv-search.model";
+import {
+  calculateAge,
+  cleanDigits,
+  cleanEmail,
+  cleanName,
+  extractAgeFromText,
+  extractBirthDateFromText,
+} from "@/server/models/cv-search.model";
 import { parseTenureAnalysis, type TenureCompany } from "@/server/models/tenure.model";
 import { titleCasePt, toPdfSafeText } from "@/server/models/text.model";
 
@@ -196,6 +203,8 @@ export function normalizeCompanyName(raw: string): string {
 
 export type RawCandidateForDashboard = {
   id: string;
+  candidateId?: string | null;
+  cpf?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -216,12 +225,160 @@ export type RawCandidateForDashboard = {
 };
 
 /**
+ * Seleciona o melhor registro entre candidaturas da mesma pessoa:
+ * 1. Quem tem currículo em anexo/PDF ganha.
+ * 2. Quem tem maior score IA ganha.
+ * 3. Quem tem análise de histórico de empresas (tenure) ganha.
+ * 4. Perfil mais específico ganha contra genérico (ex: "Promotor de Vendas" > "Função Operacional").
+ * 5. Candidatura mais recente como desempate.
+ */
+function betterRawCandidate(a: RawCandidateForDashboard, b: RawCandidateForDashboard): RawCandidateForDashboard {
+  if (Boolean(a.resumeUrl) !== Boolean(b.resumeUrl)) {
+    return a.resumeUrl ? a : b;
+  }
+  const sa = a.aiScore ?? -1;
+  const sb = b.aiScore ?? -1;
+  if (sa !== sb) return sa > sb ? a : b;
+
+  const tenureA = parseTenureAnalysis(a.aiTenure);
+  const tenureB = parseTenureAnalysis(b.aiTenure);
+  const hasTenureA = Boolean(tenureA && tenureA.empresas.length > 0);
+  const hasTenureB = Boolean(tenureB && tenureB.empresas.length > 0);
+  if (hasTenureA !== hasTenureB) return hasTenureA ? a : b;
+
+  const isGenericA = !a.aiProfile || a.aiProfile.toLowerCase().includes("operacional");
+  const isGenericB = !b.aiProfile || b.aiProfile.toLowerCase().includes("operacional");
+  if (isGenericA !== isGenericB) return isGenericA ? b : a;
+
+  const tA = new Date(a.createdAt).getTime();
+  const tB = new Date(b.createdAt).getTime();
+  return tA >= tB ? a : b;
+}
+
+/**
+ * Deduplica registros da base de talentos para que uma mesma pessoa física
+ * (mesmo CPF, candidateId, e-mail, telefone, arquivo de currículo ou nome completo)
+ * apareça estritamente uma única vez nas estatísticas e no ranking de talentos.
+ */
+export function dedupeRawCandidatesByPerson(
+  candidates: RawCandidateForDashboard[]
+): RawCandidateForDashboard[] {
+  const n = candidates.length;
+  if (n <= 1) return candidates;
+
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(i: number): number {
+    if (parent[i] === i) return i;
+    parent[i] = find(parent[i]);
+    return parent[i];
+  }
+  function union(i: number, j: number) {
+    const rootI = find(i);
+    const rootJ = find(j);
+    if (rootI !== rootJ) parent[rootI] = rootJ;
+  }
+
+  const keyToIdx = new Map<string, number>();
+
+  for (let i = 0; i < n; i++) {
+    const c = candidates[i];
+    const keys: string[] = [];
+
+    if (c.candidateId && typeof c.candidateId === "string" && c.candidateId.trim()) {
+      keys.push(`cand:${c.candidateId.trim()}`);
+    }
+    const cpfDigits = cleanDigits(c.cpf);
+    if (cpfDigits.length >= 11) {
+      keys.push(`cpf:${cpfDigits}`);
+    }
+    const email = cleanEmail(c.email);
+    if (email) {
+      keys.push(`email:${email}`);
+    }
+    const phoneDigits = cleanDigits(c.phone);
+    if (phoneDigits.length >= 10) {
+      keys.push(`phone:${phoneDigits.slice(-10)}`);
+    }
+    if (c.resumeUrl && typeof c.resumeUrl === "string" && c.resumeUrl.trim()) {
+      keys.push(`resume:${c.resumeUrl.trim().toLowerCase()}`);
+    }
+    const name = cleanName(c.name);
+    if (name) {
+      keys.push(`name:${name}`);
+    }
+
+    if (keys.length === 0) {
+      keys.push(`id:${c.id}`);
+    }
+
+    for (const k of keys) {
+      const existing = keyToIdx.get(k);
+      if (existing !== undefined) {
+        union(i, existing);
+      } else {
+        keyToIdx.set(k, i);
+      }
+    }
+  }
+
+  const groups = new Map<number, RawCandidateForDashboard[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(candidates[i]);
+  }
+
+  const result: RawCandidateForDashboard[] = [];
+  for (const group of groups.values()) {
+    let best = group[0];
+    for (let j = 1; j < group.length; j++) {
+      best = betterRawCandidate(best, group[j]);
+    }
+
+    let merged: RawCandidateForDashboard = { ...best };
+    for (const item of group) {
+      if (item === best) continue;
+      merged = {
+        ...merged,
+        candidateId: merged.candidateId || item.candidateId,
+        cpf: merged.cpf || item.cpf,
+        photoUrl: merged.photoUrl || item.photoUrl,
+        resumeUrl: merged.resumeUrl || item.resumeUrl,
+        resumeText:
+          merged.resumeText && merged.resumeText.length >= (item.resumeText?.length ?? 0)
+            ? merged.resumeText
+            : item.resumeText || merged.resumeText,
+        phone: merged.phone || item.phone,
+        email: merged.email || item.email,
+        birthDate: merged.birthDate || item.birthDate,
+        age: merged.age ?? item.age,
+        city: merged.city || item.city,
+        neighborhood: merged.neighborhood || item.neighborhood,
+        aiProfile:
+          merged.aiProfile && !merged.aiProfile.toLowerCase().includes("operacional")
+            ? merged.aiProfile
+            : item.aiProfile || merged.aiProfile,
+        aiArea: merged.aiArea || item.aiArea,
+        aiLevel: merged.aiLevel || item.aiLevel,
+        aiTenure: merged.aiTenure || item.aiTenure,
+        skills: Array.from(new Set([...(merged.skills || []), ...(item.skills || [])])),
+      };
+    }
+    result.push(merged);
+  }
+
+  return result;
+}
+
+/**
  * Constrói os dados do dashboard analítico de talentos a partir das candidaturas da empresa.
+ * Garante que a base seja deduplicada por pessoa física para evitar distorções nas métricas.
  */
 export function buildTalentDashboardData(
   companyName: string,
-  candidates: RawCandidateForDashboard[]
+  rawCandidates: RawCandidateForDashboard[]
 ): TalentDashboardData {
+  const candidates = dedupeRawCandidatesByPerson(rawCandidates);
   const total = candidates.length;
 
   let femaleCount = 0;
@@ -385,6 +542,17 @@ export function buildTalentDashboardData(
   const topCompanies = sortMapToCountPct(companyMap, 8);
   const avgTenure = totalTenureCount > 0 ? Math.round(totalTenureMonthsSum / totalTenureCount) : null;
 
+  // Garante que a lista de destaques nunca repita a mesma pessoa
+  const uniqueHighlights: HighlightCandidate[] = [];
+  const seenHighlightKeys = new Set<string>();
+  for (const h of candidateHighlights) {
+    const norm = cleanName(h.name) || h.name.toLowerCase().trim();
+    if (seenHighlightKeys.has(norm)) continue;
+    seenHighlightKeys.add(norm);
+    uniqueHighlights.push(h);
+    if (uniqueHighlights.length >= 15) break;
+  }
+
   return {
     generatedAt: new Date(),
     companyName: toPdfSafeText(companyName),
@@ -432,7 +600,7 @@ export function buildTalentDashboardData(
       count,
       pct: toPct(count, total),
     })),
-    highlights: candidateHighlights.slice(0, 15),
+    highlights: uniqueHighlights,
   };
 }
 

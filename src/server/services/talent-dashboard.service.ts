@@ -33,6 +33,8 @@ export async function loadTalentDashboardReportData(
 
   const candidates: RawCandidateForDashboard[] = rows.map((r) => ({
     id: r.id,
+    candidateId: r.candidateId,
+    cpf: r.cpf,
     name: r.name,
     email: r.email,
     phone: r.phone,

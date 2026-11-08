@@ -705,12 +705,12 @@ export function sortCandidates(
   });
 }
 
-function cleanDigits(s: string | null | undefined): string {
+export function cleanDigits(s: string | null | undefined): string {
   if (!s) return "";
   return s.replace(/\D/g, "");
 }
 
-function cleanEmail(email: string | null | undefined): string | null {
+export function cleanEmail(email: string | null | undefined): string | null {
   if (!email) return null;
   const e = email.trim().toLowerCase();
   if (!e.includes("@")) return null;
@@ -718,7 +718,7 @@ function cleanEmail(email: string | null | undefined): string | null {
   return e;
 }
 
-function cleanName(name: string | null | undefined): string | null {
+export function cleanName(name: string | null | undefined): string | null {
   if (!name) return null;
   const n = normalizeText(name);
   const parts = n.split(" ").filter((p) => p.length >= 2);

@@ -259,7 +259,7 @@ export function parseTenureAnalysis(raw: unknown): TenureAnalysis | null {
     if (!empresa && !cargo && !periodo) continue;
 
     // Descarta se for nome do candidato, telefone, nascimento ou dados pessoais
-    if (isLikelyPersonalData(empresa) || isLikelyPersonalData(periodo)) {
+    if (isLikelyPersonalData(empresa) || (periodo && isLikelyPersonalData(periodo))) {
       continue;
     }
 
