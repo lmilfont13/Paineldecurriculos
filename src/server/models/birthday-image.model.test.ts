@@ -5,45 +5,45 @@ import {
 } from "./birthday-image.model";
 
 describe("birthday-image.model", () => {
-  it("contém os 4 estilos visuais profissionais", () => {
+  it("contém os 4 estilos de cartões comemorativos de aniversário", () => {
     expect(BIRTHDAY_AI_STYLES.luxury_gold).toBeDefined();
-    expect(BIRTHDAY_AI_STYLES.gourmet_cake).toBeDefined();
-    expect(BIRTHDAY_AI_STYLES.corporate_achievement).toBeDefined();
-    expect(BIRTHDAY_AI_STYLES.warm_botanical).toBeDefined();
+    expect(BIRTHDAY_AI_STYLES.corporate_modern).toBeDefined();
+    expect(BIRTHDAY_AI_STYLES.festive_warm).toBeDefined();
+    expect(BIRTHDAY_AI_STYLES.botanical_prestige).toBeDefined();
   });
 
-  it("gera prompt em inglês com idade quando fornecida", () => {
+  it("gera prompt de cartão em inglês com idade quando fornecida", () => {
     const prompt = buildBirthdayImagePrompt({
       name: "Jéssica Silva",
       age: 33,
-      company: "Tárguet",
+      company: "Trade & Talent",
       style: "luxury_gold",
     });
 
-    expect(prompt).toContain("celebrating 33 years of life and success");
-    expect(prompt).toContain("Ultra-realistic");
-    expect(prompt).toContain("crystal glasses");
+    expect(prompt).toContain("Jéssica Silva");
+    expect(prompt).toContain("completing 33 years of life");
+    expect(prompt).toContain("luxury birthday greeting card");
+    expect(prompt).toContain("embossed polished gold borders");
   });
 
-  it("gera prompt em inglês para bolo gourmet", () => {
+  it("gera prompt em inglês para cartão corporativo moderno", () => {
     const prompt = buildBirthdayImagePrompt({
       name: "Carlos Eduardo",
-      age: 40,
-      company: "Acme",
-      style: "gourmet_cake",
+      company: "Acme Corp",
+      style: "corporate_modern",
     });
 
-    expect(prompt).toContain("artisanal birthday cake");
-    expect(prompt).toContain("celebrating 40th birthday");
+    expect(prompt).toContain("contemporary corporate birthday greeting card");
+    expect(prompt).toContain("Carlos Eduardo");
+    expect(prompt).toContain("Acme Corp");
   });
 
   it("permite prompt customizado diretamente", () => {
     const prompt = buildBirthdayImagePrompt({
       name: "Ana",
-      customPrompt: "A custom prompt for celebration",
+      customPrompt: "A custom birthday card prompt",
     });
 
-    expect(prompt).toBe("A custom prompt for celebration");
+    expect(prompt).toBe("A custom birthday card prompt");
   });
 });
-

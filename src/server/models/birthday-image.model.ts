@@ -1,13 +1,14 @@
 export type BirthdayAiStyle =
   | "luxury_gold"
-  | "gourmet_cake"
-  | "corporate_achievement"
-  | "warm_botanical";
+  | "corporate_modern"
+  | "festive_warm"
+  | "botanical_prestige";
 
 export interface BirthdayAiStyleConfig {
   id: BirthdayAiStyle;
   label: string;
   emoji: string;
+  badge: string;
   description: string;
   promptTemplate: (params: { name: string; age?: number; company: string }) => string;
 }
@@ -15,44 +16,46 @@ export interface BirthdayAiStyleConfig {
 export const BIRTHDAY_AI_STYLES: Record<BirthdayAiStyle, BirthdayAiStyleConfig> = {
   luxury_gold: {
     id: "luxury_gold",
-    label: "Celebração Executiva (Ouro & Brilho)",
+    label: "Cartão Executivo Ouro & Prestígio",
     emoji: "🏆",
-    description: "Cenário sofisticado com taças de champanhe, confetes dourados e iluminação cinematográfica de gala.",
-    promptTemplate: ({ name, age }) =>
-      `Ultra-realistic professional luxury celebration photograph for a birthday celebration. Elegant crystal glasses, golden champagne sparkles, floating delicate gold and bronze bokeh confetti, warm cinematic rim lighting, minimalist dark marble and polished brass background, studio photography, Hasselblad medium format, award-winning lighting${
-        age ? `, celebrating ${age} years of life and success` : ""
-      }, 8k resolution, crisp detail, no cartoon, hyperrealistic masterpiece.`,
+    badge: "Mais Usado",
+    description: "Design luxuoso de papelaria fina com moldura dourada e estilo cartão de celebração.",
+    promptTemplate: ({ name, age, company }) =>
+      `A magnificent high-end luxury birthday greeting card design celebrating ${name}${
+        age ? ` completing ${age} years of life` : ""
+      }. Premium corporate greeting card presentation with embossed polished gold borders, tasteful golden glitter and bokeh confetti framing the edges, centered greeting card layout with celebratory elegance from ${company}, festive yet deeply professional, award-winning stationery design, 8k resolution, crisp clean presentation.`,
   },
-  gourmet_cake: {
-    id: "gourmet_cake",
-    label: "Bolo Gourmet de Estúdio",
-    emoji: "🎂",
-    description: "Fotografia gastronômica de revista: bolo artesanal elegante com vela comemorativa e iluminação suave.",
-    promptTemplate: ({ name, age }) =>
-      `Exquisite artisanal birthday cake macro studio food photography. Decorated with delicate edible 24k gold leaf flakes, fresh ripe berries, single elegant sparkling celebration candle flame, soft warm golden hour light, blurred luxury kitchen studio background, Vogue lifestyle magazine editorial quality, shallow depth of field, appetizing and ultra high resolution${
-        age ? `, celebrating ${age}th birthday` : ""
-      }.`,
-  },
-  corporate_achievement: {
-    id: "corporate_achievement",
-    label: "Sucesso & Conquista Corporativa",
-    emoji: "🌟",
-    description: "Conceito inspirador de triunfo profissional, luz do amanhecer sobre arquitetura moderna de vidro.",
+  corporate_modern: {
+    id: "corporate_modern",
+    label: "Cartão Corporativo Contemporâneo",
+    emoji: "💼",
+    badge: "Minimalista",
+    description: "Visual executivo moderno em tons de azul marinho, prata e linhas geométricas limpas.",
     promptTemplate: ({ name, company }) =>
-      `Inspiring professional corporate achievement visual art celebrating excellence and success. Elegant glass architectural atrium bathed in a golden triumphant morning sunrise, subtle radiant light rays, refined minimal corporate trophy crystal aesthetic, modern professional workplace feeling, symbolizing career milestones for ${company}, high aesthetic, 8k cinematic realism.`,
+      `A sophisticated contemporary corporate birthday greeting card dedicated to ${name} by ${company}. Clean minimalist graphic card design, deep navy blue background with polished platinum and gold accents, stylish festive geometric elements, celebrating career milestones, success and happiness, premium agency greeting card layout, high aesthetic 8k digital art.`,
   },
-  warm_botanical: {
-    id: "warm_botanical",
-    label: "Acolhimento & Elegância Natural",
-    emoji: "🌿",
-    description: "Flores nobres, luz natural aconchegante e sensação calorosa de carinho e respeito da equipe.",
+  festive_warm: {
+    id: "festive_warm",
+    label: "Cartão Festivo & Caloroso",
+    emoji: "🎉",
+    badge: "Festivo",
+    description: "Cartão vibrante e acolhedor, com balões elegantes e clima de festa alegre.",
     promptTemplate: ({ name }) =>
-      `Warm cozy high-end lifestyle celebration still-life photography. Beautiful bouquet of eucalyptus, white peonies and delicate gold ribbon, warm natural window sunlight casting soft shadows, elegant greeting card on natural oak wood table, heartwarming, peaceful, premium Scandinavian interior aesthetic, sharp focus, aesthetic composition.`,
+      `An uplifting, joyful and tasteful birthday greeting card design celebrating ${name}. Elegant floating festive balloons in pastel and champagne tones, delicate celebration ribbons, warm inviting lighting, clean greeting card composition conveying joy, appreciation and happiness, premium commercial greeting card illustration, 8k ultra sharp quality.`,
+  },
+  botanical_prestige: {
+    id: "botanical_prestige",
+    label: "Cartão Floral & Botânico Nobre",
+    emoji: "🌿",
+    badge: "Elegante",
+    description: "Ilustração nobre com folhagens delicadas, flores brancas e toque de carinho da equipe.",
+    promptTemplate: ({ name }) =>
+      `A graceful luxury botanical birthday greeting card celebrating ${name}. Refined watercolor and fine-line illustration of eucalyptus leaves and white blossoms framing an elegant celebration card, warm sunlit background, heartfelt and peaceful aesthetic, premium bespoke stationery greeting card, 8k resolution.`,
   },
 };
 
 /**
- * Monta o prompt em inglês otimizado para o modelo de geração de imagem por IA.
+ * Monta o prompt otimizado para o modelo Google Imagen 3 / IA gerar o cartão de aniversário.
  */
 export function buildBirthdayImagePrompt(params: {
   name: string;
@@ -75,4 +78,3 @@ export function buildBirthdayImagePrompt(params: {
     company: params.company || "nossa empresa",
   });
 }
-
