@@ -12,6 +12,7 @@ import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.ser
 import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
 import { NewsTicker } from "@/components/common/news-ticker";
 import { CandidateSentimentWidget } from "@/components/public/candidate-sentiment-widget";
+import { LiveDoubtWidget } from "@/components/public/live-doubt-widget";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
@@ -81,6 +82,12 @@ export default async function TenantLayout({
         companySlug={company.slug}
         companyName={company.name}
         candidateName={candidate?.name}
+      />
+      <LiveDoubtWidget
+        companySlug={company.slug}
+        companyName={company.name}
+        candidateName={candidate?.name}
+        candidateEmail={candidate?.email}
       />
     </div>
   );

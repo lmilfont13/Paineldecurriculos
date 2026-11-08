@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/server/controllers/live-doubt.controller", () => ({
+  getLiveDoubtsAction: vi.fn(async () => []),
+  answerLiveDoubtAction: vi.fn(async () => ({ ok: true })),
+}));
 
 import { categorizePresence } from "@/components/gestor/online-presence";
 

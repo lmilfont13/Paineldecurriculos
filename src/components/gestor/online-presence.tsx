@@ -1,12 +1,14 @@
 "use client";
 
-import { Briefcase, CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, Radio, Sparkles, User, Users, X } from "lucide-react";
+import { Briefcase, CheckCircle2, ChevronDown, ChevronUp, FileEdit, LayoutDashboard, MessageCircle, MessageSquare, Phone, Radio, Send, Sparkles, User, Users, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { createClient } from "@/lib/supabase/client";
 import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
+import { getLiveDoubtsAction, answerLiveDoubtAction } from "@/server/controllers/live-doubt.controller";
+import type { LiveDoubt } from "@/server/models/live-doubt.model";
 
 export type PresencePayload = {
   role: "candidato" | "equipe";
@@ -290,8 +292,87 @@ export function OnlineCounterBadge({
 }) {
   const [sessions, setSessions] = useState<OnlineSession[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [popoverTab, setPopoverTab] = useState<"presence" | "csat">("presence");
+  const [popoverTab, setPopoverTab] = useState<"presence" | "csat" | "doubts">("presence");
+  const [doubts, setDoubts] = useState<LiveDoubt[]>([]);
+  const [replyingDoubtId, setReplyingDoubtId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Carrega dúvidas e transmite presença da equipe aos candidatos
+  useEffect(() => {
+    let active = true;
+    void getLiveDoubtsAction().then((list) => {
+      if (active && Array.isArray(list)) setDoubts(list);
+    });
+
+    let bc: BroadcastChannel | null = null;
+    let pingInterval: any = null;
+
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      bc = new BroadcastChannel("triagem_radio_sync");
+
+      const sendAdminPing = () => {
+        bc?.postMessage({
+          type: "admin_presence_ping",
+          role: "equipe",
+          userName,
+          timestamp: Date.now(),
+        });
+      };
+      sendAdminPing();
+      pingInterval = setInterval(sendAdminPing, 3000);
+
+      bc.onmessage = (e) => {
+        const data = e.data;
+        if (!data) return;
+        if (data.type === "new_doubt" && data.doubt) {
+          setDoubts((prev) => [data.doubt, ...prev.filter((d) => d.id !== data.doubt.id)]);
+        }
+      };
+    }
+
+    return () => {
+      active = false;
+      if (pingInterval) clearInterval(pingInterval);
+      if (bc) {
+        try {
+          bc.postMessage({ type: "admin_presence_bye", role: "equipe", timestamp: Date.now() });
+          bc.close();
+        } catch {}
+      }
+    };
+  }, [userName]);
+
+  const handleSendReply = async (doubtId: string) => {
+    if (!replyText.trim() || sendingReply) return;
+    setSendingReply(true);
+    try {
+      const res = await answerLiveDoubtAction({ doubtId, answer: replyText.trim() });
+      if (res.ok && res.doubt) {
+        setDoubts((prev) =>
+          prev.map((d) => (d.id === doubtId ? res.doubt! : d))
+        );
+        setReplyText("");
+        setReplyingDoubtId(null);
+
+        // Notifica o canal broadcast para a aba do candidato receber ao vivo
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const bc = new BroadcastChannel("triagem_radio_sync");
+          bc.postMessage({
+            type: "doubt_answered",
+            doubt: res.doubt,
+            timestamp: Date.now(),
+          });
+          bc.close();
+        }
+      }
+    } catch {
+      // Ignora erro
+    } finally {
+      setSendingReply(false);
+    }
+  };
 
   // Fecha ao pressionar Esc
   useEffect(() => {
@@ -411,6 +492,7 @@ export function OnlineCounterBadge({
   const perfilCount = candidates.filter((s) => s.category === "perfil").length;
   // Apenas candidatos contam no número online (o gestor não é contabilizado)
   const total = candidates.length;
+  const pendingDoubtsCount = doubts.filter((d) => d.status === "pending").length;
 
   if (variant === "topbar") {
     return (
@@ -427,6 +509,11 @@ export function OnlineCounterBadge({
           <span>
             <strong>{total}</strong> online
           </span>
+          {pendingDoubtsCount > 0 && (
+            <span className="rounded-full bg-amber-500 text-white px-1.5 py-0.2 text-[9px] font-bold animate-pulse">
+              {pendingDoubtsCount} dúvida{pendingDoubtsCount > 1 ? "s" : ""}
+            </span>
+          )}
           {cadastroCount > 0 && (
             <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[9px] font-bold text-rose-800">
               {cadastroCount} no cadastro
@@ -454,7 +541,11 @@ export function OnlineCounterBadge({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {cadastroCount > 0 ? (
+          {pendingDoubtsCount > 0 ? (
+            <span className="rounded-full bg-amber-500 text-white px-2 py-0.5 text-[10px] font-bold animate-pulse">
+              {pendingDoubtsCount} dúvida{pendingDoubtsCount > 1 ? "s" : ""}
+            </span>
+          ) : cadastroCount > 0 ? (
             <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#52525b]">
               {cadastroCount} no cadastro
             </span>
@@ -482,10 +573,10 @@ export function OnlineCounterBadge({
             aria-label="Presença Online e Satisfação"
             className="fixed inset-0 z-[200] flex items-center justify-center bg-[#fafaf9] p-6"
           >
-            <div className="w-full max-w-lg rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm">
+            <div className="w-full max-w-lg rounded-2xl border border-[#e4e4e7] bg-white p-6 shadow-sm max-h-[90vh] flex flex-col">
               {/* Cabeçalho com Abas */}
-              <div className="flex items-center justify-between border-b border-[#e4e4e7] pb-3.5">
-                <div className="flex items-center gap-1.5 bg-[#f4f4f5] p-1 rounded-xl text-xs font-medium">
+              <div className="flex items-center justify-between border-b border-[#e4e4e7] pb-3.5 shrink-0">
+                <div className="flex flex-wrap items-center gap-1.5 bg-[#f4f4f5] p-1 rounded-xl text-xs font-medium">
                   <button
                     type="button"
                     onClick={() => setPopoverTab("presence")}
@@ -497,6 +588,23 @@ export function OnlineCounterBadge({
                   >
                     <span className="size-2 rounded-full bg-[#1f7a4d]" />
                     <span>Presença ({total})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPopoverTab("doubts")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                      popoverTab === "doubts"
+                        ? "bg-white text-[#0a0a0a] font-semibold shadow-2xs"
+                        : "text-[#71717a] hover:text-[#0a0a0a]"
+                    }`}
+                  >
+                    <MessageSquare className="size-3.5 text-amber-600" />
+                    <span>Dúvidas Ao Vivo</span>
+                    {pendingDoubtsCount > 0 && (
+                      <span className="rounded-full bg-amber-500 text-white px-1.5 py-0.2 text-[9px] font-bold animate-pulse">
+                        {pendingDoubtsCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -521,8 +629,159 @@ export function OnlineCounterBadge({
               </div>
 
               {popoverTab === "csat" ? (
-                <div className="mt-4">
+                <div className="mt-4 overflow-y-auto flex-1">
                   <CandidateSentimentCard companySlug={slug} compact={false} />
+                </div>
+              ) : popoverTab === "doubts" ? (
+                <div className="mt-4 overflow-y-auto flex-1 space-y-3 pr-1">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-950">
+                    <p className="font-bold">Canal Direto com Candidatos Online</p>
+                    <p className="text-[11px] text-amber-800 mt-0.5">
+                      Responda às dúvidas dos candidatos em tempo real enquanto eles navegam ou preenchem a candidatura.
+                    </p>
+                  </div>
+
+                  {doubts.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-[#71717a]">
+                      <MessageCircle className="size-8 mx-auto text-stone-300 mb-2" />
+                      <p className="font-semibold text-stone-700">Nenhuma dúvida no momento</p>
+                      <p className="text-stone-500 mt-1 max-w-xs mx-auto">
+                        Quando um candidato enviar uma pergunta pelo portal com você online, ela aparecerá aqui instantaneamente.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {doubts.map((d) => {
+                        const cleanPhone = d.contact?.replace(/\D/g, "");
+                        const hasWhatsApp = cleanPhone && cleanPhone.length >= 10;
+                        const waUrl = hasWhatsApp
+                          ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(
+                              `Olá ${d.candidateName}, sou do RH da empresa e vi sua dúvida no nosso portal de vagas!`
+                            )}`
+                          : null;
+
+                        return (
+                          <div
+                            key={d.id}
+                            className={`rounded-xl border p-3.5 text-xs transition ${
+                              d.status === "pending"
+                                ? "border-amber-200 bg-amber-50/30"
+                                : "border-stone-200 bg-white"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-bold text-[#0a0a0a] truncate">
+                                  {d.candidateName}
+                                </span>
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                                    d.status === "pending"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : "bg-emerald-100 text-emerald-800"
+                                  }`}
+                                >
+                                  {d.status === "pending" ? "Aguardando" : "Respondida"}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-stone-400 shrink-0">
+                                {new Date(d.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+
+                            {/* Detalhe de tela / caminho */}
+                            {d.path && (
+                              <p className="mt-1 text-[10px] text-stone-500">
+                                Página: <span className="font-mono text-stone-700">{d.path}</span>
+                              </p>
+                            )}
+
+                            {/* Dúvida */}
+                            <p className="mt-2 text-stone-800 font-medium leading-relaxed bg-white/80 p-2.5 rounded-lg border border-stone-100">
+                              "{d.question}"
+                            </p>
+
+                            {/* Contato e Ações */}
+                            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100 text-[11px]">
+                              {d.contact ? (
+                                <div className="flex items-center gap-2 text-stone-600">
+                                  <span>Contato: {d.contact}</span>
+                                  {waUrl && (
+                                    <a
+                                      href={waUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
+                                    >
+                                      <Phone className="size-3" />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-stone-400">Sem contato adicional</span>
+                              )}
+
+                              {d.status === "pending" && replyingDoubtId !== d.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyingDoubtId(d.id);
+                                    setReplyText("");
+                                  }}
+                                  className="rounded-lg bg-[#0a0a0a] px-3 py-1 text-xs font-bold text-white hover:bg-stone-800 transition"
+                                >
+                                  Responder ao Vivo
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Resposta já enviada */}
+                            {d.status === "answered" && d.answer && (
+                              <div className="mt-2 rounded-lg bg-emerald-50 p-2 text-emerald-900 text-[11px]">
+                                <span className="font-bold">Resposta enviada ({d.answeredBy}):</span>
+                                <p className="mt-0.5">{d.answer}</p>
+                              </div>
+                            )}
+
+                            {/* Formulário de Resposta */}
+                            {replyingDoubtId === d.id && (
+                              <div className="mt-3 space-y-2 border-t border-stone-200 pt-2.5">
+                                <textarea
+                                  rows={2}
+                                  value={replyText}
+                                  onChange={(e) => setReplyText(e.target.value)}
+                                  placeholder="Digite sua resposta para o candidato..."
+                                  className="w-full rounded-lg border border-stone-200 p-2 text-xs outline-none focus:border-stone-900 resize-none"
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setReplyingDoubtId(null)}
+                                    className="rounded-lg border border-stone-200 px-2.5 py-1 text-[11px] font-medium text-stone-600 hover:bg-stone-50"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!replyText.trim() || sendingReply}
+                                    onClick={() => handleSendReply(d.id)}
+                                    className="flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-3 py-1 text-[11px] font-bold text-white hover:bg-stone-800 disabled:opacity-50"
+                                  >
+                                    <Send className="size-3" />
+                                    <span>{sendingReply ? "Enviando..." : "Enviar Resposta"}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
