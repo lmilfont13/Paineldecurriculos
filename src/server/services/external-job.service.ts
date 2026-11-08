@@ -10,6 +10,7 @@ import {
   stableHash,
   type ExternalJobCandidate,
   type PublicExternalJob,
+  type WorkplaceTypeFilter,
 } from "@/server/models/external-job.model";
 import {
   deleteExternalJob,
@@ -64,13 +65,27 @@ function extractJsonArray(raw: string): unknown[] {
   }
 }
 
-async function searchViaSerpApi(query: string, location: string): Promise<ExternalJobCandidate[] | null> {
+async function searchViaSerpApi(
+  query: string,
+  location: string,
+  workplaceType: WorkplaceTypeFilter = "all"
+): Promise<ExternalJobCandidate[] | null> {
   const apiKey = readEnv("SERPAPI_API_KEY");
   if (!apiKey) return null;
 
+  const terms: string[] = [];
+  if (query.trim()) terms.push(query.trim());
+  else terms.push("vagas");
+
+  if (workplaceType === "remote") terms.push("remoto home office");
+  else if (workplaceType === "on-site") terms.push("presencial");
+  else if (workplaceType === "hybrid") terms.push("hibrido");
+
+  if (location.trim()) terms.push(location.trim());
+
   const params = new URLSearchParams({
     engine: "google_jobs",
-    q: location ? `${query} ${location}` : query,
+    q: terms.join(" "),
     gl: "br",
     hl: "pt-br",
     api_key: apiKey,
@@ -95,13 +110,30 @@ async function searchViaSerpApi(query: string, location: string): Promise<Extern
   }
 }
 
-async function searchViaGeminiGrounding(query: string, location: string): Promise<ExternalJobCandidate[] | null> {
+async function searchViaGeminiGrounding(
+  query: string,
+  location: string,
+  workplaceType: WorkplaceTypeFilter = "all"
+): Promise<ExternalJobCandidate[] | null> {
   const key = readEnv("GEMINI_API_KEY");
   if (!key) return null;
 
-  const targetLocation = location.trim() || "Brasil";
+  const targetLocation = location.trim() || (workplaceType === "remote" ? "Todo o Brasil (Remoto)" : "Brasil");
+  const modalityLabel =
+    workplaceType === "remote"
+      ? "EXCLUSIVAMENTE REMOTA (Home Office / Trabalho à Distância)"
+      : workplaceType === "on-site"
+      ? "PRESENCIAL"
+      : workplaceType === "hybrid"
+      ? "HÍBRIDA"
+      : "todas as modalidades";
+
+  const targetCargo = query.trim()
+    ? `para o cargo/área "${query.trim()}"`
+    : "em diversas áreas com oportunidades abertas";
+
   const prompt = `Você é o buscador inteligente do Google Vagas para o mercado de trabalho brasileiro.
-Pesquise oportunidades REAIS, abertas e ativas para o cargo "${query}" na localidade "${targetLocation}".
+Pesquise oportunidades REAIS, abertas e ativas ${targetCargo} na localidade "${targetLocation}", modalidade: ${modalityLabel}.
 Consulte portais de vagas indexados pelo Google (Gupy, LinkedIn Jobs, Vagas.com, Catho, InfoJobs, Indeed Brasil).
 
 REGRA FUNDAMENTAL E OBRIGATÓRIA PARA "applyUrl":
@@ -244,17 +276,32 @@ function cleanEmployerName(raw: string): string {
  * Busca estruturada em tempo real de vagas reais indexadas diretamente
  * com seus links oficiais e específicos de inscrição (Gupy e portais parceiros).
  * Garante que o candidato vá diretamente à vaga selecionada, sem cair em páginas de busca.
+ * O cargo é opcional: basta informar a cidade/região ou escolher modalidade (remoto/presencial).
  */
-async function searchViaPublicStructured(query: string, location: string): Promise<ExternalJobCandidate[] | null> {
+async function searchViaPublicStructured(
+  query = "",
+  location = "",
+  workplaceType: WorkplaceTypeFilter = "all"
+): Promise<ExternalJobCandidate[] | null> {
   const cleanQ = query.trim();
   const cleanLoc = location.trim();
-  if (!cleanQ) return null;
+  if (!cleanQ && !cleanLoc && workplaceType === "all") return null;
 
   try {
-    let url = `https://portal.gupy.io/job-search/term=${encodeURIComponent(cleanQ)}`;
-    if (cleanLoc) {
-      url += `&city=${encodeURIComponent(cleanLoc)}`;
+    let url = "https://portal.gupy.io/job-search/";
+    const params: string[] = [];
+
+    if (cleanQ) {
+      params.push(`term=${encodeURIComponent(cleanQ)}`);
+    } else if (workplaceType === "remote") {
+      params.push("term=remoto");
     }
+
+    if (cleanLoc) {
+      params.push(`city=${encodeURIComponent(cleanLoc)}`);
+    }
+
+    url += params.join("&");
 
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10000),
@@ -284,6 +331,19 @@ async function searchViaPublicStructured(query: string, location: string): Promi
       if (!item || typeof item !== "object") continue;
       const rawItem = item as Record<string, unknown>;
 
+      const itemWorkplace = typeof rawItem.workplaceType === "string" ? rawItem.workplaceType : "";
+
+      // Filtro de modalidade (Remoto / Presencial / Híbrido)
+      if (workplaceType === "remote") {
+        const isRemote =
+          itemWorkplace === "remote" ||
+          String(rawItem.name || "").toLowerCase().includes("remoto") ||
+          String(rawItem.name || "").toLowerCase().includes("home office");
+        if (!isRemote) continue;
+      } else if (workplaceType === "on-site") {
+        if (itemWorkplace === "remote") continue;
+      }
+
       const title = typeof rawItem.name === "string" ? rawItem.name.trim() : "";
       const rawEmployer =
         typeof rawItem.careerPageName === "string" && rawItem.careerPageName.trim()
@@ -299,7 +359,10 @@ async function searchViaPublicStructured(query: string, location: string): Promi
 
       const city = typeof rawItem.city === "string" ? rawItem.city.trim() : "";
       const state = typeof rawItem.state === "string" ? rawItem.state.trim() : "";
-      const locStr = city && state ? `${city}, ${state}` : city || state || cleanLoc || null;
+      let locStr = city && state ? `${city}, ${state}` : city || state || cleanLoc || null;
+      if (itemWorkplace === "remote") {
+        locStr = locStr ? `${locStr} (Remoto)` : "Remoto";
+      }
 
       const rawDesc = typeof rawItem.description === "string" ? rawItem.description : "";
       const cleanDesc = rawDesc ? cleanHtmlText(rawDesc).slice(0, 500) : null;
@@ -331,13 +394,14 @@ async function searchViaPublicStructured(query: string, location: string): Promi
 
 export async function searchGoogleJobs(
   companyId: string,
-  query: string,
-  location: string
+  query = "",
+  location = "",
+  workplaceType: WorkplaceTypeFilter = "all"
 ): Promise<GoogleJobsSearchResult> {
   const cleanQuery = query.trim();
   const cleanLocation = location.trim();
-  if (!cleanQuery) {
-    return { ok: false, error: "Informe o cargo ou área pretendida para pesquisar." };
+  if (!cleanQuery && !cleanLocation && workplaceType === "all") {
+    return { ok: false, error: "Informe ao menos a localidade ou escolha se a vaga é presencial ou remota." };
   }
 
   let engine: SearchEngineType = "web_structured";
@@ -346,7 +410,7 @@ export async function searchGoogleJobs(
 
   // 1. SerpApi (Google Jobs Engine Oficial)
   if (readEnv("SERPAPI_API_KEY")) {
-    rawJobs = await searchViaSerpApi(cleanQuery, cleanLocation);
+    rawJobs = await searchViaSerpApi(cleanQuery, cleanLocation, workplaceType);
     if (rawJobs && rawJobs.length > 0) {
       engine = "serpapi";
       engineLabel = "Google Vagas (API SerpApi Oficial)";
@@ -356,7 +420,7 @@ export async function searchGoogleJobs(
   // 2. Google Gemini com Grounding no Google Search (Oficial, Zero Bloqueio)
   if (!rawJobs || rawJobs.length === 0) {
     if (readEnv("GEMINI_API_KEY")) {
-      rawJobs = await searchViaGeminiGrounding(cleanQuery, cleanLocation);
+      rawJobs = await searchViaGeminiGrounding(cleanQuery, cleanLocation, workplaceType);
       if (rawJobs && rawJobs.length > 0) {
         engine = "gemini_grounding";
         engineLabel = "Google Vagas (Google Search Grounding Oficial)";
@@ -366,7 +430,7 @@ export async function searchGoogleJobs(
 
   // 3. Buscador Estruturado em Tempo Real (Links Diretos Oficiais)
   if (!rawJobs || rawJobs.length === 0) {
-    rawJobs = await searchViaPublicStructured(cleanQuery, cleanLocation);
+    rawJobs = await searchViaPublicStructured(cleanQuery, cleanLocation, workplaceType);
     if (rawJobs && rawJobs.length > 0) {
       engine = "web_structured";
       engineLabel = "Google Vagas (Rede de Vagas Diretas)";

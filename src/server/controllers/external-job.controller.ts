@@ -13,6 +13,7 @@ import {
   externalJobSearchSchema,
   importExternalJobsSchema,
   type ExternalJobCandidate,
+  type WorkplaceTypeFilter,
 } from "@/server/models/external-job.model";
 import {
   extractJobPreviewFromUrl,
@@ -44,13 +45,22 @@ export async function getExternalJobsPageData() {
   };
 }
 
-export async function searchGoogleJobsAction(input: { query: string; location?: string }) {
+export async function searchGoogleJobsAction(input: {
+  query?: string;
+  location?: string;
+  workplaceType?: WorkplaceTypeFilter;
+}) {
   const { user } = await getGestorShell();
   const parsed = externalJobSearchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Busca inválida." };
   }
-  return searchGoogleJobs(user.companyId, parsed.data.query, parsed.data.location);
+  return searchGoogleJobs(
+    user.companyId,
+    parsed.data.query,
+    parsed.data.location,
+    parsed.data.workplaceType
+  );
 }
 
 export async function extractJobPreviewFromUrlAction(url: string) {

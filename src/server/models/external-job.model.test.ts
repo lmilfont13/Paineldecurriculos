@@ -74,9 +74,18 @@ describe("external-job.model", () => {
     expect(importExternalJobsSchema.safeParse([]).success).toBe(false);
   });
 
-  it("valida schema de busca para cargo e localidade", () => {
+  it("valida schema de busca para cargo, localidade e modalidade (cargo não obrigatório)", () => {
+    // Cargo + localidade
     expect(externalJobSearchSchema.safeParse({ query: "Vendedor", location: "São Paulo" }).success).toBe(true);
-    expect(externalJobSearchSchema.safeParse({ query: "A" }).success).toBe(false); // min 2
+    // Apenas localidade (sem cargo) -> VÁLIDO!
+    expect(externalJobSearchSchema.safeParse({ location: "Fortaleza" }).success).toBe(true);
+    // Apenas modalidade remota (sem cargo e sem localidade) -> VÁLIDO!
+    expect(externalJobSearchSchema.safeParse({ workplaceType: "remote" }).success).toBe(true);
+    // Apenas modalidade presencial com localidade
+    expect(externalJobSearchSchema.safeParse({ location: "Recife", workplaceType: "on-site" }).success).toBe(true);
+    // Tudo vazio com query curta -> inválido
+    expect(externalJobSearchSchema.safeParse({ query: "A" }).success).toBe(false);
+    expect(externalJobSearchSchema.safeParse({}).success).toBe(false);
   });
 
   it("distingue links diretos de vaga de URLs genéricas de busca", () => {

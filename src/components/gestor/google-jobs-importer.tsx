@@ -14,6 +14,7 @@ import {
   Globe,
   Info,
   Loader2,
+  MapPin,
   Plus,
   RefreshCw,
   Search,
@@ -31,6 +32,7 @@ import {
 import {
   isGenericSearchUrl,
   type ExternalJobCandidate,
+  type WorkplaceTypeFilter,
 } from "@/server/models/external-job.model";
 
 interface ImportedExternalJobItem {
@@ -60,6 +62,7 @@ export function GoogleJobsImporter({
   // Estados da Busca do Google Vagas
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
+  const [workplaceType, setWorkplaceType] = useState<WorkplaceTypeFilter>("all");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<
     (ExternalJobCandidate & { alreadyImported: boolean })[]
@@ -84,10 +87,13 @@ export function GoogleJobsImporter({
   const [savingManual, setSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
-  // Ação: Buscar no Google Vagas
+  // Ação: Buscar no Google Vagas (Cargo opcional — localidade ou modalidade já bastam!)
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() && !location.trim() && workplaceType === "all") {
+      setSearchError("Informe ao menos a localidade ou escolha se a vaga é presencial ou remota.");
+      return;
+    }
 
     setSearching(true);
     setSearchError(null);
@@ -96,8 +102,9 @@ export function GoogleJobsImporter({
 
     try {
       const res = await searchGoogleJobsAction({
-        query: query.trim(),
+        query: query.trim() || undefined,
         location: location.trim() || undefined,
+        workplaceType,
       });
 
       if (res.ok) {
@@ -106,7 +113,7 @@ export function GoogleJobsImporter({
           setSearchEngineLabel(res.engineLabel);
         }
         if (res.jobs.length === 0) {
-          setSearchError("Nenhuma vaga encontrada no Google para os termos informados.");
+          setSearchError("Nenhuma vaga encontrada para os filtros selecionados.");
         }
       } else {
         setSearchError(res.error || "Não foi possível consultar o Google Vagas.");
@@ -438,42 +445,95 @@ export function GoogleJobsImporter({
         {/* ABA 1: BUSCA DIRETA NO GOOGLE VAGAS */}
         {activeTab === "search" && (
           <div className="space-y-4">
-            <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-              <div className="sm:col-span-6">
-                <label className="text-xs font-bold text-[#0a0a0a] block mb-1">
-                  Cargo ou Área:
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-2.5 size-4 text-[#a1a1aa]" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Ex: Promotor de Vendas, Atendente, Estoquista…"
-                    className="h-10 w-full rounded-xl border border-[#e4e4e7] bg-white pl-9 pr-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
-                    required
-                  />
+            <form onSubmit={handleSearch} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                {/* Cidade / Região */}
+                <div className="sm:col-span-5">
+                  <label className="text-xs font-bold text-[#0a0a0a] block mb-1">
+                    Cidade ou Região:
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-2.5 size-4 text-[#a1a1aa]" />
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Ex: Fortaleza - CE, São Paulo, Curitiba…"
+                      className="h-10 w-full rounded-xl border border-[#e4e4e7] bg-white pl-9 pr-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                    />
+                  </div>
+                </div>
+
+                {/* Modalidade: Presencial vs Remoto */}
+                <div className="sm:col-span-4">
+                  <label className="text-xs font-bold text-[#0a0a0a] block mb-1">
+                    Modalidade de Trabalho:
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 h-10 rounded-xl border border-[#e4e4e7] bg-[#f4f4f5] p-1">
+                    <button
+                      type="button"
+                      onClick={() => setWorkplaceType("all")}
+                      className={`rounded-lg text-[11px] font-bold transition flex items-center justify-center ${
+                        workplaceType === "all"
+                          ? "bg-white text-[#0a0a0a] shadow-2xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkplaceType("on-site")}
+                      className={`rounded-lg text-[11px] font-bold transition flex items-center justify-center ${
+                        workplaceType === "on-site"
+                          ? "bg-white text-[#0a0a0a] shadow-2xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                    >
+                      Presencial
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkplaceType("remote")}
+                      className={`rounded-lg text-[11px] font-bold transition flex items-center justify-center ${
+                        workplaceType === "remote"
+                          ? "bg-white text-[#0a0a0a] shadow-2xs"
+                          : "text-[#71717a] hover:text-[#0a0a0a]"
+                      }`}
+                    >
+                      Remoto
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cargo (Opcional) */}
+                <div className="sm:col-span-3">
+                  <label className="text-xs font-bold text-[#0a0a0a] block mb-1">
+                    Cargo <span className="font-normal text-[#71717a]">(opcional)</span>:
+                  </label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-2.5 size-4 text-[#a1a1aa]" />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Ex: Vendedor, Atendente…"
+                      className="h-10 w-full rounded-xl border border-[#e4e4e7] bg-white pl-9 pr-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="sm:col-span-4">
-                <label className="text-xs font-bold text-[#0a0a0a] block mb-1">
-                  Cidade ou Região:
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Ex: Fortaleza - CE, Remoto…"
-                  className="h-10 w-full rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
-                />
-              </div>
+              {/* Dica e Botão de Busca */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+                <p className="text-[11px] text-[#71717a] leading-tight">
+                  💡 <strong>Filtro flexível:</strong> O cargo não é obrigatório. Basta informar a cidade ou selecionar se busca vagas presenciais ou remotas.
+                </p>
 
-              <div className="sm:col-span-2 flex items-end">
                 <button
                   type="submit"
-                  disabled={searching || !query.trim()}
-                  className="h-10 w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0a0a0a] px-4 text-xs font-bold text-white shadow-xs hover:bg-[#27272a] transition active:scale-95 disabled:opacity-50"
+                  disabled={searching || (!query.trim() && !location.trim() && workplaceType === "all")}
+                  className="h-11 sm:h-10 min-w-[150px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0a0a0a] px-5 text-xs font-bold text-white shadow-xs hover:bg-[#27272a] transition active:scale-95 disabled:opacity-40"
                 >
                   {searching ? (
                     <Loader2 className="size-4 animate-spin" />

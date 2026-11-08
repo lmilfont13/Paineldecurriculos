@@ -39,10 +39,27 @@ export type PublicExternalJob = {
   scheduleType: string | null;
 };
 
-export const externalJobSearchSchema = z.object({
-  query: z.string().trim().min(2, "Informe o cargo ou termo.").max(120),
-  location: z.string().trim().max(120).optional().default(""),
-});
+export type WorkplaceTypeFilter = "all" | "remote" | "on-site" | "hybrid";
+
+export const externalJobSearchSchema = z
+  .object({
+    query: z.string().trim().max(120).optional().default(""),
+    location: z.string().trim().max(120).optional().default(""),
+    workplaceType: z
+      .enum(["all", "remote", "on-site", "hybrid"])
+      .optional()
+      .default("all"),
+  })
+  .refine(
+    (data) =>
+      data.query.length >= 2 ||
+      data.location.length >= 2 ||
+      data.workplaceType !== "all",
+    {
+      message: "Informe ao menos um critério: cargo, cidade/região ou escolha se é Remoto/Presencial.",
+      path: ["query"],
+    }
+  );
 
 /** Só aceita links http(s) — nunca javascript:, data: etc. */
 export function isSafeHttpUrl(value: unknown): value is string {
