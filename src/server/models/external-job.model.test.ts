@@ -3,6 +3,7 @@ import {
   dedupeExternalJobs,
   externalJobSearchSchema,
   importExternalJobsSchema,
+  isGenericSearchUrl,
   isSafeHttpUrl,
   normalizeSource,
   parseGoogleJobResult,
@@ -76,6 +77,25 @@ describe("external-job.model", () => {
   it("valida schema de busca para cargo e localidade", () => {
     expect(externalJobSearchSchema.safeParse({ query: "Vendedor", location: "São Paulo" }).success).toBe(true);
     expect(externalJobSearchSchema.safeParse({ query: "A" }).success).toBe(false); // min 2
+  });
+
+  it("distingue links diretos de vaga de URLs genéricas de busca", () => {
+    // Links diretos da vaga (deve ser false -> não é busca genérica)
+    expect(isGenericSearchUrl("https://empresa.gupy.io/job/123456")).toBe(false);
+    expect(isGenericSearchUrl("https://unilider.gupy.io/job/eyJqb2JJZCI6MTI4NTM3NDAsInNvdXJjZSI6Imd1cHlfcG9ydGFsIn0=")).toBe(false);
+    expect(isGenericSearchUrl("https://www.linkedin.com/jobs/view/394857291/")).toBe(false);
+    expect(isGenericSearchUrl("https://www.vagas.com.br/vagas/v2654321/analista-financeiro")).toBe(false);
+    expect(isGenericSearchUrl("https://empresa.com.br/carreiras/vaga-123")).toBe(false);
+    expect(isGenericSearchUrl("https://www.google.com/search?ibp=htl;jobs#htidocid=abc123xyz")).toBe(false);
+
+    // Links de busca genérica / listagem / catálogos (deve ser true -> é busca genérica!)
+    expect(isGenericSearchUrl("https://www.gupy.io/vagas?jobName=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("https://portal.gupy.io/job-search/term=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("https://www.linkedin.com/jobs/search/?keywords=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("https://www.google.com/search?ibp=htl;jobs&q=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("https://www.vagas.com.br/vagas-de-vendedor?q=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("https://br.indeed.com/jobs?q=vendedor")).toBe(true);
+    expect(isGenericSearchUrl("invalid-url")).toBe(true);
   });
 });
 

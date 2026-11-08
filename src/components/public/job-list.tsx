@@ -220,14 +220,15 @@ function ExternalJobCard({ job }: { job: PublicExternalJob }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-[#ebe7e3] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.04)] transition-shadow hover:shadow-[0_4px_18px_rgba(28,25,23,0.07)]">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="min-w-0 flex-1">
+    <li className="overflow-hidden rounded-2xl border border-[#ebe7e3] bg-white shadow-[0_1px_3px_rgba(28,25,23,0.05)] transition-all hover:border-[#ded8d1] hover:shadow-[0_4px_16px_rgba(28,25,23,0.08)]">
+      <div className="p-4 sm:p-5 flex flex-col gap-3.5 sm:gap-4">
+        {/* Topo do Card */}
+        <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[17px] font-semibold leading-snug tracking-[-0.2px] text-[#1c1917]">
+            <h3 className="text-[16px] sm:text-[17px] font-bold leading-snug tracking-[-0.2px] text-[#1c1917]">
               {job.title}
             </h3>
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-blue-700 border border-blue-200">
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-blue-700 border border-blue-200/80">
               Vaga Externa
             </span>
             {job.source && (
@@ -237,44 +238,49 @@ function ExternalJobCard({ job }: { job: PublicExternalJob }) {
             )}
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#78716c]">
-            <span className="font-medium text-[#1c1917]">
-              Empresa: <strong>{job.employer}</strong>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-[#78716c]">
+            <span className="font-semibold text-[#1c1917]">
+              {job.employer}
             </span>
             {job.location && (
               <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3.5 text-[#a8a29e]" />
-                {job.location}
+                <MapPin className="size-3.5 text-[#a8a29e] shrink-0" />
+                <span>{job.location}</span>
               </span>
             )}
             {job.scheduleType && (
               <span className="inline-flex items-center gap-1">
-                <Briefcase className="size-3.5 text-[#a8a29e]" />
-                {job.scheduleType}
+                <Briefcase className="size-3.5 text-[#a8a29e] shrink-0" />
+                <span>{job.scheduleType}</span>
               </span>
             )}
             {job.postedLabel && (
               <span className="inline-flex items-center gap-1 text-[#a8a29e]">
-                <Clock className="size-3.5" />
-                {job.postedLabel}
+                <Clock className="size-3.5 shrink-0" />
+                <span>{job.postedLabel}</span>
               </span>
             )}
           </div>
 
           {job.description && (
-            <p className="mt-2.5 line-clamp-2 text-[13px] leading-relaxed text-[#57534e]">
+            <p className="mt-1 line-clamp-2 text-[12px] sm:text-[13px] leading-relaxed text-[#57534e]">
               {job.description}
             </p>
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col sm:items-end gap-1.5">
-          <div className="flex items-center gap-2">
+        {/* Rodapé Mobile-First com Toque Otimizado */}
+        <div className="pt-2.5 border-t border-[#f4f3f0] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-[11px] text-[#a8a29e] leading-tight">
+            Inscrição aberta no portal da empresa anunciante
+          </p>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             {job.description && (
               <button
                 type="button"
                 onClick={() => setOpen((c) => !c)}
-                className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#e4e0dc] bg-white px-3 text-[12px] font-medium text-[#57534e] transition-colors hover:border-[#c8c2bb] hover:text-[#1c1917]"
+                className="flex-1 sm:flex-initial inline-flex h-11 sm:h-9 items-center justify-center gap-1.5 rounded-xl border border-[#e4e0dc] bg-white px-3.5 text-[12px] font-semibold text-[#57534e] hover:bg-[#faf9f7] hover:text-[#1c1917] transition active:scale-98"
               >
                 <span>{open ? "Menos" : "Detalhes"}</span>
                 <ChevronDown
@@ -289,24 +295,33 @@ function ExternalJobCard({ job }: { job: PublicExternalJob }) {
               href={job.applyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#1c1917] px-4 text-[12px] font-semibold text-white shadow-2xs hover:bg-black transition active:scale-95"
+              className="flex-1 sm:flex-initial inline-flex h-11 sm:h-9 items-center justify-center gap-1.5 rounded-xl bg-[#1c1917] px-4 text-[12px] font-bold text-white shadow-2xs hover:bg-black transition active:scale-98"
             >
               <span>Candidatar-se na Fonte</span>
-              <ExternalLink className="size-3.5" />
+              <ExternalLink className="size-3.5 shrink-0" />
             </a>
           </div>
-          <span className="text-[10px] text-[#a8a29e]">
-            Inscrição gerenciada pela empresa anunciante
-          </span>
         </div>
       </div>
 
       {open && job.description && (
-        <div className="border-t border-[#f4f3f0] bg-[#faf9f7] p-5 text-[13px] leading-relaxed text-[#57534e] sm:p-6">
-          <p className="font-semibold text-[#1c1917] mb-2">Descrição da oportunidade:</p>
-          <p className="whitespace-pre-line text-[#57534e] leading-relaxed">
+        <div className="border-t border-[#f4f3f0] bg-[#faf9f7] p-4 sm:p-6 text-[13px] leading-relaxed text-[#57534e] animate-in fade-in duration-150">
+          <p className="font-bold text-[#1c1917] mb-2 text-xs uppercase tracking-wide text-[#78716c]">
+            Sobre a oportunidade e requisitos:
+          </p>
+          <p className="whitespace-pre-line text-[#44403c] leading-relaxed">
             {job.description}
           </p>
+          <div className="mt-4 pt-3 border-t border-[#e8e4df]">
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-[13px] font-bold text-white shadow-xs hover:bg-black transition active:scale-98"
+            >
+              <span>Acessar Página de Candidatura na Fonte ↗</span>
+            </a>
+          </div>
         </div>
       )}
     </li>
@@ -399,22 +414,31 @@ export function JobList({
 
   return (
     <>
-      {/* Abas Superiores: Vagas Diretas vs Oportunidades Externas */}
+      {/* Abas Superiores Mobile-First: Vagas Diretas vs Oportunidades Externas */}
       {hasExternal && (
-        <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-[#e4e0dc] pb-3">
+        <div className="mb-6 rounded-2xl bg-[#ede9e3] p-1 sm:p-1.5 flex flex-col sm:flex-row gap-1 shadow-inner">
           <button
             type="button"
             onClick={() => {
               setActiveTab("internal");
               setQuery("");
             }}
-            className={`rounded-xl px-4 py-2 text-[13px] font-semibold transition ${
+            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-[13px] font-bold transition ${
               activeTab === "internal"
-                ? "bg-[#1c1917] text-white shadow-xs"
-                : "text-[#57534e] hover:bg-white hover:text-[#1c1917]"
+                ? "bg-white text-[#1c1917] shadow-xs"
+                : "text-[#78716c] hover:text-[#1c1917]"
             }`}
           >
-            Vagas da {companyName} ({jobs.length})
+            <span className="truncate">Vagas da {companyName}</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "internal"
+                  ? "bg-[#1c1917] text-white"
+                  : "bg-white/80 text-[#78716c]"
+              }`}
+            >
+              {jobs.length}
+            </span>
           </button>
 
           <button
@@ -423,14 +447,23 @@ export function JobList({
               setActiveTab("external");
               setQuery("");
             }}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-semibold transition ${
+            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-[13px] font-bold transition ${
               activeTab === "external"
-                ? "bg-[#1c1917] text-white shadow-xs"
-                : "text-[#57534e] hover:bg-white hover:text-[#1c1917]"
+                ? "bg-white text-[#1c1917] shadow-xs"
+                : "text-[#78716c] hover:text-[#1c1917]"
             }`}
           >
-            <Globe className="size-3.5 text-blue-500" />
-            <span>Mural de Vagas Externas ({externalJobs.length})</span>
+            <Globe className="size-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">Mural de Oportunidades Externas</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "external"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white/80 text-[#78716c]"
+              }`}
+            >
+              {externalJobs.length}
+            </span>
           </button>
         </div>
       )}

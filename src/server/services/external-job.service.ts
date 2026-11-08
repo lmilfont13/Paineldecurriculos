@@ -3,6 +3,7 @@ import "server-only";
 import { readEnv } from "@/lib/env";
 import {
   dedupeExternalJobs,
+  isGenericSearchUrl,
   isSafeHttpUrl,
   normalizeSource,
   parseGoogleJobResult,
@@ -103,6 +104,16 @@ async function searchViaGeminiGrounding(query: string, location: string): Promis
 Pesquise oportunidades REAIS, abertas e ativas para o cargo "${query}" na localidade "${targetLocation}".
 Consulte portais de vagas indexados pelo Google (Gupy, LinkedIn Jobs, Vagas.com, Catho, InfoJobs, Indeed Brasil).
 
+REGRA FUNDAMENTAL E OBRIGATÓRIA PARA "applyUrl":
+O link deve ser a URL DIRETA E ESPECÍFICA da vaga individual onde o candidato se inscreve.
+É ESTRITAMENTE PROIBIDO retornar links de páginas de busca, filtros ou catálogos como:
+- URLs com "/search", "/busca", "?q=", "?keywords=", "?jobName="
+- "gupy.io/vagas?..." (ERRADO) -> DEVE ser o link direto da vaga na empresa, ex: "https://[empresa].gupy.io/job/[id]"
+- "linkedin.com/jobs/search/..." (ERRADO) -> DEVE ser o link direto da vaga, ex: "https://www.linkedin.com/jobs/view/[id]"
+- "vagas.com.br/vagas-de-..." (ERRADO) -> DEVE ser a vaga direta, ex: "https://www.vagas.com.br/vagas/v[id]/..."
+- "google.com/search?q=..." (ERRADO)
+Se você não tiver o link direto e exato para a vaga individual com seu identificador próprio, NÃO inclua a vaga.
+
 Retorne EXCLUSIVAMENTE um array JSON puro (sem markdown, sem introdução, sem explicações adicionais).
 Cada objeto deve conter rigorosamente estes campos:
 [
@@ -112,8 +123,8 @@ Cada objeto deve conter rigorosamente estes campos:
     "employer": "Nome da empresa contratante",
     "location": "Cidade, UF ou Remoto",
     "description": "Breve resumo com requisitos principais e atribuições (máximo 300 caracteres)",
-    "source": "Google Vagas / LinkedIn / Gupy / etc",
-    "applyUrl": "https://link_valido_e_real_para_candidatura",
+    "source": "Gupy / LinkedIn / Vagas.com / etc",
+    "applyUrl": "https://link_direto_e_especifico_da_vaga",
     "postedLabel": "ex: há 1 dia, recente, nesta semana",
     "scheduleType": "ex: Tempo integral, Efetivo CLT, Estágio, etc"
   }
@@ -151,23 +162,31 @@ Cada objeto deve conter rigorosamente estes campos:
     for (const item of parsedArray) {
       if (item && typeof item === "object") {
         const candidate = item as Record<string, unknown>;
-        if (candidate.title && candidate.employer && candidate.applyUrl) {
-          const externalId =
-            typeof candidate.externalId === "string" && candidate.externalId
-              ? candidate.externalId
-              : `gem_${stableHash(`${candidate.title}|${candidate.employer}|${candidate.location ?? ""}`)}`;
-          validated.push({
-            externalId,
-            title: String(candidate.title).slice(0, 200),
-            employer: String(candidate.employer).slice(0, 200),
-            location: candidate.location ? String(candidate.location).slice(0, 200) : null,
-            description: candidate.description ? String(candidate.description).slice(0, 3000) : null,
-            source: candidate.source ? String(candidate.source).slice(0, 120) : "Google Vagas",
-            applyUrl: isSafeHttpUrl(candidate.applyUrl) ? candidate.applyUrl : `https://www.google.com/search?ibp=htl;jobs&q=${encodeURIComponent(query)}`,
-            postedLabel: candidate.postedLabel ? String(candidate.postedLabel).slice(0, 80) : "Recente",
-            scheduleType: candidate.scheduleType ? String(candidate.scheduleType).slice(0, 80) : null,
-          });
+        const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
+        const employer = typeof candidate.employer === "string" ? candidate.employer.trim() : "";
+        const applyUrl = typeof candidate.applyUrl === "string" ? candidate.applyUrl.trim() : "";
+
+        // Rejeita terminantemente se não tiver título, empresa ou se o link for inválido ou página de busca!
+        if (!title || !employer || !isSafeHttpUrl(applyUrl) || isGenericSearchUrl(applyUrl)) {
+          continue;
         }
+
+        const externalId =
+          typeof candidate.externalId === "string" && candidate.externalId
+            ? candidate.externalId
+            : `gem_${stableHash(`${title}|${employer}|${candidate.location ?? ""}`)}`;
+
+        validated.push({
+          externalId,
+          title: title.slice(0, 200),
+          employer: employer.slice(0, 200),
+          location: candidate.location ? String(candidate.location).slice(0, 200) : null,
+          description: candidate.description ? String(candidate.description).slice(0, 3000) : null,
+          source: candidate.source ? String(candidate.source).slice(0, 120) : "Google Vagas",
+          applyUrl,
+          postedLabel: candidate.postedLabel ? String(candidate.postedLabel).slice(0, 80) : "Recente",
+          scheduleType: candidate.scheduleType ? String(candidate.scheduleType).slice(0, 80) : null,
+        });
       }
     }
     return validated.length > 0 ? validated : null;
@@ -177,60 +196,137 @@ Cada objeto deve conter rigorosamente estes campos:
   }
 }
 
-function searchViaWebStructured(query: string, location: string): ExternalJobCandidate[] {
-  const loc = location.trim() || "Brasil";
-  const cleanQ = query.trim();
-  const googleJobsSearchUrl = `https://www.google.com/search?ibp=htl;jobs&q=${encodeURIComponent(`${cleanQ} ${loc}`)}`;
-  const gupySearchUrl = `https://www.gupy.io/vagas?jobName=${encodeURIComponent(cleanQ)}`;
-  const linkedinSearchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanQ)}&location=${encodeURIComponent(loc)}`;
-  const vagasComSearchUrl = `https://www.vagas.com.br/vagas-de-${encodeURIComponent(cleanQ.toLowerCase().replace(/\s+/g, "-"))}?q=${encodeURIComponent(cleanQ)}`;
+function cleanHtmlText(raw: string): string {
+  return raw
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  return [
-    {
-      externalId: `gj_${stableHash(`${cleanQ}_google_${loc}`)}`,
-      title: `${cleanQ}`,
-      employer: "Google Vagas (Rede de Empregadores)",
-      location: loc,
-      description: `Oportunidades em aberto para ${cleanQ} em ${loc}. Resultados consolidados de empresas com processos seletivos ativos no Google Vagas.`,
-      source: "Google Vagas",
-      applyUrl: googleJobsSearchUrl,
-      postedLabel: "Atualizado hoje",
-      scheduleType: "Tempo integral / CLT",
-    },
-    {
-      externalId: `gupy_${stableHash(`${cleanQ}_gupy_${loc}`)}`,
-      title: `${cleanQ} - Inscrições Abertas`,
-      employer: "Empresas Parceiras via Gupy",
-      location: loc,
-      description: `Vagas ativas e processos seletivos para ${cleanQ} cadastrados na plataforma Gupy com triagem online.`,
-      source: "Gupy",
-      applyUrl: gupySearchUrl,
-      postedLabel: "Recente",
-      scheduleType: "Efetivo / CLT",
-    },
-    {
-      externalId: `li_${stableHash(`${cleanQ}_linkedin_${loc}`)}`,
-      title: `${cleanQ}`,
-      employer: "Empregadores no LinkedIn",
-      location: loc,
-      description: `Posições disponíveis para profissionais da área de ${cleanQ} na região de ${loc}.`,
-      source: "LinkedIn",
-      applyUrl: linkedinSearchUrl,
-      postedLabel: "Nesta semana",
-      scheduleType: "Tempo integral",
-    },
-    {
-      externalId: `vg_${stableHash(`${cleanQ}_vagascom_${loc}`)}`,
-      title: `Vaga de ${cleanQ}`,
-      employer: "Vagas.com Portal de Oportunidades",
-      location: loc,
-      description: `Divulgação de vagas para o cargo de ${cleanQ} com inscrição direta pela plataforma de empregos.`,
-      source: "Vagas.com",
-      applyUrl: vagasComSearchUrl,
-      postedLabel: "Recente",
-      scheduleType: "CLT / PJ",
-    },
-  ];
+function formatGupyDate(isoDate: unknown): string {
+  if (typeof isoDate !== "string") return "Recente";
+  try {
+    const diffMs = Date.now() - new Date(isoDate).getTime();
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (days <= 0) return "Hoje";
+    if (days === 1) return "Ontem";
+    if (days < 7) return `há ${days} dias`;
+    if (days < 30) return `há ${Math.floor(days / 7)} sem.`;
+    return "Recente";
+  } catch {
+    return "Recente";
+  }
+}
+
+function formatGupyType(rawType: unknown): string {
+  if (typeof rawType !== "string") return "Tempo integral";
+  if (rawType.includes("effective")) return "Efetivo / CLT";
+  if (rawType.includes("internship")) return "Estágio";
+  if (rawType.includes("apprentice")) return "Jovem Aprendiz";
+  if (rawType.includes("talent_pool")) return "Banco de Talentos";
+  if (rawType.includes("temporary")) return "Temporário";
+  if (rawType.includes("contractor")) return "PJ / Prestador";
+  return "Tempo integral";
+}
+
+function cleanEmployerName(raw: string): string {
+  const stripped = raw.replace(/^[^a-zA-Z0-9À-ÿ]+/g, "").trim();
+  return (stripped || raw).slice(0, 200);
+}
+
+/**
+ * Busca estruturada em tempo real de vagas reais indexadas diretamente
+ * com seus links oficiais e específicos de inscrição (Gupy e portais parceiros).
+ * Garante que o candidato vá diretamente à vaga selecionada, sem cair em páginas de busca.
+ */
+async function searchViaPublicStructured(query: string, location: string): Promise<ExternalJobCandidate[] | null> {
+  const cleanQ = query.trim();
+  const cleanLoc = location.trim();
+  if (!cleanQ) return null;
+
+  try {
+    let url = `https://portal.gupy.io/job-search/term=${encodeURIComponent(cleanQ)}`;
+    if (cleanLoc) {
+      url += `&city=${encodeURIComponent(cleanLoc)}`;
+    }
+
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.warn("[vagas-externas] Public structured fetch HTTP", res.status);
+      return null;
+    }
+
+    const html = await res.text();
+    const match = html.match(/<script id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/);
+    if (!match || !match[1]) return null;
+
+    const data = JSON.parse(match[1]);
+    const list = data.props?.pageProps?.initialJobList?.data;
+    if (!Array.isArray(list) || list.length === 0) return null;
+
+    const results: ExternalJobCandidate[] = [];
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue;
+      const rawItem = item as Record<string, unknown>;
+
+      const title = typeof rawItem.name === "string" ? rawItem.name.trim() : "";
+      const rawEmployer =
+        typeof rawItem.careerPageName === "string" && rawItem.careerPageName.trim()
+          ? rawItem.careerPageName.trim()
+          : "Empresa Contratante";
+      const employer = cleanEmployerName(rawEmployer);
+      const applyUrl = typeof rawItem.jobUrl === "string" ? rawItem.jobUrl.trim() : "";
+
+      // Rejeita terminantemente se o link não for direto da vaga específica!
+      if (!title || !applyUrl || !isSafeHttpUrl(applyUrl) || isGenericSearchUrl(applyUrl)) {
+        continue;
+      }
+
+      const city = typeof rawItem.city === "string" ? rawItem.city.trim() : "";
+      const state = typeof rawItem.state === "string" ? rawItem.state.trim() : "";
+      const locStr = city && state ? `${city}, ${state}` : city || state || cleanLoc || null;
+
+      const rawDesc = typeof rawItem.description === "string" ? rawItem.description : "";
+      const cleanDesc = rawDesc ? cleanHtmlText(rawDesc).slice(0, 500) : null;
+
+      const externalId =
+        rawItem.id != null
+          ? `gupy_${rawItem.id}`
+          : `gupy_${stableHash(`${title}|${employer}|${locStr ?? ""}`)}`;
+
+      results.push({
+        externalId,
+        title: title.slice(0, 200),
+        employer,
+        location: locStr ? locStr.slice(0, 200) : null,
+        description: cleanDesc,
+        source: "Gupy",
+        applyUrl,
+        postedLabel: formatGupyDate(rawItem.publishedDate),
+        scheduleType: formatGupyType(rawItem.type),
+      });
+    }
+
+    return results.length > 0 ? results : null;
+  } catch (err) {
+    console.error("[vagas-externas] Erro ao buscar vagas públicas estruturadas:", err);
+    return null;
+  }
 }
 
 export async function searchGoogleJobs(
@@ -245,7 +341,7 @@ export async function searchGoogleJobs(
   }
 
   let engine: SearchEngineType = "web_structured";
-  let engineLabel = "Google Vagas (Web Estruturado Inteligente)";
+  let engineLabel = "Google Vagas (Rede de Vagas Diretas)";
   let rawJobs: ExternalJobCandidate[] | null = null;
 
   // 1. SerpApi (Google Jobs Engine Oficial)
@@ -268,14 +364,16 @@ export async function searchGoogleJobs(
     }
   }
 
-  // 3. Buscador Web Estruturado Resiliente (Garantia de disponibilidade sem risco de bloqueio)
+  // 3. Buscador Estruturado em Tempo Real (Links Diretos Oficiais)
   if (!rawJobs || rawJobs.length === 0) {
-    rawJobs = searchViaWebStructured(cleanQuery, cleanLocation);
-    engine = "web_structured";
-    engineLabel = "Google Vagas (Web Estruturado Inteligente)";
+    rawJobs = await searchViaPublicStructured(cleanQuery, cleanLocation);
+    if (rawJobs && rawJobs.length > 0) {
+      engine = "web_structured";
+      engineLabel = "Google Vagas (Rede de Vagas Diretas)";
+    }
   }
 
-  const jobs = dedupeExternalJobs(rawJobs);
+  const jobs = rawJobs ? dedupeExternalJobs(rawJobs) : [];
   const existing = new Set(await findExistingExternalIds(companyId, jobs.map((j) => j.externalId)));
 
   return {
@@ -293,12 +391,14 @@ export async function searchGoogleJobs(
  */
 export async function extractJobPreviewFromUrl(url: string): Promise<{
   ok: boolean;
-  data?: Partial<ExternalJobCandidate>;
+  data?: Partial<ExternalJobCandidate> & { isGenericSearch?: boolean };
   error?: string;
 }> {
   if (!isSafeHttpUrl(url)) {
     return { ok: false, error: "Link inválido. Deve começar com http:// ou https://" };
   }
+
+  const isGenericSearch = isGenericSearchUrl(url);
 
   try {
     const parsedUrl = new URL(url);
@@ -328,6 +428,7 @@ export async function extractJobPreviewFromUrl(url: string): Promise<{
           applyUrl: url,
           source,
           externalId: `url_${stableHash(url)}`,
+          isGenericSearch,
         },
       };
     }
@@ -354,6 +455,7 @@ export async function extractJobPreviewFromUrl(url: string): Promise<{
         description: description || undefined,
         source,
         externalId: `url_${stableHash(url)}`,
+        isGenericSearch,
       },
     };
   } catch {
@@ -362,6 +464,7 @@ export async function extractJobPreviewFromUrl(url: string): Promise<{
       data: {
         applyUrl: url,
         externalId: `url_${stableHash(url)}`,
+        isGenericSearch,
       },
     };
   }

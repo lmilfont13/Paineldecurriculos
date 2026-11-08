@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  AlertCircle,
   ArrowLeft,
   Briefcase,
   Check,
@@ -27,7 +28,10 @@ import {
   searchGoogleJobsAction,
   toggleExternalJobAction,
 } from "@/server/controllers/external-job.controller";
-import type { ExternalJobCandidate } from "@/server/models/external-job.model";
+import {
+  isGenericSearchUrl,
+  type ExternalJobCandidate,
+} from "@/server/models/external-job.model";
 
 interface ImportedExternalJobItem {
   id: string;
@@ -670,6 +674,10 @@ export function GoogleJobsImporter({
                                   via {job.source}
                                 </span>
                               )}
+                              <span className="rounded-full bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                                <CheckCircle2 className="size-2.5 text-emerald-600" />
+                                <span>Link Direto</span>
+                              </span>
                             </div>
 
                             <p className="text-[11px] text-[#52525b] mt-0.5">
@@ -682,21 +690,39 @@ export function GoogleJobsImporter({
                                 {job.description}
                               </p>
                             )}
+
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <a
+                                href={job.applyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2"
+                                title="Conferir e testar o link direto da vaga na fonte original"
+                              >
+                                <span>Testar Link Direto da Vaga</span>
+                                <ExternalLink className="size-3" />
+                              </a>
+                            </div>
                           </div>
                         </div>
 
                         {/* Ações da Vaga: 1-clique para publicar no portal + link ao vivo */}
-                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#f4f4f5]">
                           {job.alreadyImported ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800">
+                                <Check className="size-3" />
+                                <span>No Seu Portal</span>
+                              </span>
                               <Link
                                 href={`/${companySlug}/vagas`}
                                 target="_blank"
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition shadow-2xs"
+                                className="inline-flex h-9 sm:h-8 items-center justify-center gap-1 rounded-xl border border-emerald-300 bg-white px-3 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition shadow-2xs"
                                 title="Ver vaga no seu portal público ao vivo"
                               >
-                                <Globe className="size-3" />
+                                <Globe className="size-3.5" />
                                 <span>Ver ao Vivo ↗</span>
                               </Link>
                             </div>
@@ -708,7 +734,7 @@ export function GoogleJobsImporter({
                                 handlePublishSingle(job);
                               }}
                               disabled={publishingId === job.externalId}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95 disabled:opacity-50"
+                              className="w-full sm:w-auto inline-flex h-11 sm:h-8 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95 disabled:opacity-50"
                               title="Publicar esta vaga imediatamente no seu portal público"
                             >
                               {publishingId === job.externalId ? (
@@ -725,7 +751,7 @@ export function GoogleJobsImporter({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition shrink-0"
+                            className="hidden sm:inline-flex p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition shrink-0"
                             title="Abrir anúncio original na fonte externa"
                           >
                             <ExternalLink className="size-4" />
@@ -753,7 +779,7 @@ export function GoogleJobsImporter({
                   type="url"
                   value={directUrl}
                   onChange={(e) => setDirectUrl(e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://empresa.gupy.io/job/123456 ou linkedin.com/jobs/view/..."
                   className="h-10 flex-1 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                   required
                 />
@@ -771,6 +797,29 @@ export function GoogleJobsImporter({
                   <span>Identificar Dados</span>
                 </button>
               </div>
+
+              {directUrl.trim().length > 10 && isGenericSearchUrl(directUrl.trim()) && (
+                <div className="mt-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2.5">
+                  <AlertCircle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <p className="font-bold">Atenção ao link de busca:</p>
+                    <p className="text-[11px] text-amber-800 mt-0.5">
+                      Este endereço parece ser uma página de busca ou catálogo geral (com múltiplos resultados).
+                      Para que o candidato vá direto ao formulário da vaga específica sem se perder, prefira o link direto individual
+                      (ex: <code className="font-mono bg-amber-100 px-1 rounded">empresa.gupy.io/job/...</code> ou <code className="font-mono bg-amber-100 px-1 rounded">linkedin.com/jobs/view/...</code>).
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {directUrl.trim().length > 10 && !isGenericSearchUrl(directUrl.trim()) && (
+                <div className="mt-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>✓ Link direto da vaga detectado:</strong> O candidato abrirá diretamente a página de candidatura desta oportunidade.
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -888,84 +937,147 @@ export function GoogleJobsImporter({
         </div>
 
         {jobsList.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#e4e4e7] bg-white p-10 text-center text-xs text-[#71717a]">
+          <div className="rounded-2xl border border-dashed border-[#e4e4e7] bg-white p-8 text-center text-xs text-[#71717a]">
             Nenhuma vaga externa importada ainda. Use a ferramenta de busca do Google Vagas ou cole
             um link direto acima para divulgar as primeiras oportunidades!
           </div>
         ) : (
-          <div className="rounded-2xl border border-[#e4e4e7] bg-white overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-[#e4e4e7] bg-[#fafaf9] text-[#71717a] font-bold">
-                  <tr>
-                    <th className="py-3 px-4">Cargo / Título</th>
-                    <th className="py-3 px-4">Empresa Anunciante</th>
-                    <th className="py-3 px-4">Cidade</th>
-                    <th className="py-3 px-4">Fonte</th>
-                    <th className="py-3 px-4">Status no Portal</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f4f4f5]">
-                  {jobsList.map((j) => (
-                    <tr key={j.id} className="hover:bg-[#fafaf9] transition">
-                      <td className="py-3 px-4 font-bold text-[#0a0a0a]">
-                        <div className="flex items-center gap-2">
-                          <span>{j.title}</span>
-                          {j.postedLabel && (
-                            <span className="text-[10px] font-normal text-[#a1a1aa]">
-                              ({j.postedLabel})
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-[#52525b]">{j.employer}</td>
-                      <td className="py-3 px-4 text-[#71717a]">{j.location || "—"}</td>
-                      <td className="py-3 px-4">
-                        <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#71717a]">
-                          {j.source || "Google Vagas"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePublished(j.id, j.isPublished)}
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                            j.isPublished
-                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                              : "bg-[#f4f4f5] text-[#71717a] hover:bg-[#e4e4e7]"
-                          }`}
-                        >
-                          {j.isPublished ? "Publicada" : "Oculta"}
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <a
-                            href={j.applyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition"
-                            title="Testar link externo de inscrição"
-                          >
-                            <ExternalLink className="size-3.5" />
-                          </a>
+          <>
+            {/* 1. VISUALIZAÇÃO MOBILE (CARDS AMPLOS E TÁTEIS) */}
+            <div className="block md:hidden space-y-3">
+              {jobsList.map((j) => (
+                <div
+                  key={j.id}
+                  className="rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-[15px] font-bold text-[#0a0a0a] leading-snug">
+                        {j.title}
+                      </h4>
+                      <p className="text-xs text-[#52525b] mt-0.5 font-medium">
+                        {j.employer} {j.location ? `· ${j.location}` : ""}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[10px] font-medium text-[#71717a] shrink-0">
+                      via {j.source || "Google Vagas"}
+                    </span>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-[#f4f4f5] flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePublished(j.id, j.isPublished)}
+                      className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-xs font-bold transition active:scale-98 ${
+                        j.isPublished
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      <span className={`size-2 rounded-full ${j.isPublished ? "bg-emerald-500" : "bg-slate-400"}`} />
+                      <span>{j.isPublished ? "Publicada no Portal" : "Oculta do Portal"}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={j.applyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex size-9 items-center justify-center rounded-xl text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition border border-[#e4e4e7]"
+                        title="Testar link na fonte"
+                      >
+                        <ExternalLink className="size-4" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(j.id, j.title)}
+                        className="inline-flex size-9 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition border border-rose-100"
+                        title="Remover do mural"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 2. VISUALIZAÇÃO DESKTOP (TABELA TRADICIONAL) */}
+            <div className="hidden md:block rounded-2xl border border-[#e4e4e7] bg-white overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-[#e4e4e7] bg-[#fafaf9] text-[#71717a] font-bold">
+                    <tr>
+                      <th className="py-3 px-4">Cargo / Título</th>
+                      <th className="py-3 px-4">Empresa Anunciante</th>
+                      <th className="py-3 px-4">Cidade</th>
+                      <th className="py-3 px-4">Fonte</th>
+                      <th className="py-3 px-4">Status no Portal</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f4f4f5]">
+                    {jobsList.map((j) => (
+                      <tr key={j.id} className="hover:bg-[#fafaf9] transition">
+                        <td className="py-3 px-4 font-bold text-[#0a0a0a]">
+                          <div className="flex items-center gap-2">
+                            <span>{j.title}</span>
+                            {j.postedLabel && (
+                              <span className="text-[10px] font-normal text-[#a1a1aa]">
+                                ({j.postedLabel})
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-[#52525b]">{j.employer}</td>
+                        <td className="py-3 px-4 text-[#71717a]">{j.location || "—"}</td>
+                        <td className="py-3 px-4">
+                          <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#71717a]">
+                            {j.source || "Google Vagas"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
                           <button
                             type="button"
-                            onClick={() => handleDelete(j.id, j.title)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition"
-                            title="Remover do mural"
+                            onClick={() => handleTogglePublished(j.id, j.isPublished)}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                              j.isPublished
+                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                : "bg-[#f4f4f5] text-[#71717a] hover:bg-[#e4e4e7]"
+                            }`}
                           >
-                            <Trash2 className="size-3.5" />
+                            {j.isPublished ? "Publicada" : "Oculta"}
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <a
+                              href={j.applyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition"
+                              title="Testar link externo de inscrição"
+                            >
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(j.id, j.title)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition"
+                              title="Remover do mural"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

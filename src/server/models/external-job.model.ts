@@ -55,6 +55,92 @@ export function isSafeHttpUrl(value: unknown): value is string {
   }
 }
 
+/**
+ * Detecta se uma URL é apenas uma página de busca, filtro, catálogo ou pesquisa genérica
+ * (ex: gupy.io/vagas?jobName=..., linkedin.com/jobs/search/..., google.com/search?q=...)
+ * em vez de ser o link DIRETO da vaga individual para candidatura imediata.
+ */
+export function isGenericSearchUrl(urlString: string): boolean {
+  if (!isSafeHttpUrl(urlString)) return true;
+  try {
+    const url = new URL(urlString);
+    const host = url.hostname.toLowerCase();
+    const pathname = url.pathname.toLowerCase();
+
+    // 1. Google Search sem identificador de documento específico
+    if (host.includes("google.")) {
+      if (pathname.includes("/search")) {
+        const hasDocId =
+          url.searchParams.has("htidocid") ||
+          url.hash.includes("htidocid") ||
+          url.hash.includes("htivhid=docid");
+        if (!hasDocId) return true;
+      }
+    }
+
+    // 2. Gupy: páginas genéricas de busca vs vagas diretas
+    if (host.includes("gupy.io")) {
+      if (
+        pathname === "/vagas" ||
+        pathname.startsWith("/vagas/") ||
+        pathname.includes("/job-search")
+      ) {
+        if (!pathname.includes("/job/") && !pathname.includes("/jobs/")) return true;
+      }
+      if (!pathname.includes("/job/") && !pathname.includes("/jobs/")) {
+        if (url.searchParams.has("jobName") || url.searchParams.has("term")) return true;
+      }
+    }
+
+    // 3. LinkedIn: busca de vagas vs vaga específica (/jobs/view/)
+    if (host.includes("linkedin.com")) {
+      if (pathname.includes("/jobs/search")) return true;
+      if (url.searchParams.has("keywords") && !pathname.includes("/jobs/view")) return true;
+    }
+
+    // 4. Vagas.com: listagem genérica /vagas-de-* vs vaga direta /vagas/v*
+    if (host.includes("vagas.com.br")) {
+      if (
+        pathname.includes("/vagas-de-") ||
+        (!pathname.match(/\/vagas\/v\d+/i) && url.searchParams.has("q"))
+      ) {
+        return true;
+      }
+    }
+
+    // 5. Indeed
+    if (host.includes("indeed.com")) {
+      if (pathname.includes("/jobs") && !pathname.includes("/viewjob") && !url.searchParams.has("jk")) {
+        return true;
+      }
+    }
+
+    // 6. Catho
+    if (host.includes("catho.com.br")) {
+      if (pathname.includes("/vagas/") && url.searchParams.has("q")) return true;
+    }
+
+    // 7. InfoJobs
+    if (host.includes("infojobs.com.br")) {
+      if (pathname.includes("/vagas-de-") && !pathname.includes("__")) return true;
+    }
+
+    // 8. Parâmetros genéricos de busca em qualquer site sem id de vaga
+    const genericQueryParams = ["jobname", "keywords", "palavra_chave", "termo"];
+    for (const p of genericQueryParams) {
+      if (url.searchParams.has(p) && !url.searchParams.has("id") && !url.searchParams.has("jobId")) {
+        if (!pathname.includes("/job/") && !pathname.includes("/jobs/") && !pathname.includes("/vaga/")) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export const externalJobCandidateSchema = z.object({
   externalId: z.string().min(1).max(500),
   title: z.string().trim().min(1).max(200),
@@ -104,10 +190,24 @@ export function parseGoogleJobResult(raw: unknown): ExternalJobCandidate | null 
   if (!title || !employer) return null;
 
   const applyOptions = Array.isArray(r.apply_options) ? r.apply_options : [];
-  const firstApply = applyOptions
+  const safeApplyOptions = applyOptions
     .map((o) => (o && typeof o === "object" ? (o as Record<string, unknown>).link : null))
-    .find(isSafeHttpUrl);
-  const applyUrl = firstApply ?? (isSafeHttpUrl(r.share_link) ? r.share_link : null);
+    .filter(isSafeHttpUrl);
+
+  // Prioriza link de candidatura que vai DIRETO para a vaga específica
+  const directApply = safeApplyOptions.find((link) => !isGenericSearchUrl(link));
+
+  // Fallback: se houver share_link direto ou primeiro link seguro disponível
+  let applyUrl = directApply ?? null;
+  if (!applyUrl) {
+    if (isSafeHttpUrl(r.share_link) && !isGenericSearchUrl(r.share_link)) {
+      applyUrl = r.share_link;
+    } else if (safeApplyOptions.length > 0) {
+      applyUrl = safeApplyOptions[0];
+    } else if (isSafeHttpUrl(r.share_link)) {
+      applyUrl = r.share_link;
+    }
+  }
   if (!applyUrl) return null;
 
   const ext = (r.detected_extensions ?? {}) as Record<string, unknown>;
