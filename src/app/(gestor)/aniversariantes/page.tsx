@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Cake, Calendar, ChevronRight, MessageCircle, PartyPopper, Phone, Sparkles, User, Users } from "lucide-react";
 import { getCompanyBirthdaysAction } from "@/server/controllers/birthday.controller";
 import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-avatar";
+import { BirthdayCardButtonAndModal } from "@/components/gestor/birthday-card-modal";
 
 export const metadata: Metadata = {
   title: "Aniversariantes · Triagem",
@@ -165,7 +166,15 @@ export default async function AniversariantesPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-amber-200/60 flex items-center gap-2">
+                <div className="mt-4 pt-3 border-t border-amber-200/60 flex flex-wrap items-center gap-2">
+                  <BirthdayCardButtonAndModal
+                    name={candidate.name}
+                    turningAge={candidate.turningAge}
+                    companyName={data?.companyName}
+                    whatsappUrl={candidate.whatsappUrl}
+                    greetingMessage={candidate.greetingMessage}
+                    variant="button"
+                  />
                   {candidate.whatsappUrl ? (
                     <a
                       href={candidate.whatsappUrl}
@@ -174,7 +183,7 @@ export default async function AniversariantesPage() {
                       className="flex-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition"
                     >
                       <MessageCircle className="size-4" />
-                      <span>Parabenizar no WhatsApp</span>
+                      <span>WhatsApp</span>
                     </a>
                   ) : (
                     <span className="flex-1 text-center text-xs text-[#a1a1aa] py-1.5">
@@ -185,7 +194,7 @@ export default async function AniversariantesPage() {
                     href={`/candidaturas/${candidate.id}`}
                     className="inline-flex h-9 items-center justify-center rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] hover:bg-[#fafaf9] transition"
                   >
-                    Ver ficha
+                    Ficha
                   </Link>
                 </div>
               </div>
@@ -254,21 +263,31 @@ export default async function AniversariantesPage() {
                   </p>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-[#f4f4f5] flex items-center justify-between">
-                  <span className="text-[11px] text-[#71717a]">
+                <div className="mt-3 pt-2.5 border-t border-[#f4f4f5] flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-[#71717a] truncate">
                     {candidate.phoneFormatted}
                   </span>
-                  {candidate.whatsappUrl && (
-                    <a
-                      href={candidate.whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
-                    >
-                      <MessageCircle className="size-3.5" />
-                      <span>WhatsApp</span>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <BirthdayCardButtonAndModal
+                      name={candidate.name}
+                      turningAge={candidate.turningAge}
+                      companyName={data?.companyName}
+                      whatsappUrl={candidate.whatsappUrl}
+                      greetingMessage={candidate.greetingMessage}
+                      variant="icon"
+                    />
+                    {candidate.whatsappUrl && (
+                      <a
+                        href={candidate.whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                      >
+                        <MessageCircle className="size-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -336,17 +355,27 @@ export default async function AniversariantesPage() {
                       </p>
                     </div>
 
-                    {candidate.whatsappUrl && (
-                      <a
-                        href={candidate.whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition"
-                      >
-                        <MessageCircle className="size-3.5 text-emerald-700" />
-                        <span>Felicitar</span>
-                      </a>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <BirthdayCardButtonAndModal
+                        name={candidate.name}
+                        turningAge={candidate.turningAge}
+                        companyName={data?.companyName}
+                        whatsappUrl={candidate.whatsappUrl}
+                        greetingMessage={candidate.greetingMessage}
+                        variant="icon"
+                      />
+                      {candidate.whatsappUrl && (
+                        <a
+                          href={candidate.whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition"
+                        >
+                          <MessageCircle className="size-3.5 text-emerald-700" />
+                          <span>Felicitar</span>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

@@ -23,6 +23,7 @@ export type BirthdayCandidate = {
 };
 
 export type CompanyBirthdaysData = {
+  companyName: string;
   today: BirthdayCandidate[];
   thisWeek: BirthdayCandidate[];
   thisMonth: BirthdayCandidate[];
@@ -220,6 +221,7 @@ export function buildCompanyBirthdays(
   upcomingCandidates.sort(sortByDays);
 
   return {
+    companyName,
     today: todayCandidates,
     thisWeek: thisWeekCandidates,
     thisMonth: thisMonthCandidates,

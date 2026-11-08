@@ -8,6 +8,7 @@ import { getPainelData } from "@/server/controllers/gestor.controller";
 import { getCompanyBirthdaysAction } from "@/server/controllers/birthday.controller";
 import { formatWaiting } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
+import { BirthdayCardButtonAndModal } from "@/components/gestor/birthday-card-modal";
 import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
 import { jobStatusLabels } from "@/server/models/job.model";
 
@@ -237,18 +238,28 @@ export default async function PainelPage() {
                   </div>
                 </div>
 
-                {person.whatsappUrl && (
-                  <a
-                    href={person.whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-2xs hover:bg-emerald-700 transition"
-                    title={`Mandar parabéns para ${person.name} no WhatsApp`}
-                  >
-                    <MessageCircle className="size-3.5" />
-                    <span>WhatsApp</span>
-                  </a>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <BirthdayCardButtonAndModal
+                    name={person.name}
+                    turningAge={person.turningAge}
+                    companyName={companyName}
+                    whatsappUrl={person.whatsappUrl}
+                    greetingMessage={person.greetingMessage}
+                    variant="icon"
+                  />
+                  {person.whatsappUrl && (
+                    <a
+                      href={person.whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-2xs hover:bg-emerald-700 transition"
+                      title={`Mandar parabéns para ${person.name} no WhatsApp`}
+                    >
+                      <MessageCircle className="size-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
