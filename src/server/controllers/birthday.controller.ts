@@ -11,3 +11,4 @@ export async function getCompanyBirthdaysAction(): Promise<CompanyBirthdaysData 
   const user = await requireManager();
   return getCompanyBirthdays(user.companyId);
 }
+

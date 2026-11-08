@@ -61,3 +61,4 @@ export async function getCompanyBirthdays(companyId: string): Promise<CompanyBir
 
   return buildCompanyBirthdays(deduplicated, company.name);
 }
+

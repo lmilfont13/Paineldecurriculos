@@ -50,6 +50,7 @@ import {
   findJobQueueSiblings,
   cloneStandbyApplicationToJob,
   findUnevaluatedApplications,
+  findLatestPersonResumeInfo,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -1563,5 +1564,58 @@ export async function toggleApplicationImpediment(
   await updateApplicationImpediment(applicationId, hasImpediment, cleanReason);
 
   return { ok: true, hasImpediment, reason: cleanReason };
+}
+
+/**
+ * Sincroniza a candidatura com o currículo mais recente da candidata
+ * (vindo do cadastro ou de outra vaga mais recente) e enfileira reanálise.
+ */
+export async function syncApplicationWithLatestResume(
+  companyId: string,
+  applicationId: string
+): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application) {
+    return { ok: false, error: "Candidatura não encontrada." };
+  }
+
+  const latestResume = await findLatestPersonResumeInfo(
+    companyId,
+    application.email,
+    application.candidateId,
+    application.resumeUrl
+  );
+
+  if (!latestResume?.resumeUrl) {
+    return {
+      ok: false,
+      error: "Nenhum currículo mais recente foi encontrado para esta candidata.",
+    };
+  }
+
+  await updateApplicationResume(
+    applicationId,
+    latestResume.resumeUrl,
+    latestResume.resumeText
+  );
+
+  await requestReanalysis(companyId, applicationId).catch(() => {});
+
+  return {
+    ok: true,
+    message: `Currículo sincronizado com sucesso com "${latestResume.sourceTitle}"! A IA está reavaliando a candidatura.`,
+  };
+}
+
+/**
+ * Busca se existe uma versão de currículo mais recente enviada pela mesma candidata.
+ */
+export async function getLatestPersonResumeInfo(
+  companyId: string,
+  email: string,
+  candidateId?: string | null,
+  currentResumeUrl?: string | null
+) {
+  return findLatestPersonResumeInfo(companyId, email, candidateId, currentResumeUrl);
 }
 

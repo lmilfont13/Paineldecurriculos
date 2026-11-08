@@ -888,6 +888,24 @@ export function OnlineCounterBadge({
                                   {s.screenTitle}
                                 </span>
                               </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsOpen(false);
+                                  if (typeof window !== "undefined") {
+                                    window.dispatchEvent(
+                                      new CustomEvent("triagem:open-shoutout", {
+                                        detail: { name: s.name, key: s.key },
+                                      })
+                                    );
+                                  }
+                                }}
+                                className="shrink-0 flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0a0a0a] shadow-2xs hover:bg-[#1c1917] hover:text-white transition"
+                                title={`Enviar aviso ou recado na rádio para ${s.name || "este candidato"}`}
+                              >
+                                <span>Mandar Aviso</span>
+                              </button>
                             </div>
                           );
                         })

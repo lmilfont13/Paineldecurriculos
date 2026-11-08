@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, FileCheck2, Loader2, RefreshCw, Sparkles } from "lucide-react";
-import { syncApplicationResumeAction } from "@/server/controllers/gestor.controller";
+import { syncApplicationResumeAction } from "@/server/controllers/application.controller";
 import { Toast } from "@/components/gestor/toast";
 
 export interface LatestResumeInfoProp {
@@ -120,3 +120,4 @@ export function SyncResumeBanner({
     </>
   );
 }
+

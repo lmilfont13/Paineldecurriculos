@@ -113,3 +113,4 @@ describe("birthday.model", () => {
     expect(data.thisMonth).toHaveLength(3); // Jessica, Carlos, Mariana
   });
 });
+

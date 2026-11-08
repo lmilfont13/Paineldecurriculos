@@ -226,6 +226,8 @@ export function GestorRadioPlayer({
 
   // Estúdio de Alô no Ar & Recados aos Candidatos Online
   const [selectedCandidate, setSelectedCandidate] = useState<string>("all");
+  const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
+  const [shoutoutAudience, setShoutoutAudience] = useState<"private" | "broadcast">("private");
   const [shoutoutMessage, setShoutoutMessage] = useState<string>(
     "Olá! A equipe da Tárguet viu que você está por aqui. Seja muito bem-vindo ao nosso portal e tenha um excelente dia!"
   );
@@ -242,6 +244,26 @@ export function GestorRadioPlayer({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [configOpen]);
+
+  // Abertura direta do Estúdio de Alô a partir de outros componentes do painel
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOpenShoutout = (e: Event) => {
+      const custom = e as CustomEvent<{ name?: string; key?: string }>;
+      setConfigOpen(true);
+      setActiveTab("alo");
+      if (custom.detail?.name) {
+        setSelectedCandidate(custom.detail.name);
+        setCustomCandidateInput(custom.detail.name);
+        setShoutoutAudience("private");
+      }
+      if (custom.detail?.key) {
+        setSelectedCandidateKey(custom.detail.key);
+      }
+    };
+    window.addEventListener("triagem:open-shoutout", handleOpenShoutout);
+    return () => window.removeEventListener("triagem:open-shoutout", handleOpenShoutout);
+  }, []);
 
   // Busca de rádios FM públicas
   const [query, setQuery] = useState("");
@@ -1307,12 +1329,17 @@ export function GestorRadioPlayer({
     try {
       const explicitTarget = customCandidateInput.trim();
       const targetName = explicitTarget || (selectedCandidate === "all" ? "" : selectedCandidate);
-      const isAll = !targetName;
+      const isAll = !targetName || (selectedCandidate === "all" && !explicitTarget);
+      const mode: "all" | "private" = isAll ? "all" : (shoutoutAudience === "broadcast" ? "all" : "private");
       const shoutoutTimestamp = Date.now();
 
       // 1. Gera áudio com masterização Michelin usando a voz rigorosamente escolhida
       const res = await generateRadioSpotAction({
-        title: isAll ? "Recado Especial no Ar" : `Alô Especial para ${targetName}`,
+        title: isAll
+          ? "Recado Especial no Ar"
+          : mode === "private"
+            ? `Aviso Direto para ${targetName}`
+            : `Alô Especial para ${targetName}`,
         script: shoutoutMessage,
         voice: shoutoutVoice,
         sfxPreset: "acolhimento-suave",
@@ -1324,10 +1351,11 @@ export function GestorRadioPlayer({
       localChannelRef.current?.postMessage({
         type: "live_shoutout",
         targetCandidateName: targetName,
+        targetCandidateKey: selectedCandidateKey || undefined,
         message: shoutoutMessage,
         voice: shoutoutVoice,
         audioUrl,
-        broadcastMode: isAll ? "all" : "private",
+        broadcastMode: mode,
         timestamp: shoutoutTimestamp,
       });
 
@@ -1338,10 +1366,11 @@ export function GestorRadioPlayer({
           event: "live_shoutout",
           payload: {
             targetCandidateName: targetName,
+            targetCandidateKey: selectedCandidateKey || undefined,
             message: shoutoutMessage,
             voice: shoutoutVoice,
             audioUrl,
-            broadcastMode: isAll ? "all" : "private",
+            broadcastMode: mode,
             timestamp: shoutoutTimestamp,
           },
         });
@@ -2656,6 +2685,8 @@ export function GestorRadioPlayer({
                           onClick={() => {
                             setCustomCandidateInput("");
                             setSelectedCandidate("all");
+                            setSelectedCandidateKey(null);
+                            setShoutoutAudience("broadcast");
                             setShoutoutMessage(
                               "Atenção a todos os candidatos conectados na rádio Tárguet! Nossa equipe de RH deseja um dia excelente e muito sucesso na sua trajetória profissional. Voltem sempre ao nosso portal!"
                             );
@@ -2687,7 +2718,11 @@ export function GestorRadioPlayer({
                         {/* Card do Nome Digitado (se preenchido e não houver match exato na lista) */}
                         {customCandidateInput.trim() && (
                           <div
-                            onClick={() => setSelectedCandidate(customCandidateInput.trim())}
+                            onClick={() => {
+                              setSelectedCandidate(customCandidateInput.trim());
+                              setSelectedCandidateKey(null);
+                              setShoutoutAudience("private");
+                            }}
                             className="flex items-center justify-between p-3 cursor-pointer bg-[#f4f4f5] border-l-4 border-[#0a0a0a] font-medium"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -2746,7 +2781,9 @@ export function GestorRadioPlayer({
                                 key={cand.key}
                                 onClick={() => {
                                   setSelectedCandidate(name);
+                                  setSelectedCandidateKey(cand.key);
                                   setCustomCandidateInput(cand.name || "");
+                                  setShoutoutAudience("private");
                                   setShoutoutMessage(
                                     `Olá ${name}! A equipe da Tárguet viu que você está por aqui. Seja muito bem-vinda ao nosso portal e conte conosco para o seu crescimento profissional!`
                                   );
@@ -2798,6 +2835,56 @@ export function GestorRadioPlayer({
                           </span>
                         </div>
                       </div>
+
+                      {/* Escolha do Alcance: Somente para a pessoa marcada OU No ar para todos */}
+                      {Boolean(customCandidateInput.trim() || selectedCandidate !== "all") && (
+                        <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3 text-xs">
+                          <span className="block text-[11px] font-bold text-[#0a0a0a] mb-2">
+                            Alcance do Aviso (Como você quer entregar?):
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShoutoutAudience("private")}
+                              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition ${
+                                shoutoutAudience === "private"
+                                  ? "border-[#0a0a0a] bg-white shadow-2xs"
+                                  : "border-[#e4e4e7] bg-white/60 hover:bg-white"
+                              }`}
+                            >
+                              <span className="text-sm shrink-0">🔒</span>
+                              <div>
+                                <span className="block font-bold text-[#0a0a0a] text-xs">
+                                  Só para {customCandidateInput.trim() || selectedCandidate}
+                                </span>
+                                <span className="block text-[10px] text-[#71717a] mt-0.5 leading-tight">
+                                  Privado: o áudio e o aviso na tela vão apenas para essa pessoa. Outros não ouvem.
+                                </span>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setShoutoutAudience("broadcast")}
+                              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition ${
+                                shoutoutAudience === "broadcast"
+                                  ? "border-[#0a0a0a] bg-white shadow-2xs"
+                                  : "border-[#e4e4e7] bg-white/60 hover:bg-white"
+                              }`}
+                            >
+                              <span className="text-sm shrink-0">📢</span>
+                              <div>
+                                <span className="block font-bold text-[#0a0a0a] text-xs">
+                                  No ar para todos os ouvintes
+                                </span>
+                                <span className="block text-[10px] text-[#71717a] mt-0.5 leading-tight">
+                                  Público: toca na rádio de todos os candidatos conectados, citando o nome no ar.
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Roteiros Estratégicos Prontos (1-Click) */}
                       <div>
@@ -2942,11 +3029,11 @@ export function GestorRadioPlayer({
                                   ? "Recado Transmitido!"
                                   : sendingShoutout
                                     ? "Transmitindo..."
-                                    : customCandidateInput.trim()
-                                      ? `Transmitir para ${customCandidateInput.trim()}`
-                                      : selectedCandidate !== "all"
-                                        ? `Transmitir para ${selectedCandidate}`
-                                        : "Transmitir Recado Geral"}
+                                    : customCandidateInput.trim() || selectedCandidate !== "all"
+                                      ? shoutoutAudience === "private"
+                                        ? `Enviar Privado para ${customCandidateInput.trim() || selectedCandidate}`
+                                        : `Transmitir no Ar para Todos (citando ${customCandidateInput.trim() || selectedCandidate})`
+                                      : "Transmitir Recado Geral para Todos"}
                               </span>
                             </button>
                           </div>

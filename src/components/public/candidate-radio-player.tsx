@@ -485,6 +485,7 @@ export function CandidateRadioPlayer({
   const handleLiveShoutoutReceived = useCallback(
     (payload?: {
       targetCandidateName?: string;
+      targetCandidateKey?: string;
       message?: string;
       voice?: string;
       audioUrl?: string;
@@ -499,15 +500,27 @@ export function CandidateRadioPlayer({
         typeof window !== "undefined" ? localStorage.getItem("triagem:candidate:name") : "";
       const myName = (candidateName || myStoredName || "").trim().toLowerCase();
       const targetName = (payload.targetCandidateName || "").trim().toLowerCase();
-      const isTargetedToMe = Boolean(
+
+      const myTabKey =
+        typeof window !== "undefined" ? sessionStorage.getItem("triagem:presence:id") : null;
+
+      const matchesKey = Boolean(
+        payload.targetCandidateKey && myTabKey && payload.targetCandidateKey === myTabKey
+      );
+      const matchesName = Boolean(
         myName && targetName && (myName.includes(targetName) || targetName.includes(myName))
       );
+      const isTargetedToMe = matchesKey || matchesName;
 
-      // Na rádio, o áudio toca no ar para todos os ouvintes conectados na estação,
-      // dando destaque VIP personalizado com banner especial para o candidato citado.
+      // Se o gestor escolheu modo privado (apenas para a pessoa marcada) e não é esta pessoa:
+      // Ignora o evento por completo (não toca áudio, não altera volume e não exibe o banner).
+      if (payload.broadcastMode === "private" && !isTargetedToMe) {
+        return;
+      }
+
       setLiveAnnouncement(
         isTargetedToMe
-          ? `🌟 Mensagem Especial no Ar para você: "${payload.message}"`
+          ? `🌟 Mensagem Especial da Empresa para você: "${payload.message}"`
           : payload.targetCandidateName
             ? `🎙️ Alô no Ar da Rádio Tárguet para ${payload.targetCandidateName}: "${payload.message}"`
             : `🎙️ Recado Geral da Rádio: "${payload.message}"`

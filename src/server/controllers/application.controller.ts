@@ -64,6 +64,7 @@ import {
   sendManagerMessage,
   setApplicationStatus,
   toggleApplicationImpediment,
+  syncApplicationWithLatestResume,
   importStandbyToJob,
   submitApplication,
   type CandidateSummary,
@@ -983,4 +984,19 @@ export async function askAcrossCandidatesAction(
 ): Promise<AssistantResult> {
   const user = await requireManager();
   return askAcrossApplications(user.companyId, jobId, question);
+}
+
+/**
+ * Sincroniza o currículo mais recente da candidata (enviado em outra vaga ou no cadastro)
+ * com esta vaga específica e solicita a reanálise da IA.
+ */
+export async function syncApplicationResumeAction(applicationId: string) {
+  const user = await requireManager();
+  const res = await syncApplicationWithLatestResume(user.companyId, applicationId);
+  if (res.ok) {
+    revalidatePath(`/candidaturas/${applicationId}`);
+    revalidatePath("/candidaturas");
+    revalidatePath("/buscar-cvs");
+  }
+  return res;
 }

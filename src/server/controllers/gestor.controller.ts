@@ -5,8 +5,6 @@ import { titleCasePt } from "@/server/models/text.model";
 import "server-only";
 
 import { cache } from "react";
-import { revalidatePath } from "next/cache";
-import { findLatestPersonResumeInfo, updateApplicationResume } from "@/server/repositories/application.repository";
 
 import { requireManager } from "@/server/controllers/guards";
 import type {
@@ -24,6 +22,7 @@ import {
   listCompanyApplicantAges,
   listJobApplicantAges,
   requestReanalysis,
+  getLatestPersonResumeInfo,
 } from "@/server/services/application.service";
 import {
   calculateAge,
@@ -277,7 +276,7 @@ export async function getCandidaturaDetail(id: string) {
     id
   );
   const queue = await getQueueSiblings(user.companyId, id, application.jobId);
-  const latestResume = await findLatestPersonResumeInfo(
+  const latestResume = await getLatestPersonResumeInfo(
     user.companyId,
     application.email,
     application.candidateId,
@@ -303,45 +302,7 @@ export async function getCandidaturaDetail(id: string) {
   };
 }
 
-/**
- * Sincroniza o currículo mais recente da candidata (enviado em outra vaga ou no cadastro)
- * com esta vaga específica e solicita a reanálise da IA.
- */
-export async function syncApplicationResumeAction(applicationId: string) {
-  const { user } = await getGestorShell();
-  const application = await getCompanyApplication(user.companyId, applicationId);
-  if (!application) {
-    return { ok: false, error: "Candidatura não encontrada." };
-  }
 
-  const latestResume = await findLatestPersonResumeInfo(
-    user.companyId,
-    application.email,
-    application.candidateId,
-    application.resumeUrl
-  );
-
-  if (!latestResume?.resumeUrl) {
-    return { ok: false, error: "Nenhum currículo mais recente foi encontrado para esta candidata." };
-  }
-
-  await updateApplicationResume(
-    applicationId,
-    latestResume.resumeUrl,
-    latestResume.resumeText
-  );
-
-  await requestReanalysis(user.companyId, applicationId).catch(() => {});
-
-  revalidatePath(`/candidaturas/${applicationId}`);
-  revalidatePath("/candidaturas");
-  revalidatePath("/buscar-cvs");
-
-  return {
-    ok: true,
-    message: `Currículo sincronizado com sucesso com "${latestResume.sourceTitle}"! A IA está reavaliando a candidatura.`,
-  };
-}
 
 /** G12 · Dados para comparação lado a lado (2–3 candidaturas do tenant). */
 export async function getCompareData(ids: string[]) {
