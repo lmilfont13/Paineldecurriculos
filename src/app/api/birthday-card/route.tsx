@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface ThemeConfig {
+export interface ThemeConfig {
   background: string;
   cardBg: string;
   border: string;
@@ -19,7 +19,7 @@ interface ThemeConfig {
   isLight?: boolean;
 }
 
-const THEMES: Record<string, ThemeConfig> = {
+export const THEMES: Record<string, ThemeConfig> = {
   navy: {
     background: "linear-gradient(to bottom right, #060b17, #0c1a38, #060b17)",
     cardBg: "rgba(12, 26, 56, 0.75)",
@@ -32,6 +32,19 @@ const THEMES: Record<string, ThemeConfig> = {
     badgeText: "#fef3c7",
     tagline: "HOMENAGEM CORPORATIVA",
     footerColor: "#94a3b8",
+  },
+  gold_luxury: {
+    background: "linear-gradient(to bottom right, #1c1404, #2d1e05, #140d02)",
+    cardBg: "rgba(45, 30, 5, 0.8)",
+    border: "rgba(251, 191, 36, 0.5)",
+    accent: "#f59e0b",
+    titleColor: "#ffffff",
+    subColor: "#fde68a",
+    textColor: "#fef3c7",
+    badgeBg: "rgba(245, 158, 11, 0.2)",
+    badgeText: "#fde68a",
+    tagline: "CELEBRACAO & SUCESSO",
+    footerColor: "#d97706",
   },
   graphite: {
     background: "linear-gradient(to bottom right, #09090b, #18181b, #09090b)",
@@ -75,16 +88,23 @@ const THEMES: Record<string, ThemeConfig> = {
   },
 };
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+export interface BirthdayCardRenderParams {
+  name: string;
+  displayMode?: string;
+  company?: string;
+  theme?: string;
+  message?: string;
+  age?: number | string;
+  showAge?: boolean;
+}
 
-  const rawName = searchParams.get("name") || "Colaborador";
-  const displayMode = searchParams.get("displayMode") || "full";
-  const company = searchParams.get("company") || "Nossa Empresa";
-  const themeKey = searchParams.get("theme") || "navy";
-  const customMessage = searchParams.get("message");
-  const age = searchParams.get("age") || "";
-  const showAgeParam = searchParams.get("showAge");
+export function renderBirthdayCardImageResponse(params: BirthdayCardRenderParams): ImageResponse {
+  const rawName = params.name || "Colaborador";
+  const displayMode = params.displayMode || "full";
+  const company = params.company || "Nossa Empresa";
+  const themeKey = params.theme || "navy";
+  const customMessage = params.message;
+  const age = params.age ? String(params.age) : "";
 
   const nameParts = rawName.trim().split(/\s+/);
   const displayName =
@@ -96,7 +116,7 @@ export async function GET(request: NextRequest) {
 
   const turningAgeNumber = parseInt(age, 10);
   const hasValidAge = !isNaN(turningAgeNumber) && turningAgeNumber > 0;
-  const showAge = showAgeParam === "true" && hasValidAge;
+  const showAge = params.showAge === true && hasValidAge;
 
   const currentTheme = THEMES[themeKey] || THEMES.navy;
 
@@ -410,4 +430,18 @@ export async function GET(request: NextRequest) {
       height,
     }
   );
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  return renderBirthdayCardImageResponse({
+    name: searchParams.get("name") || "Colaborador",
+    displayMode: searchParams.get("displayMode") || "full",
+    company: searchParams.get("company") || "Nossa Empresa",
+    theme: searchParams.get("theme") || "navy",
+    message: searchParams.get("message") || undefined,
+    age: searchParams.get("age") || undefined,
+    showAge: searchParams.get("showAge") === "true",
+  });
 }
