@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Gauge,
   Minus,
   Newspaper,
   Pause,
@@ -18,6 +19,41 @@ import {
 } from "lucide-react";
 import type { NewsTickerItem, NewsTickerCategory } from "@/server/models/news-ticker.model";
 import { DEFAULT_RETAIL_NEWS } from "@/server/models/news-ticker.model";
+
+export type TickerSpeedLevel = "slow" | "normal" | "fast";
+
+const SPEED_CONFIG: Record<
+  TickerSpeedLevel,
+  {
+    label: string;
+    shortLabel: string;
+    description: string;
+    secondsPerItem: number;
+    rotationIntervalMs: number;
+  }
+> = {
+  slow: {
+    label: "Lenta (Leitura Fácil)",
+    shortLabel: "0.5x Lenta",
+    description: "Movimento suave e tranquilo para ler com calma",
+    secondsPerItem: 14,
+    rotationIntervalMs: 9000,
+  },
+  normal: {
+    label: "Normal (Moderada)",
+    shortLabel: "1x Normal",
+    description: "Velocidade padrão agradável",
+    secondsPerItem: 8.5,
+    rotationIntervalMs: 6500,
+  },
+  fast: {
+    label: "Rápida (Dinâmica)",
+    shortLabel: "1.5x Rápida",
+    description: "Ritmo estilo canal de notícias ao vivo",
+    secondsPerItem: 5,
+    rotationIntervalMs: 4500,
+  },
+};
 
 const CATEGORY_COLORS: Record<NewsTickerCategory, { bg: string; text: string; border: string }> = {
   BRASIL: {
@@ -86,6 +122,27 @@ export function NewsTicker({
     }
   });
   const [currentPosition, setCurrentPosition] = useState<"top" | "bottom" | "relative">(position);
+  const [speed, setSpeed] = useState<TickerSpeedLevel>(() => {
+    if (typeof window === "undefined") return "slow";
+    try {
+      const saved = localStorage.getItem("triagem:news-ticker:speed");
+      if (saved === "slow" || saved === "normal" || saved === "fast") {
+        return saved;
+      }
+    } catch {}
+    return "slow";
+  });
+
+  const cycleSpeed = useCallback(() => {
+    setSpeed((curr) => {
+      const next: TickerSpeedLevel =
+        curr === "slow" ? "normal" : curr === "normal" ? "fast" : "slow";
+      try {
+        localStorage.setItem("triagem:news-ticker:speed", next);
+      } catch {}
+      return next;
+    });
+  }, []);
 
   // Carrega notícias dinâmicas ao vivo da API
   useEffect(() => {
@@ -134,11 +191,12 @@ export function NewsTicker({
   // Rotação e alternância contínua automática (quando em modo alternating)
   useEffect(() => {
     if (isPaused || displayMode !== "alternating" || total <= 1) return;
+    const intervalMs = SPEED_CONFIG[speed].rotationIntervalMs;
     const timer = setInterval(() => {
       nextNews();
-    }, ROTATION_INTERVAL_MS);
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, [isPaused, displayMode, total, nextNews]);
+  }, [isPaused, displayMode, total, nextNews, speed]);
 
   if (!news || news.length === 0) return null;
 
@@ -177,8 +235,15 @@ export function NewsTicker({
   const theme = CATEGORY_COLORS[currentItem.category] || CATEGORY_COLORS.BRASIL;
   // Repete o catálogo para garantir ciclo contínuo sem saltos
   const tickerItems = news.length < 10 ? [...news, ...news, ...news, ...news] : [...news, ...news];
-  // Velocidade ideal estilo Bloomberg: visível, ativa e perfeitamente legível (25s a 60s total)
-  const tickerSpeedSeconds = Math.max(25, Math.min(60, Math.round(news.length * 1.8)));
+  // Velocidade estilo Bloomberg adaptada para leitura humana confortável:
+  // Lenta: ~14s por notícia (movimento muito calmo e fácil de acompanhar)
+  // Normal: ~8.5s por notícia (ritmo suave e equilibrado)
+  // Rápida: ~5s por notícia (dinâmico estilo TV ao vivo)
+  const speedSecondsPerItem = SPEED_CONFIG[speed].secondsPerItem;
+  const tickerSpeedSeconds = Math.max(
+    speed === "slow" ? 130 : speed === "fast" ? 50 : 85,
+    Math.round(news.length * speedSecondsPerItem)
+  );
 
   // 1. Variante Compacta (usada dentro de modais de configuração/DJ)
   if (variant === "compact") {
@@ -200,6 +265,15 @@ export function NewsTicker({
           </div>
 
           <div className="flex items-center gap-1 text-[10px] text-slate-400">
+            <button
+              type="button"
+              onClick={cycleSpeed}
+              title={`Velocidade: ${SPEED_CONFIG[speed].label}. Clique para alterar.`}
+              className="p-0.5 px-1.5 rounded bg-slate-800 text-[8px] font-bold text-amber-400 hover:bg-slate-700 hover:text-amber-300 flex items-center gap-1"
+            >
+              <Gauge className="size-2 text-amber-400" />
+              <span>{SPEED_CONFIG[speed].shortLabel}</span>
+            </button>
             <button
               type="button"
               onClick={() => setIsPaused((p) => !p)}
@@ -288,6 +362,7 @@ export function NewsTicker({
           <div className="relative overflow-hidden whitespace-nowrap">
             <div
               data-ticker="marquee"
+              data-paused={isPaused ? "true" : "false"}
               className="inline-flex items-center gap-8 animate-ticker"
               style={{
                 animationName: "ticker",
@@ -300,8 +375,9 @@ export function NewsTicker({
                 WebkitAnimationTimingFunction: "linear",
                 WebkitAnimationIterationCount: "infinite",
                 WebkitAnimationPlayState: isPaused ? "paused" : "running",
+                "--ticker-duration": `${tickerSpeedSeconds}s`,
                 willChange: "transform",
-              }}
+              } as React.CSSProperties}
             >
               {tickerItems.map((item, idx) => {
                 const itemTheme = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.BRASIL;
@@ -365,7 +441,7 @@ export function NewsTicker({
         )}
       </div>
 
-      {/* 3. Controles: Pausar, Alternar Topo/Rodapé, Alternar Modo e Minimizar */}
+      {/* 3. Controles: Pausar, Velocidade, Alternar Topo/Rodapé, Alternar Modo e Minimizar */}
       <div className="ml-2 sm:ml-3 flex shrink-0 items-center gap-1 sm:gap-1.5 border-l border-slate-800 pl-2 sm:pl-2.5 text-[10px] text-slate-400">
         {/* Play / Pausar */}
         <button
@@ -375,6 +451,19 @@ export function NewsTicker({
           className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition"
         >
           {isPaused ? <Play className="size-2.5 fill-current" /> : <Pause className="size-2.5 fill-current" />}
+        </button>
+
+        {/* Ajuste de Velocidade do Letreiro */}
+        <button
+          type="button"
+          onClick={cycleSpeed}
+          title={`Velocidade atual: ${SPEED_CONFIG[speed].label} (${SPEED_CONFIG[speed].description}). Clique para mudar para ${
+            speed === "slow" ? "Normal (1x)" : speed === "normal" ? "Rápida (1.5x)" : "Lenta (0.5x)"
+          }.`}
+          className="inline-flex items-center gap-1 rounded bg-slate-800/90 px-1.5 sm:px-2 py-0.5 text-[9px] font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition active:scale-95"
+        >
+          <Gauge className="size-2.5 text-amber-400 shrink-0" />
+          <span>{SPEED_CONFIG[speed].shortLabel}</span>
         </button>
 
         {/* Mudar Posição: Topo / Rodapé */}

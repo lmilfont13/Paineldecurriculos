@@ -250,9 +250,20 @@
 .animate-ticker {
   display: inline-flex !important;
   width: max-content !important;
-  animation: ticker 40s linear infinite !important;
-  -webkit-animation: ticker 40s linear infinite !important;
+  animation-name: ticker;
+  -webkit-animation-name: ticker;
+  animation-timing-function: linear;
+  -webkit-animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  -webkit-animation-iteration-count: infinite;
+  animation-duration: var(--ticker-duration, 110s);
+  -webkit-animation-duration: var(--ticker-duration, 110s);
   will-change: transform;
+}
+
+.animate-ticker[data-paused="true"] {
+  animation-play-state: paused !important;
+  -webkit-animation-play-state: paused !important;
 }
 
 @keyframes progress {

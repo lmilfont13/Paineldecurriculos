@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   // O currículo da demonstração (public/demo) é lido do disco pela IA
   // (ai.service → readDemoResume). Sem isto, a pasta public não vai junto
   // com as funções serverless na Vercel.
