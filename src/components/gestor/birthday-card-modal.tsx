@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   Copy,
@@ -102,6 +103,26 @@ export function BirthdayCardButtonAndModal({
   const [downloading, setDownloading] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fecha no Esc e bloqueia scroll de fundo enquanto o modal estiver aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   const effectiveCompany = companyName || "Nossa Empresa";
 
@@ -276,14 +297,23 @@ export function BirthdayCardButtonAndModal({
         </button>
       )}
 
-      {/* Modal: Cartão de Aniversário por IA */}
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-5 backdrop-blur-xs animate-in fade-in"
-        >
-          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+      {/* Modal: Cartão de Aniversário por IA (Renderizado via Portal na raiz do documento para não ser cortado por overflow-hidden) */}
+      {isOpen &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-xs animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsOpen(false);
+            }}
+          >
+            <div
+              className="relative w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Topo do Modal */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
               <div className="flex items-center gap-3">
@@ -628,7 +658,8 @@ export function BirthdayCardButtonAndModal({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

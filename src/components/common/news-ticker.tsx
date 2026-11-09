@@ -20,7 +20,7 @@ import {
 import type { NewsTickerItem, NewsTickerCategory } from "@/server/models/news-ticker.model";
 import { DEFAULT_RETAIL_NEWS } from "@/server/models/news-ticker.model";
 
-export type TickerSpeedLevel = "slow" | "normal" | "fast";
+export type TickerSpeedLevel = "ultraslow" | "slow" | "normal";
 
 const SPEED_CONFIG: Record<
   TickerSpeedLevel,
@@ -32,26 +32,26 @@ const SPEED_CONFIG: Record<
     rotationIntervalMs: number;
   }
 > = {
+  ultraslow: {
+    label: "Super Lenta (Leitura Despreocupada)",
+    shortLabel: "0.25x Super Lenta",
+    description: "Movimento ultra suave e calmo para ler sem pressa",
+    secondsPerItem: 38,
+    rotationIntervalMs: 14000,
+  },
   slow: {
     label: "Lenta (Leitura Fácil)",
     shortLabel: "0.5x Lenta",
-    description: "Movimento suave e tranquilo para ler com calma",
-    secondsPerItem: 14,
+    description: "Movimento tranquilo e suave para acompanhar cada palavra",
+    secondsPerItem: 24,
     rotationIntervalMs: 9000,
   },
   normal: {
     label: "Normal (Moderada)",
     shortLabel: "1x Normal",
-    description: "Velocidade padrão agradável",
-    secondsPerItem: 8.5,
+    description: "Velocidade padrão de canal de notícias",
+    secondsPerItem: 14,
     rotationIntervalMs: 6500,
-  },
-  fast: {
-    label: "Rápida (Dinâmica)",
-    shortLabel: "1.5x Rápida",
-    description: "Ritmo estilo canal de notícias ao vivo",
-    secondsPerItem: 5,
-    rotationIntervalMs: 4500,
   },
 };
 
@@ -126,7 +126,7 @@ export function NewsTicker({
     if (typeof window === "undefined") return "slow";
     try {
       const saved = localStorage.getItem("triagem:news-ticker:speed");
-      if (saved === "slow" || saved === "normal" || saved === "fast") {
+      if (saved === "ultraslow" || saved === "slow" || saved === "normal") {
         return saved;
       }
     } catch {}
@@ -136,7 +136,7 @@ export function NewsTicker({
   const cycleSpeed = useCallback(() => {
     setSpeed((curr) => {
       const next: TickerSpeedLevel =
-        curr === "slow" ? "normal" : curr === "normal" ? "fast" : "slow";
+        curr === "slow" ? "ultraslow" : curr === "ultraslow" ? "normal" : "slow";
       try {
         localStorage.setItem("triagem:news-ticker:speed", next);
       } catch {}
@@ -236,12 +236,12 @@ export function NewsTicker({
   // Repete o catálogo para garantir ciclo contínuo sem saltos
   const tickerItems = news.length < 10 ? [...news, ...news, ...news, ...news] : [...news, ...news];
   // Velocidade estilo Bloomberg adaptada para leitura humana confortável:
-  // Lenta: ~14s por notícia (movimento muito calmo e fácil de acompanhar)
-  // Normal: ~8.5s por notícia (ritmo suave e equilibrado)
-  // Rápida: ~5s por notícia (dinâmico estilo TV ao vivo)
+  // Super Lenta: ~38s por notícia (leitura ultra calma e despreocupada)
+  // Lenta: ~24s por notícia (movimento muito suave e fácil de acompanhar)
+  // Normal: ~14s por notícia (ritmo suave e equilibrado)
   const speedSecondsPerItem = SPEED_CONFIG[speed].secondsPerItem;
   const tickerSpeedSeconds = Math.max(
-    speed === "slow" ? 130 : speed === "fast" ? 50 : 85,
+    speed === "ultraslow" ? 380 : speed === "slow" ? 250 : 150,
     Math.round(news.length * speedSecondsPerItem)
   );
 
@@ -357,7 +357,14 @@ export function NewsTicker({
       </div>
 
       {/* 2. Área do Letreiro Contínuo (Ticker Horizontal Marquee) */}
-      <div className="relative min-w-0 flex-1 overflow-hidden">
+      <div
+        className="relative min-w-0 flex-1 overflow-hidden cursor-pointer"
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("a")) return;
+          setIsPaused((p) => !p);
+        }}
+        title={isPaused ? "Pausado · Clique em qualquer ponto para retomar" : "Clique em qualquer ponto para pausar a leitura"}
+      >
         {displayMode === "ticker" ? (
           <div className="relative overflow-hidden whitespace-nowrap">
             <div
@@ -458,12 +465,23 @@ export function NewsTicker({
           type="button"
           onClick={cycleSpeed}
           title={`Velocidade atual: ${SPEED_CONFIG[speed].label} (${SPEED_CONFIG[speed].description}). Clique para mudar para ${
-            speed === "slow" ? "Normal (1x)" : speed === "normal" ? "Rápida (1.5x)" : "Lenta (0.5x)"
+            speed === "slow" ? "Super Lenta (0.25x)" : speed === "ultraslow" ? "Normal (1x)" : "Lenta (0.5x)"
           }.`}
           className="inline-flex items-center gap-1 rounded bg-slate-800/90 px-1.5 sm:px-2 py-0.5 text-[9px] font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition active:scale-95"
         >
           <Gauge className="size-2.5 text-amber-400 shrink-0" />
           <span>{SPEED_CONFIG[speed].shortLabel}</span>
+        </button>
+
+        {/* Alternador de Modo: Fita Contínua vs Card Estático */}
+        <button
+          type="button"
+          onClick={() => setDisplayMode((m) => (m === "ticker" ? "alternating" : "ticker"))}
+          title={displayMode === "ticker" ? "Mudar para modo estático (notícias paradas com botões < >)" : "Mudar para letreiro contínuo Bloomberg"}
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition"
+        >
+          <Repeat className="size-2.5" />
+          <span>{displayMode === "ticker" ? "Fita" : "Card Estático"}</span>
         </button>
 
         {/* Mudar Posição: Topo / Rodapé */}
@@ -475,17 +493,6 @@ export function NewsTicker({
         >
           {currentPosition === "top" ? <ArrowDown className="size-2.5" /> : <ArrowUp className="size-2.5" />}
           <span className="text-[9px] uppercase font-bold">{currentPosition === "top" ? "Rodapé" : "Topo"}</span>
-        </button>
-
-        {/* Alternador de Modo: Contínuo vs Alternando */}
-        <button
-          type="button"
-          onClick={() => setDisplayMode((m) => (m === "ticker" ? "alternating" : "ticker"))}
-          title={displayMode === "ticker" ? "Mudar para modo estático alternando" : "Mudar para letreiro contínuo Bloomberg"}
-          className="hidden lg:inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition"
-        >
-          <Repeat className="size-2.5" />
-          <span>{displayMode === "ticker" ? "Fita" : "Card"}</span>
         </button>
 
         {/* Botão Reduzir / Minimizar */}
