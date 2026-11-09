@@ -458,7 +458,7 @@ export function GoogleJobsImporter({
                       type="text"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Ex: Fortaleza - CE, São Paulo, Curitiba…"
+                      placeholder="Ex: Fortaleza, São Paulo, Curitiba, Ceará…"
                       className="h-10 w-full rounded-xl border border-[#e4e4e7] bg-white pl-9 pr-3 text-xs text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
                     />
                   </div>

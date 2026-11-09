@@ -272,6 +272,38 @@ function cleanEmployerName(raw: string): string {
   return (stripped || raw).slice(0, 200);
 }
 
+const BRAZIL_STATE_CODES = new Set([
+  "ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms",
+  "mg", "pa", "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc",
+  "sp", "se", "to",
+]);
+
+/**
+ * Normaliza a entrada de localidade do usuário brasileiro (ex: "Fortaleza - CE",
+ * "São Paulo - SP", "Curitiba/PR", "CE"), separando cidade limpa de estado.
+ */
+function extractCityAndState(rawLocation: string): { city?: string; state?: string } {
+  const clean = rawLocation.trim();
+  if (!clean) return {};
+
+  const lower = clean.toLowerCase();
+  if (BRAZIL_STATE_CODES.has(lower)) {
+    return { state: clean.toUpperCase() };
+  }
+
+  const parts = clean.split(/\s*[-/|,]\s*/);
+  if (parts.length >= 2) {
+    const p0 = parts[0]?.trim();
+    const p1 = parts[1]?.trim();
+    return {
+      city: p0 || undefined,
+      state: p1 || undefined,
+    };
+  }
+
+  return { city: clean };
+}
+
 /**
  * Busca estruturada em tempo real de vagas reais indexadas diretamente
  * com seus links oficiais e específicos de inscrição (Gupy e portais parceiros).
@@ -285,107 +317,146 @@ async function searchViaPublicStructured(
 ): Promise<ExternalJobCandidate[] | null> {
   const cleanQ = query.trim();
   const cleanLoc = location.trim();
-  if (!cleanQ && !cleanLoc && workplaceType === "all") return null;
+  const { city: targetCity, state: targetState } = extractCityAndState(cleanLoc);
+
+  // Lista ordenada de URLs candidatas para garantir que mesmo com variações de digitação
+  // ou termos específicos o usuário sempre receba vagas ativas e diretas.
+  const candidateUrls: string[] = [];
+
+  // 1. Se informou cidade limpa (ex: "Fortaleza" extraído de "Fortaleza - CE")
+  if (targetCity) {
+    let u = `https://portal.gupy.io/job-search/city=${encodeURIComponent(targetCity)}`;
+    if (cleanQ) {
+      u += `&term=${encodeURIComponent(cleanQ)}`;
+    } else if (workplaceType === "remote") {
+      u += `&term=remoto`;
+    }
+    candidateUrls.push(u);
+  }
+
+  // 2. Se tem cargo + localidade combinados
+  if (cleanQ && cleanLoc) {
+    candidateUrls.push(
+      `https://portal.gupy.io/job-search/term=${encodeURIComponent(`${cleanQ} ${targetCity || cleanLoc}`)}`
+    );
+  }
+
+  // 3. Busca por termo da localidade (caso o filtro de cidade não traga vagas ou tenha sido digitado UF como "CE")
+  if (cleanLoc) {
+    candidateUrls.push(
+      `https://portal.gupy.io/job-search/term=${encodeURIComponent(targetCity || targetState || cleanLoc)}`
+    );
+  }
+
+  // 4. Se informou apenas cargo
+  if (cleanQ) {
+    candidateUrls.push(
+      `https://portal.gupy.io/job-search/term=${encodeURIComponent(cleanQ)}`
+    );
+  }
+
+  // 5. Se apenas remoto
+  if (workplaceType === "remote") {
+    candidateUrls.push("https://portal.gupy.io/job-search/term=remoto");
+  }
+
+  // 6. Descoberta geral de vagas ativas
+  candidateUrls.push("https://portal.gupy.io/job-search/term=vagas");
 
   try {
-    let url = "https://portal.gupy.io/job-search/";
-    const params: string[] = [];
+    for (const url of candidateUrls) {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+        },
+        cache: "no-store",
+      });
 
-    if (cleanQ) {
-      params.push(`term=${encodeURIComponent(cleanQ)}`);
-    } else if (workplaceType === "remote") {
-      params.push("term=remoto");
-    }
+      if (!res.ok) continue;
 
-    if (cleanLoc) {
-      params.push(`city=${encodeURIComponent(cleanLoc)}`);
-    }
+      const html = await res.text();
+      const match = html.match(/<script id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/);
+      if (!match || !match[1]) continue;
 
-    url += params.join("&");
-
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(10000),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      console.warn("[vagas-externas] Public structured fetch HTTP", res.status);
-      return null;
-    }
-
-    const html = await res.text();
-    const match = html.match(/<script id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/);
-    if (!match || !match[1]) return null;
-
-    const data = JSON.parse(match[1]);
-    const list = data.props?.pageProps?.initialJobList?.data;
-    if (!Array.isArray(list) || list.length === 0) return null;
-
-    const results: ExternalJobCandidate[] = [];
-    for (const item of list) {
-      if (!item || typeof item !== "object") continue;
-      const rawItem = item as Record<string, unknown>;
-
-      const itemWorkplace = typeof rawItem.workplaceType === "string" ? rawItem.workplaceType : "";
-
-      // Filtro de modalidade (Remoto / Presencial / Híbrido)
-      if (workplaceType === "remote") {
-        const isRemote =
-          itemWorkplace === "remote" ||
-          String(rawItem.name || "").toLowerCase().includes("remoto") ||
-          String(rawItem.name || "").toLowerCase().includes("home office");
-        if (!isRemote) continue;
-      } else if (workplaceType === "on-site") {
-        if (itemWorkplace === "remote") continue;
-      }
-
-      const title = typeof rawItem.name === "string" ? rawItem.name.trim() : "";
-      const rawEmployer =
-        typeof rawItem.careerPageName === "string" && rawItem.careerPageName.trim()
-          ? rawItem.careerPageName.trim()
-          : "Empresa Contratante";
-      const employer = cleanEmployerName(rawEmployer);
-      const applyUrl = typeof rawItem.jobUrl === "string" ? rawItem.jobUrl.trim() : "";
-
-      // Rejeita terminantemente se o link não for direto da vaga específica!
-      if (!title || !applyUrl || !isSafeHttpUrl(applyUrl) || isGenericSearchUrl(applyUrl)) {
+      let data: Record<string, unknown> | null = null;
+      try {
+        data = JSON.parse(match[1]) as Record<string, unknown>;
+      } catch {
         continue;
       }
 
-      const city = typeof rawItem.city === "string" ? rawItem.city.trim() : "";
-      const state = typeof rawItem.state === "string" ? rawItem.state.trim() : "";
-      let locStr = city && state ? `${city}, ${state}` : city || state || cleanLoc || null;
-      if (itemWorkplace === "remote") {
-        locStr = locStr ? `${locStr} (Remoto)` : "Remoto";
+      const list = (data?.props as { pageProps?: { initialJobList?: { data?: unknown[] } } })
+        ?.pageProps?.initialJobList?.data;
+      if (!Array.isArray(list) || list.length === 0) continue;
+
+      const results: ExternalJobCandidate[] = [];
+      for (const item of list) {
+        if (!item || typeof item !== "object") continue;
+        const rawItem = item as Record<string, unknown>;
+
+        const itemWorkplace = typeof rawItem.workplaceType === "string" ? rawItem.workplaceType : "";
+
+        // Filtro de modalidade (Remoto / Presencial / Híbrido)
+        if (workplaceType === "remote") {
+          const isRemote =
+            itemWorkplace === "remote" ||
+            String(rawItem.name || "").toLowerCase().includes("remoto") ||
+            String(rawItem.name || "").toLowerCase().includes("home office");
+          if (!isRemote) continue;
+        } else if (workplaceType === "on-site") {
+          if (itemWorkplace === "remote") continue;
+        }
+
+        const title = typeof rawItem.name === "string" ? rawItem.name.trim() : "";
+        const rawEmployer =
+          typeof rawItem.careerPageName === "string" && rawItem.careerPageName.trim()
+            ? rawItem.careerPageName.trim()
+            : "Empresa Contratante";
+        const employer = cleanEmployerName(rawEmployer);
+        const applyUrl = typeof rawItem.jobUrl === "string" ? rawItem.jobUrl.trim() : "";
+
+        // Rejeita terminantemente se o link não for direto da vaga específica!
+        if (!title || !applyUrl || !isSafeHttpUrl(applyUrl) || isGenericSearchUrl(applyUrl)) {
+          continue;
+        }
+
+        const city = typeof rawItem.city === "string" ? rawItem.city.trim() : "";
+        const state = typeof rawItem.state === "string" ? rawItem.state.trim() : "";
+        let locStr = city && state ? `${city}, ${state}` : city || state || cleanLoc || null;
+        if (itemWorkplace === "remote") {
+          locStr = locStr ? `${locStr} (Remoto)` : "Remoto";
+        }
+
+        const rawDesc = typeof rawItem.description === "string" ? rawItem.description : "";
+        const cleanDesc = rawDesc ? cleanHtmlText(rawDesc).slice(0, 500) : null;
+
+        const externalId =
+          rawItem.id != null
+            ? `gupy_${rawItem.id}`
+            : `gupy_${stableHash(`${title}|${employer}|${locStr ?? ""}`)}`;
+
+        results.push({
+          externalId,
+          title: title.slice(0, 200),
+          employer,
+          location: locStr ? locStr.slice(0, 200) : null,
+          description: cleanDesc,
+          source: "Gupy",
+          applyUrl,
+          postedLabel: formatGupyDate(rawItem.publishedDate),
+          scheduleType: formatGupyType(rawItem.type),
+        });
       }
 
-      const rawDesc = typeof rawItem.description === "string" ? rawItem.description : "";
-      const cleanDesc = rawDesc ? cleanHtmlText(rawDesc).slice(0, 500) : null;
-
-      const externalId =
-        rawItem.id != null
-          ? `gupy_${rawItem.id}`
-          : `gupy_${stableHash(`${title}|${employer}|${locStr ?? ""}`)}`;
-
-      results.push({
-        externalId,
-        title: title.slice(0, 200),
-        employer,
-        location: locStr ? locStr.slice(0, 200) : null,
-        description: cleanDesc,
-        source: "Gupy",
-        applyUrl,
-        postedLabel: formatGupyDate(rawItem.publishedDate),
-        scheduleType: formatGupyType(rawItem.type),
-      });
+      if (results.length > 0) {
+        return results;
+      }
     }
 
-    return results.length > 0 ? results : null;
+    return null;
   } catch (err) {
     console.error("[vagas-externas] Erro ao buscar vagas públicas estruturadas:", err);
     return null;
@@ -400,9 +471,6 @@ export async function searchGoogleJobs(
 ): Promise<GoogleJobsSearchResult> {
   const cleanQuery = query.trim();
   const cleanLocation = location.trim();
-  if (!cleanQuery && !cleanLocation && workplaceType === "all") {
-    return { ok: false, error: "Informe ao menos a localidade ou escolha se a vaga é presencial ou remota." };
-  }
 
   let engine: SearchEngineType = "web_structured";
   let engineLabel = "Google Vagas (Rede de Vagas Diretas)";
