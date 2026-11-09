@@ -63,6 +63,7 @@ export default async function PainelPage() {
     await getPainelData();
   const birthdayData = await getCompanyBirthdaysAction().catch(() => null);
   const birthdaysToday = birthdayData?.today ?? [];
+  const birthdaysTomorrow = birthdayData?.thisWeek.filter((b) => b.daysUntil === 1) ?? [];
   const firstName = userName.split(" ")[0];
 
   // Primeiro uso (nenhuma vaga ainda): induz a criar a vaga, sem mostrar zeros.
@@ -181,8 +182,8 @@ export default async function PainelPage() {
         </Link>
       )}
 
-      {/* Lembrete de Aniversariantes de Hoje */}
-      {birthdaysToday.length > 0 && (
+      {/* Lembrete de Aniversariantes de Hoje ou de Amanhã */}
+      {(birthdaysToday.length > 0 || birthdaysTomorrow.length > 0) && (
         <section className="mt-8 overflow-hidden rounded-2xl border border-amber-300 bg-linear-to-r from-amber-50 via-orange-50/50 to-amber-50/30 p-6 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -192,14 +193,18 @@ export default async function PainelPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-[#0a0a0a]">
-                    Aniversariantes de Hoje! 🎉
+                    {birthdaysToday.length > 0
+                      ? "Aniversariantes de Hoje! 🎉"
+                      : "Aniversariantes de Amanhã! 🎈"}
                   </h2>
                   <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {birthdaysToday.length}
+                    {birthdaysToday.length > 0 ? birthdaysToday.length : birthdaysTomorrow.length}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-[#71717a]">
-                  Fortaleça o vínculo com seus talentos enviando uma mensagem personalizada de parabéns pelo WhatsApp.
+                  {birthdaysToday.length > 0
+                    ? "Fortaleça o vínculo com seus talentos enviando uma mensagem personalizada de parabéns pelo WhatsApp."
+                    : "Prepare com antecedência as felicitações para os talentos que comemoram aniversário amanhã."}
                 </p>
               </div>
             </div>
@@ -214,7 +219,7 @@ export default async function PainelPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {birthdaysToday.map((person) => (
+            {(birthdaysToday.length > 0 ? birthdaysToday : birthdaysTomorrow).map((person) => (
               <div
                 key={person.id}
                 className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-white/95 p-3.5 shadow-2xs backdrop-blur-xs"
@@ -230,7 +235,13 @@ export default async function PainelPage() {
                       {person.name}
                     </p>
                     <p className="truncate text-[11px] font-medium text-amber-800">
-                      Completando {person.turningAge} anos 🎂
+                      {person.isToday
+                        ? (person.turningAge > 0
+                            ? `Completando ${person.turningAge} anos hoje 🎂`
+                            : `Aniversário Hoje (${person.dayMonthFormatted}) 🎂`)
+                        : (person.turningAge > 0
+                            ? `Fará ${person.turningAge} anos amanhã (${person.dayMonthFormatted}) 🎂`
+                            : `Aniversário Amanhã (${person.dayMonthFormatted}) 🎂`)}
                     </p>
                     <p className="truncate text-[10px] text-[#71717a]">
                       {person.jobTitle}

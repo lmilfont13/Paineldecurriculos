@@ -112,5 +112,31 @@ describe("birthday.model", () => {
 
     expect(data.thisMonth).toHaveLength(3); // Jessica, Carlos, Mariana
   });
+
+  it("corrige ano suspeito (ex: 2026) resgatando a idade real do texto do currículo", () => {
+    const rawCandidate: RawCandidateForBirthday = {
+      id: "app-maria-julia",
+      name: "Maria Julia de Maria Araújo",
+      email: "mariajulia@exemplo.com",
+      phone: "85999999999",
+      photoUrl: null,
+      birthDate: new Date("2026-11-09T00:00:00.000Z"), // Data com ano 2026 (suspeito)
+      resumeText: "Maria Julia de Maria Araújo\n23 anos, Solteira\nTelefone: (85) 99999-9999\nPromotora de Vendas",
+      jobTitle: "Promotor(a) de Vendas",
+    };
+
+    // No domingo à noite em Fortaleza (08/11 21:50 BRT -> 09/11 00:50 UTC)
+    const sundayNightUtc = new Date("2026-11-09T00:50:00.000Z");
+    const data = buildCompanyBirthdays([rawCandidate], "Tarhget Fortaleza", sundayNightUtc);
+
+    // No Brasil ainda é dia 8, então o aniversário (dia 9) é AMANHÃ!
+    expect(data.today).toHaveLength(0);
+    expect(data.thisWeek).toHaveLength(1);
+    expect(data.thisWeek[0].isToday).toBe(false);
+    expect(data.thisWeek[0].daysUntil).toBe(1); // Amanhã
+    expect(data.thisWeek[0].turningAge).toBe(23); // Idade resgatada do currículo, nunca 0!
+    expect(data.thisWeek[0].dayMonthFormatted).toBe("9 de novembro");
+    expect(data.thisWeek[0].greetingMessage).toContain("com 23 anos");
+  });
 });
 

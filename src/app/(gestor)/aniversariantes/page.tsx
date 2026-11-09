@@ -157,7 +157,9 @@ export default async function AniversariantesPage() {
                   <div className="mt-3.5 rounded-xl border border-amber-200/80 bg-white/90 p-3">
                     <p className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
                       <Sparkles className="size-3.5 text-amber-600" />
-                      Completando {candidate.turningAge} anos hoje!
+                      {candidate.turningAge > 0
+                        ? `Completando ${candidate.turningAge} anos hoje!`
+                        : `Aniversariante de hoje (${candidate.dayMonthFormatted})!`}
                     </p>
                     <p className="text-[11px] text-[#71717a] mt-1 flex items-center gap-1.5">
                       <Phone className="size-3 text-[#a1a1aa]" />
@@ -254,12 +256,12 @@ export default async function AniversariantesPage() {
                     </div>
 
                     <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 shrink-0">
-                      Em {candidate.daysUntil} dia{candidate.daysUntil > 1 ? "s" : ""}
+                      {candidate.daysUntil === 1 ? "Amanhã 🎈" : `Em ${candidate.daysUntil} dia${candidate.daysUntil > 1 ? "s" : ""}`}
                     </span>
                   </div>
 
                   <p className="mt-3 text-xs text-[#52525b]">
-                    📅 <strong>{candidate.dayMonthFormatted}</strong> · fará <strong>{candidate.turningAge} anos</strong>
+                    📅 <strong>{candidate.dayMonthFormatted}</strong> · {candidate.turningAge > 0 ? `fará ${candidate.turningAge} anos` : "aniversariante"}
                   </p>
                 </div>
 
