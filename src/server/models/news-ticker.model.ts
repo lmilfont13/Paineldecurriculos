@@ -1,9 +1,16 @@
 /**
- * Modelo e curadoria de notícias do mercado de varejo e principais notícias do dia
- * para o letreiro digital (News Ticker) da Rádio Tárguet e Portal do Candidato.
+ * Modelo e curadoria de notícias do Brasil, Mundo, Economia e Varejo
+ * para o letreiro digital (News Ticker) estilo Bloomberg da Rádio Tárguet e Portal do Candidato.
  */
 
-export type NewsTickerCategory = "VAREJO" | "ECONOMIA" | "MERCADO" | "EMPREGOS";
+export type NewsTickerCategory =
+  | "BRASIL"
+  | "MUNDO"
+  | "ECONOMIA"
+  | "MERCADO"
+  | "VAREJO"
+  | "EMPREGOS"
+  | "TECNOLOGIA";
 
 export interface NewsTickerItem {
   id: string;
@@ -14,8 +21,22 @@ export interface NewsTickerItem {
   url?: string;
 }
 
-/** Notícias dinâmicas de alta relevância com foco em Varejo, Supermercados, Atacarejo e Economia */
+/** Notícias dinâmicas de alta relevância com foco em Brasil, Mundo, Varejo e Economia */
 export const DEFAULT_RETAIL_NEWS: NewsTickerItem[] = [
+  {
+    id: "news-brasil-1",
+    category: "BRASIL",
+    title: "Governo e Congresso alinham pauta econômica prioritária para votação de medidas fiscais",
+    source: "Agência Brasil",
+    timeAgo: "há 15 min",
+  },
+  {
+    id: "news-world-1",
+    category: "MUNDO",
+    title: "Geopolítica global: negociações comerciais e diplomáticas mobilizam cúpulas internacionais",
+    source: "BBC Brasil",
+    timeAgo: "há 20 min",
+  },
   {
     id: "news-retail-1",
     category: "VAREJO",
@@ -29,6 +50,13 @@ export const DEFAULT_RETAIL_NEWS: NewsTickerItem[] = [
     title: "Inflação dos alimentos desacelera e estimula poder de compra nas famílias brasileiras no trimestre",
     source: "Valor Econômico",
     timeAgo: "há 40 min",
+  },
+  {
+    id: "news-tech-1",
+    category: "TECNOLOGIA",
+    title: "Avanço em Inteligência Artificial impulsiona investimentos recordes em infraestrutura e semicondutores",
+    source: "InfoMoney",
+    timeAgo: "há 50 min",
   },
   {
     id: "news-retail-3",
@@ -52,61 +80,130 @@ export const DEFAULT_RETAIL_NEWS: NewsTickerItem[] = [
     timeAgo: "há 2h",
   },
   {
-    id: "news-retail-6",
-    category: "VAREJO",
-    title: "Formatos de atacarejo ganham mais espaço nos hábitos do consumidor com compras em embalagens família",
-    source: "Poder360",
-    timeAgo: "há 3h",
-  },
-  {
-    id: "news-retail-7",
-    category: "ECONOMIA",
-    title: "Banco Central sinaliza estabilidade fiscal e projeção de crescimento do PIB anima contratações no varejo",
-    source: "Exame",
-    timeAgo: "há 3h",
-  },
-  {
-    id: "news-retail-8",
-    category: "VAREJO",
-    title: "Inteligência Artificial na gestão de estoque reduz perdas operacionais em até 35% no grande varejo",
-    source: "Forbes Negócios",
-    timeAgo: "há 4h",
+    id: "news-world-2",
+    category: "MUNDO",
+    title: "Mercados globais reagem a indicadores dos EUA, Europa e Ásia com foco em política monetária",
+    source: "G1 Mundo",
+    timeAgo: "há 2h",
   },
 ];
 
 let cachedNews: { items: NewsTickerItem[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de cache para notícias sempre frescas
+const CACHE_TTL_MS = 4 * 60 * 1000; // 4 minutos de cache para notícias sempre frescas
+
+const LIVE_NEWS_SOURCES: {
+  name: string;
+  url: string;
+  defaultCategory: NewsTickerCategory;
+}[] = [
+  { name: "G1", url: "https://g1.globo.com/rss/g1/", defaultCategory: "BRASIL" },
+  { name: "G1 Mundo", url: "https://g1.globo.com/rss/g1/mundo/", defaultCategory: "MUNDO" },
+  { name: "G1 Economia", url: "https://g1.globo.com/rss/g1/economia/", defaultCategory: "ECONOMIA" },
+  { name: "BBC Brasil", url: "https://feeds.bbci.co.uk/portuguese/rss.xml", defaultCategory: "MUNDO" },
+  { name: "Agência Brasil", url: "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml", defaultCategory: "BRASIL" },
+  { name: "Agência Brasil", url: "https://agenciabrasil.ebc.com.br/rss/internacional/feed.xml", defaultCategory: "MUNDO" },
+  { name: "Poder360", url: "https://www.poder360.com.br/feed/", defaultCategory: "BRASIL" },
+  { name: "InfoMoney", url: "https://www.infomoney.com.br/feed/", defaultCategory: "MERCADO" },
+  { name: "CNN Brasil", url: "https://www.cnnbrasil.com.br/feed/", defaultCategory: "BRASIL" },
+];
 
 function cleanXmlText(text: string): string {
   return text
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
     .replace(/<[^>]+>/g, "")
+    .replace(/^(VÍDEOS?|FOTOS?|AO VIVO|EXCLUSIVO|ENTREVISTA|ANÁLISE|PODCAST)\s*:\s*/i, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-function detectCategory(title: string): NewsTickerCategory {
+function detectCategory(title: string, defaultCategory: NewsTickerCategory): NewsTickerCategory {
   const t = title.toLowerCase();
-  if (/emprego|vaga|contrata|caged|trabalh|clt|sal[aá]ri|desempreg|renda|carreira/i.test(t)) {
+  if (/intelig[eê]ncia artificial|\bia\b|nvidia|google|apple|microsoft|openai|chatgpt|software|ciber|tecnologia/i.test(t)) {
+    return "TECNOLOGIA";
+  }
+  if (/emprego|vaga|contrata|caged|trabalh|clt|sal[aá]ri|desempreg|renda|carreira|concurso/i.test(t)) {
     return "EMPREGOS";
   }
-  if (/varejo|supermerc|atacarej|atacado|loja|com[eé]rcio|compra|consum|alimento|bebida|sacola|shopping|ponto de venda|pdv/i.test(t)) {
+  if (/varejo|supermerc|atacarej|atacado|loja|com[eé]rcio|compra|consum|alimento|bebida|sacola|shopping|pdv/i.test(t)) {
     return "VAREJO";
   }
-  if (/infla[cç]|pib|juros|selic|d[oó]lar|c[aâ]mbio|banco central|copom|impost|tribut|arrecada|fiscal|bolsa fam/i.test(t)) {
+  if (/infla[cç]|pib|juros|selic|d[oó]lar|c[aâ]mbio|banco central|copom|impost|tribut|arrecada|fiscal|d[ií]vida/i.test(t)) {
     return "ECONOMIA";
   }
-  return "MERCADO";
+  if (/eua|trump|biden|china|europa|r[uú]ssia|ucr[aâ]nia|israel|oriente m[eé]dio|argentina|milei|venezuela|otan|onu|papa|it[aá]lia|frança|mundo|internacional/i.test(t)) {
+    return "MUNDO";
+  }
+  if (/brasil|lula|congresso|senado|c[aâ]mara|stf|judici[aá]rio|minist[eé]rio|governo|pol[ií]cia federal|\bpf\b|enem|mec/i.test(t)) {
+    return "BRASIL";
+  }
+  return defaultCategory;
+}
+
+async function fetchSourceFeed(source: (typeof LIVE_NEWS_SOURCES)[number]): Promise<NewsTickerItem[]> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2800);
+
+    const res = await fetch(source.url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "application/rss+xml, application/xml, text/xml, */*",
+      },
+      next: { revalidate: 240 },
+    }).catch(() => null);
+
+    clearTimeout(timeout);
+    if (!res || !res.ok) return [];
+
+    const xml = await res.text();
+    const itemRegex =
+      /<item>[\s\S]*?<title>([\s\S]*?)<\/title>(?:[\s\S]*?<link>([\s\S]*?)<\/link>)?[\s\S]*?<\/item>/gi;
+
+    const items: NewsTickerItem[] = [];
+    let m;
+    let idx = 1;
+
+    while ((m = itemRegex.exec(xml)) !== null && items.length < 5) {
+      const rawTitle = m[1] ?? "";
+      const rawLink = m[2] ?? "";
+      const title = cleanXmlText(rawTitle);
+      const url = rawLink ? cleanXmlText(rawLink) : undefined;
+
+      // Desconsidera chamadas genéricas, muito curtas ou transmissões ao vivo vazias
+      if (title.length > 25 && !title.toLowerCase().startsWith("ao vivo:")) {
+        items.push({
+          id: `${source.name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${Date.now()}-${idx++}`,
+          category: detectCategory(title, source.defaultCategory),
+          title,
+          source: source.name,
+          timeAgo: "ao vivo",
+          url: url && (url.startsWith("http://") || url.startsWith("https://")) ? url : undefined,
+        });
+      }
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
 }
 
 /**
- * Busca notícias recentes de feeds públicos de notícias de economia e varejo.
- * Se houver erro de rede ou timeout, utiliza o catálogo curado dinâmico.
+ * Busca notícias recentes de múltiplos feeds públicos de prestígio sobre
+ * Brasil, Mundo, Economia, Varejo, Empregos e Tecnologia.
+ * Se houver erro de rede, utiliza o catálogo curado dinâmico como fallback.
  */
 export async function getRetailAndMarketNews(): Promise<NewsTickerItem[]> {
   const now = Date.now();
@@ -114,93 +211,68 @@ export async function getRetailAndMarketNews(): Promise<NewsTickerItem[]> {
     return cachedNews.items;
   }
 
-  const liveNews: NewsTickerItem[] = [];
-
-  // 1. Agência Brasil Economia
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2200);
+    const settled = await Promise.allSettled(LIVE_NEWS_SOURCES.map(fetchSourceFeed));
+    const collected: NewsTickerItem[] = [];
+    const seenTitles = new Set<string>();
 
-    const res = await fetch("https://agenciabrasil.ebc.com.br/rss/economia/feed.xml", {
-      signal: controller.signal,
-      next: { revalidate: 300 },
-    }).catch(() => null);
-
-    clearTimeout(timeout);
-
-    if (res && res.ok) {
-      const xml = await res.text();
-      const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/item>/gi;
-      let m;
-      let idx = 1;
-      while ((m = itemRegex.exec(xml)) !== null && liveNews.length < 5) {
-        const title = cleanXmlText(m[1] ?? "");
-        if (title.length > 20 && !liveNews.some((n) => n.title === title)) {
-          liveNews.push({
-            id: `agb-${idx++}`,
-            category: detectCategory(title),
-            title,
-            source: "Agência Brasil",
-            timeAgo: "ao vivo",
-          });
+    for (const res of settled) {
+      if (res.status === "fulfilled" && Array.isArray(res.value)) {
+        for (const item of res.value) {
+          const norm = item.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (!seenTitles.has(norm)) {
+            seenTitles.add(norm);
+            collected.push(item);
+          }
         }
       }
     }
-  } catch {
-    // Falha silenciosa
-  }
 
-  // 2. G1 Economia
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2200);
+    if (collected.length >= 6) {
+      // Agrupa por categoria para intercalar harmoniosamente
+      const byCategory = new Map<NewsTickerCategory, NewsTickerItem[]>();
+      for (const item of collected) {
+        const list = byCategory.get(item.category) ?? [];
+        list.push(item);
+        byCategory.set(item.category, list);
+      }
 
-    const res = await fetch("https://g1.globo.com/rss/g1/economia/", {
-      signal: controller.signal,
-      next: { revalidate: 300 },
-    }).catch(() => null);
+      const priorityOrder: NewsTickerCategory[] = [
+        "BRASIL",
+        "MUNDO",
+        "ECONOMIA",
+        "VAREJO",
+        "MERCADO",
+        "TECNOLOGIA",
+        "EMPREGOS",
+      ];
 
-    clearTimeout(timeout);
+      const interleaved: NewsTickerItem[] = [];
+      let addedInRound = true;
 
-    if (res && res.ok) {
-      const xml = await res.text();
-      const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/item>/gi;
-      let m;
-      let idx = 1;
-      while ((m = itemRegex.exec(xml)) !== null && liveNews.length < 8) {
-        const title = cleanXmlText(m[1] ?? "");
-        if (title.length > 20 && !liveNews.some((n) => n.title === title)) {
-          liveNews.push({
-            id: `g1-${idx++}`,
-            category: detectCategory(title),
-            title,
-            source: "G1 Economia",
-            timeAgo: "hoje",
-          });
+      while (addedInRound && interleaved.length < 35) {
+        addedInRound = false;
+        for (const cat of priorityOrder) {
+          const catList = byCategory.get(cat);
+          if (catList && catList.length > 0) {
+            interleaved.push(catList.shift()!);
+            addedInRound = true;
+          }
         }
       }
-    }
-  } catch {
-    // Falha silenciosa
-  }
 
-  // Se conseguimos notícias ao vivo, alternamos com notícias focadas em varejo
-  if (liveNews.length > 0) {
-    const combined: NewsTickerItem[] = [];
-    let liveIdx = 0;
-    let defIdx = 0;
-
-    while (combined.length < 12 && (liveIdx < liveNews.length || defIdx < DEFAULT_RETAIL_NEWS.length)) {
-      if (liveIdx < liveNews.length) {
-        combined.push(liveNews[liveIdx++]);
+      // Adiciona algumas notícias pontuais de varejo se houver poucas no feed
+      const hasRetail = interleaved.some((n) => n.category === "VAREJO");
+      if (!hasRetail) {
+        interleaved.splice(3, 0, DEFAULT_RETAIL_NEWS[2]);
+        interleaved.splice(8, 0, DEFAULT_RETAIL_NEWS[0]);
       }
-      if (defIdx < DEFAULT_RETAIL_NEWS.length) {
-        combined.push(DEFAULT_RETAIL_NEWS[defIdx++]);
-      }
-    }
 
-    cachedNews = { items: combined, timestamp: now };
-    return combined;
+      cachedNews = { items: interleaved, timestamp: now };
+      return interleaved;
+    }
+  } catch (err) {
+    console.warn("[news-ticker] Erro ao consolidar feeds ao vivo:", err);
   }
 
   cachedNews = { items: DEFAULT_RETAIL_NEWS, timestamp: now };

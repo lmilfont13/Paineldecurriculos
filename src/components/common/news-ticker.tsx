@@ -20,25 +20,40 @@ import type { NewsTickerItem, NewsTickerCategory } from "@/server/models/news-ti
 import { DEFAULT_RETAIL_NEWS } from "@/server/models/news-ticker.model";
 
 const CATEGORY_COLORS: Record<NewsTickerCategory, { bg: string; text: string; border: string }> = {
+  BRASIL: {
+    bg: "bg-emerald-500/20",
+    text: "text-emerald-300",
+    border: "border-emerald-400/40",
+  },
+  MUNDO: {
+    bg: "bg-sky-500/20",
+    text: "text-sky-300",
+    border: "border-sky-400/40",
+  },
+  ECONOMIA: {
+    bg: "bg-teal-500/20",
+    text: "text-teal-300",
+    border: "border-teal-400/40",
+  },
+  MERCADO: {
+    bg: "bg-indigo-500/20",
+    text: "text-indigo-300",
+    border: "border-indigo-400/40",
+  },
   VAREJO: {
     bg: "bg-amber-500/20",
     text: "text-amber-300",
     border: "border-amber-400/40",
   },
-  ECONOMIA: {
-    bg: "bg-emerald-500/20",
-    text: "text-emerald-300",
-    border: "border-emerald-400/40",
-  },
-  MERCADO: {
-    bg: "bg-blue-500/20",
-    text: "text-blue-300",
-    border: "border-blue-400/40",
-  },
   EMPREGOS: {
     bg: "bg-purple-500/20",
     text: "text-purple-300",
     border: "border-purple-400/40",
+  },
+  TECNOLOGIA: {
+    bg: "bg-cyan-500/20",
+    text: "text-cyan-300",
+    border: "border-cyan-400/40",
   },
 };
 
@@ -148,7 +163,7 @@ export function NewsTicker({
         >
           <span className="flex size-1.5 rounded-full bg-red-500 animate-pulse" />
           <Radio className="size-3 text-red-500" />
-          <span>Giro do Varejo</span>
+          <span>Brasil & Mundo</span>
           <span className="rounded bg-slate-800 px-1 py-0.2 text-[9px] text-slate-400">
             {news.length}
           </span>
@@ -252,7 +267,7 @@ export function NewsTicker({
           BLOOMBERG
         </span>
         <span className="text-[10px] font-black uppercase tracking-wider text-slate-200 hidden md:inline-flex items-center gap-1">
-          Giro do Varejo
+          Brasil & Mundo
         </span>
       </div>
 
@@ -267,7 +282,7 @@ export function NewsTicker({
               style={{ animationDuration: `${Math.max(40, news.length * 8)}s` }}
             >
               {tickerItems.map((item, idx) => {
-                const itemTheme = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.VAREJO;
+                const itemTheme = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.BRASIL;
                 return (
                   <div key={`${item.id}-${idx}`} className="inline-flex items-center gap-2 text-[11px] whitespace-nowrap">
                     <span
@@ -275,7 +290,19 @@ export function NewsTicker({
                     >
                       {item.category}
                     </span>
-                    <span className="font-semibold text-slate-100">{item.title}</span>
+                    {item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-slate-100 hover:text-amber-300 hover:underline transition"
+                        title={`Ler notícia completa na fonte (${item.source})`}
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span className="font-semibold text-slate-100">{item.title}</span>
+                    )}
                     <span className="text-[10px] text-slate-400">({item.source})</span>
                     <span className="text-amber-400 ml-2 font-bold text-[10px]">▲</span>
                   </div>
@@ -294,9 +321,21 @@ export function NewsTicker({
             >
               {currentItem.category}
             </span>
-            <span className="truncate text-[11px] font-semibold text-slate-100">
-              {currentItem.title}
-            </span>
+            {currentItem.url ? (
+              <a
+                href={currentItem.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-[11px] font-semibold text-slate-100 hover:text-amber-300 hover:underline transition"
+                title={`Ler notícia completa na fonte (${currentItem.source})`}
+              >
+                {currentItem.title}
+              </a>
+            ) : (
+              <span className="truncate text-[11px] font-semibold text-slate-100">
+                {currentItem.title}
+              </span>
+            )}
             <span className="shrink-0 text-[10px] text-slate-400 hidden lg:inline">
               — {currentItem.source} ({currentItem.timeAgo})
             </span>

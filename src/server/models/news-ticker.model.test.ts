@@ -7,7 +7,7 @@ describe("news-ticker.model", () => {
     for (const item of DEFAULT_RETAIL_NEWS) {
       expect(item.id).toBeTruthy();
       expect(item.title).toBeTruthy();
-      expect(item.category).toMatch(/^(VAREJO|ECONOMIA|MERCADO|EMPREGOS)$/);
+      expect(item.category).toMatch(/^(VAREJO|ECONOMIA|MERCADO|EMPREGOS|BRASIL|MUNDO|TECNOLOGIA)$/);
       expect(item.source).toBeTruthy();
     }
   });
