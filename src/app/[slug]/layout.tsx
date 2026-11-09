@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getTenant, getPublicSession } from "@/server/controllers/public.controller";
-import { LiveDoubtWidget } from "@/components/public/live-doubt-widget";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
 import { brandCssVars, isHiddenFromDirectory } from "@/server/models/company.model";
@@ -50,12 +49,6 @@ export default async function TenantLayout({
       <AttributionTracker />
       <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
       {children}
-      <LiveDoubtWidget
-        companySlug={company.slug}
-        companyName={company.name}
-        candidateName={candidate?.name}
-        candidateEmail={candidate?.email}
-      />
     </div>
   );
 }
