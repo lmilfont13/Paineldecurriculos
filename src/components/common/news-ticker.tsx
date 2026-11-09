@@ -174,8 +174,11 @@ export function NewsTicker({
   }
 
   const currentItem = news[currentIndex] || news[0];
-  const theme = CATEGORY_COLORS[currentItem.category] || CATEGORY_COLORS.VAREJO;
-  const tickerItems = [...news, ...news];
+  const theme = CATEGORY_COLORS[currentItem.category] || CATEGORY_COLORS.BRASIL;
+  // Repete o catálogo para garantir ciclo contínuo sem saltos
+  const tickerItems = news.length < 10 ? [...news, ...news, ...news, ...news] : [...news, ...news];
+  // Velocidade ideal estilo Bloomberg: visível, ativa e perfeitamente legível (25s a 60s total)
+  const tickerSpeedSeconds = Math.max(25, Math.min(60, Math.round(news.length * 1.8)));
 
   // 1. Variante Compacta (usada dentro de modais de configuração/DJ)
   if (variant === "compact") {
@@ -257,8 +260,16 @@ export function NewsTicker({
           ? "fixed bottom-0 inset-x-0 z-30"
           : "relative"
       } flex h-7 sm:h-8 w-full items-center justify-between border-y border-slate-800 bg-[#09090b] px-2 sm:px-3 text-xs text-slate-200 shadow-sm backdrop-blur-md select-none`}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => {
+        if (typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches) {
+          setIsPaused(true);
+        }
+      }}
+      onMouseLeave={() => {
+        if (typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches) {
+          setIsPaused(false);
+        }
+      }}
     >
       {/* 1. Selo Bloomberg / Canal de Notícias */}
       <div className="flex shrink-0 items-center gap-1.5 pr-2 sm:pr-3 border-r border-slate-800 mr-2 sm:mr-3">
@@ -276,10 +287,21 @@ export function NewsTicker({
         {displayMode === "ticker" ? (
           <div className="relative overflow-hidden whitespace-nowrap">
             <div
-              className={`inline-flex items-center gap-8 animate-ticker ${
-                isPaused ? "[animation-play-state:paused]" : ""
-              }`}
-              style={{ animationDuration: `${Math.max(40, news.length * 8)}s` }}
+              data-ticker="marquee"
+              className="inline-flex items-center gap-8 animate-ticker"
+              style={{
+                animationName: "ticker",
+                animationDuration: `${tickerSpeedSeconds}s`,
+                animationTimingFunction: "linear",
+                animationIterationCount: "infinite",
+                animationPlayState: isPaused ? "paused" : "running",
+                WebkitAnimationName: "ticker",
+                WebkitAnimationDuration: `${tickerSpeedSeconds}s`,
+                WebkitAnimationTimingFunction: "linear",
+                WebkitAnimationIterationCount: "infinite",
+                WebkitAnimationPlayState: isPaused ? "paused" : "running",
+                willChange: "transform",
+              }}
             >
               {tickerItems.map((item, idx) => {
                 const itemTheme = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.BRASIL;

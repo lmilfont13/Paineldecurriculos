@@ -219,7 +219,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *:not(.animate-ticker):not([data-ticker="marquee"]),
   *::before,
   *::after {
     scroll-behavior: auto !important;
@@ -238,9 +238,20 @@
   }
 }
 
+@-webkit-keyframes ticker {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+  100% {
+    -webkit-transform: translate3d(-50%, 0, 0);
+  }
+}
+
 .animate-ticker {
-  display: inline-flex;
-  animation: ticker 40s linear infinite;
+  display: inline-flex !important;
+  width: max-content !important;
+  animation: ticker 40s linear infinite !important;
+  -webkit-animation: ticker 40s linear infinite !important;
   will-change: transform;
 }
 
