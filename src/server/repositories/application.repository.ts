@@ -35,6 +35,15 @@ export async function updateAgentRun(
   return prisma.agentRun.update({ where: { id }, data });
 }
 
+/** Execuções da triagem por candidatura desde `since` (para o teto da reanálise automática). */
+export function findRecentTriageRuns(applicationIds: string[], since: Date) {
+  if (applicationIds.length === 0) return Promise.resolve([]);
+  return prisma.agentRun.findMany({
+    where: { agent: "TRIAGE", applicationId: { in: applicationIds }, createdAt: { gte: since } },
+    select: { applicationId: true, status: true, error: true },
+  });
+}
+
 const ACTIVE_RUN_STATUSES = ["QUEUED", "RUNNING"] as const;
 const ANALYZING_AI_STATES = ["WAITING", "PROCESSING"] as const;
 

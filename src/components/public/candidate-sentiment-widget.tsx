@@ -14,6 +14,11 @@ interface CandidateSentimentWidgetProps {
   candidateName?: string | null;
 }
 
+/** Lista de vagas, detalhe e formulário: momento de procurar/candidatar, não de avaliar. */
+function isBrowsingOrApplying(pathname: string): boolean {
+  return /\/vagas(\/|$)/.test(pathname) || /\/entrar(\/|$)/.test(pathname);
+}
+
 export function CandidateSentimentWidget({
   companySlug,
   companyName,
@@ -34,15 +39,17 @@ export function CandidateSentimentWidget({
       const stored = localStorage.getItem(`triagem:feedback:${companySlug}`);
       if (stored) {
         setAlreadyVoted(true);
-      } else {
-        // Exibe após 4 segundos de navegação para não incomodar na chegada imediata
+      } else if (candidateName && !isBrowsingOrApplying(window.location.pathname)) {
+        // Só pergunta a quem já usou o portal (candidato logado) e fora da
+        // lista de vagas e do formulário: na primeira visita o pop-up cobria
+        // as vagas antes de a pessoa ver qualquer coisa.
         const timer = setTimeout(() => {
           setIsOpen(true);
-        }, 4000);
+        }, 8000);
         return () => clearTimeout(timer);
       }
     } catch {}
-  }, [companySlug]);
+  }, [companySlug, candidateName]);
 
   if (!mounted) return null;
 

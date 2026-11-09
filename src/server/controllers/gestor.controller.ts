@@ -21,7 +21,7 @@ import {
   listApplicationsForCvSearch,
   listCompanyApplicantAges,
   listJobApplicantAges,
-  requestReanalysis,
+  autoRetryStuckTriage,
   getLatestPersonResumeInfo,
 } from "@/server/services/application.service";
 import {
@@ -107,23 +107,12 @@ export async function getCandidaturasPageData(jobId?: string) {
     await listCompanyApplications(user.companyId, jobId)
   );
 
-  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado que
-  // haviam ficado como NO_RESUME, FAILED ou com leitura inválida (exceto se houver impedimento de contratação).
-  const stuck = applications
-    .filter(
-      (a) =>
-        !a.hasImpediment &&
-        a.resumeUrl &&
-        (a.aiState === "NO_RESUME" ||
-          a.aiState === "FAILED" ||
-          Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
-        Date.now() - a.updatedAt.getTime() > 15_000
-    )
-    .slice(0, 2);
-  for (const app of stuck) {
-    await requestReanalysis(user.companyId, app.id).catch(() => {});
-    app.aiState = "WAITING";
-  }
+  // Reenfileira até 2 currículos que ficaram sem leitura (ex.: PDF em imagem),
+  // com teto de tentativas para um arquivo ilegível não voltar a cada visita.
+  const requeued = new Set(
+    await autoRetryStuckTriage(user.companyId, applications, { limit: 2, minAgeMs: 15_000 })
+  );
+  for (const app of applications) if (requeued.has(app.id)) app.aiState = "WAITING";
 
   const ages = await listCompanyApplicantAges(user.companyId);
   return { applications, jobs: (await listCompanyJobs(user.companyId)).filter((j) => j.status === "OPEN"), companyName: company.name, ages };
@@ -216,22 +205,12 @@ export async function getVagaDetailData(jobId: string) {
     await listCompanyApplications(user.companyId, jobId)
   );
 
-  // Reenfileira automaticamente até 3 currículos em imagem/PDF escaneado da vaga (exceto se houver impedimento de contratação)
-  const stuck = applications
-    .filter(
-      (a) =>
-        !a.hasImpediment &&
-        a.resumeUrl &&
-        (a.aiState === "NO_RESUME" ||
-          a.aiState === "FAILED" ||
-          Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
-        Date.now() - a.updatedAt.getTime() > 15_000
-    )
-    .slice(0, 2);
-  for (const app of stuck) {
-    await requestReanalysis(user.companyId, app.id).catch(() => {});
-    app.aiState = "WAITING";
-  }
+  // Reenfileira até 2 currículos que ficaram sem leitura (ex.: PDF em imagem),
+  // com teto de tentativas para um arquivo ilegível não voltar a cada visita.
+  const requeued = new Set(
+    await autoRetryStuckTriage(user.companyId, applications, { limit: 2, minAgeMs: 15_000 })
+  );
+  for (const app of applications) if (requeued.has(app.id)) app.aiState = "WAITING";
 
   const ages = await listJobApplicantAges(user.companyId, jobId);
   const questions = await getJobQuestions(user.companyId, jobId);
@@ -255,19 +234,13 @@ export async function getCandidaturaDetail(id: string) {
 
   // Se a candidatura tem currículo anexado mas ficou sem leitura do arquivo
   // (ex.: PDF em imagem da Catho antes do OCR visual), dispara a análise ao abrir.
-  const needsVisualOcrRetry =
-    !application.hasImpediment &&
-    Boolean(application.resumeUrl) &&
-    (application.aiState === "NO_RESUME" ||
-      application.aiState === "FAILED" ||
-      (application.aiState === "DONE" && !application.resumeText?.trim()) ||
-      Boolean(application.aiReasoning?.includes("Engenheiro de Software"))) &&
-    Date.now() - application.updatedAt.getTime() > 10_000;
-
-  if (needsVisualOcrRetry) {
-    await requestReanalysis(user.companyId, id).catch(() => {});
-    application.aiState = "WAITING";
-  }
+  // Com teto de tentativas: um arquivo ilegível não volta para a fila a cada abertura.
+  const requeued = await autoRetryStuckTriage(user.companyId, [application], {
+    limit: 1,
+    minAgeMs: 10_000,
+    includeDoneWithoutText: true,
+  });
+  if (requeued.length > 0) application.aiState = "WAITING";
 
   const [withPhoto] = await withPhotoUrls([application]);
   const otherApplications = await getOtherApplicationsOfPerson(

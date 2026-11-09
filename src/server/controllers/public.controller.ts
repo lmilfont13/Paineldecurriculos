@@ -12,8 +12,6 @@ import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
-import type { PublicExternalJob } from "@/server/models/external-job.model";
-import { listPublicExternalJobs } from "@/server/services/external-job.service";
 import {
   getCandidateApplication,
   getAppliedJobIds,
@@ -55,19 +53,17 @@ export async function getJobsPageData(
   company: PublicCompany;
   jobs: PublicJob[];
   appliedJobIds: string[];
-  externalJobs: PublicExternalJob[];
 } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
   const jobs = await listOpenJobs(company.id);
-  const externalJobs = await listPublicExternalJobs(company.id);
   const candidate = await getSessionCandidate();
   const appliedJobIds = candidate
     ? await getAppliedJobIds(candidate.id, jobs.map((j) => j.id))
     : [];
-  return { company, jobs, appliedJobIds, externalJobs };
+  return { company, jobs, appliedJobIds };
 }
 
 export async function getJobDetailPageData(

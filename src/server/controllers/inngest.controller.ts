@@ -15,6 +15,8 @@ export const analyzeApplicationJob = inngest.createFunction(
   {
     id: "analyze-application",
     retries: 2,
+    // No pico (87 candidaturas/dia) a IA estourou o limite de uso do provedor.
+    concurrency: { limit: 3 },
     triggers: [{ event: "application/submitted" }],
   },
   async ({ event }) => {

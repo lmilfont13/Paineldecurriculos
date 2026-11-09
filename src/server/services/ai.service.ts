@@ -5,6 +5,11 @@ import path from "node:path";
 
 import sharp from "sharp";
 import { extractImages, extractText, getDocumentProxy } from "unpdf";
+import {
+  isRateLimitError,
+  isUnreadableFileError,
+  retryDelayMs,
+} from "@/server/models/ai-retry.model";
 
 import { Prisma } from "@prisma/client";
 
@@ -67,7 +72,12 @@ export async function loadResumeBytes(resumePath: string): Promise<Uint8Array> {
   if (error || !data) {
     throw new Error(`Falha ao baixar currículo: ${error?.message}`);
   }
-  return new Uint8Array(await data.arrayBuffer());
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  // Envio interrompido no celular pode deixar o arquivo com 0 bytes.
+  if (bytes.length === 0) {
+    throw new Error("Arquivo vazio: o currículo enviado tem 0 bytes. Peça um novo arquivo ao candidato.");
+  }
+  return bytes;
 }
 
 /** MIME type inferido da extensão do caminho no Storage. */
@@ -826,7 +836,10 @@ export async function runTriageWithTracking(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (attempt > 1) {
-      const waitMs = attempt === 2 ? 2000 : 6000;
+      const waitMs = retryDelayMs(
+        attempt,
+        isRateLimitError(lastError instanceof Error ? lastError.message : String(lastError))
+      );
       await updateAgentRun(runId, {
         attempts: attempt,
         summary: `Tentando de novo (${attempt}/${maxAttempts})`,
@@ -866,6 +879,20 @@ export async function runTriageWithTracking(
     } catch (error) {
       lastError = error;
       console.error(`[triagem] Tentativa ${attempt}/${maxAttempts} falhou:`, error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (isUnreadableFileError(message)) {
+        // Arquivo vazio ou corrompido: repetir não adianta. Fica "sem
+        // currículo legível" (só campo de IA — regra 2) e o gestor pede outro.
+        await updateApplicationAi(applicationId, { aiState: "NO_RESUME" });
+        await updateAgentRun(runId, {
+          status: "FAILED",
+          attempts: attempt,
+          error: `Currículo ilegível (arquivo vazio ou corrompido): ${message}`.slice(0, 500),
+          durationMs: Date.now() - startedAt.getTime(),
+          finishedAt: new Date(),
+        });
+        return;
+      }
     }
   }
 
