@@ -74,6 +74,15 @@ export async function verifyUploadedResume(
       error: "Não recebemos o seu currículo. Envie o arquivo novamente.",
     };
   }
+  if (typeof data.size === "number" && data.size === 0) {
+    // Envio interrompido (comum no celular): o arquivo chega com 0 bytes e a
+    // IA nunca conseguiria ler. Melhor pedir de novo agora.
+    await supabase.storage.from(RESUMES_BUCKET).remove([path]);
+    return {
+      ok: false,
+      error: "O currículo chegou vazio (o envio pode ter sido interrompido). Anexe o arquivo novamente.",
+    };
+  }
   if (typeof data.size === "number" && data.size > MAX_RESUME_BYTES) {
     await supabase.storage.from(RESUMES_BUCKET).remove([path]);
     return { ok: false, error: "O currículo deve ter no máximo 5 MB." };

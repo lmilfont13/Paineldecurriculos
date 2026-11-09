@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Globe } from "lucide-react";
 
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getVagasPageData } from "@/server/controllers/gestor.controller";
@@ -42,14 +41,6 @@ export default async function VagasPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <CopyLink url={publicUrl} />
-          <Link
-            href="/vagas/externas"
-            title="Importar e gerenciar vagas do Google Vagas e portais externos"
-            className="flex h-10 items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/70 px-4 text-[13px] font-semibold text-blue-800 hover:bg-blue-100/80 transition"
-          >
-            <Globe className="size-4 text-blue-600" />
-            <span>Google Vagas</span>
-          </Link>
           <a
             href="/relatorio-geral"
             target="_blank"

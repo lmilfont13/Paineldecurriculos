@@ -88,7 +88,12 @@ import {
 } from "@/server/services/email.service";
 import { findFieldsForJob } from "@/server/services/form.service";
 import { findJobById } from "@/server/repositories/job.repository";
-import { findAgeSourcesForCompany, findAgeSourcesForJob, updateAnswerValues } from "@/server/repositories/application.repository";
+import { findAgeSourcesForCompany, findAgeSourcesForJob, findRecentTriageRuns, updateAnswerValues } from "@/server/repositories/application.repository";
+import {
+  AUTO_RETRY_WINDOW_MS,
+  canAutoRetry,
+  isTransientAiError,
+} from "@/server/models/ai-retry.model";
 import { effectiveAge } from "@/server/models/age.model";
 import { cepDigits } from "@/server/models/address.model";
 import { DEFAULT_CHANNELS, serverChannels, type ContactChannel } from "@/server/models/contact-channels.model";
@@ -502,6 +507,63 @@ export async function correctApplicationAnswers(
   return { ok: true, changed };
 }
 
+/**
+ * Candidaturas que ainda podem ser reenfileiradas sozinhas: abaixo do teto de
+ * execuções na janela. Falhas passageiras (limite de uso da IA, tempo
+ * esgotado) não contam — só tentativas que de fato rodaram ou falharam por
+ * causa do arquivo. Sem isso, um PDF vazio voltava para a fila a cada visita.
+ */
+export async function autoRetryAllowedIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const runs = await findRecentTriageRuns(ids, new Date(Date.now() - AUTO_RETRY_WINDOW_MS));
+  const counts = new Map<string, number>();
+  for (const run of runs) {
+    if (!run.applicationId) continue;
+    if (run.status === "FAILED" && isTransientAiError(run.error)) continue;
+    counts.set(run.applicationId, (counts.get(run.applicationId) ?? 0) + 1);
+  }
+  return new Set(ids.filter((id) => canAutoRetry(counts.get(id) ?? 0)));
+}
+
+type StuckCandidate = {
+  id: string;
+  aiState: string;
+  hasImpediment: boolean;
+  resumeUrl: string | null;
+  resumeText?: string | null;
+  aiReasoning?: string | null;
+  updatedAt: Date;
+};
+
+/**
+ * Reenfileira sozinho, ao abrir as telas do gestor, quem ficou sem leitura
+ * do currículo (ex.: PDF em imagem antes do OCR). Respeita o teto de
+ * execuções. Devolve os ids reenfileirados (a tela mostra "Analisando…").
+ */
+export async function autoRetryStuckTriage(
+  companyId: string,
+  apps: StuckCandidate[],
+  options: { limit: number; minAgeMs: number; includeDoneWithoutText?: boolean }
+): Promise<string[]> {
+  const stuck = apps.filter(
+    (a) =>
+      !a.hasImpediment &&
+      Boolean(a.resumeUrl) &&
+      (a.aiState === "NO_RESUME" ||
+        a.aiState === "FAILED" ||
+        (options.includeDoneWithoutText === true && a.aiState === "DONE" && !a.resumeText?.trim()) ||
+        Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
+      Date.now() - a.updatedAt.getTime() > options.minAgeMs
+  );
+  if (stuck.length === 0) return [];
+  const allowed = await autoRetryAllowedIds(stuck.map((a) => a.id));
+  const targets = stuck.filter((a) => allowed.has(a.id)).slice(0, options.limit);
+  for (const app of targets) {
+    await requestReanalysis(companyId, app.id).catch(() => {});
+  }
+  return targets.map((a) => a.id);
+}
+
 export async function requestReanalysis(
   companyId: string,
   id: string
@@ -522,14 +584,18 @@ export async function requestReanalysis(
  */
 export async function reanalyzePendingApplications(
   companyId: string,
-  options: { jobId?: string; applicationIds?: string[]; limit?: number } = {}
+  options: { jobId?: string; applicationIds?: string[]; limit?: number; auto?: boolean } = {}
 ): Promise<{ queued: number; names: string[] }> {
   const batchLimit = Math.min(options.limit ?? 10, 15);
-  const targets = await findUnevaluatedApplications(companyId, {
+  const found = await findUnevaluatedApplications(companyId, {
     jobId: options.jobId,
     applicationIds: options.applicationIds,
-    limit: batchLimit,
+    // Na recuperação automática, busca mais para sobrar após o teto.
+    limit: options.auto ? 15 : batchLimit,
   });
+  // Recuperação automática respeita o teto de execuções; pedido do gestor, não.
+  const allowed = options.auto ? await autoRetryAllowedIds(found.map((a) => a.id)) : null;
+  const targets = (allowed ? found.filter((a) => allowed.has(a.id)) : found).slice(0, batchLimit);
 
   if (targets.length === 0) {
     return { queued: 0, names: [] };
@@ -1098,7 +1164,7 @@ export async function getAiProgress(companyId: string, ids: string[]) {
       states.length === 0 || states.some((s) => s.aiState === "WAITING" || s.aiState === "FAILED");
     if (hasPendingInList) {
       lastAutoRecoverByCompany.set(companyId, now);
-      reanalyzePendingApplications(companyId, { limit: 3 }).catch((err) =>
+      reanalyzePendingApplications(companyId, { limit: 3, auto: true }).catch((err) =>
         console.error("[ia] falha na recuperação automática:", err)
       );
     }

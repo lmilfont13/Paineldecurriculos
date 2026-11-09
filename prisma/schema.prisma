@@ -48,7 +48,6 @@ model Company {
   supportConversations SupportConversation[]
   supportMessages      SupportMessage[]
   supportReports       SupportReport[]
-  externalJobs         ExternalJob[]
 }
 
 model User {
@@ -676,30 +675,4 @@ model SupportReport {
   @@index([companyId, resolvedAt])
 }
 
-/// Vaga externa agregada (ex.: Google Vagas). S� divulga��o: o candidato se
-/// inscreve na fonte original; a empresa do portal n�o conduz o processo.
-model ExternalJob {
-  id           String   @id @default(cuid())
-  companyId    String
-  /// Identificador est�vel da vaga na fonte (evita importar duas vezes).
-  externalId   String
-  title        String
-  /// Empresa anunciante (n�o � a empresa dona do portal).
-  employer     String
-  location     String?
-  description  String?
-  /// Plataforma de origem informada pelo Google (ex.: "LinkedIn", "Gupy").
-  source       String?
-  applyUrl     String
-  postedLabel  String?
-  scheduleType String?
-  isPublished  Boolean  @default(true)
-  viewsCount   Int      @default(0)
-  clicksCount  Int      @default(0)
-  createdAt    DateTime @default(now())
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([companyId, externalId])
-  @@index([companyId, isPublished])
-}
