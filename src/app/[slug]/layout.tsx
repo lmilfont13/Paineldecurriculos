@@ -2,16 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getTenant, getPublicSession } from "@/server/controllers/public.controller";
-import {
-  getActiveRadioStation,
-  getActiveRadioPlaylist,
-  getActiveRadioSpotInterval,
-  getActiveRadioSpots,
-} from "@/server/services/message-template.service";
-import { isTargetRadioSpotsEnabled } from "@/server/services/company-feature.service";
-import { CandidateRadioPlayer } from "@/components/public/candidate-radio-player";
-import { NewsTicker } from "@/components/common/news-ticker";
-import { CandidateSentimentWidget } from "@/components/public/candidate-sentiment-widget";
 import { LiveDoubtWidget } from "@/components/public/live-doubt-widget";
 import { AttributionTracker } from "@/components/public/attribution-tracker";
 import { PublicPresenceTracker } from "@/components/gestor/online-presence";
@@ -51,38 +41,15 @@ export default async function TenantLayout({
   const company = await getTenant(slug);
   if (!company) notFound();
   const candidate = await getPublicSession();
-  const [radioStation, spotsEnabled, customPlaylist, spotIntervalMinutes, customSpots] = await Promise.all([
-    getActiveRadioStation(company.id),
-    isTargetRadioSpotsEnabled(company.id),
-    getActiveRadioPlaylist(company.id),
-    getActiveRadioSpotInterval(company.id),
-    getActiveRadioSpots(company.id),
-  ]);
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-[#faf8f6] text-[#1c1917] pb-24"
+      className="flex min-h-screen flex-col bg-[#faf8f6] text-[#1c1917] pb-10"
       style={brandCssVars(company) as React.CSSProperties}
     >
       <AttributionTracker />
       <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
-      <NewsTicker variant="bloomberg" position="top" defaultDisplay="ticker" />
       {children}
-      <CandidateRadioPlayer
-        station={radioStation}
-        companyName={company.name}
-        companySlug={company.slug}
-        candidateName={candidate?.name}
-        spotsEnabled={spotsEnabled}
-        playlist={customPlaylist}
-        spotIntervalMinutes={spotIntervalMinutes}
-        spots={customSpots}
-      />
-      <CandidateSentimentWidget
-        companySlug={company.slug}
-        companyName={company.name}
-        candidateName={candidate?.name}
-      />
       <LiveDoubtWidget
         companySlug={company.slug}
         companyName={company.name}

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GestorRadioPlayer, type RadioStation } from "@/components/gestor/radio-player";
+import type { RadioStation } from "@/components/gestor/radio-player";
 import { OnlineCounterBadge } from "@/components/gestor/online-presence";
 import { CommandPaletteTrigger, openCommandPalette } from "@/components/gestor/command-palette";
 import { SoundToggleControl } from "@/components/gestor/sound-notification-listener";
@@ -204,7 +204,6 @@ export function GestorSidebar({
             userName={userName}
           />
         )}
-        <GestorRadioPlayer initialStation={radioStation} canManage={canManageRadio} companySlug={companySlug} />
       </div>
       <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">

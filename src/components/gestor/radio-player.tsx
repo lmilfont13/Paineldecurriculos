@@ -40,7 +40,7 @@ import { createPortal } from "react-dom";
 
 import { createClient } from "@/lib/supabase/client";
 import { playVoiceSpeech, stopVoiceSpeech } from "@/lib/audio-speech";
-import { NewsTicker } from "@/components/common/news-ticker";
+
 import {
   generateRadioSpotAction,
   getMusicCatalogAction,
@@ -2074,10 +2074,7 @@ export function GestorRadioPlayer({
                 </div>
               </div>
 
-              {/* Letreiro de Notícias de Varejo e Economia no Estúdio */}
-              <div className="mt-2.5">
-                <NewsTicker variant="compact" />
-              </div>
+
             </div>
 
             <div className="flex items-center gap-1 border-b border-[#e4e4e7] bg-white px-6 text-xs overflow-x-auto">
