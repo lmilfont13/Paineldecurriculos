@@ -31,8 +31,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <div className="absolute -bottom-28 -left-20 size-72 rounded-full border border-white/[0.04]" />
             <div className="relative flex h-full flex-col">
               <div className="flex items-center gap-3">
-                <span className="flex size-11 items-center justify-center rounded-[14px] text-xs font-bold text-white shadow-[0_10px_35px_rgba(129,18,1,0.3)]" style={{ backgroundColor: "var(--brand-primary, #811201)" }}>T</span>
-                <div><p className="text-sm font-semibold tracking-wide">Triagem</p><p className="text-[10px] uppercase tracking-[0.16em] text-white/35">SaaS de recrutamento</p></div>
+                <span className="flex size-11 items-center justify-center rounded-[14px] shadow-[0_10px_35px_rgba(129,18,1,0.3)]" style={{ backgroundColor: "var(--brand-primary, #811201)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/tarhget-icon-white.png" alt="" className="size-7 object-contain" />
+                </span>
+                <div><p className="text-sm font-semibold tracking-wide">Triagem · Tarhget</p><p className="text-[10px] uppercase tracking-[0.16em] text-white/35">SaaS de recrutamento</p></div>
               </div>
 
               <div className="mt-14 max-w-[560px] xl:mt-20">
@@ -75,7 +78,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 <div className="flex items-center justify-between"><div><p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[#aaa39c]">Empresas com oportunidades</p><p className="mt-1 text-[12px] font-medium text-[#57534e]">Escolha onde você quer trabalhar</p></div><span className="text-[10px] text-[#b7b0aa]">{companies.length} {companies.length === 1 ? "empresa" : "empresas"}</span></div>
                 <ul className="mt-5 space-y-2.5">
                   {companies.map((c) => <li key={c.slug}><Link href={`/${c.slug}/vagas`} className="group flex items-center gap-3 rounded-2xl border border-[#e9e3de] bg-[#fcfbfa] px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-[#d7cdc5] hover:bg-white hover:shadow-md">
-                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-bold text-white shadow-sm" style={{ background: c.primaryColor ?? "#811201" }}>{c.logoUrl ? <img src={c.logoUrl} alt="" className="size-full object-cover" /> : c.name.slice(0,2).toUpperCase()}</span>
+                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[10px] font-bold text-white shadow-sm" style={{ background: c.primaryColor ?? "#811201" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.logoUrl || "/images/tarhget-icon-white.png"} alt="" className="size-6 object-contain" />
+                    </span>
                     <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-semibold text-[#1c1917]">{c.name}</span>{c.sector && <span className="block truncate text-[11px] text-[#a8a29e]">{c.sector}</span>}</span>
                     {c._count.jobs > 0 && <span className="rounded-full bg-[#f5f1ed] px-2 py-1 text-[10px] font-semibold text-[#78716c]">{c._count.jobs} {c._count.jobs === 1 ? "vaga" : "vagas"}</span>}
                     <span className="text-lg text-[#b7aaa3] transition-transform group-hover:translate-x-0.5">→</span>

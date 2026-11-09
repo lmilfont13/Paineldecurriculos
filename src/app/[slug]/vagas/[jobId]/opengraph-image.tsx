@@ -71,7 +71,7 @@ export default async function Image({
               <img
                 src={company.logoUrl}
                 alt={company.name}
-                style={{ width: "64px", height: "64px", objectFit: "contain", borderRadius: "12px", background: "#fff", padding: "4px", border: "1px solid #e4e4e7" }}
+                style={{ width: "64px", height: "64px", objectFit: "contain" }}
               />
             ) : (
               <div

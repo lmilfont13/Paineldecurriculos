@@ -21,44 +21,30 @@ export function companyInitials(name: string): string {
 
 /** Logo sobre a faixa da marca: a versão completa, pintada de branco. */
 function BrandLogo({ company }: { company: PublicCompany }) {
-  if (company.logoFullUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={company.logoFullUrl}
-        alt={company.name}
-        className="h-[60px] w-auto object-contain md:h-[76px]"
-        style={{ filter: "brightness(0) invert(1)" }}
-      />
-    );
-  }
+  const logoSrc = company.logoFullUrl || "/images/tarhget-logo-white.png";
+  const isWhitePreRendered = logoSrc.includes("white");
   return (
-    <span className="text-lg font-bold text-white">{company.name}</span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoSrc}
+      alt={company.name}
+      className="h-[52px] w-auto max-w-[220px] object-contain md:h-[68px]"
+      style={!isWhitePreRendered ? { filter: "brightness(0) invert(1)" } : undefined}
+    />
   );
 }
 
 /** Logo sobre fundo claro: o símbolo colorido + o nome. */
 function LightLogo({ company }: { company: PublicCompany }) {
+  const iconSrc = company.logoUrl || "/images/tarhget-icon.png";
   return (
     <span className="flex items-center gap-2.5">
-      {company.logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={company.logoUrl}
-          alt=""
-          className="size-9 object-contain"
-        />
-      ) : (
-        <span
-          className="flex size-8 items-center justify-center rounded-[7px] text-[11px] font-bold"
-          style={{
-            backgroundColor: "var(--brand-primary)",
-            color: "var(--brand-foreground)",
-          }}
-        >
-          {companyInitials(company.name)}
-        </span>
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={iconSrc}
+        alt={company.name}
+        className="size-9 object-contain"
+      />
       <span className="text-[15px] font-semibold tracking-[0.2px] text-[#1c1917]">
         {company.name}
       </span>
@@ -253,12 +239,17 @@ export async function CompanyHeader({
 
 /** Rodapé do fluxo público. */
 export function CompanyFooter({ company }: { company: PublicCompany }) {
+  const iconSrc = company.logoUrl || "/images/tarhget-icon.png";
   return (
     <footer className="mt-24 border-t border-[#ebe7e3]">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-1 px-5 py-8 text-xs text-[#a8a29e] sm:flex-row sm:items-center sm:justify-between md:px-8">
-        <span>
-          {company.name}
-          {company.sector ? ` · ${company.sector}` : ""}
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-2 px-5 py-8 text-xs text-[#a8a29e] sm:flex-row sm:items-center sm:justify-between md:px-8">
+        <span className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={iconSrc} alt="" className="size-4 object-contain opacity-75" />
+          <span>
+            {company.name}
+            {company.sector ? ` · ${company.sector}` : ""}
+          </span>
         </span>
         <div className="flex items-center gap-4">
           <Link

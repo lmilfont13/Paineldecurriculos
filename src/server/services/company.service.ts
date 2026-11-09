@@ -38,8 +38,14 @@ export async function getPrivacyContactEmail(slug: string): Promise<string | nul
 }
 
 /** Empresa do gestor logado (uso interno — dados completos). */
-export function getCompanyById(id: string) {
-  return findCompanyById(id);
+export async function getCompanyById(id: string) {
+  const company = await findCompanyById(id);
+  if (!company) return null;
+  return {
+    ...company,
+    logoUrl: company.logoUrl || "/images/tarhget-icon.png",
+    logoFullUrl: company.logoFullUrl || "/images/tarhget-logo.png",
+  };
 }
 
 /** Lista de empresas ativas para o seletor público da tela de login. */

@@ -50,31 +50,17 @@ function CompanyMark({
   logoUrl: string | null;
   size?: number;
 }) {
-  if (logoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logoUrl}
-        alt={name}
-        width={size}
-        height={size}
-        className="shrink-0 rounded-[7px] bg-white object-contain p-0.5 ring-1 ring-[#e4e4e7]"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
+  const src = logoUrl || "/images/tarhget-icon.png";
   return (
-    <span
-      className="flex shrink-0 items-center justify-center rounded-[7px] text-[11px] font-bold"
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: "var(--brand-primary)",
-        color: "var(--brand-foreground)",
-      }}
-    >
-      {initials}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
   );
 }
 

@@ -17,7 +17,10 @@ export async function generateMetadata({
   return {
     title: `Vagas · ${company.name}`,
     description: company.heroSubtitle,
-    ...(company.logoUrl ? { icons: { icon: company.logoUrl } } : {}),
+    icons: {
+      icon: company.logoUrl || "/images/tarhget-icon.png",
+      apple: "/images/tarhget-icon.png",
+    },
     // Empresa de demonstração: acessível por link, mas fora do Google.
     ...(isHiddenFromDirectory(company.slug) ? { robots: { index: false, follow: false } } : {}),
   };

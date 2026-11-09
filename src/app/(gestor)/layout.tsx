@@ -18,7 +18,12 @@ import {
 
 export async function generateMetadata(): Promise<Metadata> {
   const { company } = await getGestorShell();
-  return company.logoUrl ? { icons: { icon: company.logoUrl } } : {};
+  return {
+    icons: {
+      icon: company.logoUrl || "/images/tarhget-icon.png",
+      apple: "/images/tarhget-icon.png",
+    },
+  };
 }
 
 /**

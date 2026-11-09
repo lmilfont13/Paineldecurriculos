@@ -69,10 +69,20 @@ export default async function PainelPage() {
   if (stats.totalJobs === 0) {
     return (
       <>
-        <h1 className="text-2xl font-bold text-[#0a0a0a]">Olá, {firstName}</h1>
-        <p className="mt-2 text-sm text-[#71717a]">
-          Vamos colocar a {companyName} para receber candidaturas.
-        </p>
+        <div className="flex items-center gap-3.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/tarhget-icon.png"
+            alt={companyName}
+            className="size-11 object-contain shrink-0"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-[#0a0a0a]">Olá, {firstName}</h1>
+            <p className="mt-1 text-sm text-[#71717a]">
+              Vamos colocar a {companyName} para receber candidaturas.
+            </p>
+          </div>
+        </div>
 
         <div className="mt-8 max-w-[560px] rounded-2xl border border-[#e4e4e7] bg-white p-8">
           <span
@@ -126,15 +136,23 @@ export default async function PainelPage() {
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0a0a0a]">
-            Olá, {firstName}
-          </h1>
-          <p className="mt-2 text-sm text-[#71717a]">
-            {nobodyYet
-              ? `Painel de recrutamento da ${companyName}.`
-              : `${stats.newApplications7d} candidatura${stats.newApplications7d === 1 ? "" : "s"} e ${stats.decided7d} ${stats.decided7d === 1 ? "decisão" : "decisões"} nos últimos 7 dias.`}
-          </p>
+        <div className="flex items-center gap-3.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/tarhget-icon.png"
+            alt={companyName}
+            className="size-11 object-contain shrink-0"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-[#0a0a0a]">
+              Olá, {firstName}
+            </h1>
+            <p className="mt-1 text-sm text-[#71717a]">
+              {nobodyYet
+                ? `Painel de recrutamento da ${companyName}.`
+                : `${stats.newApplications7d} candidatura${stats.newApplications7d === 1 ? "" : "s"} e ${stats.decided7d} ${stats.decided7d === 1 ? "decisão" : "decisões"} nos últimos 7 dias.`}
+            </p>
+          </div>
         </div>
         <Link
           href="/vagas/nova"
