@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { playVoiceSpeech } from "@/lib/audio-speech";
-import { NewsTicker } from "@/components/common/news-ticker";
 import {
   CURATED_STATIONS,
   TARGET_PLAYLIST_TRACKS,
@@ -850,7 +849,6 @@ export function CandidateRadioPlayer({
         aria-label="Rádio da Empresa"
         className="fixed bottom-4 inset-x-3 sm:inset-x-6 z-40 max-w-xl mx-auto"
       >
-        <div className="mb-2"><NewsTicker variant="compact" /></div>
         <div className="relative overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all hover:border-[#0a0a0a]/20 sm:p-3.5">
           {/* Notificação Especial VIP de Alô / Recado no Ar */}
           {liveAnnouncement && (

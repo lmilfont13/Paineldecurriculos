@@ -66,7 +66,7 @@ export default async function TenantLayout({
     >
       <AttributionTracker />
       <PublicPresenceTracker slug={company.slug} candidateName={candidate?.name} />
-      <NewsTicker variant="bar" />
+      <NewsTicker variant="bloomberg" position="top" defaultDisplay="ticker" />
       {children}
       <CandidateRadioPlayer
         station={radioStation}
