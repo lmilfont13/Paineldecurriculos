@@ -9,7 +9,6 @@ import { getCompanyBirthdaysAction } from "@/server/controllers/birthday.control
 import { formatWaiting } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { BirthdayCardButtonAndModal } from "@/components/gestor/birthday-card-modal";
-import { CandidateSentimentCard } from "@/components/gestor/candidate-sentiment-card";
 import { jobStatusLabels } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Painel · Triagem" };
@@ -442,11 +441,6 @@ export default async function PainelPage() {
           </div>
         </>
       )}
-
-      {/* Termômetro de Satisfação e Experiência dos Candidatos (Emojis & CSAT) */}
-      <div className="mt-10 max-w-[848px]">
-        <CandidateSentimentCard />
-      </div>
     </>
   );
 }
