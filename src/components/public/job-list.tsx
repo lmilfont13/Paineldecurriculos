@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   CheckCircle2,
@@ -12,6 +12,11 @@ import {
   Info,
   MapPin,
 } from "lucide-react";
+
+import {
+  recordExternalJobClickAction,
+  recordExternalJobViewsAction,
+} from "@/server/controllers/external-job.controller";
 
 import {
   contractLabels,
@@ -216,8 +221,20 @@ function JobCard({
 
 /* ─── cartão da vaga externa ──────────────────────────────── */
 
-function ExternalJobCard({ job }: { job: PublicExternalJob }) {
+function ExternalJobCard({
+  job,
+  onApplyClick,
+}: {
+  job: PublicExternalJob;
+  onApplyClick?: (id: string) => void;
+}) {
   const [open, setOpen] = useState(false);
+
+  const handleApply = () => {
+    if (onApplyClick) {
+      onApplyClick(job.id);
+    }
+  };
 
   return (
     <li className="overflow-hidden rounded-2xl border border-[#ebe7e3] bg-white shadow-[0_1px_3px_rgba(28,25,23,0.05)] transition-all hover:border-[#ded8d1] hover:shadow-[0_4px_16px_rgba(28,25,23,0.08)]">
@@ -295,6 +312,7 @@ function ExternalJobCard({ job }: { job: PublicExternalJob }) {
               href={job.applyUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleApply}
               className="flex-1 sm:flex-initial inline-flex h-11 sm:h-9 items-center justify-center gap-1.5 rounded-xl bg-[#1c1917] px-4 text-[12px] font-bold text-white shadow-2xs hover:bg-black transition active:scale-98"
             >
               <span>Candidatar-se na Fonte</span>
@@ -317,6 +335,7 @@ function ExternalJobCard({ job }: { job: PublicExternalJob }) {
               href={job.applyUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleApply}
               className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1c1917] px-4 text-[13px] font-bold text-white shadow-xs hover:bg-black transition active:scale-98"
             >
               <span>Acessar Página de Candidatura na Fonte ↗</span>
@@ -402,6 +421,34 @@ export function JobList({
       );
     });
   }, [externalJobs, query]);
+
+  // Rastreia visualizações (impressões) das vagas do mural de oportunidades
+  useEffect(() => {
+    if (activeTab !== "external" || !filteredExternal.length) return;
+
+    try {
+      const storageKey = `triagem_viewed_ext_${slug}`;
+      const rawStored = sessionStorage.getItem(storageKey);
+      const viewedSet = new Set<string>(rawStored ? JSON.parse(rawStored) : []);
+      const newToTrack = filteredExternal
+        .map((j) => j.id)
+        .filter((id) => !viewedSet.has(id));
+
+      if (newToTrack.length > 0) {
+        newToTrack.forEach((id) => viewedSet.add(id));
+        sessionStorage.setItem(storageKey, JSON.stringify(Array.from(viewedSet)));
+        recordExternalJobViewsAction(newToTrack).catch(() => {});
+      }
+    } catch {
+      // Fallback silencioso
+      const ids = filteredExternal.slice(0, 30).map((j) => j.id);
+      recordExternalJobViewsAction(ids).catch(() => {});
+    }
+  }, [activeTab, filteredExternal, slug]);
+
+  const handleApplyClick = (jobId: string) => {
+    recordExternalJobClickAction(jobId).catch(() => {});
+  };
 
   const modeOptions = Object.entries(workModeLabels).map(([value, label]) => ({
     value,
@@ -607,7 +654,7 @@ export function JobList({
           ) : (
             <ul className="mt-4 space-y-3">
               {filteredExternal.map((job) => (
-                <ExternalJobCard key={job.id} job={job} />
+                <ExternalJobCard key={job.id} job={job} onApplyClick={handleApplyClick} />
               ))}
             </ul>
           )}

@@ -15,6 +15,7 @@ export default async function ExternalJobsManagerPage() {
       initialJobs={data.jobs}
       companySlug={data.companySlug}
       searchConfigured={data.searchConfigured}
+      initialStats={data.stats}
     />
   );
 }

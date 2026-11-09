@@ -17,6 +17,8 @@ import {
   findExistingExternalIds,
   findExternalJobsByCompany,
   findPublishedExternalJobs,
+  incrementExternalJobClick,
+  incrementExternalJobViews,
   insertExternalJobs,
   setExternalJobPublished,
 } from "@/server/repositories/external-job.repository";
@@ -621,4 +623,15 @@ export async function toggleExternalJob(companyId: string, id: string, isPublish
 
 export async function removeExternalJob(companyId: string, id: string) {
   return (await deleteExternalJob(companyId, id)) > 0;
+}
+
+export async function trackExternalJobViews(jobIds: string[]): Promise<number> {
+  const safeIds = Array.from(new Set(jobIds.filter((id) => typeof id === "string" && id.trim().length > 0))).slice(0, 100);
+  if (safeIds.length === 0) return 0;
+  return incrementExternalJobViews(safeIds);
+}
+
+export async function trackExternalJobClick(jobId: string): Promise<boolean> {
+  if (!jobId || typeof jobId !== "string") return false;
+  return (await incrementExternalJobClick(jobId.trim())) > 0;
 }

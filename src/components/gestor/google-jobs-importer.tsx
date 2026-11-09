@@ -1,25 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
   ArrowLeft,
+  BarChart2,
   Briefcase,
   Check,
   CheckCircle2,
   Code2,
   Copy,
   ExternalLink,
+  Eye,
   Globe,
   Info,
   Loader2,
   MapPin,
+  MousePointerClick,
   Plus,
   RefreshCw,
   Search,
   ShieldCheck,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 import {
   createSingleExternalJobAction,
@@ -30,6 +34,8 @@ import {
   toggleExternalJobAction,
 } from "@/server/controllers/external-job.controller";
 import {
+  calculateCtr,
+  calculateExternalJobsSummary,
   isGenericSearchUrl,
   type ExternalJobCandidate,
   type WorkplaceTypeFilter,
@@ -44,6 +50,9 @@ interface ImportedExternalJobItem {
   applyUrl: string;
   postedLabel: string | null;
   isPublished: boolean;
+  viewsCount?: number;
+  clicksCount?: number;
+  ctr?: number;
   createdAt: string;
 }
 
@@ -51,10 +60,18 @@ export function GoogleJobsImporter({
   initialJobs,
   companySlug,
   searchConfigured,
+  initialStats,
 }: {
   initialJobs: ImportedExternalJobItem[];
   companySlug: string;
   searchConfigured: boolean;
+  initialStats?: {
+    totalJobs: number;
+    publishedJobs: number;
+    totalViews: number;
+    totalClicks: number;
+    averageCtr: number;
+  };
 }) {
   const [jobsList, setJobsList] = useState<ImportedExternalJobItem[]>(initialJobs);
   const [activeTab, setActiveTab] = useState<"search" | "url">("search");
@@ -86,6 +103,30 @@ export function GoogleJobsImporter({
   const [manualDescription, setManualDescription] = useState("");
   const [savingManual, setSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+
+  // Ordenação e Telemetria
+  const [sortMode, setSortMode] = useState<"recent" | "views" | "clicks" | "ctr">("recent");
+
+  const stats = useMemo(() => {
+    return calculateExternalJobsSummary(jobsList);
+  }, [jobsList]);
+
+  const sortedJobs = useMemo(() => {
+    return [...jobsList].sort((a, b) => {
+      if (sortMode === "views") {
+        return (b.viewsCount ?? 0) - (a.viewsCount ?? 0);
+      }
+      if (sortMode === "clicks") {
+        return (b.clicksCount ?? 0) - (a.clicksCount ?? 0);
+      }
+      if (sortMode === "ctr") {
+        const ctrA = calculateCtr(a.clicksCount ?? 0, a.viewsCount ?? 0);
+        const ctrB = calculateCtr(b.clicksCount ?? 0, b.viewsCount ?? 0);
+        return ctrB - ctrA;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [jobsList, sortMode]);
 
   // Ação: Buscar no Google Vagas (Cargo opcional — localidade ou modalidade já bastam!)
   const handleSearch = async (e: React.FormEvent) => {
@@ -187,6 +228,9 @@ export function GoogleJobsImporter({
             applyUrl: job.applyUrl,
             postedLabel: job.postedLabel,
             isPublished: true,
+            viewsCount: 0,
+            clicksCount: 0,
+            ctr: 0,
             createdAt: new Date().toISOString(),
           },
           ...prev,
@@ -248,6 +292,9 @@ export function GoogleJobsImporter({
           applyUrl: job.applyUrl,
           postedLabel: job.postedLabel,
           isPublished: true,
+          viewsCount: 0,
+          clicksCount: 0,
+          ctr: 0,
           createdAt: new Date().toISOString(),
         }));
         setJobsList((prev) => [...newItems, ...prev]);
@@ -320,6 +367,9 @@ export function GoogleJobsImporter({
             applyUrl: directUrl.trim(),
             postedLabel: "Recém-adicionada",
             isPublished: true,
+            viewsCount: 0,
+            clicksCount: 0,
+            ctr: 0,
             createdAt: new Date().toISOString(),
           },
           ...prev,
@@ -973,27 +1023,117 @@ export function GoogleJobsImporter({
         )}
       </div>
 
-      {/* Lista de Vagas Externas Cadastradas no Portal */}
+      {/* Dashboard de Métricas e Telemetria do Mural */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-[#0a0a0a]">
-              Vagas Externas Ativas no Portal ({jobsList.length})
-            </h2>
-            <p className="text-xs text-[#71717a]">
-              Estas oportunidades estão visíveis no mural público do seu portal para apoiar os candidatos.
+        <div>
+          <h2 className="text-base font-bold text-[#0a0a0a] flex items-center gap-2">
+            <BarChart2 className="size-4 text-purple-600" />
+            <span>Métricas e Desempenho do Mural de Oportunidades</span>
+          </h2>
+          <p className="text-xs text-[#71717a]">
+            Acompanhe quantas pessoas visualizaram e clicaram para se candidatar nas vagas externas divulgadas no seu portal.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Card 1: Vagas no Mural */}
+          <div className="rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-[#71717a] mb-1.5">
+              <span className="text-xs font-semibold">Vagas no Mural</span>
+              <Briefcase className="size-4 text-[#71717a]" />
+            </div>
+            <div className="text-2xl font-black text-[#0a0a0a] tracking-tight">
+              {stats.totalJobs}
+            </div>
+            <p className="text-[11px] text-[#71717a] mt-0.5">
+              <span className="text-emerald-700 font-bold">{stats.publishedJobs}</span> ativas no portal
             </p>
           </div>
 
-          <Link
-            href={`/${companySlug}/vagas`}
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
-            title="Abrir o portal público de vagas em uma nova aba"
-          >
-            <Globe className="size-3.5 text-emerald-600" />
-            <span>Ver Portal Público ao Vivo ↗</span>
-          </Link>
+          {/* Card 2: Visualizações */}
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-blue-700 mb-1.5">
+              <span className="text-xs font-semibold">Visualizações</span>
+              <Eye className="size-4 text-blue-600" />
+            </div>
+            <div className="text-2xl font-black text-blue-950 tracking-tight">
+              {stats.totalViews.toLocaleString("pt-BR")}
+            </div>
+            <p className="text-[11px] text-blue-700/80 mt-0.5">
+              Candidatos que viram o mural
+            </p>
+          </div>
+
+          {/* Card 3: Cliques */}
+          <div className="rounded-2xl border border-purple-100 bg-purple-50/60 p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-purple-700 mb-1.5">
+              <span className="text-xs font-semibold">Cliques p/ Inscrição</span>
+              <MousePointerClick className="size-4 text-purple-600" />
+            </div>
+            <div className="text-2xl font-black text-purple-950 tracking-tight">
+              {stats.totalClicks.toLocaleString("pt-BR")}
+            </div>
+            <p className="text-[11px] text-purple-700/80 mt-0.5">
+              Cliques no link oficial da vaga
+            </p>
+          </div>
+
+          {/* Card 4: Taxa de Conversão */}
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-emerald-700 mb-1.5">
+              <span className="text-xs font-semibold">Taxa de Interesse (CTR)</span>
+              <TrendingUp className="size-4 text-emerald-600" />
+            </div>
+            <div className="text-2xl font-black text-emerald-950 tracking-tight">
+              {stats.averageCtr}%
+            </div>
+            <p className="text-[11px] text-emerald-700/80 mt-0.5">
+              Média de cliques / visualizações
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Vagas Externas Cadastradas no Portal */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-bold text-[#0a0a0a]">
+              Vagas Externas Cadastradas ({jobsList.length})
+            </h3>
+            <p className="text-xs text-[#71717a]">
+              Oportunidades em exibição no mural público da sua empresa.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Seletor de Ordenação */}
+            {jobsList.length > 0 && (
+              <div className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-2.5 py-1.5 text-xs text-[#71717a] shadow-2xs">
+                <span className="font-medium text-[#a1a1aa]">Ordenar:</span>
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as "recent" | "views" | "clicks" | "ctr")}
+                  className="bg-transparent font-semibold text-[#0a0a0a] focus:outline-none cursor-pointer"
+                >
+                  <option value="recent">Mais Recentes</option>
+                  <option value="views">Mais Vistas (👁️)</option>
+                  <option value="clicks">Mais Clicadas (🖱️)</option>
+                  <option value="ctr">Maior Taxa CTR (%)</option>
+                </select>
+              </div>
+            )}
+
+            <Link
+              href={`/${companySlug}/vagas`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs"
+              title="Abrir o portal público de vagas em uma nova aba"
+            >
+              <Globe className="size-3.5 text-emerald-600" />
+              <span>Ver Portal Público ao Vivo ↗</span>
+            </Link>
+          </div>
         </div>
 
         {jobsList.length === 0 ? (
@@ -1003,67 +1143,98 @@ export function GoogleJobsImporter({
           </div>
         ) : (
           <>
-            {/* 1. VISUALIZAÇÃO MOBILE (CARDS AMPLOS E TÁTEIS) */}
+            {/* 1. VISUALIZAÇÃO MOBILE (CARDS AMPLOS E TÁTEIS COM TELEMETRIA) */}
             <div className="block md:hidden space-y-3">
-              {jobsList.map((j) => (
-                <div
-                  key={j.id}
-                  className="rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-[15px] font-bold text-[#0a0a0a] leading-snug">
-                        {j.title}
-                      </h4>
-                      <p className="text-xs text-[#52525b] mt-0.5 font-medium">
-                        {j.employer} {j.location ? `· ${j.location}` : ""}
-                      </p>
+              {sortedJobs.map((j) => {
+                const jobCtr = calculateCtr(j.clicksCount ?? 0, j.viewsCount ?? 0);
+                return (
+                  <div
+                    key={j.id}
+                    className="rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-[15px] font-bold text-[#0a0a0a] leading-snug">
+                          {j.title}
+                        </h4>
+                        <p className="text-xs text-[#52525b] mt-0.5 font-medium">
+                          {j.employer} {j.location ? `· ${j.location}` : ""}
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[10px] font-medium text-[#71717a] shrink-0">
+                        via {j.source || "Google Vagas"}
+                      </span>
                     </div>
 
-                    <span className="rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[10px] font-medium text-[#71717a] shrink-0">
-                      via {j.source || "Google Vagas"}
-                    </span>
-                  </div>
+                    {/* Bloco de Métricas da Vaga */}
+                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-[#fafaf9] p-2.5 text-center text-xs border border-[#f4f4f5]">
+                      <div>
+                        <span className="block text-[10px] text-[#71717a] font-medium">Visualizações</span>
+                        <span className="font-bold text-[#0a0a0a] flex items-center justify-center gap-1 mt-0.5">
+                          <Eye className="size-3 text-blue-500" />
+                          {j.viewsCount ?? 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-[#71717a] font-medium">Cliques</span>
+                        <span className="font-bold text-[#0a0a0a] flex items-center justify-center gap-1 mt-0.5">
+                          <MousePointerClick className="size-3 text-purple-500" />
+                          {j.clicksCount ?? 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-[#71717a] font-medium">Taxa (CTR)</span>
+                        <span
+                          className={`font-bold block mt-0.5 ${
+                            jobCtr > 0 ? "text-emerald-700" : "text-[#71717a]"
+                          }`}
+                        >
+                          {jobCtr}%
+                        </span>
+                      </div>
+                    </div>
 
-                  <div className="pt-2.5 border-t border-[#f4f4f5] flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePublished(j.id, j.isPublished)}
-                      className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-xs font-bold transition active:scale-98 ${
-                        j.isPublished
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      <span className={`size-2 rounded-full ${j.isPublished ? "bg-emerald-500" : "bg-slate-400"}`} />
-                      <span>{j.isPublished ? "Publicada no Portal" : "Oculta do Portal"}</span>
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={j.applyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex size-9 items-center justify-center rounded-xl text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition border border-[#e4e4e7]"
-                        title="Testar link na fonte"
-                      >
-                        <ExternalLink className="size-4" />
-                      </a>
+                    <div className="pt-2.5 border-t border-[#f4f4f5] flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => handleDelete(j.id, j.title)}
-                        className="inline-flex size-9 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition border border-rose-100"
-                        title="Remover do mural"
+                        onClick={() => handleTogglePublished(j.id, j.isPublished)}
+                        className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-xs font-bold transition active:scale-98 ${
+                          j.isPublished
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
                       >
-                        <Trash2 className="size-4" />
+                        <span className={`size-2 rounded-full ${j.isPublished ? "bg-emerald-500" : "bg-slate-400"}`} />
+                        <span>{j.isPublished ? "Publicada no Portal" : "Oculta do Portal"}</span>
                       </button>
+
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={j.applyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex size-9 items-center justify-center rounded-xl text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition border border-[#e4e4e7]"
+                          title="Testar link na fonte"
+                        >
+                          <ExternalLink className="size-4" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(j.id, j.title)}
+                          className="inline-flex size-9 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition border border-rose-100"
+                          title="Remover do mural"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* 2. VISUALIZAÇÃO DESKTOP (TABELA TRADICIONAL) */}
+            {/* 2. VISUALIZAÇÃO DESKTOP (TABELA COM COLUNAS DE TELEMETRIA) */}
             <div className="hidden md:block rounded-2xl border border-[#e4e4e7] bg-white overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -1073,66 +1244,95 @@ export function GoogleJobsImporter({
                       <th className="py-3 px-4">Empresa Anunciante</th>
                       <th className="py-3 px-4">Cidade</th>
                       <th className="py-3 px-4">Fonte</th>
+                      <th className="py-3 px-4 text-center">Visualizações</th>
+                      <th className="py-3 px-4 text-center">Cliques</th>
+                      <th className="py-3 px-4 text-center">Conversão (CTR)</th>
                       <th className="py-3 px-4">Status no Portal</th>
                       <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#f4f4f5]">
-                    {jobsList.map((j) => (
-                      <tr key={j.id} className="hover:bg-[#fafaf9] transition">
-                        <td className="py-3 px-4 font-bold text-[#0a0a0a]">
-                          <div className="flex items-center gap-2">
-                            <span>{j.title}</span>
-                            {j.postedLabel && (
-                              <span className="text-[10px] font-normal text-[#a1a1aa]">
-                                ({j.postedLabel})
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-[#52525b]">{j.employer}</td>
-                        <td className="py-3 px-4 text-[#71717a]">{j.location || "—"}</td>
-                        <td className="py-3 px-4">
-                          <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#71717a]">
-                            {j.source || "Google Vagas"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            type="button"
-                            onClick={() => handleTogglePublished(j.id, j.isPublished)}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                              j.isPublished
-                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                : "bg-[#f4f4f5] text-[#71717a] hover:bg-[#e4e4e7]"
-                            }`}
-                          >
-                            {j.isPublished ? "Publicada" : "Oculta"}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            <a
-                              href={j.applyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition"
-                              title="Testar link externo de inscrição"
+                    {sortedJobs.map((j) => {
+                      const jobCtr = calculateCtr(j.clicksCount ?? 0, j.viewsCount ?? 0);
+                      return (
+                        <tr key={j.id} className="hover:bg-[#fafaf9] transition">
+                          <td className="py-3 px-4 font-bold text-[#0a0a0a]">
+                            <div className="flex items-center gap-2">
+                              <span>{j.title}</span>
+                              {j.postedLabel && (
+                                <span className="text-[10px] font-normal text-[#a1a1aa]">
+                                  ({j.postedLabel})
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-[#52525b]">{j.employer}</td>
+                          <td className="py-3 px-4 text-[#71717a]">{j.location || "—"}</td>
+                          <td className="py-3 px-4">
+                            <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#71717a]">
+                              {j.source || "Google Vagas"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#0a0a0a]">
+                              <Eye className="size-3 text-blue-500" />
+                              {(j.viewsCount ?? 0).toLocaleString("pt-BR")}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#0a0a0a]">
+                              <MousePointerClick className="size-3 text-purple-500" />
+                              {(j.clicksCount ?? 0).toLocaleString("pt-BR")}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${
+                                jobCtr > 0
+                                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                  : "bg-[#f4f4f5] text-[#71717a] border-transparent"
+                              }`}
                             >
-                              <ExternalLink className="size-3.5" />
-                            </a>
+                              {jobCtr}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
                             <button
                               type="button"
-                              onClick={() => handleDelete(j.id, j.title)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition"
-                              title="Remover do mural"
+                              onClick={() => handleTogglePublished(j.id, j.isPublished)}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                                j.isPublished
+                                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                  : "bg-[#f4f4f5] text-[#71717a] hover:bg-[#e4e4e7]"
+                              }`}
                             >
-                              <Trash2 className="size-3.5" />
+                              {j.isPublished ? "Publicada" : "Oculta"}
                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <a
+                                href={j.applyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg text-[#71717a] hover:bg-[#e4e4e7] hover:text-[#0a0a0a] transition"
+                                title="Testar link externo de inscrição"
+                              >
+                                <ExternalLink className="size-3.5" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(j.id, j.title)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition"
+                                title="Remover do mural"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

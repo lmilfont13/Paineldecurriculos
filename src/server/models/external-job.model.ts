@@ -37,7 +37,39 @@ export type PublicExternalJob = {
   applyUrl: string;
   postedLabel: string | null;
   scheduleType: string | null;
+  viewsCount?: number;
+  clicksCount?: number;
 };
+
+/**
+ * Calcula a Taxa de Conversão de Cliques (CTR) em percentual com 1 casa decimal.
+ */
+export function calculateCtr(clicks: number, views: number): number {
+  if (!views || views <= 0) return 0;
+  const rate = (clicks / views) * 100;
+  return Math.min(100, Math.max(0, Number(rate.toFixed(1))));
+}
+
+/**
+ * Sumariza o desempenho de visualizações e cliques do Mural de Oportunidades.
+ */
+export function calculateExternalJobsSummary(
+  jobs: Array<{ viewsCount?: number | null; clicksCount?: number | null; isPublished?: boolean }>
+) {
+  const totalJobs = jobs.length;
+  const publishedJobs = jobs.filter((j) => j.isPublished !== false).length;
+  const totalViews = jobs.reduce((acc, j) => acc + (j.viewsCount ?? 0), 0);
+  const totalClicks = jobs.reduce((acc, j) => acc + (j.clicksCount ?? 0), 0);
+  const averageCtr = calculateCtr(totalClicks, totalViews);
+
+  return {
+    totalJobs,
+    publishedJobs,
+    totalViews,
+    totalClicks,
+    averageCtr,
+  };
+}
 
 export type WorkplaceTypeFilter = "all" | "remote" | "on-site" | "hybrid";
 

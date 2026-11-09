@@ -694,6 +694,8 @@ model ExternalJob {
   postedLabel  String?
   scheduleType String?
   isPublished  Boolean  @default(true)
+  viewsCount   Int      @default(0)
+  clicksCount  Int      @default(0)
   createdAt    DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)

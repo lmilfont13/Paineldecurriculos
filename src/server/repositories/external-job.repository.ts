@@ -29,6 +29,8 @@ export async function findPublishedExternalJobs(companyId: string, take = 60) {
       applyUrl: true,
       postedLabel: true,
       scheduleType: true,
+      viewsCount: true,
+      clicksCount: true,
     },
   });
 }
@@ -61,6 +63,23 @@ export async function setExternalJobPublished(companyId: string, id: string, isP
 
 export async function deleteExternalJob(companyId: string, id: string) {
   const result = await prisma.externalJob.deleteMany({ where: { id, companyId } });
+  return result.count;
+}
+
+export async function incrementExternalJobViews(ids: string[]) {
+  if (ids.length === 0) return 0;
+  const result = await prisma.externalJob.updateMany({
+    where: { id: { in: ids } },
+    data: { viewsCount: { increment: 1 } },
+  });
+  return result.count;
+}
+
+export async function incrementExternalJobClick(id: string) {
+  const result = await prisma.externalJob.updateMany({
+    where: { id },
+    data: { clicksCount: { increment: 1 } },
+  });
   return result.count;
 }
 

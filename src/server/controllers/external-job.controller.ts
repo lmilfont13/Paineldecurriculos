@@ -9,6 +9,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getGestorShell } from "@/server/controllers/gestor.controller";
 import {
+  calculateCtr,
+  calculateExternalJobsSummary,
   externalJobCandidateSchema,
   externalJobSearchSchema,
   importExternalJobsSchema,
@@ -23,14 +25,19 @@ import {
   removeExternalJob,
   searchGoogleJobs,
   toggleExternalJob,
+  trackExternalJobClick,
+  trackExternalJobViews,
 } from "@/server/services/external-job.service";
 
 export async function getExternalJobsPageData() {
   const { user, company } = await getGestorShell();
   const jobs = await listExternalJobsForManager(user.companyId);
+  const stats = calculateExternalJobsSummary(jobs);
+
   return {
     companySlug: company.slug,
     searchConfigured: isGoogleJobsSearchConfigured(),
+    stats,
     jobs: jobs.map((j) => ({
       id: j.id,
       title: j.title,
@@ -40,6 +47,9 @@ export async function getExternalJobsPageData() {
       applyUrl: j.applyUrl,
       postedLabel: j.postedLabel,
       isPublished: j.isPublished,
+      viewsCount: j.viewsCount ?? 0,
+      clicksCount: j.clicksCount ?? 0,
+      ctr: calculateCtr(j.clicksCount ?? 0, j.viewsCount ?? 0),
       createdAt: j.createdAt.toISOString(),
     })),
   };
@@ -108,4 +118,27 @@ export async function removeExternalJobAction(id: string) {
   await removeExternalJob(user.companyId, id);
   revalidatePath("/vagas/externas");
   revalidatePath(`/${company.slug}/vagas`);
+}
+
+/**
+ * Registra visualizações de vagas externas exibidas na tela para o candidato.
+ * Protegido contra payload abusivo (máx 100 IDs válidos).
+ */
+export async function recordExternalJobViewsAction(jobIds: string[]) {
+  if (!Array.isArray(jobIds) || jobIds.length === 0) return { ok: true, count: 0 };
+  const validIds = jobIds.filter((id) => typeof id === "string" && id.length >= 10 && id.length <= 40).slice(0, 100);
+  if (validIds.length === 0) return { ok: true, count: 0 };
+  const count = await trackExternalJobViews(validIds);
+  return { ok: true, count };
+}
+
+/**
+ * Registra o clique do candidato para se inscrever na fonte original externa.
+ */
+export async function recordExternalJobClickAction(jobId: string) {
+  if (!jobId || typeof jobId !== "string" || jobId.length < 10 || jobId.length > 40) {
+    return { ok: false };
+  }
+  const tracked = await trackExternalJobClick(jobId);
+  return { ok: tracked };
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateCtr,
+  calculateExternalJobsSummary,
   dedupeExternalJobs,
   externalJobSearchSchema,
   importExternalJobsSchema,
@@ -105,6 +107,28 @@ describe("external-job.model", () => {
     expect(isGenericSearchUrl("https://www.vagas.com.br/vagas-de-vendedor?q=vendedor")).toBe(true);
     expect(isGenericSearchUrl("https://br.indeed.com/jobs?q=vendedor")).toBe(true);
     expect(isGenericSearchUrl("invalid-url")).toBe(true);
+  });
+
+  it("calcula taxa de conversão (CTR) e métricas consolidadas do mural", () => {
+    expect(calculateCtr(0, 0)).toBe(0);
+    expect(calculateCtr(0, 50)).toBe(0);
+    expect(calculateCtr(15, 100)).toBe(15);
+    expect(calculateCtr(1, 3)).toBe(33.3);
+    expect(calculateCtr(50, 10)).toBe(100); // capped at 100%
+
+    const summary = calculateExternalJobsSummary([
+      { viewsCount: 100, clicksCount: 20, isPublished: true },
+      { viewsCount: 50, clicksCount: 10, isPublished: true },
+      { viewsCount: 0, clicksCount: 0, isPublished: false },
+    ]);
+
+    expect(summary).toEqual({
+      totalJobs: 3,
+      publishedJobs: 2,
+      totalViews: 150,
+      totalClicks: 30,
+      averageCtr: 20,
+    });
   });
 });
 
