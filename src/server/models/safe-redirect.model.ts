@@ -9,7 +9,6 @@ export function safeInternalPath(raw: unknown, fallback: string): string {
   const value = typeof raw === "string" ? raw : "";
   if (!value.startsWith("/")) return fallback;
   if (value.startsWith("//")) return fallback;
-  // eslint-disable-next-line no-control-regex
   if (/[\\\u0000-\u001f\u007f]/.test(value)) return fallback;
   return value;
 }
