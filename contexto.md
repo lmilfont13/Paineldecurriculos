@@ -144,6 +144,7 @@ atualize os dois lugares.
 | `INNGEST_SIGNING_KEY` | Assinatura das tarefas do Inngest (ambiente **Production**) | Inngest → *Manage → Signing Key* |
 | `RESEND_API_KEY` | Envio de e-mails | Resend → *API Keys* |
 | `EMAIL_FROM_ADDRESS` | Remetente dos e-mails (opcional até verificar o domínio) | Um endereço do domínio verificado no Resend |
+| `DATA_ENCRYPTION_KEY` | Chave que embaralha RG e CPF no banco. **Secreta.** Guarde uma cópia num gerenciador de senhas: se for perdida, os documentos já gravados não podem mais ser lidos. | Você cria: um texto aleatório de 40 caracteres ou mais |
 | `NEXT_PUBLIC_APP_URL` | Endereço do site | `https://mt-triagem.vercel.app` em produção, `http://localhost:3000` no computador |
 
 O `.env` antigo pode ter uma `PRISMA_DATABASE_URL`. Ela não é usada; pode
@@ -359,6 +360,10 @@ e-mail personalizados.
   de currículo em imagem repete a análise em vez de dar nota só pelas
   respostas; Next 16.4.6 e sharp 0.35.5; páginas de erro e 404 em português;
   ajustes do painel no celular.
+
+- **RG e CPF cifrados (11/2026):** os documentos ficam embaralhados no banco e
+  só o sistema abre, com a chave `DATA_ENCRYPTION_KEY` (seção 5). Para quem usa
+  o painel nada muda. Não troque essa chave sem antes converter os dados.
 
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.
