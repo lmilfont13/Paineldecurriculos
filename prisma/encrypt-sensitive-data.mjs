@@ -4,6 +4,8 @@
 //   node --env-file=.env prisma/encrypt-sensitive-data.mjs --apply   → cifra
 //
 // Pode rodar quantas vezes quiser: só mexe no que ainda está em texto normal.
+// O build de produção (package.json) roda com --apply a cada deploy, depois do
+// `next build`; se falhar, só avisa no log e o deploy segue.
 // Precisa da mesma DATA_ENCRYPTION_KEY do site. Nunca imprime RG ou CPF.
 // Formato igual ao de src/lib/field-crypto.ts (há um teste que confere os dois).
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
@@ -66,7 +68,9 @@ export async function main(argv = process.argv.slice(2)) {
     return null;
   }
   const { PrismaClient } = await import("@prisma/client");
-  const prisma = new PrismaClient();
+  // Conexão direta (a mesma das migrations): não depende do pooler de transação.
+  const url = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
+  const prisma = new PrismaClient(url ? { datasources: { db: { url } } } : undefined);
   try {
     const summary = await run(prisma, key, apply);
     console.log(apply ? "RG/CPF cifrados:" : "Simulação (nada foi gravado; use --apply para cifrar):");
