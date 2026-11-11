@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeInternalPath } from "@/server/models/safe-redirect.model";
 import { notFound, redirect } from "next/navigation";
 
 import { CandidateAuthForm } from "@/components/public/candidate-auth-form";
@@ -29,10 +30,7 @@ export default async function CandidateEntrarPage({
   const company = await getTenant(slug);
   if (!company) notFound();
 
-  const destination =
-    next && next.startsWith("/") && !next.startsWith("//")
-      ? next
-      : `/${slug}/minhas-candidaturas`;
+  const destination = safeInternalPath(next, `/${slug}/minhas-candidaturas`);
   const applying = destination.includes("/candidatar");
 
   // Já logado → segue direto para o destino

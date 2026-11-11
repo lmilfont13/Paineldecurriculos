@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { extractImages, extractText, getDocumentProxy } from "unpdf";
 import {
   isRateLimitError,
+  isTransientAiError,
   isUnreadableFileError,
   retryDelayMs,
 } from "@/server/models/ai-retry.model";
@@ -31,6 +32,7 @@ import {
   type ProfileSegment,
   type ChecklistItem,
   parseScoreResponse,
+  wrapCandidateMaterial,
 } from "@/server/models/ai.model";
 import {
   extractHeuristicTenure,
@@ -87,6 +89,10 @@ function mimeFromPath(p: string): string {
   return "image/jpeg"; // .jpg / .jpeg
 }
 
+// Tipos derivados da função: o sharp 0.35 não expõe mais o namespace pelo import padrão.
+type SharpInstance = ReturnType<typeof sharp>;
+type SharpOverlay = Parameters<SharpInstance["composite"]>[0][number];
+
 const MAX_OCR_SIDE = 1600;
 const MAX_OCR_SLICES = 3;
 
@@ -109,7 +115,7 @@ function cleanOcrOutput(raw: string): string {
  * por página, respeitando o limite de 8.000 tokens/minuto da Groq.
  */
 async function sliceSharpImageForOcr(
-  createInstance: () => sharp.Sharp,
+  createInstance: () => SharpInstance,
   width: number,
   height: number
 ): Promise<VisionAttachment[]> {
@@ -120,7 +126,7 @@ async function sliceSharpImageForOcr(
       const overlap = Math.min(90, Math.round(height * 0.02));
       const colHeight = Math.ceil(height / cols) + overlap;
       const step = Math.max(1, Math.floor((height - overlap) / cols));
-      const composites: sharp.OverlayOptions[] = [];
+      const composites: SharpOverlay[] = [];
 
       for (let c = 0; c < cols; c++) {
         const top = Math.min(c * step, Math.max(0, height - 1));
@@ -193,6 +199,7 @@ async function extractTextFromAttachments(
   if (attachments.length === 0) return "";
 
   const parts: string[] = [];
+  let transientError: unknown = null;
 
   for (const att of attachments.slice(0, MAX_OCR_SLICES)) {
     try {
@@ -208,8 +215,16 @@ async function extractTextFromAttachments(
       if (cleaned) parts.push(cleaned);
     } catch (error) {
       console.error("[ia] Falha ao ler página em imagem no OCR:", error);
+      if (isTransientAiError(error instanceof Error ? error.message : String(error))) {
+        transientError = error;
+      }
     }
   }
+
+  // Nada lido por falha passageira (limite de uso, rede, tempo esgotado):
+  // propaga, para a análise ser repetida. Engolir o erro aqui fazia a nota
+  // sair só pelas respostas do formulário, como se o currículo não existisse.
+  if (parts.length === 0 && transientError) throw transientError;
 
   return parts.join("\n\n");
 }
@@ -365,6 +380,8 @@ async function extractPdfTextWithVision(
       ocrText = await extractTextFromAttachments(imageAttachments, companyId);
     } catch (error) {
       console.error("[ia] Falha no OCR das imagens do PDF:", error);
+      // Falha passageira sem texto nativo que sirva: repete a análise depois.
+      if (isTransientAiError(error instanceof Error ? error.message : String(error))) throw error;
     }
   }
 
@@ -378,7 +395,6 @@ async function extractPdfTextWithVision(
 const AI_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
 
-const MAX_RESUME_CHARS = 12000;
 
 /** Etapa da triagem, mostrada ao vivo na tela de agentes. */
 export type TriageStepReporter = (label: string) => Promise<void>;
@@ -460,12 +476,7 @@ async function buildChecklist(
 type ScorableJob = { title: string; aiCriteria: string[]; requirements: string | null };
 
 function composeMaterial(resumeText: string, answersText: string): string {
-  return [
-    resumeText.trim() && `Currículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
-    answersText && `Respostas do formulário de candidatura:\n${answersText.slice(0, 4000)}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  return wrapCandidateMaterial(resumeText, answersText);
 }
 
 /** Nota de aderência a uma vaga, sempre com o AI_PROMPT imutável (regra 3). */

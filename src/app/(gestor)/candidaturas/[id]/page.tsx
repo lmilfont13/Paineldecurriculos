@@ -36,7 +36,7 @@ import { TalentPoolCard } from "@/components/gestor/talent-pool-card";
 import { readCareer } from "@/server/models/career.model";
 import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
 import { suggestTalentPool } from "@/server/models/talent.model";
-import { readChecklist } from "@/server/models/ai.model";
+import { readChecklist, scoredWithoutResumeText } from "@/server/models/ai.model";
 import { readTenure } from "@/server/models/tenure.model";
 import { TenureCard } from "@/components/gestor/tenure-card";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
@@ -186,9 +186,11 @@ export default async function CandidaturaDetailPage({
       </div>
 
       <header className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.7px] text-[#a1a1aa]">
+        {/* No celular os botões vão para baixo do nome: lado a lado, espremiam o
+            nome numa coluna de 60px e o WhatsApp saía da tela. */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.7px] text-[#71717a]">
               Candidatura · {jobLabel(app.job.title, app.job.code)}
             </p>
             <div className="mt-5 flex items-center gap-4">
@@ -249,7 +251,7 @@ export default async function CandidaturaDetailPage({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap sm:gap-3">
             {!app.hasImpediment && (
               <ImpedimentToggle
                 applicationId={app.id}
@@ -266,8 +268,8 @@ export default async function CandidaturaDetailPage({
             />
             <Link
               href="/candidaturas"
-              aria-label="Fechar"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+              aria-label="Fechar e voltar para candidatos"
+              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] sm:ml-0"
             >
               ✕
             </Link>
@@ -390,8 +392,17 @@ export default async function CandidaturaDetailPage({
                       : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
                   </span>
                 </div>
+                {scoredWithoutResumeText(app) && (
+                  <p
+                    role="note"
+                    className="mt-4 rounded-xl border border-[#fde68a] bg-[#fffbeb] px-3.5 py-2.5 text-[12px] leading-5 text-[#78350f]"
+                  >
+                    Atenção: a IA não conseguiu ler o texto do currículo anexado. Esta nota considera só as
+                    respostas do formulário. Abra o currículo para avaliar, ou use &quot;Analisar de novo&quot;.
+                  </p>
+                )}
                 {app.aiModel && (
-                  <p className="mt-3 text-[11px] text-[#a1a1aa]">
+                  <p className="mt-3 text-[11px] text-[#71717a]">
                     Analisado por {app.aiModel.replace(/^groq:/, "")}
                     {app.resumeUrl ? "" : ", só com as respostas do formulário"}
                   </p>

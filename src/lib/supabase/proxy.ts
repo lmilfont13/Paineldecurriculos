@@ -9,23 +9,7 @@ import {
   detectSourceFromHeaders,
 } from "@/server/models/attribution.model";
 
-/** Prefixos que exigem sessão (gestor e admin). O papel é checado nos guards. */
-const PROTECTED_PREFIXES = [
-  "/painel",
-  "/vagas",
-  "/candidaturas",
-  "/formulario",
-  "/configuracoes",
-  "/agentes",
-  "/auditoria",
-  "/admin",
-];
-
-function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
-}
+import { hasSupabaseSessionCookie, isProtectedPath } from "./proxy-paths";
 
 /**
  * Captura a origem do candidato (?origem=, ?ref=, Referer do Google) e
@@ -65,9 +49,14 @@ function captureAttribution(
  * redireciona para /login quem acessa área protegida sem sessão.
  */
 export async function updateSession(request: NextRequest) {
-  // Captura de atribuição: rotas públicas com slug (candidatos).
-  // Rápido e sem I/O — só lê a URL e seta cookies se necessário.
-  if (!isProtectedPath(request.nextUrl.pathname)) {
+  const protectedPath = isProtectedPath(request.nextUrl.pathname);
+
+  // Rota pública de visitante sem sessão: rápido e sem I/O — só lê a URL e
+  // grava os cookies de atribuição se necessário.
+  if (
+    !protectedPath &&
+    !hasSupabaseSessionCookie(request.cookies.getAll().map((c) => c.name))
+  ) {
     const response = NextResponse.next({ request });
     captureAttribution(request, response);
     return response;
@@ -106,11 +95,15 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims ?? null;
 
-  if (!user && isProtectedPath(request.nextUrl.pathname)) {
+  if (!user && protectedPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
+
+  // Candidato logado em rota pública: mantém a atribuição e devolve a
+  // resposta que carrega os cookies de sessão renovados.
+  if (!protectedPath) captureAttribution(request, supabaseResponse);
 
   return supabaseResponse;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { loginAction, type LoginState } from "@/server/controllers/auth.controller";
 
@@ -17,6 +17,9 @@ export function LoginForm({
     loginAction,
     null
   );
+  // Controlado: o React limpa campos não controlados depois da action, e o
+  // gestor tinha de digitar o e-mail de novo a cada senha errada.
+  const [email, setEmail] = useState("");
 
   const inputStyle = dark
     ? {
@@ -50,6 +53,8 @@ export function LoginForm({
         required
         autoComplete="email"
         placeholder="voce@empresa.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
         className="mt-1.5 h-11 w-full rounded-xl border px-3.5 text-[13.5px] outline-none transition-all focus:border-[var(--brand-primary,#811201)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand-primary,#811201)_10%,transparent)]"
         style={{ ...inputStyle, color: text.input }}
       />
@@ -148,7 +153,7 @@ export function LoginForm({
         <a
           href="/recuperar-senha"
           className="mt-4 inline-block text-[12px] transition-colors hover:underline"
-          style={{ color: dark ? "#3c3230" : "#78716c" }}
+          style={{ color: dark ? "#a8a29e" : "#57534e" }}
         >
           Esqueci minha senha
         </a>

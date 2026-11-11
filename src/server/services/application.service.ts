@@ -92,6 +92,7 @@ import { findAgeSourcesForCompany, findAgeSourcesForJob, findRecentTriageRuns, u
 import {
   AUTO_RETRY_WINDOW_MS,
   canAutoRetry,
+  isStuckForAutoRetry,
   isTransientAiError,
 } from "@/server/models/ai-retry.model";
 import { effectiveAge } from "@/server/models/age.model";
@@ -530,31 +531,21 @@ type StuckCandidate = {
   aiState: string;
   hasImpediment: boolean;
   resumeUrl: string | null;
-  resumeText?: string | null;
-  aiReasoning?: string | null;
   updatedAt: Date;
 };
 
 /**
  * Reenfileira sozinho, ao abrir as telas do gestor, quem ficou sem leitura
- * do currículo (ex.: PDF em imagem antes do OCR). Respeita o teto de
- * execuções. Devolve os ids reenfileirados (a tela mostra "Analisando…").
+ * do currículo (análise falhou ou ficou "sem currículo"). Respeita o teto de
+ * execuções. Nota já concluída nunca é refeita aqui (isStuckForAutoRetry).
+ * Devolve os ids reenfileirados (a tela mostra "Analisando…").
  */
 export async function autoRetryStuckTriage(
   companyId: string,
   apps: StuckCandidate[],
-  options: { limit: number; minAgeMs: number; includeDoneWithoutText?: boolean }
+  options: { limit: number; minAgeMs: number }
 ): Promise<string[]> {
-  const stuck = apps.filter(
-    (a) =>
-      !a.hasImpediment &&
-      Boolean(a.resumeUrl) &&
-      (a.aiState === "NO_RESUME" ||
-        a.aiState === "FAILED" ||
-        (options.includeDoneWithoutText === true && a.aiState === "DONE" && !a.resumeText?.trim()) ||
-        Boolean(a.aiReasoning?.includes("Engenheiro de Software"))) &&
-      Date.now() - a.updatedAt.getTime() > options.minAgeMs
-  );
+  const stuck = apps.filter((a) => isStuckForAutoRetry(a, options.minAgeMs));
   if (stuck.length === 0) return [];
   const allowed = await autoRetryAllowedIds(stuck.map((a) => a.id));
   const targets = stuck.filter((a) => allowed.has(a.id)).slice(0, options.limit);

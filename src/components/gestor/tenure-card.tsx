@@ -22,7 +22,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
           <History className="size-4 text-[#a1a1aa]" />
           <span>Tempo de permanência nas empresas (Média & Mediana)</span>
         </div>
-        <p className="mt-1 text-[11px] text-[#a1a1aa]">
+        <p className="mt-1 text-[11px] text-[#52525b]">
           Sem histórico com datas de entrada e saída detectadas para este candidato. Se o currículo possui datas de atuação profissional, clique em &ldquo;Analisar de novo&rdquo; acima para reprocessar o cálculo detalhado de tempo por empresa.
         </p>
       </div>

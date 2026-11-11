@@ -29,6 +29,11 @@ export function CandidateAuthForm({
     FormData
   >(loginCandidateAction, null);
 
+  // Controlados: o React limpa campos não controlados depois da action, e o
+  // candidato perdia nome e e-mail a cada erro (ex.: senha curta), no celular.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
   const pending = signupPending || loginPending;
   const error = mode === "signup" ? signupState?.error : loginState?.error;
 
@@ -72,6 +77,8 @@ export function CandidateAuthForm({
               name="name"
               required
               autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Como você quer ser chamado(a)"
               className={inputClass}
             />
@@ -86,6 +93,8 @@ export function CandidateAuthForm({
             type="email"
             required
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="voce@email.com"
             className={inputClass}
           />
@@ -99,6 +108,7 @@ export function CandidateAuthForm({
             type="password"
             required
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            minLength={mode === "signup" ? 8 : undefined}
             placeholder={mode === "signup" ? "Mínimo 8 caracteres" : "••••••••••"}
             className={inputClass}
           />
@@ -126,7 +136,7 @@ export function CandidateAuthForm({
               : "Entrar e continuar"}
         </button>
 
-        <p className="text-center text-xs text-[#a1a1aa]">
+        <p className="text-center text-xs text-[#71717a]">
           Seus dados ficam salvos para as próximas candidaturas.
         </p>
         {mode === "login" && (

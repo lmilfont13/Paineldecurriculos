@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import {
   Briefcase,
   Bot,
@@ -31,7 +33,7 @@ const NAV = [
   { href: "/talentos", label: "Talentos", Icon: FolderOpen },
   { href: "/aniversariantes", label: "Aniversariantes", short: "Aniversários", Icon: Cake },
   { href: "/agentes", label: "Agentes", Icon: Bot },
-  { href: "/auditoria", label: "Auditoria", short: "Audit", Icon: ClipboardList, secondary: true },
+  { href: "/auditoria", label: "Auditoria", Icon: ClipboardList, secondary: true },
   { href: "/configuracoes", label: "Configurações", short: "Ajustes", Icon: Settings, secondary: true },
 ] as const;
 
@@ -274,10 +276,21 @@ export function GestorTopbar({
 
 export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   const pathname = usePathname();
+  const activeRef = useRef<HTMLAnchorElement>(null);
+
+  // Uma fileira só, com rolagem lateral: com 9 itens numa grade de 7 colunas
+  // a barra quebrava em duas linhas e cobria ~130px da tela do celular.
+  useEffect(() => {
+    // Rola só a barra (nunca a página) para deixar o item ativo à vista.
+    const el = activeRef.current;
+    const nav = el?.parentElement;
+    if (el && nav) nav.scrollLeft = el.offsetLeft - (nav.clientWidth - el.clientWidth) / 2;
+  }, [pathname]);
+
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex snap-x overflow-x-auto overscroll-x-contain border-t border-[#e4e4e7] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] backdrop-blur [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
     >
       {NAV.map((item) => {
         const active = isActive(pathname, item.href);
@@ -285,9 +298,12 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
           <Link
             key={item.href}
             href={item.href}
+            ref={active ? activeRef : undefined}
+            aria-current={active ? "page" : undefined}
             className={
-              "relative flex h-16 min-w-0 flex-col items-center justify-center gap-1 truncate px-0.5 text-[10px] " +
-              (active ? "font-medium text-[#0a0a0a]" : "text-[#71717a]")
+              // 18% de largura: cabem 5 itens e meio, e o meio item mostra que há mais ao lado.
+              "relative flex h-16 min-w-[18%] shrink-0 grow snap-start flex-col items-center justify-center gap-1 whitespace-nowrap px-1 text-[10px] " +
+              (active ? "font-medium text-[#0a0a0a]" : "text-[#52525b]")
             }
           >
             <item.Icon

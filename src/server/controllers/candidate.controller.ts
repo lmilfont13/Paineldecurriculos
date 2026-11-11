@@ -1,5 +1,6 @@
 "use server";
 
+import { safeInternalPath } from "@/server/models/safe-redirect.model";
 import { parseInstagram } from "@/server/models/instagram.model";
 import { signInPath } from "@/server/models/candidate.model";
 import { cepDigits } from "@/server/models/address.model";
@@ -27,10 +28,9 @@ import {
 
 export type CandidateAuthState = { error: string } | null;
 
-/** Sanitiza o destino pós-login: só caminhos internos. */
+/** Sanitiza o destino pós-login: só caminhos internos (ver safe-redirect.model). */
 function safeNext(raw: FormDataEntryValue | null, fallback: string): string {
-  const value = String(raw ?? "");
-  return value.startsWith("/") && !value.startsWith("//") ? value : fallback;
+  return safeInternalPath(raw, fallback);
 }
 
 /** CA1 · Criar conta de candidato e continuar a candidatura. */
