@@ -36,7 +36,7 @@ import { TalentPoolCard } from "@/components/gestor/talent-pool-card";
 import { readCareer } from "@/server/models/career.model";
 import { loadApplicationTalentInfo } from "@/server/controllers/talent.controller";
 import { suggestTalentPool } from "@/server/models/talent.model";
-import { readChecklist } from "@/server/models/ai.model";
+import { readChecklist, scoredWithoutResumeText } from "@/server/models/ai.model";
 import { readTenure } from "@/server/models/tenure.model";
 import { TenureCard } from "@/components/gestor/tenure-card";
 import { getCandidaturaDetail } from "@/server/controllers/gestor.controller";
@@ -390,8 +390,17 @@ export default async function CandidaturaDetailPage({
                       : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
                   </span>
                 </div>
+                {scoredWithoutResumeText(app) && (
+                  <p
+                    role="note"
+                    className="mt-4 rounded-xl border border-[#fde68a] bg-[#fffbeb] px-3.5 py-2.5 text-[12px] leading-5 text-[#78350f]"
+                  >
+                    Atenção: a IA não conseguiu ler o texto do currículo anexado. Esta nota considera só as
+                    respostas do formulário. Abra o currículo para avaliar, ou use &quot;Analisar de novo&quot;.
+                  </p>
+                )}
                 {app.aiModel && (
-                  <p className="mt-3 text-[11px] text-[#a1a1aa]">
+                  <p className="mt-3 text-[11px] text-[#71717a]">
                     Analisado por {app.aiModel.replace(/^groq:/, "")}
                     {app.resumeUrl ? "" : ", só com as respostas do formulário"}
                   </p>

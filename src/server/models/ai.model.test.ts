@@ -76,3 +76,15 @@ describe("readChecklist", () => {
     ).toEqual([{ criterion: "Excel", met: "não", evidence: "1" }]);
   });
 });
+
+describe("scoredWithoutResumeText", () => {
+  it("avisa quando há arquivo mas a nota saiu sem o texto dele", async () => {
+    const { scoredWithoutResumeText } = await import("./ai.model");
+    expect(scoredWithoutResumeText({ aiState: "DONE", resumeUrl: "a/b.pdf", resumeText: "  " })).toBe(true);
+    expect(scoredWithoutResumeText({ aiState: "DONE", resumeUrl: "a/b.pdf", resumeText: null })).toBe(true);
+    expect(scoredWithoutResumeText({ aiState: "DONE", resumeUrl: "a/b.pdf", resumeText: "Experiência em loja" })).toBe(false);
+    // Sem arquivo já existe o aviso "só com as respostas do formulário".
+    expect(scoredWithoutResumeText({ aiState: "DONE", resumeUrl: null, resumeText: null })).toBe(false);
+    expect(scoredWithoutResumeText({ aiState: "FAILED", resumeUrl: "a/b.pdf", resumeText: null })).toBe(false);
+  });
+});

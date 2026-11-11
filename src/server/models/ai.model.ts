@@ -239,3 +239,17 @@ export function parseScoreResponse(raw: string): { score: number; reasoning: str
   }
   return { score, reasoning: reasoning.trim().slice(0, 500) };
 }
+
+/**
+ * A nota foi dada sem o texto do currículo? Acontece quando há arquivo
+ * anexado, mas a leitura não devolveu texto (imagem ilegível, PDF protegido):
+ * a IA avaliou só as respostas do formulário. O gestor precisa saber disso
+ * antes de confiar na nota.
+ */
+export function scoredWithoutResumeText(app: {
+  aiState: string;
+  resumeUrl: string | null;
+  resumeText?: string | null;
+}): boolean {
+  return app.aiState === "DONE" && Boolean(app.resumeUrl) && !app.resumeText?.trim();
+}
