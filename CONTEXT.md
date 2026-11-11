@@ -28,6 +28,7 @@ INNGEST_EVENT_KEY=""
 INNGEST_SIGNING_KEY=""
 RESEND_API_KEY=""
 EMAIL_FROM_ADDRESS=""            # opcional: remetente com domínio verificado no Resend
+DATA_ENCRYPTION_KEY=""           # cifra RG/CPF no banco (≥ 32 caracteres; se perder, os dados cifrados não voltam)
 NEXT_PUBLIC_APP_URL=""
 ```
 
@@ -117,6 +118,7 @@ Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }
 - O gestor escolhe o que pedir (`requestInfoAction`); o candidato responde em `/[slug]/minhas-candidaturas/[id]/pre-entrevista`.
 - RG/CPF nunca aparecem em notificação, e-mail, lista ou `metadata` de auditoria; na ficha vão mascarados e só abrem por clique (`revealSensitiveInfoAction`, que registra `DADOS_SENSIVEIS_VISTOS`).
 - A IA de triagem não recebe esses dados e o pedido não muda `AppStatus` (regras 2 e 3).
+- RG/CPF ficam **cifrados no banco** (AES-256-GCM, `src/lib/field-crypto.ts`), em `Candidate` e `Application`. A cifra é aplicada em `src/lib/prisma.ts` (extensão do client) em toda gravação e leitura, então o resto do código vê o valor normal. Chave: `DATA_ENCRYPTION_KEY`. Não dá para filtrar (`where`) por RG/CPF no banco. SQL direto (`$queryRaw`) não passa pela cifra — não use para esses campos. Dados antigos: `prisma/encrypt-sensitive-data.mjs`.
 
 ### 6. Arquitetura em camadas (MVC)
 
