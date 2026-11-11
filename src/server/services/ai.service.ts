@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { extractImages, extractText, getDocumentProxy } from "unpdf";
 import {
   isRateLimitError,
+  isTransientAiError,
   isUnreadableFileError,
   retryDelayMs,
 } from "@/server/models/ai-retry.model";
@@ -193,6 +194,7 @@ async function extractTextFromAttachments(
   if (attachments.length === 0) return "";
 
   const parts: string[] = [];
+  let transientError: unknown = null;
 
   for (const att of attachments.slice(0, MAX_OCR_SLICES)) {
     try {
@@ -208,8 +210,16 @@ async function extractTextFromAttachments(
       if (cleaned) parts.push(cleaned);
     } catch (error) {
       console.error("[ia] Falha ao ler página em imagem no OCR:", error);
+      if (isTransientAiError(error instanceof Error ? error.message : String(error))) {
+        transientError = error;
+      }
     }
   }
+
+  // Nada lido por falha passageira (limite de uso, rede, tempo esgotado):
+  // propaga, para a análise ser repetida. Engolir o erro aqui fazia a nota
+  // sair só pelas respostas do formulário, como se o currículo não existisse.
+  if (parts.length === 0 && transientError) throw transientError;
 
   return parts.join("\n\n");
 }
@@ -365,6 +375,8 @@ async function extractPdfTextWithVision(
       ocrText = await extractTextFromAttachments(imageAttachments, companyId);
     } catch (error) {
       console.error("[ia] Falha no OCR das imagens do PDF:", error);
+      // Falha passageira sem texto nativo que sirva: repete a análise depois.
+      if (isTransientAiError(error instanceof Error ? error.message : String(error))) throw error;
     }
   }
 
