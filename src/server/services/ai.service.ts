@@ -88,6 +88,10 @@ function mimeFromPath(p: string): string {
   return "image/jpeg"; // .jpg / .jpeg
 }
 
+// Tipos derivados da função: o sharp 0.35 não expõe mais o namespace pelo import padrão.
+type SharpInstance = ReturnType<typeof sharp>;
+type SharpOverlay = Parameters<SharpInstance["composite"]>[0][number];
+
 const MAX_OCR_SIDE = 1600;
 const MAX_OCR_SLICES = 3;
 
@@ -110,7 +114,7 @@ function cleanOcrOutput(raw: string): string {
  * por página, respeitando o limite de 8.000 tokens/minuto da Groq.
  */
 async function sliceSharpImageForOcr(
-  createInstance: () => sharp.Sharp,
+  createInstance: () => SharpInstance,
   width: number,
   height: number
 ): Promise<VisionAttachment[]> {
@@ -121,7 +125,7 @@ async function sliceSharpImageForOcr(
       const overlap = Math.min(90, Math.round(height * 0.02));
       const colHeight = Math.ceil(height / cols) + overlap;
       const step = Math.max(1, Math.floor((height - overlap) / cols));
-      const composites: sharp.OverlayOptions[] = [];
+      const composites: SharpOverlay[] = [];
 
       for (let c = 0; c < cols; c++) {
         const top = Math.min(c * step, Math.max(0, height - 1));
