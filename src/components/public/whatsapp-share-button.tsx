@@ -20,7 +20,7 @@ export function WhatsAppShareButton({
   jobId: string;
   jobTitle: string;
   url: string;
-  /** "outline" = bordado (sidebar desktop) · "solid" = verde (mobile) */
+  /** "outline" = bordado (sidebar desktop) · "solid" = verde compacto (barra fixa do celular) */
   variant?: "outline" | "solid";
 }) {
   const [, startTransition] = useTransition();
@@ -46,10 +46,14 @@ export function WhatsAppShareButton({
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleClick}
-        className={`${sharedClass} h-11 w-full rounded-xl bg-[#25D366] text-sm font-semibold text-white`}
+        aria-label="Compartilhar no WhatsApp"
+        // Compacto: no celular ele divide a barra fixa com "Candidatar-se", que
+        // é a ação principal. Com o texto longo, o botão principal quebrava em
+        // duas linhas. Verde escuro para o texto branco ter contraste.
+        className={`${sharedClass} h-11 shrink-0 whitespace-nowrap rounded-xl bg-[#128C7E] px-4 text-sm font-semibold text-white`}
       >
         <WhatsAppIcon />
-        Compartilhar no WhatsApp
+        Compartilhar
       </a>
     );
   }
@@ -60,7 +64,7 @@ export function WhatsAppShareButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className={`${sharedClass} h-9 w-full rounded-xl border border-[#25D366]/50 bg-[#f0fdf4] text-[13px] font-medium text-[#16a34a] hover:bg-[#dcfce7]`}
+      className={`${sharedClass} h-9 w-full rounded-xl border border-[#25D366]/50 bg-[#f0fdf4] text-[13px] font-medium text-[#15803d] hover:bg-[#dcfce7]`}
     >
       <WhatsAppIcon />
       Compartilhar no WhatsApp

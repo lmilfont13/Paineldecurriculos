@@ -19,7 +19,8 @@ function isHeadingLine(line: string): boolean {
 export function parseJobDescription(text: string): ParsedSection[] {
   if (!text) return [];
 
-  const rawParagraphs = text
+  // Texto colado do WhatsApp chega com **negrito**; a página mostrava os asteriscos.
+  const rawParagraphs = stripInlineMarkup(text)
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
@@ -174,9 +175,21 @@ export function parseJobDescription(text: string): ParsedSection[] {
 
 
 /** Resumo de uma linha para o cartão da vaga: a apresentação, sem título de bloco, cortada sem partir palavra. */
+/**
+ * Tira a marcação de ênfase colada do WhatsApp/Markdown (**negrito**, *negrito*,
+ * _itálico_, ~riscado~, # título). Só remove marcadores em par, grudados no
+ * texto, para não mexer em "2 * 3" nem em "nome_sobrenome".
+ */
+export function stripInlineMarkup(text: string): string {
+  return text
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/(\*\*|__)(?=\S)([^\n]*?\S)\1/g, "$2")
+    .replace(/(^|[\s(])([*_~])(?=\S)([^\n*_~]*?\S)\2(?=[\s).,;:!?]|$)/g, "$1$3");
+}
+
 export function jobSummary(description: string, max = 160): string {
   const first = parseJobDescription(description)[0];
-  const text = (first?.content ?? "").replace(/\s+/g, " ").trim();
+  const text = stripInlineMarkup(first?.content ?? "").replace(/\s+/g, " ").trim();
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
   const lastSpace = cut.lastIndexOf(" ");

@@ -221,7 +221,7 @@ export default async function PublicJobDetailPage({
           />
           <Link
             href={applyHref}
-            className="flex h-11 flex-1 items-center justify-center rounded-xl text-[14px] font-semibold transition-opacity hover:opacity-90"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-xl text-[14px] font-semibold transition-opacity hover:opacity-90"
             style={{
               backgroundColor: "var(--brand-primary)",
               color: "var(--brand-foreground)",

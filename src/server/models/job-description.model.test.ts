@@ -84,3 +84,31 @@ describe("jobSummary", () => {
     expect(jobSummary("")).toBe("");
   });
 });
+
+describe("jobSummary com marcação colada do WhatsApp/Markdown", () => {
+  it("não mostra asteriscos, sublinhados nem cerquilhas no cartão da vaga", () => {
+    // Regressão: o cartão público mostrava "**Promotor de Vendas – Laticínios e Frios**".
+    expect(jobSummary("**Promotor de Vendas – Laticínios e Frios**")).toBe("Promotor de Vendas – Laticínios e Frios");
+    expect(jobSummary("*Vaga* para _promotor_ em ~Fortaleza~")).toBe("Vaga para promotor em Fortaleza");
+    expect(jobSummary("## Sobre a vaga animada")).toBe("Sobre a vaga animada");
+  });
+
+  it("mantém asterisco e sublinhado que fazem parte do texto", () => {
+    expect(jobSummary("Salário 2 * 1.500 e e-mail nome_sobrenome@empresa.com")).toBe(
+      "Salário 2 * 1.500 e e-mail nome_sobrenome@empresa.com"
+    );
+  });
+});
+
+describe("parseJobDescription com marcação colada", () => {
+  it("a página da vaga não mostra os asteriscos dos títulos", async () => {
+    const { parseJobDescription } = await import("@/server/models/job-description.model");
+    const sections = parseJobDescription(
+      "**Promotor de Vendas – Laticínios e Frios**\n\n**ESCALA E HORÁRIOS**\nSegunda a sábado, 8h às 16h20.\n\n**REMUNERAÇÃO E BENEFÍCIOS**\nSalário + VT."
+    );
+    const all = sections.map((s) => `${s.title ?? ""} ${s.content}`).join(" ");
+    expect(all).not.toContain("*");
+    expect(all).toContain("ESCALA E HORÁRIOS");
+    expect(all).toContain("Segunda a sábado");
+  });
+});
