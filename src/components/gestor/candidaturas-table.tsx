@@ -1032,14 +1032,22 @@ export function CandidaturasTable({
       </div>
       )}
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
         <button
           type="button"
           onClick={exportCsv}
-          className="text-xs font-medium text-[#a1a1aa] hover:text-[#0a0a0a]"
+          className="text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
         >
-          Exportar CSV
+          Exportar esta lista (CSV)
         </button>
+        <a
+          href="/api/export/cadastrados"
+          download
+          title="Planilha com todas as pessoas e candidaturas da empresa. O download fica registrado na auditoria."
+          className="rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+        >
+          Baixar todos os cadastrados (Excel)
+        </a>
       </div>
 
       {/* Barra de ações em massa (E9) */}

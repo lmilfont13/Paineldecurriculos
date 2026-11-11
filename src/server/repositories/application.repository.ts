@@ -356,6 +356,46 @@ export function findApplicationsForCvSearch(companyId: string) {
   });
 }
 
+/**
+ * Planilha "todos os cadastrados": todas as candidaturas reais da empresa
+ * (vagas abertas ou não, e banco de talentos). Só os campos da planilha —
+ * RG, CPF, PcD, notas internas e texto do currículo não são lidos.
+ */
+export function findApplicationsForExport(companyId: string) {
+  return prisma.application.findMany({
+    where: { companyId, isDemo: false },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      candidateId: true,
+      name: true,
+      email: true,
+      phone: true,
+      birthDate: true,
+      city: true,
+      state: true,
+      neighborhood: true,
+      desiredRole: true,
+      salaryExpectation: true,
+      workPreference: true,
+      availability: true,
+      hasCnh: true,
+      source: true,
+      status: true,
+      aiState: true,
+      aiScore: true,
+      aiArea: true,
+      aiLevel: true,
+      hasImpediment: true,
+      consentAt: true,
+      createdAt: true,
+      interviewAt: true,
+      interviewMode: true,
+      job: { select: { title: true, code: true, aiMinScore: true, isTalentPool: true } },
+    },
+  });
+}
+
 /** Busca por conteúdo: ids das candidaturas do tenant cujo nome/e-mail/currículo contêm o termo. */
 export async function searchApplicationIds(companyId: string, term: string) {
   const rows = await prisma.application.findMany({
