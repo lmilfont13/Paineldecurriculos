@@ -233,12 +233,11 @@ export async function getCandidaturaDetail(id: string) {
   if (!application) return null;
 
   // Se a candidatura tem currículo anexado mas ficou sem leitura do arquivo
-  // (ex.: PDF em imagem da Catho antes do OCR visual), dispara a análise ao abrir.
+  // (análise falhou ou ficou "sem currículo"), dispara a análise ao abrir.
   // Com teto de tentativas: um arquivo ilegível não volta para a fila a cada abertura.
   const requeued = await autoRetryStuckTriage(user.companyId, [application], {
     limit: 1,
     minAgeMs: 10_000,
-    includeDoneWithoutText: true,
   });
   if (requeued.length > 0) application.aiState = "WAITING";
 

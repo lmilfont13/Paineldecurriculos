@@ -45,3 +45,18 @@ export function retryDelayMs(attempt: number, rateLimited: boolean): number {
 export function canAutoRetry(recentRuns: number): boolean {
   return recentRuns < AUTO_RETRY_MAX_RUNS;
 }
+
+/**
+ * Candidatura que ficou sem leitura (falhou ou ficou "sem currículo") e pode
+ * voltar para a fila sozinha. Nota já concluída (DONE) NUNCA volta sozinha:
+ * abrir a ficha não pode mudar a nota — para refazer existe "Analisar de novo".
+ */
+export function isStuckForAutoRetry(
+  app: { aiState: string; hasImpediment: boolean; resumeUrl: string | null; updatedAt: Date },
+  minAgeMs: number,
+  now: number = Date.now()
+): boolean {
+  if (app.hasImpediment || !app.resumeUrl) return false;
+  if (app.aiState !== "NO_RESUME" && app.aiState !== "FAILED") return false;
+  return now - app.updatedAt.getTime() > minAgeMs;
+}
