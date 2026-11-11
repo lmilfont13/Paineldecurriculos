@@ -353,5 +353,12 @@ e-mail personalizados.
   `sitemap.xml` e `robots.txt`. A vaga oculta do banco de talentos e a empresa
   demo ficam de fora.
 
+- **Revisão pré-release (11/2026):** banco fechado para acesso direto pela
+  chave pública (RLS em todas as tabelas); abrir a ficha não refaz mais uma
+  nota concluída (só "Analisar de novo" refaz); falha passageira na leitura
+  de currículo em imagem repete a análise em vez de dar nota só pelas
+  respostas; Next 16.4.6 e sharp 0.35.5; páginas de erro e 404 em português;
+  ajustes do painel no celular.
+
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.

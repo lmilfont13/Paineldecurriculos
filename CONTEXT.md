@@ -72,7 +72,14 @@ const jobs = await prisma.job.findMany({
 })
 ```
 
-Ativar Row Level Security no Supabase como segunda camada de proteção.
+Row Level Security no Supabase é a segunda camada de proteção: **toda tabela
+do schema `public` tem RLS ligado e nenhum privilégio para `anon` /
+`authenticated`** (migração `20261111180000_lock_down_data_api`). O app só
+acessa o banco pelo servidor, via Prisma. Sem isso, a chave pública do
+navegador lê e grava as tabelas pela Data API — foi o que aconteceu até
+11/2026, porque o `prisma/rls.sql` nunca tinha sido aplicado. Tabela nova
+criada pelo Prisma já nasce fechada (privilégios padrão revogados); confira
+com o *Security Advisor* do Supabase depois de cada migração.
 
 ### 2. Fluxo da IA — nunca bloquear o candidato
 
@@ -164,4 +171,4 @@ service/repository — nunca deixado a cargo da view.
 - [x] Fluxo admin: empresas, wizard 5 passos, editar em abas
 - [x] Análise de IA com Inngest (dev: `npx inngest-cli dev`; deploy precisa das chaves)
 - [x] E-mails com Resend (no-op até configurar RESEND_API_KEY)
-- [x] Row Level Security no Supabase (`prisma/rls.sql` aplicado)
+- [x] Row Level Security no Supabase (migração `20261111180000_lock_down_data_api`; o `prisma/rls.sql` antigo ficou só como referência)

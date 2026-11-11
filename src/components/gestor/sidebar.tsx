@@ -281,7 +281,10 @@ export function GestorBottomNav({ pendingCount }: { pendingCount: number }) {
   // Uma fileira só, com rolagem lateral: com 9 itens numa grade de 7 colunas
   // a barra quebrava em duas linhas e cobria ~130px da tela do celular.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ inline: "center", block: "nearest" });
+    // Rola só a barra (nunca a página) para deixar o item ativo à vista.
+    const el = activeRef.current;
+    const nav = el?.parentElement;
+    if (el && nav) nav.scrollLeft = el.offsetLeft - (nav.clientWidth - el.clientWidth) / 2;
   }, [pathname]);
 
   return (

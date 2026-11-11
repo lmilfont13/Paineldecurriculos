@@ -21,8 +21,7 @@ export default function GlobalRouteError({
     <main className="flex min-h-dvh flex-col items-center justify-center bg-[#faf8f6] px-6 text-center">
       <h1 className="text-2xl font-semibold text-[#1c1917]">Algo deu errado por aqui</h1>
       <p className="mt-2 max-w-[400px] text-sm leading-6 text-[#57534e]">
-        Não foi culpa sua, e nada do que você já salvou se perdeu. Tente de novo; se continuar, volte em
-        alguns minutos.
+        Não foi culpa sua. Tente de novo; se continuar, volte em alguns minutos.
       </p>
       <button
         type="button"
