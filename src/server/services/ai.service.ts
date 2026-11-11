@@ -32,6 +32,7 @@ import {
   type ProfileSegment,
   type ChecklistItem,
   parseScoreResponse,
+  wrapCandidateMaterial,
 } from "@/server/models/ai.model";
 import {
   extractHeuristicTenure,
@@ -394,7 +395,6 @@ async function extractPdfTextWithVision(
 const AI_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
 Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
 
-const MAX_RESUME_CHARS = 12000;
 
 /** Etapa da triagem, mostrada ao vivo na tela de agentes. */
 export type TriageStepReporter = (label: string) => Promise<void>;
@@ -476,12 +476,7 @@ async function buildChecklist(
 type ScorableJob = { title: string; aiCriteria: string[]; requirements: string | null };
 
 function composeMaterial(resumeText: string, answersText: string): string {
-  return [
-    resumeText.trim() && `Currículo do candidato:\n${resumeText.slice(0, MAX_RESUME_CHARS)}`,
-    answersText && `Respostas do formulário de candidatura:\n${answersText.slice(0, 4000)}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  return wrapCandidateMaterial(resumeText, answersText);
 }
 
 /** Nota de aderência a uma vaga, sempre com o AI_PROMPT imutável (regra 3). */
