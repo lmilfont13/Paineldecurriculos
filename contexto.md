@@ -365,5 +365,11 @@ e-mail personalizados.
   só o sistema abre, com a chave `DATA_ENCRYPTION_KEY` (seção 5). Para quem usa
   o painel nada muda. Não troque essa chave sem antes converter os dados.
 
+- **Planilha de cadastrados (11/2026):** em *Candidatos*, no fim da lista,
+  "Baixar todos os cadastrados (Excel)" gera um arquivo com três abas: Pessoas
+  (uma linha por pessoa), Candidaturas (uma por candidatura) e Resumo. Não leva
+  RG, CPF, PcD, dados bancários, notas internas nem a justificativa da IA. Cada
+  download fica registrado na Auditoria.
+
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.
