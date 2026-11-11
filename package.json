@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma migrate deploy; fi && prisma generate && next build",
+    "build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma migrate deploy; fi && prisma generate && next build && if [ \"$VERCEL_ENV\" = \"production\" ]; then node prisma/encrypt-sensitive-data.mjs --apply || echo \"[aviso] conversao de RG/CPF falhou; o deploy segue\"; fi",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
