@@ -1,666 +1,450 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { Check, Copy, Download, Gift, Loader2, MessageCircle, Send, X } from "lucide-react";
+
 import {
-  Check,
-  Copy,
-  Download,
-  FileImage,
-  Loader2,
-  MessageCircle,
-  RefreshCw,
-  Sparkles,
-  Type,
-  X,
-} from "lucide-react";
-import { generateBirthdayAiImageAction } from "@/server/controllers/birthday-image.controller";
-import {
-  BIRTHDAY_AI_STYLES,
-  type BirthdayAiStyle,
-} from "@/server/models/birthday-image.model";
+  BIRTHDAY_CARD_THEMES,
+  BIRTHDAY_MESSAGES,
+  MAX_CARD_MESSAGE,
+  type BirthdayCardNameMode,
+  type BirthdayCardTheme,
+} from "@/server/models/birthday-card-options.model";
 
-export type CorporateCardTheme = "navy" | "graphite" | "emerald" | "clean";
+const THEME_SWATCH: Record<BirthdayCardTheme, string> = {
+  marca: "bg-[var(--brand-primary)]",
+  claro: "bg-[#fbf8f3]",
+  noite: "bg-[#12141a]",
+};
 
-const CORPORATE_THEMES = [
-  {
-    id: "navy" as CorporateCardTheme,
-    label: "Azul Marinho & Ouro Real",
-    description: "Sóbrio, prestigioso e institucional.",
-  },
-  {
-    id: "graphite" as CorporateCardTheme,
-    label: "Grafite Moderno & Platina",
-    description: "Tons neutros de ardósia e platina.",
-  },
-  {
-    id: "emerald" as CorporateCardTheme,
-    label: "Esmeralda Nobre & Ouro",
-    description: "Verde escuro nobre associado a crescimento.",
-  },
-  {
-    id: "clean" as CorporateCardTheme,
-    label: "Timbre Corporativo Branco",
-    description: "Fundo branco puro com tipografia formal.",
-  },
-];
-
-const CORPORATE_MESSAGE_TEMPLATES = [
-  {
-    id: "career",
-    label: "Trajetória & Sucesso",
-    text: "Neste dia especial, celebramos a sua trajetória e expressamos nossa admiração por sua dedicação. Desejamos contínuo sucesso, saúde, realizações e prosperidade em cada etapa de sua jornada.",
-  },
-  {
-    id: "recognition",
-    label: "Reconhecimento & Parceria",
-    text: "Parabéns pelo seu aniversário! Agradecemos pelo compromisso, talento e energia positiva que você traz para nossa equipe. Que este novo ano de vida seja marcado por grandes conquistas!",
-  },
-  {
-    id: "growth",
-    label: "Crescimento & Conquistas",
-    text: "Em nome de toda a empresa, parabenizamos você por mais um ciclo. Desejamos saúde plena, sabedoria, felicidade e contínuo crescimento pessoal e profissional!",
-  },
-];
+type Feedback = { tone: "ok" | "erro"; text: string } | null;
 
 export function BirthdayCardButtonAndModal({
   name,
   turningAge,
   companyName,
   whatsappUrl,
-  greetingMessage,
   variant = "button",
 }: {
   name: string;
   turningAge?: number;
   companyName?: string;
   whatsappUrl?: string | null;
+  /** Mantido por compatibilidade com as telas; o texto agora é escolhido no cartão. */
   greetingMessage?: string;
   variant?: "button" | "icon";
 }) {
+  const titleId = useId();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"ai_card" | "graphic_card">("ai_card");
+  // O cartão abre fora do layout (portal), então leva a cor da marca junto.
+  const [brand, setBrand] = useState({ primary: "#0a0a0a", foreground: "#ffffff" });
+  const [theme, setTheme] = useState<BirthdayCardTheme>("marca");
+  const [mode, setMode] = useState<BirthdayCardNameMode>("first");
+  const [showAge, setShowAge] = useState(false);
+  const [message, setMessage] = useState(BIRTHDAY_MESSAGES[0].text);
+  // A imagem só é refeita quando a pessoa para de digitar.
+  const [settledMessage, setSettledMessage] = useState(message);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"send" | "copy" | "download" | null>(null);
+  const [feedback, setFeedback] = useState<Feedback>(null);
 
-  // Estados do Cartão Gerado por IA (Google Imagen)
-  const [aiStyle, setAiStyle] = useState<BirthdayAiStyle>("luxury_gold");
-  const [generatingAi, setGeneratingAi] = useState(false);
-  const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
-  const [aiImageMime, setAiImageMime] = useState<string>("image/jpeg");
-  const [aiSeed, setAiSeed] = useState<number>(() => Math.floor(Math.random() * 999999));
-  const [aiEngine, setAiEngine] = useState<string | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
+  function open(trigger: HTMLElement) {
+    const css = getComputedStyle(trigger);
+    const primary = css.getPropertyValue("--brand-primary").trim();
+    const foreground = css.getPropertyValue("--brand-foreground").trim();
+    if (primary) setBrand({ primary, foreground: foreground || "#ffffff" });
+    setIsOpen(true);
+  }
 
-  // Estados do Card Tipográfico Alternativo
-  const [graphicTheme, setGraphicTheme] = useState<CorporateCardTheme>("navy");
-  const [displayMode, setDisplayMode] = useState<"full" | "first">("full");
-  const [showAge, setShowAge] = useState<boolean>(false);
-  const [customText, setCustomText] = useState<string>(
-    CORPORATE_MESSAGE_TEMPLATES[0].text
-  );
-  const [graphicLoading, setGraphicLoading] = useState<boolean>(true);
-
-  // Ações
-  const [downloading, setDownloading] = useState(false);
-  const [copiedImage, setCopiedImage] = useState(false);
-  const [copiedText, setCopiedText] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  const hasAge = typeof turningAge === "number" && turningAge > 0;
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const timer = setTimeout(() => setSettledMessage(message), 450);
+    return () => clearTimeout(timer);
+  }, [message]);
 
-  // Fecha no Esc e bloqueia scroll de fundo enquanto o modal estiver aberto
+  // Fecha no Esc e trava a rolagem do fundo enquanto o cartão está aberto.
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsOpen(false);
     };
-    window.addEventListener("keydown", handleKeyDown);
-    const originalOverflow = document.body.style.overflow;
+    window.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
     };
   }, [isOpen]);
 
-  const effectiveCompany = companyName || "Nossa Empresa";
+  const cardUrl = `/api/birthday-card?${new URLSearchParams({
+    name,
+    mode,
+    theme,
+    showAge: showAge && hasAge ? "true" : "false",
+    age: hasAge ? String(turningAge) : "",
+    message: settledMessage.trim(),
+  }).toString()}`;
+  const loading = loadedUrl !== cardUrl && failedUrl !== cardUrl;
+  const failed = failedUrl === cardUrl;
+  const pendingTyping = settledMessage !== message;
 
-  // URL do Card Gráfico Tipográfico
-  const graphicCardUrl = `/api/birthday-card?name=${encodeURIComponent(
-    name
-  )}&displayMode=${displayMode}&company=${encodeURIComponent(
-    effectiveCompany
-  )}&theme=${graphicTheme}&age=${turningAge || ""}&showAge=${showAge ? "true" : "false"}&message=${encodeURIComponent(
-    customText.trim()
-  )}`;
-
-  // URL da Foto/Cartão IA (fallback direto via rota)
-  const aiImageUrl = `/api/birthday-image?name=${encodeURIComponent(
-    name
-  )}&age=${turningAge || ""}&company=${encodeURIComponent(
-    effectiveCompany
-  )}&style=${aiStyle}&seed=${aiSeed}`;
-
-  // Imagem ativa para download / cópia
-  const activeImageUrl =
-    activeTab === "ai_card"
-      ? aiImageBase64
-        ? `data:${aiImageMime};base64,${aiImageBase64}`
-        : aiImageUrl
-      : graphicCardUrl;
-
-  // Gera o cartão de aniversário com IA (Google Imagen)
-  const handleGenerateAiCard = async (customStyle?: BirthdayAiStyle, newSeed?: number) => {
-    setGeneratingAi(true);
-    setAiError(null);
-    const useStyle = customStyle || aiStyle;
-    const useSeed = newSeed ?? Math.floor(Math.random() * 999999);
-    setAiSeed(useSeed);
-
-    try {
-      const res = await generateBirthdayAiImageAction({
-        name,
-        age: turningAge,
-        companyName: effectiveCompany,
-        style: useStyle,
-        seed: useSeed,
-      });
-
-      if (res.ok && res.base64) {
-        setAiImageBase64(res.base64);
-        setAiImageMime(res.mimeType || "image/jpeg");
-        setAiEngine(res.engine || "google_imagen");
-      } else {
-        setAiError(res.error || "Não foi possível gerar o cartão por IA.");
-      }
-    } catch {
-      setAiError("Falha de conexão ao gerar o cartão comemorativo.");
-    } finally {
-      setGeneratingAi(false);
-    }
-  };
-
-  // Ao abrir o modal, se não houver cartão gerado ainda, gera imediatamente
-  useEffect(() => {
-    if (isOpen && !aiImageBase64 && !generatingAi) {
-      void handleGenerateAiCard();
-    }
-  }, [isOpen]);
-
-  // URL dinâmica do WhatsApp com mensagem formatada
-  const dynamicWhatsappUrl = (() => {
+  const whatsappText = `Olá, ${firstName}! 🎂\n\n${message.trim()}${companyName ? `\n\n— *${companyName}*` : ""}`;
+  const whatsappLink = (() => {
     if (!whatsappUrl) return null;
     try {
       const url = new URL(whatsappUrl);
-      const firstName = name.trim().split(/\s+/)[0];
-      const messageToSend = `Olá, ${firstName}! 🎂\n\n${customText.trim()}\n\n— *${effectiveCompany}*`;
-      url.searchParams.set("text", messageToSend);
+      url.searchParams.set("text", whatsappText);
       return url.toString();
     } catch {
       return whatsappUrl;
     }
   })();
 
-  // Copia a imagem do cartão para o clipboard (Ctrl+V no WhatsApp Web)
-  const handleCopyImage = async () => {
-    try {
-      let blob: Blob;
-      if (activeTab === "ai_card" && aiImageBase64) {
-        const res = await fetch(`data:${aiImageMime};base64,${aiImageBase64}`);
-        blob = await res.blob();
-      } else {
-        const targetUrl = activeTab === "ai_card" ? aiImageUrl : graphicCardUrl;
-        const res = await fetch(targetUrl);
-        blob = await res.blob();
-      }
+  const fileName = `feliz-aniversario-${firstName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")}.png`;
 
-      if (typeof window !== "undefined" && "ClipboardItem" in window && navigator.clipboard) {
+  function notify(next: Feedback) {
+    setFeedback(next);
+    if (next) setTimeout(() => setFeedback((current) => (current === next ? null : current)), 5000);
+  }
+
+  async function fetchCard(): Promise<Blob> {
+    const res = await fetch(cardUrl);
+    if (!res.ok) throw new Error("cartão indisponível");
+    return res.blob();
+  }
+
+  async function copyImage(blob: Blob): Promise<boolean> {
+    if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) return false;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function saveFile(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /** No celular abre o compartilhar com a imagem; no computador copia e abre o WhatsApp. */
+  async function handleSend() {
+    if (busy) return;
+    setBusy("send");
+    try {
+      const blob = await fetchCard();
+      const file = new File([blob], fileName, { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              [blob.type || "image/png"]: blob,
-            }),
-          ]);
-          setCopiedImage(true);
-          setTimeout(() => setCopiedImage(false), 3500);
+          await navigator.share({ files: [file], text: whatsappText });
           return;
-        } catch {}
-      }
-
-      await navigator.clipboard.writeText(customText);
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 3000);
-    } catch {
-      await navigator.clipboard.writeText(customText);
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 3000);
-    }
-  };
-
-  // Baixa o cartão em alta resolução
-  const handleDownload = async () => {
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      let blob: Blob;
-      if (activeTab === "ai_card" && aiImageBase64) {
-        const byteCharacters = atob(aiImageBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        } catch (error) {
+          if ((error as Error).name === "AbortError") return; // a pessoa fechou o compartilhar
         }
-        blob = new Blob([new Uint8Array(byteNumbers)], { type: aiImageMime });
-      } else {
-        const targetUrl = activeTab === "ai_card" ? aiImageUrl : graphicCardUrl;
-        const res = await fetch(targetUrl);
-        blob = await res.blob();
       }
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `cartao-aniversario-${name.toLowerCase().replace(/\s+/g, "-")}.${
-        activeTab === "ai_card" ? "jpg" : "png"
-      }`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const copied = await copyImage(blob);
+      if (!copied) saveFile(blob);
+      notify({
+        tone: "ok",
+        text: copied
+          ? whatsappLink
+            ? "Imagem copiada. Abra a conversa e cole com Ctrl+V."
+            : "Imagem copiada. Cole com Ctrl+V onde quiser enviar."
+          : "Imagem baixada. Anexe na conversa.",
+      });
     } catch {
-      window.open(activeImageUrl, "_blank");
+      notify({ tone: "erro", text: "Não consegui gerar o cartão agora. Tente de novo." });
     } finally {
-      setDownloading(false);
+      setBusy(null);
     }
-  };
+  }
+
+  async function handleCopy() {
+    if (busy) return;
+    setBusy("copy");
+    try {
+      const copied = await copyImage(await fetchCard());
+      notify(
+        copied
+          ? { tone: "ok", text: "Imagem copiada. Cole com Ctrl+V." }
+          : { tone: "erro", text: "Este navegador não copia imagem. Use Baixar." }
+      );
+    } catch {
+      notify({ tone: "erro", text: "Não consegui gerar o cartão agora. Tente de novo." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDownload() {
+    if (busy) return;
+    setBusy("download");
+    try {
+      saveFile(await fetchCard());
+    } catch {
+      notify({ tone: "erro", text: "Não consegui gerar o cartão agora. Tente de novo." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const secondary =
+    "inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#18181b] hover:bg-[#fafaf9] disabled:opacity-50";
 
   return (
     <>
       {variant === "icon" ? (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-amber-50/80 text-amber-950 shadow-2xs hover:bg-amber-100 hover:text-amber-950 transition"
-          title={`Gerar Cartão de Aniversário por IA para ${name}`}
+          onClick={(e) => open(e.currentTarget)}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-amber-50/80 text-amber-700 hover:bg-amber-100"
+          title={`Cartão de aniversário para ${name}`}
+          aria-label={`Cartão de aniversário para ${name}`}
         >
-          <Sparkles className="size-4 text-amber-600" />
+          <Gift className="size-4" />
         </button>
       ) : (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-950 shadow-2xs hover:bg-amber-100 transition active:scale-95"
-          title={`Gerar Cartão de Aniversário por IA para ${name}`}
+          onClick={(e) => open(e.currentTarget)}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
+          title={`Cartão de aniversário para ${name}`}
         >
-          <Sparkles className="size-3.5 text-amber-600" />
-          <span>Cartão por IA</span>
+          <Gift className="size-3.5 text-amber-700" />
+          <span>Cartão</span>
         </button>
       )}
 
-      {/* Modal: Cartão de Aniversário por IA (Renderizado via Portal na raiz do documento para não ser cortado por overflow-hidden) */}
       {isOpen &&
-        mounted &&
-        typeof document !== "undefined" &&
         createPortal(
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-xs animate-in fade-in"
+            aria-labelledby={titleId}
+            className="fixed inset-0 z-9999 flex items-end justify-center bg-black/70 sm:items-center sm:p-5"
+            style={{ ["--brand-primary" as string]: brand.primary, ["--brand-foreground" as string]: brand.foreground }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setIsOpen(false);
             }}
           >
-            <div
-              className="relative w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-            {/* Topo do Modal */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
-              <div className="flex items-center gap-3">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-slate-900 text-amber-400 shadow-xs">
-                  <Sparkles className="size-5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Cartão de Aniversário com IA
-                    </h3>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-                      Google Imagen 3 / HD 1024×1024
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Cartão comemorativo para <strong className="text-slate-700">{name}</strong> {turningAge ? `· ${turningAge} anos` : ""} · {effectiveCompany}
+            <div className="flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+              <div className="flex items-center justify-between gap-3 border-b border-[#e4e4e7] px-5 py-3.5">
+                <div className="min-w-0">
+                  <h3 id={titleId} className="text-sm font-bold text-[#0a0a0a]">
+                    Cartão de aniversário
+                  </h3>
+                  <p className="truncate text-xs text-[#71717a]">
+                    Para {name}
+                    {hasAge ? ` · faz ${turningAge} anos` : ""}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => setIsOpen(false)}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                  aria-label="Fechar"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              {/* Botão Fechar */}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition"
-                aria-label="Fechar modal"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            {/* Alternador de Abas */}
-            <div className="flex items-center gap-2 border-b border-slate-200 px-6 pt-3 pb-2 bg-white">
-              <button
-                type="button"
-                onClick={() => setActiveTab("ai_card")}
-                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-                  activeTab === "ai_card"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <Sparkles className="size-3.5 text-amber-400" />
-                <span>Cartão Ilustrado com IA (Google Imagen)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("graphic_card")}
-                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-                  activeTab === "graphic_card"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <FileImage className="size-3.5 text-zinc-400" />
-                <span>Card Tipográfico de RH</span>
-              </button>
-            </div>
-
-            {/* Corpo do Modal */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white">
-              {activeTab === "ai_card" ? (
-                /* ABA 1: CARTÃO ILUSTRADO GERADO POR IA (GOOGLE IMAGEN) */
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  {/* Coluna Esquerda: Pré-visualização do Cartão */}
-                  <div className="lg:col-span-6 flex flex-col items-center">
-                    <div className="relative w-full max-w-[380px] aspect-square rounded-2xl overflow-hidden border border-slate-300 shadow-xl bg-slate-950 flex items-center justify-center">
-                      {generatingAi ? (
-                        <div className="flex flex-col items-center justify-center p-6 text-center space-y-3 text-white">
-                          <Loader2 className="size-8 animate-spin text-amber-400" />
-                          <p className="text-xs font-bold">
-                            Criando cartão com Inteligência Artificial...
-                          </p>
-                          <p className="text-[11px] text-slate-300 max-w-xs leading-relaxed">
-                            Renderizando arte comemorativa de alta definição para {name}.
-                          </p>
-                        </div>
-                      ) : aiImageBase64 ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={`data:${aiImageMime};base64,${aiImageBase64}`}
-                            alt={`Cartão de Aniversário por IA para ${name}`}
-                            className="w-full h-full object-cover transition duration-300"
-                          />
-                          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none opacity-90 z-20">
-                            <span className="rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                              {BIRTHDAY_AI_STYLES[aiStyle]?.label}
-                            </span>
-                            <span className="rounded-full bg-amber-500/90 px-2 py-1 text-[10px] font-bold text-white shadow-xs">
-                              IA 1024×1024 HD
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-center p-6 text-xs text-slate-400">
-                          Clique em &quot;Gerar Cartão&quot; para iniciar.
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-[11px] text-slate-500 text-center mt-3">
-                      Cartão artístico comemorativo criado por IA, pronto para enviar pelo WhatsApp.
-                    </p>
-                  </div>
-
-                  {/* Coluna Direita: Opções de Estilo do Cartão */}
-                  <div className="lg:col-span-6 space-y-5">
-                    <div>
-                      <label className="text-xs font-bold text-slate-900 block mb-2">
-                        Escolha o Estilo do Cartão Comemorativo:
-                      </label>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {(Object.keys(BIRTHDAY_AI_STYLES) as BirthdayAiStyle[]).map((styleKey) => {
-                          const styleInfo = BIRTHDAY_AI_STYLES[styleKey];
-                          const isSelected = aiStyle === styleKey;
-                          return (
-                            <button
-                              key={styleKey}
-                              type="button"
-                              onClick={() => {
-                                setAiStyle(styleKey);
-                                void handleGenerateAiCard(styleKey);
-                              }}
-                              disabled={generatingAi}
-                              className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
-                                isSelected
-                                  ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/15 shadow-2xs"
-                                  : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-1 mb-1">
-                                <span className="text-xl">{styleInfo.emoji}</span>
-                                <span className="text-[10px] font-bold rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600">
-                                  {styleInfo.badge}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold text-slate-900 line-clamp-1">
-                                  {styleInfo.label}
-                                </p>
-                                <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2 leading-tight">
-                                  {styleInfo.description}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
+              <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-5 md:grid-cols-2">
+                <div className="mx-auto w-full max-w-[340px] md:max-w-none">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-[#e4e4e7] bg-[#f4f4f5]">
+                    {!failed && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={cardUrl}
+                        src={cardUrl}
+                        alt={`Cartão de aniversário para ${name}`}
+                        className={`size-full object-cover transition-opacity duration-200 ${loading ? "opacity-0" : "opacity-100"}`}
+                        onLoad={() => setLoadedUrl(cardUrl)}
+                        onError={() => setFailedUrl(cardUrl)}
+                      />
+                    )}
+                    {(loading || pendingTyping) && !failed && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/40">
+                        <Loader2 className="size-6 animate-spin text-[#71717a]" />
                       </div>
-                    </div>
-
-                    {/* Descrição do Estilo Selecionado & Botão de Regerar */}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-3">
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block mb-1">
-                          {BIRTHDAY_AI_STYLES[aiStyle]?.label}
-                        </span>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {BIRTHDAY_AI_STYLES[aiStyle]?.description}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateAiCard(aiStyle)}
-                        disabled={generatingAi}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-900 shadow-2xs hover:bg-slate-50 transition active:scale-98 disabled:opacity-50"
-                      >
-                        <RefreshCw className={`size-3.5 ${generatingAi ? "animate-spin" : ""}`} />
-                        <span>
-                          {generatingAi ? "Criando Cartão..." : "Gerar Outra Versão do Cartão"}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Dica de Envio Prático */}
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-950 flex items-start gap-2.5">
-                      <span className="text-base shrink-0">💡</span>
-                      <div>
-                        <p className="font-bold">Como enviar junto com o texto de parabéns:</p>
-                        <p className="text-[11px] text-emerald-900 mt-0.5 leading-relaxed">
-                          1. Clique em <strong>Copiar Cartão (Imagem)</strong>.<br />
-                          2. Clique em <strong>Abrir no WhatsApp</strong>.<br />
-                          3. Pressione <strong>Ctrl + V</strong> para colar a imagem no chat e envie com a mensagem pronta!
-                        </p>
-                      </div>
-                    </div>
-
-                    {aiError && (
-                      <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-                        {aiError}
+                    )}
+                    {failed && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
+                        <p className="text-xs text-[#52525b]">Não consegui desenhar o cartão.</p>
+                        <button type="button" onClick={() => setFailedUrl(null)} className={secondary}>
+                          Tentar de novo
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
-              ) : (
-                /* ABA 2: CARD TIPOGRÁFICO INSTITUCIONAL */
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  <div className="lg:col-span-6 flex flex-col items-center">
-                    <div className="relative w-full max-w-[380px] aspect-square rounded-2xl overflow-hidden border border-slate-300 shadow-xl bg-slate-950 flex items-center justify-center">
-                      {graphicLoading && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/80 text-white p-4 space-y-2">
-                          <Loader2 className="size-7 animate-spin text-amber-400" />
-                          <p className="text-xs font-semibold">Renderizando card tipográfico...</p>
-                        </div>
-                      )}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        key={graphicCardUrl}
-                        src={graphicCardUrl}
-                        alt={`Card de Aniversário Corporativo para ${name}`}
-                        className={`w-full h-full object-cover transition duration-300 ${
-                          graphicLoading ? "opacity-0" : "opacity-100"
-                        }`}
-                        onLoad={() => setGraphicLoading(false)}
-                        onError={() => setGraphicLoading(false)}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="lg:col-span-6 space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-900 block mb-1.5">
-                        Padrão do Card Tipográfico:
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {CORPORATE_THEMES.map((item) => (
+                <div className="space-y-4">
+                  <fieldset>
+                    <legend className="mb-1.5 text-xs font-semibold text-[#0a0a0a]">Estilo</legend>
+                    <div className="grid grid-cols-3 gap-2">
+                      {BIRTHDAY_CARD_THEMES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={theme === item.id}
+                          onClick={() => setTheme(item.id)}
+                          title={item.description}
+                          className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-medium ${
+                            theme === item.id
+                              ? "border-[#0a0a0a] bg-[#fafaf9] text-[#0a0a0a] ring-1 ring-[#0a0a0a]"
+                              : "border-[#e4e4e7] text-[#52525b] hover:bg-[#fafaf9]"
+                          }`}
+                        >
+                          <span className={`size-4 shrink-0 rounded-full border border-black/15 ${THEME_SWATCH[item.id]}`} />
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <fieldset>
+                    <legend className="mb-1.5 text-xs font-semibold text-[#0a0a0a]">Nome no cartão</legend>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <div className="inline-flex rounded-lg border border-[#e4e4e7] p-0.5">
+                        {(
+                          [
+                            ["first", "Primeiro nome"],
+                            ["full", "Nome e sobrenome"],
+                          ] as const
+                        ).map(([value, label]) => (
                           <button
-                            key={item.id}
+                            key={value}
                             type="button"
-                            onClick={() => {
-                              setGraphicTheme(item.id);
-                              setGraphicLoading(true);
-                            }}
-                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition ${
-                              graphicTheme === item.id
-                                ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/15"
-                                : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                            aria-pressed={mode === value}
+                            onClick={() => setMode(value)}
+                            className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
+                              mode === value ? "bg-[#0a0a0a] text-white" : "text-[#52525b] hover:text-[#0a0a0a]"
                             }`}
                           >
-                            <span className="block text-slate-900">{item.label}</span>
-                            <span className="text-[10px] font-normal text-slate-500">{item.description}</span>
+                            {label}
                           </button>
                         ))}
                       </div>
+                      {hasAge && (
+                        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[#3f3f46]">
+                          <input
+                            type="checkbox"
+                            checked={showAge}
+                            onChange={(e) => setShowAge(e.target.checked)}
+                            className="size-4 rounded border-[#a1a1aa]"
+                          />
+                          Mostrar a idade ({turningAge})
+                        </label>
+                      )}
                     </div>
+                  </fieldset>
 
-                    <div>
-                      <label className="text-xs font-bold text-slate-900 block mb-1.5">
-                        Mensagem de Felicitação:
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <label htmlFor={`${titleId}-msg`} className="text-xs font-semibold text-[#0a0a0a]">
+                        Mensagem
                       </label>
-                      <textarea
-                        rows={3}
-                        value={customText}
-                        onChange={(e) => {
-                          setCustomText(e.target.value);
-                          setGraphicLoading(true);
-                        }}
-                        className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 leading-relaxed outline-none focus:border-slate-900 resize-none shadow-2xs"
-                      />
+                      <span className={`text-[11px] ${message.length > MAX_CARD_MESSAGE ? "text-[#b91c1c]" : "text-[#71717a]"}`}>
+                        {message.length}/{MAX_CARD_MESSAGE}
+                      </span>
                     </div>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {BIRTHDAY_MESSAGES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={message === item.text}
+                          onClick={() => setMessage(item.text)}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                            message === item.text
+                              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                              : "border-[#e4e4e7] text-[#52525b] hover:bg-[#fafaf9]"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      id={`${titleId}-msg`}
+                      rows={4}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="w-full resize-none rounded-lg border border-[#d4d4d8] bg-white p-3 text-sm leading-relaxed text-[#0a0a0a] outline-none focus:border-[#0a0a0a]"
+                    />
+                    {message.length > MAX_CARD_MESSAGE && (
+                      <p className="mt-1 text-[11px] text-[#b91c1c]">
+                        Passou do limite: no cartão o texto será cortado. No WhatsApp vai inteiro.
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Rodapé de Ações Finais (Copiar Imagem, Baixar, WhatsApp) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Botão de Copiar Imagem (Ctrl+V no WhatsApp Web) */}
-                <button
-                  type="button"
-                  onClick={handleCopyImage}
-                  disabled={generatingAi}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs hover:bg-slate-100 transition active:scale-95 disabled:opacity-50"
-                  title="Copia o cartão para colar direto no WhatsApp Web com Ctrl+V"
-                >
-                  {copiedImage ? (
-                    <>
-                      <Check className="size-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Cartão Copiado (Ctrl+V)!</span>
-                    </>
-                  ) : copiedText ? (
-                    <>
-                      <Check className="size-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Texto Copiado!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-3.5" />
-                      <span>Copiar Cartão (Imagem)</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Baixar Imagem */}
-                <button
-                  type="button"
-                  onClick={handleDownload}
-                  disabled={downloading || generatingAi}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-2xs hover:bg-slate-100 transition active:scale-95 disabled:opacity-50"
-                  title="Baixar cartão em alta resolução (1024x1024)"
-                >
-                  {downloading ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Download className="size-3.5" />
-                  )}
-                  <span>{downloading ? "Baixando..." : "Baixar Cartão"}</span>
-                </button>
-
-                {/* Copiar Apenas Texto */}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(customText);
-                    setCopiedText(true);
-                    setTimeout(() => setCopiedText(false), 3000);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 transition"
-                  title="Copiar texto formal de felicitação"
-                >
-                  <Type className="size-3.5 text-slate-500" />
-                  <span>Copiar Mensagem</span>
-                </button>
               </div>
 
-              {/* Botão de Abrir WhatsApp */}
-              {dynamicWhatsappUrl && (
-                <a
-                  href={dynamicWhatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition active:scale-95"
-                  title="Abre a conversa no WhatsApp para enviar o cartão ao aniversariante"
+              <div className="border-t border-[#e4e4e7] bg-[#fafaf9] px-5 py-3.5">
+                <p
+                  role="status"
+                  className={`text-xs ${feedback ? "mb-2" : ""} ${feedback?.tone === "erro" ? "text-[#b91c1c]" : "text-[#15803d]"}`}
                 >
-                  <MessageCircle className="size-4" />
-                  <span>Abrir no WhatsApp</span>
-                </a>
-              )}
+                  {feedback && (
+                    <span className="inline-flex items-center gap-1">
+                      {feedback.tone === "ok" && <Check className="size-3.5" />}
+                      {feedback.text}
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={busy !== null || failed}
+                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 text-sm font-semibold text-[var(--brand-foreground)] hover:opacity-90 disabled:opacity-50 sm:flex-none"
+                  >
+                    {busy === "send" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    Enviar cartão
+                  </button>
+                  {whatsappLink && (
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                    >
+                      <MessageCircle className="size-4" />
+                      Abrir conversa
+                    </a>
+                  )}
+                  <button type="button" onClick={handleCopy} disabled={busy !== null || failed} className={secondary}>
+                    {busy === "copy" ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
+                    Copiar imagem
+                  </button>
+                  <button type="button" onClick={handleDownload} disabled={busy !== null || failed} className={secondary}>
+                    {busy === "download" ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                    Baixar
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

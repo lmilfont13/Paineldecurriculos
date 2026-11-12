@@ -371,5 +371,12 @@ e-mail personalizados.
   RG, CPF, PcD, dados bancários, notas internas nem a justificativa da IA. Cada
   download fica registrado na Auditoria.
 
+- **Cartão de aniversário refeito (11/2026):** saiu a geração por IA (que
+  mandava nome e idade para um serviço de fora). O cartão agora é desenhado
+  pelo próprio sistema, com a cor e o logo da empresa, em três estilos (Marca,
+  Claro, Noite), com opção de mostrar a idade e mensagem editável. "Enviar
+  cartão" abre o compartilhar do celular com a imagem; no computador copia a
+  imagem para colar na conversa. Só gestor logado gera o cartão.
+
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.
