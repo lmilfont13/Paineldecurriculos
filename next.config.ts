@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./public/demo/**/*"],
     "/**/*": ["./public/demo/**/*"],
+    // Fontes do cartão de aniversário, lidas do disco na hora de desenhar.
+    "/api/birthday-card": ["./src/assets/fonts/*.woff"],
   },
   // Exclui arquivos de áudio pesados de serem incluídos dentro do bundle das Serverless Functions.
   // Eles são servidos diretamente pela CDN estática da Vercel.
