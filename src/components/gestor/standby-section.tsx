@@ -142,8 +142,24 @@ export function StandbySection({
                   </p>
                   {p.reasoning && <p className="mt-1 text-[12px] leading-5 text-[#52525b]">{p.reasoning}</p>}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <MatchScore match={{ score: p.score, state: p.state, minScore }} />
+                  <a
+                    href={`/candidaturas/${p.id}/cv`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#3f3f46] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                    title="Visualizar currículo em nova aba"
+                  >
+                    Ver CV
+                  </a>
+                  <a
+                    href={`/candidaturas/${p.id}/cv?download=1`}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                    title="Baixar currículo em PDF"
+                  >
+                    Baixar PDF
+                  </a>
                   {importedIds.has(p.id) ? (
                     <span className="inline-flex items-center gap-1 rounded-lg bg-[#e4f6ec] px-2.5 py-1 text-[11px] font-medium text-[#1f7a4d]">
                       <Check className="size-3.5" /> No funil

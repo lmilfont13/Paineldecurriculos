@@ -74,6 +74,24 @@ export default async function TalentFolderPage({
               aiState={person.aiState}
               meetsMinimum={person.aiScore !== null && person.aiScore >= person.job.aiMinScore}
             />
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`/candidaturas/${person.id}/cv`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-semibold text-[#3f3f46] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                title="Visualizar currículo em nova aba"
+              >
+                Ver CV
+              </a>
+              <a
+                href={`/candidaturas/${person.id}/cv?download=1`}
+                className="inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2.5 text-[11px] font-semibold text-white transition hover:opacity-90"
+                title="Baixar currículo em PDF"
+              >
+                Baixar PDF
+              </a>
+            </div>
             <RemoveFromFolderButton folderId={folder.id} applicationId={person.id} name={person.name} />
           </div>
         ))}

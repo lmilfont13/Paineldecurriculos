@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Download, Eye } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -166,7 +167,7 @@ export default async function CandidaturaDetailPage({
       candidateName={app.name}
       jobId={app.job.id}
       jobTitle={jobLabel(app.job.title, app.job.code)}
-      hasResume={Boolean(app.resumeUrl)}
+      hasResume={true}
       latestResumeUrl={app.latestResumeInfo?.latestResumeUrl}
       latestResumeSource={app.latestResumeInfo?.sourceTitle}
       queue={app.queue}
@@ -251,7 +252,29 @@ export default async function CandidaturaDetailPage({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:gap-2.5">
+            <a
+              href={`/candidaturas/${app.id}/cv`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs transition hover:bg-[#fafaf9]"
+              title="Ver currículo em nova aba"
+            >
+              <Eye className="size-3.5 text-[#52525b]" />
+              <span>Ver currículo</span>
+            </a>
+            <a
+              href={`/candidaturas/${app.id}/cv?download=1`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold shadow-2xs transition hover:opacity-90"
+              style={{
+                backgroundColor: "var(--brand-primary)",
+                color: "var(--brand-foreground)",
+              }}
+              title="Baixar currículo em PDF"
+            >
+              <Download className="size-3.5" />
+              <span>Baixar PDF</span>
+            </a>
             {!app.hasImpediment && (
               <ImpedimentToggle
                 applicationId={app.id}
@@ -686,37 +709,45 @@ export default async function CandidaturaDetailPage({
             <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
               Currículo
             </p>
-            {app.resumeUrl ? (
-              <div className="mt-4 flex items-center gap-3">
-                <span className="rounded-lg bg-[#e4f6ec] px-2.5 py-2 text-[9px] font-bold text-[#1f7a4d]">
-                  PDF
+            <div className="mt-4 flex items-center gap-3">
+              <span className="rounded-lg bg-[#e4f6ec] px-2.5 py-2 text-[9px] font-bold text-[#1f7a4d]">
+                PDF
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
+                  Currículo de {app.name.split(" ")[0]}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
-                    Currículo de {app.name.split(" ")[0]}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-[#71717a]">
-                    Documento enviado na candidatura
-                  </span>
+                <span className="mt-0.5 block text-[11px] text-[#71717a]">
+                  {app.resumeUrl
+                    ? "Documento enviado na candidatura"
+                    : app.latestResumeInfo?.latestResumeUrl
+                    ? `Currículo sincronizado (${app.latestResumeInfo.sourceTitle})`
+                    : "Dossiê em PDF gerado com os dados da candidatura"}
                 </span>
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-[#71717a]">
-                Nenhum currículo enviado.
-              </p>
-            )}
-            {app.resumeUrl && (
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
               <a
                 href={`/candidaturas/${app.id}/cv`}
-                className="mt-4 flex h-10 w-full items-center justify-center rounded-xl px-5 text-xs font-semibold hover:opacity-90"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
+              >
+                <Eye className="size-3.5 text-[#52525b]" />
+                <span>Ver currículo</span>
+              </a>
+              <a
+                href={`/candidaturas/${app.id}/cv?download=1`}
+                className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition hover:opacity-90"
                 style={{
                   backgroundColor: "var(--brand-primary)",
                   color: "var(--brand-foreground)",
                 }}
               >
-                Abrir currículo
+                <Download className="size-3.5" />
+                <span>Baixar PDF</span>
               </a>
-            )}
+            </div>
           </section>
 
           <div className="flex justify-center pt-1">

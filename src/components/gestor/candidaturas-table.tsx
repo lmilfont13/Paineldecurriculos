@@ -411,7 +411,21 @@ export function CandidaturasTable({
     [scoped]
   );
   const cols =
-    "grid-cols-[28px_minmax(0,1fr)_auto] md:grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_44px_72px]";
+    "grid-cols-[28px_minmax(0,1fr)_auto] md:grid-cols-[36px_minmax(180px,2fr)_150px_minmax(120px,1fr)_164px_64px]";
+
+  function downloadSelectedResumes() {
+    const ids = [...selected];
+    ids.forEach((appId, idx) => {
+      setTimeout(() => {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = `/candidaturas/${appId}/cv?download=1`;
+        document.body.appendChild(iframe);
+        setTimeout(() => iframe.remove(), 30_000);
+      }, idx * 450);
+    });
+    setToast(`Iniciando download de ${ids.length} currículo${ids.length === 1 ? "" : "s"} em PDF…`);
+  }
 
   if (!hasOpenJobs) {
     return (
@@ -814,11 +828,29 @@ export function CandidaturasTable({
                     )}
                   </Link>
 
-                  <div className="border-t border-[#f1f0ed] px-4 py-2.5 flex items-center justify-between">
+                  <div className="mt-auto border-t border-[#f1f0ed] px-4 py-2 flex items-center justify-between">
                     <span className="text-[11px] text-[#71717a] truncate">{jobLabel(row.jobTitle, row.jobCode)}</span>
                     {row.aiScore !== null && (
                       <span className={"ml-2 shrink-0 text-[11px] font-semibold " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
                     )}
+                  </div>
+                  <div className="border-t border-[#f1f0ed] bg-[#fafaf9]/70 px-3 py-2 flex items-center gap-1.5 rounded-b-2xl">
+                    <a
+                      href={`/candidaturas/${row.id}/cv`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2 text-[10px] font-semibold text-[#3f3f46] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                      title="Visualizar currículo em nova aba"
+                    >
+                      Ver CV
+                    </a>
+                    <a
+                      href={`/candidaturas/${row.id}/cv?download=1`}
+                      className="flex-1 inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2 text-[10px] font-semibold text-white transition hover:opacity-90"
+                      title="Baixar currículo em PDF"
+                    >
+                      Baixar PDF
+                    </a>
                   </div>
                 </div>
                 </Fragment>
@@ -997,17 +1029,24 @@ export function CandidaturasTable({
                   </span>
                 )}
               </span>
-              {row.resumeUrl ? (
+              <div className="col-span-full flex items-center justify-end gap-1.5 md:col-span-1 md:justify-start">
                 <a
                   href={`/candidaturas/${row.id}/cv`}
-                  className="hidden text-sm text-[#71717a] hover:text-[#0a0a0a] md:inline"
-                  title="Baixar currículo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-semibold text-[#3f3f46] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                  title="Visualizar currículo em nova aba"
                 >
-                  ↓
+                  Ver CV
                 </a>
-              ) : (
-                <span className="hidden text-sm text-[#e4e4e7] md:inline">–</span>
-              )}
+                <a
+                  href={`/candidaturas/${row.id}/cv?download=1`}
+                  className="inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2.5 text-[11px] font-semibold text-white transition hover:opacity-90"
+                  title="Baixar currículo em PDF"
+                >
+                  PDF ↓
+                </a>
+              </div>
               <Link
                 href={`/candidaturas/${row.id}`}
                 className="hidden text-right text-xs font-medium hover:underline md:block"
@@ -1080,6 +1119,14 @@ export function CandidaturasTable({
             className="h-[34px] shrink-0 rounded-[10px] bg-[#c86b60]/25 px-4 text-xs font-medium text-[#f5b7b0] hover:bg-[#c86b60]/40 disabled:opacity-50"
           >
             Excluir
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={downloadSelectedResumes}
+            className="h-[34px] shrink-0 rounded-[10px] bg-white/12 px-4 text-xs font-semibold text-white hover:bg-white/20 disabled:opacity-50"
+          >
+            Baixar PDFs ({selected.size})
           </button>
           <button
             type="button"

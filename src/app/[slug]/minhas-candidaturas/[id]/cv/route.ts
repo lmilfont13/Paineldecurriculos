@@ -6,9 +6,9 @@ import {
 } from "@/server/services/application.service";
 import { getSessionCandidate } from "@/server/services/candidate.service";
 
-/** Download do currículo enviado nesta candidatura (posse do candidato). */
+/** Visualização ou download (?download=1) do currículo enviado nesta candidatura (posse do candidato). */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string; id: string }> }
 ) {
   const candidate = await getSessionCandidate();
@@ -16,9 +16,18 @@ export async function GET(
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
   const { id } = await params;
+  const { searchParams } = new URL(request.url);
+  const isDownload =
+    searchParams.get("download") === "1" ||
+    searchParams.get("download") === "true";
+
   const application = await getCandidateApplication(candidate.id, id);
   const url = application
-    ? await getCandidateResumeSignedUrl(candidate.id, application.resumeUrl)
+    ? await getCandidateResumeSignedUrl(
+        candidate.id,
+        application.resumeUrl ?? candidate.resumeUrl,
+        { download: isDownload, candidateName: application.name || candidate.name }
+      )
     : null;
   if (!url) {
     return NextResponse.json(
@@ -26,5 +35,5 @@ export async function GET(
       { status: 404 }
     );
   }
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(new URL(url, request.url));
 }

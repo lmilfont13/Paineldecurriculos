@@ -127,6 +127,7 @@ import {
 import { withLargePhotoPaths } from "@/server/models/photo.model";
 import { parseInstagram } from "@/server/models/instagram.model";
 import { CONSENT_REQUIRED_MESSAGE, CONSENT_VERSION } from "@/server/models/consent.model";
+import { readChecklist } from "@/server/models/ai.model";
 import { activeRunsSignature } from "@/server/models/simulation.model";
 import { sweepStaleAgentRunsThrottled } from "@/server/services/agent-watchdog.service";
 import {
@@ -775,30 +776,67 @@ export async function withdrawApplication(
   return { ok: true };
 }
 
+/** Gera um nome de arquivo limpo para download do currículo em PDF. */
+export function buildResumeDownloadFilename(name?: string | null, ext = ".pdf"): string {
+  const clean = (name || "candidato")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  const normalizedExt = ext.startsWith(".") ? ext.toLowerCase() : `.${ext.toLowerCase()}`;
+  return `curriculo-${clean || "candidato"}${normalizedExt}`;
+}
+
 /** URL assinada do currículo, na visão do candidato (posse verificada). */
 export async function getCandidateResumeSignedUrl(
   candidateId: string,
-  resumePath: string | null
+  resumePath: string | null,
+  options?: { download?: boolean; candidateName?: string | null }
 ): Promise<string | null> {
   if (!resumePath) return null;
+  if (isDemoResumePath(resumePath)) {
+    return `/${resumePath}`;
+  }
   const supabase = createAdminClient();
+  const extMatch = resumePath.match(/\.[a-zA-Z0-9]+$/);
+  const downloadFilename = options?.download
+    ? buildResumeDownloadFilename(options.candidateName, extMatch ? extMatch[0] : ".pdf")
+    : undefined;
   const { data, error } = await supabase.storage
     .from(RESUMES_BUCKET)
-    .createSignedUrl(resumePath, 600);
+    .createSignedUrl(
+      resumePath,
+      600,
+      downloadFilename ? { download: downloadFilename } : undefined
+    );
   return error ? null : data.signedUrl;
 }
 
-/** URL assinada (10 min) para baixar o currículo do Storage privado. */
+/** URL assinada (10 min) para visualizar ou baixar o currículo do Storage privado. */
 export async function getResumeSignedUrl(
   companyId: string,
   applicationId: string,
-  resumeUrlOverride?: string | null
+  resumeUrlOverride?: string | null,
+  options?: { download?: boolean }
 ): Promise<string | null> {
-  let targetResumeUrl = resumeUrlOverride;
-  if (!targetResumeUrl) {
-    const application = await getCompanyApplication(companyId, applicationId);
-    targetResumeUrl = application?.resumeUrl ?? null;
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application && !resumeUrlOverride) return null;
+
+  let targetResumeUrl = resumeUrlOverride || application?.resumeUrl || null;
+
+  // Fallback automático: se esta candidatura não tinha arquivo anexado diretamente,
+  // verifica se a mesma pessoa já enviou currículo no perfil ou em outra vaga.
+  if (!targetResumeUrl && application) {
+    const latest = await findLatestPersonResumeInfo(
+      companyId,
+      application.email,
+      application.candidateId,
+      null
+    ).catch(() => null);
+    targetResumeUrl = latest?.resumeUrl ?? null;
   }
+
   if (!targetResumeUrl) return null;
 
   // Demo: arquivo estático de /public. Caminho relativo — a rota monta a
@@ -809,11 +847,85 @@ export async function getResumeSignedUrl(
   }
 
   const supabase = createAdminClient();
+  const extMatch = targetResumeUrl.match(/\.[a-zA-Z0-9]+$/);
+  const downloadFilename = options?.download
+    ? buildResumeDownloadFilename(application?.name, extMatch ? extMatch[0] : ".pdf")
+    : undefined;
+
   const { data, error } = await supabase.storage
     .from(RESUMES_BUCKET)
-    .createSignedUrl(targetResumeUrl, 600);
+    .createSignedUrl(
+      targetResumeUrl,
+      600,
+      downloadFilename ? { download: downloadFilename } : undefined
+    );
   if (error) return null;
   return data.signedUrl;
+}
+
+/**
+ * Monta os dados estruturados da candidatura para gerar um PDF de currículo/dossiê
+ * quando o candidato não possui arquivo físico no Storage ou quando solicitado.
+ */
+export async function getApplicationResumePdfData(
+  companyId: string,
+  applicationId: string
+) {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application) return null;
+
+  let resumeText = application.resumeText;
+  if (!resumeText) {
+    const latest = await findLatestPersonResumeInfo(
+      companyId,
+      application.email,
+      application.candidateId,
+      application.resumeUrl
+    ).catch(() => null);
+    if (latest?.resumeText) {
+      resumeText = latest.resumeText;
+    }
+  }
+
+  const checklist = readChecklist(application.aiChecklist);
+  const rawHighlights = checklist
+    .filter((item) => item.met === "sim" || item.met === "parcial")
+    .map((item) => `${item.criterion}: ${item.evidence || item.met}`);
+
+  return {
+    id: application.id,
+    name: application.name,
+    email: application.email,
+    phone: application.phone,
+    city: application.city,
+    state: application.state,
+    neighborhood: application.neighborhood,
+    desiredRole: application.desiredRole,
+    instagram: application.instagram,
+    salaryExpectation: application.salaryExpectation,
+    workPreference: application.workPreference,
+    availability: application.availability,
+    hasCnh: application.hasCnh,
+    maritalStatus: application.maritalStatus,
+    professionalSummary: application.professionalSummary,
+    status: application.status,
+    aiScore: application.aiScore,
+    aiReasoning: application.aiReasoning,
+    aiProfile: application.aiProfile,
+    aiArea: application.aiArea,
+    aiLevel: application.aiLevel,
+    aiHighlights: rawHighlights,
+    aiCareerSummary: null,
+    resumeText,
+    jobTitle: application.job.title,
+    companyName: application.company.name,
+    brandColor: application.company.primaryColor,
+    createdAt: application.createdAt,
+    answers: application.answers.map((a) => ({
+      label: a.field.label,
+      value: a.value,
+    })),
+  };
 }
 
 /**

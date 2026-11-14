@@ -121,6 +121,22 @@ export function ShortlistPanel({
                   <span className="text-[11px] text-[#a1a1aa]">
                     {appStatusLabels[pick.status as AppStatusKey] ?? pick.status}
                   </span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <a
+                      href={`/candidaturas/${pick.applicationId}/cv`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-semibold text-[#3f3f46] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                    >
+                      Ver CV
+                    </a>
+                    <a
+                      href={`/candidaturas/${pick.applicationId}/cv?download=1`}
+                      className="inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2.5 text-[11px] font-semibold text-white hover:opacity-90"
+                    >
+                      Baixar PDF
+                    </a>
+                  </div>
                 </div>
                 {pick.reason && (
                   <p className="mt-2 text-[13px] leading-6 text-[#3f3f46]">{pick.reason}</p>

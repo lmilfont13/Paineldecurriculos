@@ -119,16 +119,22 @@ export default async function CompararPage({
               </dl>
 
               <hr className="my-4 border-[#e4e4e7]" />
-              {app.resumeUrl ? (
+              <div className="mb-4 grid grid-cols-2 gap-2">
                 <a
                   href={`/candidaturas/${app.id}/cv`}
-                  className="mb-4 text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-9 items-center justify-center rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
                 >
-                  CV: currículo de {app.name.split(" ")[0]} ↓
+                  Ver currículo
                 </a>
-              ) : (
-                <p className="mb-4 text-xs text-[#a1a1aa]">Sem currículo</p>
-              )}
+                <a
+                  href={`/candidaturas/${app.id}/cv?download=1`}
+                  className="flex h-9 items-center justify-center rounded-xl bg-[#0a0a0a] px-3 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                  Baixar PDF
+                </a>
+              </div>
 
               <CompareActions applicationId={app.id} name={app.name} />
             </div>

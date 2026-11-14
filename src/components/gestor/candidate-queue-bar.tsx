@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Zap, Columns, FileText, Keyboard } from "lucide-react";
+import { ChevronLeft, ChevronRight, Zap, Columns, FileText, Download, Keyboard } from "lucide-react";
 
 export type QueueBarProps = {
   applicationId: string;
@@ -83,20 +83,42 @@ export function CandidateQueueBar({
 
       <div className="flex flex-wrap items-center gap-2">
         {hasResume && (
-          <button
-            type="button"
-            onClick={onToggleSplitView}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-medium transition ${
-              splitView
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
-            }`}
-            title="Alterna a exibição do PDF original lado a lado com a análise (Atalho: V)"
-          >
-            <Columns className="size-3.5" />
-            <span className="hidden sm:inline">Visualizar CV lado a lado</span>
-            <span className="sm:hidden">Split CV</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onToggleSplitView}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-medium transition ${
+                splitView
+                  ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                  : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+              }`}
+              title="Alterna a exibição do PDF original lado a lado com a análise (Atalho: V)"
+            >
+              <Columns className="size-3.5" />
+              <span className="hidden sm:inline">Ver CV lado a lado</span>
+              <span className="sm:hidden">Ver CV</span>
+            </button>
+
+            <a
+              href={`/candidaturas/${applicationId}/cv`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[11px] font-medium text-[#52525b] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+              title="Abrir currículo em nova aba"
+            >
+              <FileText className="size-3.5" />
+              <span className="hidden md:inline">Ver currículo</span>
+            </a>
+
+            <a
+              href={`/candidaturas/${applicationId}/cv?download=1`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[11px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
+              title="Baixar currículo em PDF"
+            >
+              <Download className="size-3.5" />
+              <span>Baixar PDF</span>
+            </a>
+          </>
         )}
 
         {queue.nextPendingId && queue.nextPendingId !== queue.nextId && (

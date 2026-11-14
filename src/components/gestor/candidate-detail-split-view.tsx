@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { ExternalLink, Minimize2, Sparkles, ZoomIn } from "lucide-react";
+import { Download, ExternalLink, Minimize2, Sparkles } from "lucide-react";
 import { CandidateQueueBar } from "@/components/gestor/candidate-queue-bar";
 
 export function CandidateDetailSplitView({
@@ -38,6 +38,11 @@ export function CandidateDetailSplitView({
     activeResumeVersion === "latest" && latestResumeUrl
       ? `/candidaturas/${applicationId}/cv?url=${encodeURIComponent(latestResumeUrl)}`
       : `/candidaturas/${applicationId}/cv`;
+
+  const downloadResumeUrl =
+    activeResumeVersion === "latest" && latestResumeUrl
+      ? `/candidaturas/${applicationId}/cv?url=${encodeURIComponent(latestResumeUrl)}&download=1`
+      : `/candidaturas/${applicationId}/cv?download=1`;
 
   useEffect(() => {
     try {
@@ -111,7 +116,15 @@ export function CandidateDetailSplitView({
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <a
+                  href={downloadResumeUrl}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                  title="Baixar currículo em PDF"
+                >
+                  <Download className="size-3" />
+                  <span>Baixar PDF</span>
+                </a>
                 <a
                   href={effectiveResumeUrl}
                   target="_blank"

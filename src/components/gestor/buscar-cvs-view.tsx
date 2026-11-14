@@ -979,13 +979,23 @@ export function BuscarCvsView({
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCandidate(item);
-                            setDrawerTab(item.resumeUrl ? "pdf" : "ai");
+                            setDrawerTab("pdf");
                           }}
-                          title="Ver Dossiê / PDF"
-                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] hover:bg-stone-100 hover:text-[#0a0a0a]"
+                          title="Ver currículo / Dossiê"
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-stone-200 bg-white px-2 text-[11px] font-semibold text-[#3f3f46] hover:bg-stone-100 hover:text-[#0a0a0a]"
                         >
-                          <Eye className="size-4" />
+                          <Eye className="size-3.5" />
+                          <span className="hidden sm:inline">Ver CV</span>
                         </button>
+                        <a
+                          href={`/candidaturas/${item.id}/cv?download=1`}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Baixar currículo em PDF"
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-[#0a0a0a] px-2 text-[11px] font-semibold text-white hover:opacity-90"
+                        >
+                          <Download className="size-3.5" />
+                          <span className="hidden sm:inline">PDF</span>
+                        </a>
                       </div>
                     </div>
                   );
@@ -1273,7 +1283,7 @@ export function BuscarCvsView({
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         {whatsappUrl && (
                           <a
                             href={whatsappUrl}
@@ -1286,18 +1296,26 @@ export function BuscarCvsView({
                             WhatsApp
                           </a>
                         )}
-                        {item.resumeUrl && (
-                          <a
-                            href={`/candidaturas/${item.id}/cv`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-[#71717a] hover:text-[#0a0a0a] hover:underline"
-                          >
-                            <Download className="size-3.5" />
-                            PDF
-                          </a>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCandidate(item);
+                            setDrawerTab("pdf");
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
+                        >
+                          <Eye className="size-3.5 text-[#52525b]" />
+                          Ver currículo
+                        </button>
+                        <a
+                          href={`/candidaturas/${item.id}/cv?download=1`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                        >
+                          <Download className="size-3.5" />
+                          Baixar PDF
+                        </a>
                         <Link
                           href={`/candidaturas/${item.id}`}
                           onClick={(e) => e.stopPropagation()}
@@ -1384,6 +1402,24 @@ export function BuscarCvsView({
               </div>
 
               <div className="flex items-center gap-2">
+                <a
+                  href={`/candidaturas/${selectedCandidate.id}/cv`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] px-3 py-1.5 text-xs font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
+                  title="Abrir currículo em nova aba"
+                >
+                  <ExternalLink className="size-3.5" />
+                  Ver em nova aba
+                </a>
+                <a
+                  href={`/candidaturas/${selectedCandidate.id}/cv?download=1`}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0a0a0a] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                  title="Baixar currículo em PDF"
+                >
+                  <Download className="size-3.5" />
+                  Baixar PDF
+                </a>
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -1403,21 +1439,19 @@ export function BuscarCvsView({
               </div>
             </div>
 
-            {/* Abas do Visualizador: PDF Real vs Dossiê IA vs Texto */}
+            {/* Abas do Visualizador: PDF vs Dossiê IA vs Texto */}
             <div className="mt-4 flex border-b border-[#e4e4e7] gap-2">
-              {selectedCandidate.resumeUrl && (
-                <button
-                  type="button"
-                  onClick={() => setDrawerTab("pdf")}
-                  className={`border-b-2 pb-2.5 text-xs font-bold transition ${
-                    drawerTab === "pdf"
-                      ? "border-[#0a0a0a] text-[#0a0a0a]"
-                      : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
-                  }`}
-                >
-                  📄 Currículo em PDF Real
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setDrawerTab("pdf")}
+                className={`border-b-2 pb-2.5 text-xs font-bold transition ${
+                  drawerTab === "pdf"
+                    ? "border-[#0a0a0a] text-[#0a0a0a]"
+                    : "border-transparent text-[#71717a] hover:text-[#0a0a0a]"
+                }`}
+              >
+                📄 Currículo em PDF
+              </button>
               <button
                 type="button"
                 onClick={() => setDrawerTab("ai")}
@@ -1445,7 +1479,7 @@ export function BuscarCvsView({
             {/* Conteúdo Dinâmico por Aba */}
             <div className="mt-4 flex-1">
               {/* ABA 1: PDF Viewer Embutido */}
-              {drawerTab === "pdf" && selectedCandidate.resumeUrl && (
+              {drawerTab === "pdf" && (
                 <div className="h-[650px] w-full rounded-2xl border border-[#e4e4e7] overflow-hidden bg-stone-100">
                   <iframe
                     src={`/candidaturas/${selectedCandidate.id}/cv#toolbar=1`}
