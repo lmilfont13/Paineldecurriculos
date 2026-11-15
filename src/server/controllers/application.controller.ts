@@ -282,20 +282,31 @@ export async function reextractPhotoAction(
   }
 }
 
-/** Extrai fotos em lote: dos ids selecionados, ou de todos que ainda não têm foto. */
+/** Extrai fotos em lote: dos ids selecionados, ou varre todos que ainda não têm foto. */
 export async function extractPhotosBulkAction(
-  applicationIds?: string[]
-): Promise<{ processed: number; found: number }> {
+  options?: string[] | { ids?: string[]; excludeIds?: string[]; limit?: number }
+): Promise<{
+  processed: number;
+  found: number;
+  processedIds: string[];
+  remaining: number;
+}> {
   try {
     const user = await requireManager();
-    const ids = applicationIds?.length ? applicationIds.slice(0, 100) : undefined;
-    const result = await extractPhotosBulk(user.companyId, ids);
+    const normalized = Array.isArray(options)
+      ? { ids: options.length ? options.slice(0, 100) : undefined }
+      : {
+          ids: options?.ids?.length ? options.ids.slice(0, 100) : undefined,
+          excludeIds: options?.excludeIds?.slice(0, 5000),
+          limit: options?.limit,
+        };
+    const result = await extractPhotosBulk(user.companyId, normalized);
     revalidatePath("/candidaturas");
     revalidatePath("/buscar-cvs");
     return result;
   } catch (error) {
     console.error("[foto] Erro em extractPhotosBulkAction:", error);
-    return { processed: 0, found: 0 };
+    return { processed: 0, found: 0, processedIds: [], remaining: 0 };
   }
 }
 

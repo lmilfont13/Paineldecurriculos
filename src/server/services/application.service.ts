@@ -52,6 +52,9 @@ import {
   cloneStandbyApplicationToJob,
   findUnevaluatedApplications,
   findLatestPersonResumeInfo,
+  findApplicationsMissingPhoto,
+  findExistingPersonPhotoPath,
+  updateApplicationPhoto,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -427,6 +430,19 @@ export async function extractApplicationPhoto(
     const application = await getCompanyApplication(companyId, applicationId);
     if (!application) return false;
 
+    // Se esta candidatura está sem foto, mas outra candidatura da mesma pessoa já tem foto extraída, reaproveita.
+    if (!application.photoPath) {
+      const existingPhoto = await findExistingPersonPhotoPath(
+        companyId,
+        application.email,
+        application.candidateId
+      ).catch(() => null);
+      if (existingPhoto) {
+        await updateApplicationPhoto(applicationId, existingPhoto);
+        return true;
+      }
+    }
+
     let targetResumeUrl = application.resumeUrl;
     if (!targetResumeUrl) {
       const latest = await findLatestPersonResumeInfo(
@@ -513,25 +529,42 @@ export async function getLargePhotoUrl(
 
 /**
  * Extrai fotos (e indexa o texto) de várias candidaturas do tenant, em série
- * para não estourar memória/conexões. Sem ids = todas com PDF e sem foto.
+ * para não estourar memória/conexões. Suporta exclusão de IDs já verificados
+ * para varrer 100% dos currículos pendentes em lotes sequenciais.
  */
 export async function extractPhotosBulk(
   companyId: string,
-  ids?: string[]
-): Promise<{ processed: number; found: number }> {
-  const all = await findApplicationsByCompany(companyId);
-  const targets = all
-    .filter((a) => a.resumeUrl && (ids ? ids.includes(a.id) : !a.photoPath))
-    .slice(0, 15);
+  options?: string[] | { ids?: string[]; excludeIds?: string[]; limit?: number }
+): Promise<{
+  processed: number;
+  found: number;
+  processedIds: string[];
+  remaining: number;
+}> {
+  const normalized = Array.isArray(options)
+    ? { ids: options, limit: 15 }
+    : {
+        ids: options?.ids,
+        excludeIds: options?.excludeIds,
+        limit: options?.limit ?? 8,
+      };
+
+  const { items: targets, remaining } = await findApplicationsMissingPhoto(
+    companyId,
+    normalized
+  );
+
   let found = 0;
+  const processedIds: string[] = [];
   for (const app of targets) {
+    processedIds.push(app.id);
     try {
       if (await extractApplicationPhoto(companyId, app.id)) found += 1;
     } catch (error) {
       console.error("[foto] Falha em lote:", app.id, error);
     }
   }
-  return { processed: targets.length, found };
+  return { processed: targets.length, found, processedIds, remaining };
 }
 
 /** Busca por nome, e-mail, perfil e conteúdo do currículo (sempre do tenant). */

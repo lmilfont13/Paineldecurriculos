@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
@@ -130,10 +131,18 @@ export function CandidaturasTable({
   const [sortInfoOpen, setSortInfoOpen] = useState(false);
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"list" | "cards">("cards");
   const [onlyPhoto, setOnlyPhoto] = useState(false);
+  const [onlyWithoutPhoto, setOnlyWithoutPhoto] = useState(false);
   const [contentMatches, setContentMatches] = useState<Set<string> | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState<{
+    scanned: number;
+    found: number;
+    remaining: number;
+  } | null>(null);
+  const stopPhotoScanRef = useRef(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [messageOpen, setMessageOpen] = useState(false);
@@ -166,19 +175,86 @@ export function CandidaturasTable({
     };
   }, [search]);
 
+  const missingPhotoCount = useMemo(
+    () => rows.filter((r) => !r.photoUrl).length,
+    [rows]
+  );
+
   async function extractPhotos(ids?: string[]) {
+    if (photoBusy) return;
+    stopPhotoScanRef.current = false;
     setPhotoBusy(true);
+    setPhotoProgress({
+      scanned: 0,
+      found: 0,
+      remaining: ids ? ids.length : missingPhotoCount,
+    });
+
     try {
-      const r = await extractPhotosBulkAction(ids);
-      setToast(
-        r.processed === 0
-          ? "Nenhum currículo pendente de foto."
-          : `${r.found} foto(s) extraída(s) de ${r.processed} currículo(s).`
-      );
+      if (ids && ids.length > 0) {
+        let totalProcessed = 0;
+        let totalFound = 0;
+        for (let i = 0; i < ids.length; i += 8) {
+          if (stopPhotoScanRef.current) break;
+          const chunk = ids.slice(i, i + 8);
+          const r = await extractPhotosBulkAction({ ids: chunk, limit: 8 });
+          totalProcessed += r.processed;
+          totalFound += r.found;
+          setPhotoProgress({
+            scanned: totalProcessed,
+            found: totalFound,
+            remaining: Math.max(0, ids.length - totalProcessed),
+          });
+          if (r.found > 0) router.refresh();
+        }
+        router.refresh();
+        setToast(
+          totalProcessed === 0
+            ? "Nenhum currículo pendente de foto."
+            : `${totalFound} foto(s) extraída(s) após verificar ${totalProcessed} currículo(s).`
+        );
+        return;
+      }
+
+      const checkedIds = new Set<string>();
+      let totalScanned = 0;
+      let totalFound = 0;
+
+      while (!stopPhotoScanRef.current) {
+        const r = await extractPhotosBulkAction({
+          excludeIds: Array.from(checkedIds),
+          limit: 8,
+        });
+        if (r.processed === 0) break;
+        for (const id of r.processedIds) checkedIds.add(id);
+        totalScanned += r.processed;
+        totalFound += r.found;
+        setPhotoProgress({
+          scanned: totalScanned,
+          found: totalFound,
+          remaining: r.remaining,
+        });
+        if (r.found > 0) router.refresh();
+        if (r.remaining === 0) break;
+      }
+
+      router.refresh();
+      if (totalScanned === 0) {
+        setToast("Todos os currículos com foto disponível já foram verificados.");
+      } else if (stopPhotoScanRef.current) {
+        setToast(
+          `Busca pausada: ${totalFound} foto(s) extraída(s) em ${totalScanned} currículo(s) verificados.`
+        );
+      } else {
+        setToast(
+          `Varredura concluída: ${totalFound} foto(s) extraída(s) após analisar ${totalScanned} currículo(s) sem foto.`
+        );
+      }
     } catch {
       setToast("Não foi possível extrair as fotos agora.");
     } finally {
       setPhotoBusy(false);
+      setPhotoProgress(null);
     }
   }
 
@@ -204,8 +280,16 @@ export function CandidaturasTable({
 
   /** Tudo menos a aba — é a base das contagens de cada aba (scent honesto). */
   const scoped = useMemo(
-    () => applyFilters(rows, { search, jobId, onlyMeets, onlyPhoto, contentMatches }),
-    [rows, search, jobId, onlyMeets, onlyPhoto, contentMatches]
+    () =>
+      applyFilters(rows, {
+        search,
+        jobId,
+        onlyMeets,
+        onlyPhoto,
+        onlyWithoutPhoto,
+        contentMatches,
+      }),
+    [rows, search, jobId, onlyMeets, onlyPhoto, onlyWithoutPhoto, contentMatches]
   );
   const counts = useMemo(() => countByStage(scoped), [scoped]);
   // "Triar agora" abre quem espera há mais tempo (respeitando vaga e busca ativas).
@@ -519,9 +603,12 @@ export function CandidaturasTable({
             type="button"
             disabled={photoBusy}
             onClick={() => extractPhotos()}
-            className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-60"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-60"
+            title="Varre automaticamente todos os currículos sem foto extraída"
           >
-            {photoBusy ? "Extraindo fotos…" : "Extrair fotos dos currículos"}
+            {photoBusy
+              ? `Buscando fotos (${photoProgress?.scanned ?? 0} verificados · ${photoProgress?.found ?? 0} extraídas)…`
+              : `Buscar todas as fotos pendentes${missingPhotoCount > 0 ? ` (${missingPhotoCount})` : ""}`}
           </button>
           {nextCandidate && (
             <Link href={`/candidaturas/${nextCandidate.id}`} className="flex h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--brand-primary)" }}>
@@ -530,6 +617,33 @@ export function CandidaturasTable({
           )}
         </div>
       </div>
+
+      {photoBusy && photoProgress && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="size-2.5 animate-pulse rounded-full bg-emerald-500" />
+            <div>
+              <p className="text-[13px] font-semibold text-[#0a0a0a]">
+                Varrendo todos os currículos sem foto automaticamente…
+              </p>
+              <p className="text-[12px] text-[#71717a]">
+                <strong>{photoProgress.scanned}</strong> currículo(s) verificado(s) ·{" "}
+                <strong className="text-emerald-700">{photoProgress.found}</strong> foto(s) extraída(s) ·{" "}
+                <strong>{photoProgress.remaining}</strong> restante(s) na fila
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              stopPhotoScanRef.current = true;
+            }}
+            className="h-8 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#f4f4f5]"
+          >
+            Pausar varredura
+          </button>
+        </div>
+      )}
 
       {/* Etapas do funil com contagem — onde está o trabalho, sem filtrar às cegas */}
       <div
@@ -680,11 +794,37 @@ export function CandidaturasTable({
           <input
             type="checkbox"
             checked={onlyPhoto}
-            onChange={(e) => setOnlyPhoto(e.target.checked)}
+            onChange={(e) => {
+              setOnlyPhoto(e.target.checked);
+              if (e.target.checked) setOnlyWithoutPhoto(false);
+            }}
             className="size-3.5 accent-[#0a0a0a]"
           />
           Somente com foto
         </label>
+
+        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
+          <input
+            type="checkbox"
+            checked={onlyWithoutPhoto}
+            onChange={(e) => {
+              setOnlyWithoutPhoto(e.target.checked);
+              if (e.target.checked) setOnlyPhoto(false);
+            }}
+            className="size-3.5 accent-[#0a0a0a]"
+          />
+          Sem foto ({missingPhotoCount})
+        </label>
+
+        {onlyWithoutPhoto && filtered.length > 0 && !photoBusy && (
+          <button
+            type="button"
+            onClick={() => extractPhotos(filtered.map((r) => r.id))}
+            className="h-10 rounded-xl border border-[#0a0a0a] bg-[#0a0a0a] px-3.5 text-[12px] font-semibold text-white transition hover:opacity-90"
+          >
+            Extrair fotos desta lista ({filtered.length})
+          </button>
+        )}
 
         {(tab === "PENDING" || tab === "ALL") && readyToPass.length > 0 && (
           <button

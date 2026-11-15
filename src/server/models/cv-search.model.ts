@@ -61,6 +61,7 @@ export type CvSearchFilters = {
   selectedStatus: string;
   minScore: number | null;
   onlyWithPhoto: boolean;
+  onlyWithoutPhoto?: boolean;
   onlyWithPdf: boolean;
   onlyRemote?: boolean;
 
@@ -667,8 +668,11 @@ export function filterCandidates(
       return false;
     }
 
-    // 15. Filtro apenas com foto
+    // 15. Filtro apenas com foto / sem foto
     if (filters.onlyWithPhoto && !item.photoUrl) {
+      return false;
+    }
+    if (filters.onlyWithoutPhoto && item.photoUrl) {
       return false;
     }
 

@@ -53,6 +53,8 @@ export type ListFilters = {
   onlyMeets: boolean;
   /** Somente candidatos com foto extraída do currículo. */
   onlyPhoto?: boolean;
+  /** Somente candidatos sem foto extraída do currículo. */
+  onlyWithoutPhoto?: boolean;
   /** Ids que casaram com o termo no conteúdo do currículo (busca no servidor). */
   contentMatches?: ReadonlySet<string> | null;
 };
@@ -68,7 +70,7 @@ export function meetsMinimum(row: CandidaturaRow): boolean {
  */
 export function applyFilters(
   rows: CandidaturaRow[],
-  { search, jobId, onlyMeets, onlyPhoto, contentMatches }: ListFilters
+  { search, jobId, onlyMeets, onlyPhoto, onlyWithoutPhoto, contentMatches }: ListFilters
 ): CandidaturaRow[] {
   const q = search.trim().toLowerCase();
   return rows.filter((row) => {
@@ -84,6 +86,7 @@ export function applyFilters(
     if (jobId && row.jobId !== jobId) return false;
     if (onlyMeets && !meetsMinimum(row)) return false;
     if (onlyPhoto && !row.photoUrl) return false;
+    if (onlyWithoutPhoto && row.photoUrl) return false;
     return true;
   });
 }

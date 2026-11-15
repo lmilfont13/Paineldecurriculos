@@ -2,6 +2,7 @@
 
 import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   AtSign,
@@ -80,6 +81,7 @@ export function BuscarCvsView({
   candidates: CandidateCvCard[];
   jobs: { id: string; title: string }[];
 }) {
+  const router = useRouter();
   const [filters, setFilters] = useState<CvSearchFilters>({
     keyword: "",
     nameQuery: "",
@@ -89,6 +91,7 @@ export function BuscarCvsView({
     selectedStatus: "",
     minScore: null,
     onlyWithPhoto: false,
+    onlyWithoutPhoto: false,
     onlyWithPdf: false,
     onlyRemote: false,
     selectedNeighborhood: "",
@@ -116,7 +119,13 @@ export function BuscarCvsView({
   const [roleSearch, setRoleSearch] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showHotkeysHelp, setShowHotkeysHelp] = useState(true);
-  const [isExtractingPhotos, startPhotoExtraction] = useTransition();
+  const [isExtractingPhotos, setIsExtractingPhotos] = useState(false);
+  const [photoScanProgress, setPhotoScanProgress] = useState<{
+    scanned: number;
+    found: number;
+    remaining: number;
+  } | null>(null);
+  const stopPhotoScanRef = useRef(false);
   const [, startViewTransition] = useTransition();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -190,6 +199,7 @@ export function BuscarCvsView({
 
   // Estatísticas rápidas
   const totalWithPhoto = useMemo(() => people.filter((c) => Boolean(c.photoUrl)).length, [people]);
+  const totalWithoutPhoto = useMemo(() => people.filter((c) => !c.photoUrl).length, [people]);
   const totalWithPdf = useMemo(() => people.filter((c) => Boolean(c.resumeUrl)).length, [people]);
   const topMatches = useMemo(() => people.filter((c) => (c.aiScore ?? 0) >= 80).length, [people]);
 
@@ -202,6 +212,7 @@ export function BuscarCvsView({
     Boolean(filters.selectedStatus) ||
     filters.minScore !== null ||
     filters.onlyWithPhoto ||
+    Boolean(filters.onlyWithoutPhoto) ||
     filters.onlyWithPdf ||
     Boolean(filters.onlyRemote) ||
     Boolean(filters.selectedNeighborhood) ||
@@ -313,6 +324,7 @@ export function BuscarCvsView({
       selectedStatus: "",
       minScore: null,
       onlyWithPhoto: false,
+      onlyWithoutPhoto: false,
       onlyWithPdf: false,
       onlyRemote: false,
       selectedNeighborhood: "",
@@ -341,21 +353,85 @@ export function BuscarCvsView({
     }, 2500);
   }
 
-  function handleExtractAllPhotos() {
-    startPhotoExtraction(async () => {
-      try {
-        const result = await extractPhotosBulkAction();
-        setToastMessage(
-          result.processed === 0
-            ? "Todos os currículos já possuem foto processada!"
-            : `${result.found} foto(s) extraída(s) de ${result.processed} currículo(s).`
-        );
-        setTimeout(() => setToastMessage(null), 4000);
-      } catch {
-        setToastMessage("Erro ao extrair fotos.");
-        setTimeout(() => setToastMessage(null), 4000);
-      }
+  async function handleExtractAllPhotos(ids?: string[]) {
+    if (isExtractingPhotos) return;
+    stopPhotoScanRef.current = false;
+    setIsExtractingPhotos(true);
+    setPhotoScanProgress({
+      scanned: 0,
+      found: 0,
+      remaining: ids ? ids.length : totalWithoutPhoto,
     });
+
+    try {
+      if (ids && ids.length > 0) {
+        let totalProcessed = 0;
+        let totalFound = 0;
+        for (let i = 0; i < ids.length; i += 8) {
+          if (stopPhotoScanRef.current) break;
+          const chunk = ids.slice(i, i + 8);
+          const r = await extractPhotosBulkAction({ ids: chunk, limit: 8 });
+          totalProcessed += r.processed;
+          totalFound += r.found;
+          setPhotoScanProgress({
+            scanned: totalProcessed,
+            found: totalFound,
+            remaining: Math.max(0, ids.length - totalProcessed),
+          });
+          if (r.found > 0) router.refresh();
+        }
+        router.refresh();
+        setToastMessage(
+          totalProcessed === 0
+            ? "Nenhum currículo pendente de foto."
+            : `${totalFound} foto(s) extraída(s) após analisar ${totalProcessed} currículo(s).`
+        );
+        setTimeout(() => setToastMessage(null), 5000);
+        return;
+      }
+
+      const checkedIds = new Set<string>();
+      let totalScanned = 0;
+      let totalFound = 0;
+
+      while (!stopPhotoScanRef.current) {
+        const result = await extractPhotosBulkAction({
+          excludeIds: Array.from(checkedIds),
+          limit: 8,
+        });
+        if (result.processed === 0) break;
+        for (const id of result.processedIds) checkedIds.add(id);
+        totalScanned += result.processed;
+        totalFound += result.found;
+        setPhotoScanProgress({
+          scanned: totalScanned,
+          found: totalFound,
+          remaining: result.remaining,
+        });
+        if (result.found > 0) router.refresh();
+        if (result.remaining === 0) break;
+      }
+
+      router.refresh();
+      if (totalScanned === 0) {
+        setToastMessage("Todos os currículos com foto disponível já foram verificados!");
+      } else if (stopPhotoScanRef.current) {
+        setToastMessage(
+          `Busca pausada: ${totalFound} foto(s) extraída(s) em ${totalScanned} currículo(s) analisados.`
+        );
+      } else {
+        setToastMessage(
+          `Varredura concluída: ${totalFound} foto(s) extraída(s) após analisar ${totalScanned} currículo(s) sem foto!`
+        );
+      }
+      setTimeout(() => setToastMessage(null), 5000);
+    } catch {
+      setToastMessage("Erro ao extrair fotos.");
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setIsExtractingPhotos(false);
+      setPhotoScanProgress(null);
+    }
   }
 
   return (
@@ -403,11 +479,14 @@ export function BuscarCvsView({
             <button
               type="button"
               disabled={isExtractingPhotos}
-              onClick={handleExtractAllPhotos}
+              onClick={() => handleExtractAllPhotos()}
               className="inline-flex h-9.5 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-4 text-xs font-semibold text-[#0a0a0a] shadow-xs transition hover:bg-[#fafaf9] hover:border-[#0a0a0a]/30 active:scale-98 disabled:opacity-60"
+              title="Varre automaticamente todos os currículos que ainda não têm foto extraída"
             >
               <RotateCcw className={`size-3.5 ${isExtractingPhotos ? "animate-spin" : ""}`} />
-              {isExtractingPhotos ? "Extraindo fotos…" : "Sincronizar fotos do CV"}
+              {isExtractingPhotos
+                ? `Buscando (${photoScanProgress?.scanned ?? 0} verificados · ${photoScanProgress?.found ?? 0} fotos)…`
+                : `Buscar todas as fotos pendentes (${totalWithoutPhoto})`}
             </button>
             <Link
               href="/candidaturas"
@@ -417,6 +496,33 @@ export function BuscarCvsView({
             </Link>
           </div>
         </div>
+
+        {isExtractingPhotos && photoScanProgress && (
+          <div className="relative z-10 mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="size-2.5 animate-pulse rounded-full bg-emerald-600" />
+              <div>
+                <p className="text-xs font-bold text-[#0a0a0a]">
+                  Varrendo automaticamente todos os currículos sem foto…
+                </p>
+                <p className="text-[11px] text-[#52525b]">
+                  <strong>{photoScanProgress.scanned}</strong> currículo(s) analisado(s) ·{" "}
+                  <strong className="text-emerald-700">{photoScanProgress.found}</strong> foto(s) extraída(s) ·{" "}
+                  <strong>{photoScanProgress.remaining}</strong> restante(s)
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                stopPhotoScanRef.current = true;
+              }}
+              className="h-8 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs hover:bg-[#fafaf9]"
+            >
+              Pausar busca
+            </button>
+          </div>
+        )}
 
         {/* Barra de Filtros Rápidos Pré-configurados (Chips Inteligentes) */}
         <div className="relative z-10 mt-6 flex flex-wrap items-center gap-2 border-t border-[#f4f4f5] pt-4 text-xs">
@@ -435,7 +541,13 @@ export function BuscarCvsView({
           </button>
           <button
             type="button"
-            onClick={() => setFilters((p) => ({ ...p, onlyWithPhoto: !p.onlyWithPhoto }))}
+            onClick={() =>
+              setFilters((p) => ({
+                ...p,
+                onlyWithPhoto: !p.onlyWithPhoto,
+                onlyWithoutPhoto: !p.onlyWithPhoto ? false : p.onlyWithoutPhoto,
+              }))
+            }
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
               filters.onlyWithPhoto
                 ? "bg-[#0a0a0a] text-white font-semibold"
@@ -444,6 +556,32 @@ export function BuscarCvsView({
           >
             <span>📸</span> Com foto ({totalWithPhoto})
           </button>
+          <button
+            type="button"
+            onClick={() =>
+              setFilters((p) => ({
+                ...p,
+                onlyWithoutPhoto: !p.onlyWithoutPhoto,
+                onlyWithPhoto: !p.onlyWithoutPhoto ? false : p.onlyWithPhoto,
+              }))
+            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+              filters.onlyWithoutPhoto
+                ? "bg-[#0a0a0a] text-white font-semibold"
+                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+            }`}
+          >
+            <span>🔍</span> Sem foto ({totalWithoutPhoto})
+          </button>
+          {filters.onlyWithoutPhoto && sorted.length > 0 && !isExtractingPhotos && (
+            <button
+              type="button"
+              onClick={() => handleExtractAllPhotos(sorted.map((c) => c.id))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-3 py-1 font-semibold text-white transition hover:bg-emerald-800"
+            >
+              Extrair fotos desta lista ({sorted.length})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, onlyWithPdf: !p.onlyWithPdf }))}

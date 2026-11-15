@@ -708,9 +708,103 @@ export async function findDemoApplicationIds(companyId: string) {
   return rows.map((r) => r.id);
 }
 
-/** Foto recortada do currículo (null quando o PDF não tem foto). */
-export function updateApplicationPhoto(id: string, photoPath: string | null) {
-  return prisma.application.update({ where: { id }, data: { photoPath } });
+/** Foto recortada do currículo (null quando o PDF não tem foto). Propaga também para outras candidaturas da mesma pessoa na empresa. */
+export async function updateApplicationPhoto(id: string, photoPath: string | null) {
+  const updated = await prisma.application.update({
+    where: { id },
+    data: { photoPath },
+    select: { id: true, companyId: true, email: true, candidateId: true, photoPath: true },
+  });
+  if (photoPath) {
+    try {
+      await prisma.application.updateMany({
+        where: {
+          companyId: updated.companyId,
+          id: { not: updated.id },
+          photoPath: null,
+          OR: [
+            { email: { equals: updated.email.trim(), mode: "insensitive" } },
+            ...(updated.candidateId ? [{ candidateId: updated.candidateId }] : []),
+          ],
+        },
+        data: { photoPath },
+      });
+    } catch {
+      // propagar foto para outras candidaturas da mesma pessoa nunca bloqueia a atualização principal
+    }
+  }
+  return updated;
+}
+
+/** Verifica se outra candidatura da mesma pessoa na empresa já possui foto extraída. */
+export async function findExistingPersonPhotoPath(
+  companyId: string,
+  email: string,
+  candidateId?: string | null
+): Promise<string | null> {
+  const found = await prisma.application.findFirst({
+    where: {
+      companyId,
+      isDemo: false,
+      photoPath: { not: null },
+      OR: [
+        { email: { equals: email.trim(), mode: "insensitive" } },
+        ...(candidateId ? [{ candidateId }] : []),
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    select: { photoPath: true },
+  });
+  return found?.photoPath ?? null;
+}
+
+/**
+ * Busca candidaturas do tenant que ainda estão sem foto extraída (photoPath: null),
+ * abrangendo todas as vagas (abertas, encerradas e Banco de Talentos) e permitindo
+ * excluir IDs já verificados na varredura em lote.
+ */
+export async function findApplicationsMissingPhoto(
+  companyId: string,
+  options?: { ids?: string[]; excludeIds?: string[]; limit?: number }
+) {
+  const take = Math.max(1, Math.min(options?.limit ?? 8, 50));
+  const where: Prisma.ApplicationWhereInput = {
+    companyId,
+    isDemo: false,
+    ...(options?.ids?.length
+      ? { id: { in: options.ids } }
+      : {
+          photoPath: null,
+          OR: [
+            { resumeUrl: { not: null } },
+            { candidate: { resumeUrl: { not: null } } },
+          ],
+          ...(options?.excludeIds?.length ? { id: { notIn: options.excludeIds } } : {}),
+        }),
+  };
+
+  const [items, totalRemaining] = await Promise.all([
+    prisma.application.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }],
+      take,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        candidateId: true,
+        resumeUrl: true,
+        photoPath: true,
+      },
+    }),
+    prisma.application.count({ where }),
+  ]);
+
+  return {
+    items,
+    remaining: Math.max(0, totalRemaining - items.length),
+    totalPending: totalRemaining,
+  };
 }
 
 /** IDs das candidaturas de uma vaga do tenant (exclusão da vaga). */
