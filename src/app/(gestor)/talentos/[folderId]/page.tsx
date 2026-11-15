@@ -54,7 +54,18 @@ export default async function TalentFolderPage({
                 className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
               />
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">{person.name}</span>
+                <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-[#0a0a0a]">
+                  <span className="truncate">{person.name}</span>
+                  {person.hasImpediment && (
+                    <span
+                      className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                      title={person.impedimentReason ? `Motivo: ${person.impedimentReason}` : "Impedimento de contratação ativo"}
+                    >
+                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span>Tarja Preta</span>
+                    </span>
+                  )}
+                </span>
                 <span className="block truncate text-[12px] text-[#71717a]">
                   {[person.aiProfile, person.aiLevel].filter(Boolean).join(" · ")}
                   {person.aiProfile || person.aiLevel ? " · " : ""}se inscreveu em {person.job.title}

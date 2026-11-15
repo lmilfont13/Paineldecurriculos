@@ -373,8 +373,17 @@ export default async function PainelPage() {
                   className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
-                    {app.name}
+                  <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-[#0a0a0a]">
+                    <span className="truncate">{app.name}</span>
+                    {app.hasImpediment && (
+                      <span
+                        className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        title={app.impedimentReason ? `Motivo: ${app.impedimentReason}` : "Impedimento de contratação ativo"}
+                      >
+                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span>Tarja Preta</span>
+                      </span>
+                    )}
                   </span>
                   <span className="block truncate text-[11px] text-[#71717a]">
                     {app.jobTitle} · espera{" "}

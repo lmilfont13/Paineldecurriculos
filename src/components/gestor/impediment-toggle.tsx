@@ -61,8 +61,8 @@ export function ImpedimentToggle({
         setModalOpen(false);
         setToast(
           result.hasImpediment
-            ? `Tarja Preta ativada para ${firstName}. Candidato impedido de entrevista, aprovação e IA.`
-            : `Impedimento removido. ${firstName} pode avançar no processo.`
+            ? `Tarja Preta ativada para ${firstName} em todas as vagas da empresa.`
+            : `Impedimento removido. ${firstName} pode avançar em todas as vagas.`
         );
       } catch {
         setToast("Falha na comunicação com o servidor.");
@@ -183,8 +183,9 @@ export function ImpedimentToggle({
                 </div>
 
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 leading-relaxed">
-                  <span className="font-bold">Atenção:</span> Esta ação é reversível a qualquer momento.
-                  O candidato terá a tarja preta destacada em todas as visualizações do sistema.
+                  <span className="font-bold">Atenção:</span> Esta marcação vale automaticamente para{" "}
+                  <strong>todas as vagas em que este candidato já se inscreveu ou vier a se candidatar</strong>{" "}
+                  na empresa. A ação é reversível a qualquer momento.
                 </div>
               </div>
             ) : (

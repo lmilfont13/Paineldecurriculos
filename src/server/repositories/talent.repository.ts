@@ -30,6 +30,8 @@ export function findTalentFolder(companyId: string, folderId: string) {
               aiLevel: true,
               photoPath: true,
               status: true,
+              hasImpediment: true,
+              impedimentReason: true,
               talentMatches: {
                 where: { state: "DONE", job: { status: "OPEN" } },
                 orderBy: { score: "desc" },
@@ -252,6 +254,8 @@ export function findTalentMatchesForJob(companyId: string, jobId: string) {
           aiProfile: true,
           aiLevel: true,
           photoPath: true,
+          hasImpediment: true,
+          impedimentReason: true,
           job: { select: { title: true } },
           talentItems: { select: { folder: { select: { id: true, name: true } } } },
         },

@@ -1745,10 +1745,15 @@ export async function saveInfoAnswers(
   return { ok: true };
 }
 
-/** Outras candidaturas da mesma pessoa na empresa (vazio se o e-mail não for válido). */
-export async function getOtherApplicationsOfPerson(companyId: string, email: string, excludeId: string) {
-  if (!email.includes("@")) return [];
-  return findOtherApplicationsByEmail(companyId, email, excludeId);
+/** Outras candidaturas da mesma pessoa na empresa (por e-mail ou candidateId). */
+export async function getOtherApplicationsOfPerson(
+  companyId: string,
+  email: string,
+  excludeId: string,
+  candidateId?: string | null
+) {
+  if (!email.includes("@") && !candidateId) return [];
+  return findOtherApplicationsByEmail(companyId, email, excludeId, candidateId);
 }
 
 export type QueueSiblingInfo = {

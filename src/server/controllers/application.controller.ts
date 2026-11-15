@@ -387,6 +387,9 @@ export async function moveApplicationAction(
   const result = await moveApplication(user.companyId, String(applicationId), status, parsed);
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/candidaturas");
+  revalidatePath("/buscar-cvs");
+  revalidatePath("/vagas");
+  revalidatePath("/talentos");
   revalidatePath("/painel");
   return result;
 }
@@ -484,6 +487,9 @@ export async function toggleApplicationImpedimentAction(
 
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/candidaturas");
+  revalidatePath("/buscar-cvs");
+  revalidatePath("/vagas");
+  revalidatePath("/talentos");
   revalidatePath("/painel");
   return result;
 }

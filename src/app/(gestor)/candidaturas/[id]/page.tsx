@@ -204,6 +204,15 @@ export default async function CandidaturaDetailPage({
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
                   {app.name}
+                  {app.hasImpediment && (
+                    <span
+                      className="ml-2 inline-flex items-center gap-1.5 rounded bg-black px-2 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wider text-white shadow-sm"
+                      title={app.impedimentReason ? `Motivo do impedimento: ${app.impedimentReason}` : "Impedimento de contratação ativo em todas as vagas"}
+                    >
+                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span>Tarja Preta</span>
+                    </span>
+                  )}
                   {app.preRegistered && (
                     <span className="ml-2 rounded-full bg-[#fff7e6] px-2 py-0.5 align-middle text-[11px] font-medium text-[#a16207]">
                       Cadastro incompleto
@@ -325,6 +334,9 @@ export default async function CandidaturaDetailPage({
                 {app.impedimentReason
                   ? `Justificativa: ${app.impedimentReason}`
                   : "Candidato bloqueado para avanço em entrevistas, aprovação e reanálise da IA."}
+                <span className="text-zinc-400">
+                  {" · "}Válida em todas as vagas desta empresa.
+                </span>
                 {app.impedimentAt && (
                   <span className="text-zinc-500 text-[11px]">
                     {" · "}Registrado em {formatAppliedAt(app.impedimentAt, true)}
@@ -350,7 +362,7 @@ export default async function CandidaturaDetailPage({
           </p>
           <ul className="mt-2 space-y-1">
             {app.otherApplications.map((other) => (
-              <li key={other.id}>
+              <li key={other.id} className="flex flex-wrap items-center gap-1.5">
                 <Link
                   href={`/candidaturas/${other.id}`}
                   className="font-medium text-[#0a0a0a] underline-offset-2 hover:underline"
@@ -358,6 +370,15 @@ export default async function CandidaturaDetailPage({
                   {jobLabel(other.job.title, other.job.code)}
                 </Link>
                 <span className="text-[#a1a1aa]"> · {appStatusLabels[other.status as AppStatusKey]}</span>
+                {(other.hasImpediment || app.hasImpediment) && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+                    title={other.impedimentReason || app.impedimentReason || "Impedimento ativo em todas as vagas"}
+                  >
+                    <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span>Tarja Preta</span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

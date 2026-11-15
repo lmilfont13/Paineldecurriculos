@@ -286,10 +286,11 @@ export async function countPendingGroupedByJob(companyId: string) {
  * Candidaturas com a vaga (para score vs. aiMinScore e listas do gestor).
  * `includeDemo: false` tira a simulação (painel e números).
  */
-export function findApplicationsByCompany(
+export async function findApplicationsByCompany(
   companyId: string,
   options: { includeDemo?: boolean; onlyOpenJobs?: boolean } = {}
 ) {
+  await syncCompanyImpediments(companyId);
   return prisma.application.findMany({
     where: {
       companyId,
@@ -326,7 +327,8 @@ export async function findAgeSourcesForCompany(companyId: string) {
 }
 
 /** Busca avançada de CVs (nível Michelin): dados enriquecidos para busca facetada e snippets. */
-export function findApplicationsForCvSearch(companyId: string) {
+export async function findApplicationsForCvSearch(companyId: string) {
+  await syncCompanyImpediments(companyId);
   return prisma.application.findMany({
     where: { companyId },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
@@ -507,8 +509,97 @@ export function findApplicationsByCandidate(candidateId: string) {
   });
 }
 
-export function findApplicationById(id: string) {
-  return prisma.application.findUnique({
+function buildSamePersonOrClauses(identity: {
+  email?: string | null;
+  candidateId?: string | null;
+  cpf?: string | null;
+}): Prisma.ApplicationWhereInput[] {
+  const clauses: Prisma.ApplicationWhereInput[] = [];
+  const email = identity.email?.trim();
+  if (email && email.includes("@") && !email.includes("conta-excluida")) {
+    clauses.push({ email: { equals: email, mode: "insensitive" } });
+  }
+  const candidateId = identity.candidateId?.trim();
+  if (candidateId) {
+    clauses.push({ candidateId });
+  }
+  const cpf = identity.cpf?.trim();
+  if (cpf && cpf.replace(/\D/g, "").length >= 11) {
+    clauses.push({ cpf });
+  }
+  return clauses;
+}
+
+/**
+ * Verifica se esta pessoa já possui Tarja Preta (impedimento de contratação)
+ * ativa em alguma candidatura na empresa.
+ */
+export async function findPersonImpedimentInCompany(
+  companyId: string,
+  identity: { email?: string | null; candidateId?: string | null; cpf?: string | null }
+) {
+  const orClauses = buildSamePersonOrClauses(identity);
+  if (orClauses.length === 0) return null;
+  return prisma.application.findFirst({
+    where: {
+      companyId,
+      isDemo: false,
+      hasImpediment: true,
+      OR: orClauses,
+    },
+    orderBy: [{ impedimentAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    select: {
+      hasImpediment: true,
+      impedimentReason: true,
+      impedimentAt: true,
+    },
+  });
+}
+
+/**
+ * Garante que qualquer candidato com Tarja Preta ativa na empresa tenha a
+ * marcação propagada para todas as suas candidaturas (atuais, antigas ou novas).
+ */
+export async function syncCompanyImpediments(companyId: string): Promise<void> {
+  try {
+    const flagged = await prisma.application.findMany({
+      where: { companyId, isDemo: false, hasImpediment: true },
+      orderBy: [{ impedimentAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        email: true,
+        candidateId: true,
+        cpf: true,
+        impedimentReason: true,
+        impedimentAt: true,
+      },
+    });
+    if (flagged.length === 0) return;
+
+    for (const item of flagged) {
+      const orClauses = buildSamePersonOrClauses(item);
+      if (orClauses.length === 0) continue;
+      await prisma.application.updateMany({
+        where: {
+          companyId,
+          isDemo: false,
+          hasImpediment: false,
+          OR: orClauses,
+        },
+        data: {
+          hasImpediment: true,
+          impedimentReason: item.impedimentReason,
+          impedimentAt: item.impedimentAt ?? new Date(),
+        },
+      });
+    }
+  } catch {
+    // sincronização oportuna nunca bloqueia a listagem
+  }
+}
+
+export async function findApplicationById(id: string) {
+  const app = await prisma.application.findUnique({
     where: { id },
     include: {
       job: {
@@ -526,6 +617,32 @@ export function findApplicationById(id: string) {
       statusEvents: { orderBy: { createdAt: "asc" } },
     },
   });
+
+  if (app && !app.isDemo && !app.hasImpediment) {
+    const inherited = await findPersonImpedimentInCompany(app.companyId, {
+      email: app.email,
+      candidateId: app.candidateId,
+      cpf: app.cpf,
+    }).catch(() => null);
+    if (inherited) {
+      const impedimentAt = inherited.impedimentAt ?? new Date();
+      await prisma.application
+        .update({
+          where: { id: app.id },
+          data: {
+            hasImpediment: true,
+            impedimentReason: inherited.impedimentReason,
+            impedimentAt,
+          },
+        })
+        .catch(() => {});
+      app.hasImpediment = true;
+      app.impedimentReason = inherited.impedimentReason;
+      app.impedimentAt = impedimentAt;
+    }
+  }
+
+  return app;
 }
 
 /** Trilha de status (histórico do gestor + timeline do candidato). */
@@ -549,19 +666,57 @@ export function updateManagerNotes(id: string, managerNotes: string | null) {
   return prisma.application.update({ where: { id }, data: { managerNotes } });
 }
 
-export function updateApplicationImpediment(
+/**
+ * Ativa ou desativa a Tarja Preta e propaga automaticamente para TODAS as
+ * candidaturas da mesma pessoa na empresa (por e-mail, candidateId ou CPF).
+ */
+export async function updateApplicationImpediment(
   id: string,
   hasImpediment: boolean,
   reason: string | null
 ) {
-  return prisma.application.update({
+  const impedimentReason = hasImpediment ? reason : null;
+  const impedimentAt = hasImpediment ? new Date() : null;
+  const updated = await prisma.application.update({
     where: { id },
     data: {
       hasImpediment,
-      impedimentReason: hasImpediment ? reason : null,
-      impedimentAt: hasImpediment ? new Date() : null,
+      impedimentReason,
+      impedimentAt,
+    },
+    select: {
+      id: true,
+      companyId: true,
+      email: true,
+      candidateId: true,
+      cpf: true,
+      hasImpediment: true,
+      impedimentReason: true,
+      impedimentAt: true,
     },
   });
+
+  try {
+    const orClauses = buildSamePersonOrClauses(updated);
+    if (orClauses.length > 0) {
+      await prisma.application.updateMany({
+        where: {
+          companyId: updated.companyId,
+          id: { not: updated.id },
+          OR: orClauses,
+        },
+        data: {
+          hasImpediment,
+          impedimentReason,
+          impedimentAt,
+        },
+      });
+    }
+  } catch {
+    // propagar Tarja Preta para outras candidaturas da mesma pessoa nunca bloqueia a ação principal
+  }
+
+  return updated;
 }
 
 /** Combina (ou remarca) a conversa da candidatura. */
@@ -650,7 +805,7 @@ export function updateApplicationStatus(
   return prisma.application.update({ where: { id }, data: { status } });
 }
 
-export function createApplication(data: {
+export async function createApplication(data: {
   jobId: string;
   companyId: string;
   candidateId: string;
@@ -692,9 +847,24 @@ export function createApplication(data: {
   preRegistered?: boolean;
 }) {
   const { answers, ...application } = data;
+  const existingImpediment = application.isDemo
+    ? null
+    : await findPersonImpedimentInCompany(application.companyId, {
+        email: application.email,
+        candidateId: application.candidateId,
+        cpf: application.cpf,
+      }).catch(() => null);
+
   return prisma.application.create({
     data: {
       ...application,
+      ...(existingImpediment
+        ? {
+            hasImpediment: true,
+            impedimentReason: existingImpediment.impedimentReason,
+            impedimentAt: existingImpediment.impedimentAt ?? new Date(),
+          }
+        : {}),
       answers: { create: answers },
     },
   });
@@ -908,7 +1078,7 @@ export function updateApplicationCareer(id: string, aiCareer: Prisma.InputJsonVa
  * O candidato completou o cadastro rápido feito pelo gestor: troca dados,
  * currículo e respostas e volta a candidatura para a fila da IA.
  */
-export function completePreRegisteredApplication(
+export async function completePreRegisteredApplication(
   id: string,
   data: {
     name: string;
@@ -944,12 +1114,32 @@ export function completePreRegisteredApplication(
   }
 ) {
   const { answers, ...rest } = data;
+  const current = await prisma.application.findUnique({
+    where: { id },
+    select: { companyId: true, email: true, candidateId: true, hasImpediment: true },
+  });
+  const inherited =
+    current && !current.hasImpediment
+      ? await findPersonImpedimentInCompany(current.companyId, {
+          email: current.email,
+          candidateId: current.candidateId,
+          cpf: rest.cpf,
+        }).catch(() => null)
+      : null;
+
   return prisma.$transaction(async (tx) => {
     await tx.answer.deleteMany({ where: { applicationId: id } });
     return tx.application.update({
       where: { id },
       data: {
         ...rest,
+        ...(inherited
+          ? {
+              hasImpediment: true,
+              impedimentReason: inherited.impedimentReason,
+              impedimentAt: inherited.impedimentAt ?? new Date(),
+            }
+          : {}),
         preRegistered: false,
         aiState: "WAITING",
         answers: { create: answers },
@@ -1007,20 +1197,29 @@ export function updateInfoAnswers(
   return prisma.application.update({ where: { id }, data });
 }
 
-/** Outras candidaturas da mesma pessoa (pelo e-mail) na empresa, para o aviso da ficha. */
-export function findOtherApplicationsByEmail(companyId: string, email: string, excludeId: string) {
+/** Outras candidaturas da mesma pessoa (pelo e-mail ou candidateId) na empresa, para o aviso da ficha. */
+export function findOtherApplicationsByEmail(
+  companyId: string,
+  email: string,
+  excludeId: string,
+  candidateId?: string | null
+) {
+  const orClauses = buildSamePersonOrClauses({ email, candidateId });
+  if (orClauses.length === 0) return Promise.resolve([]);
   return prisma.application.findMany({
     where: {
       companyId,
       id: { not: excludeId },
       isDemo: false,
-      email: { equals: email.trim(), mode: "insensitive" },
+      OR: orClauses,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: {
       id: true,
       status: true,
+      hasImpediment: true,
+      impedimentReason: true,
       createdAt: true,
       job: { select: { title: true, code: true } },
     },
@@ -1187,6 +1386,18 @@ export async function cloneStandbyApplicationToJob(
     return { ok: true, applicationId: existing.id, alreadyExisted: true };
   }
 
+  const inheritedImpediment = source.hasImpediment
+    ? {
+        hasImpediment: true,
+        impedimentReason: source.impedimentReason,
+        impedimentAt: source.impedimentAt ?? new Date(),
+      }
+    : await findPersonImpedimentInCompany(companyId, {
+        email: source.email,
+        candidateId: source.candidateId,
+        cpf: source.cpf,
+      }).catch(() => null);
+
   const created = await prisma.application.create({
     data: {
       jobId: targetJobId,
@@ -1222,6 +1433,9 @@ export async function cloneStandbyApplicationToJob(
       hasCnh: source.hasCnh,
       isPcd: source.isPcd,
       pcdDetails: source.pcdDetails,
+      hasImpediment: Boolean(inheritedImpediment),
+      impedimentReason: inheritedImpediment?.impedimentReason ?? null,
+      impedimentAt: inheritedImpediment ? (inheritedImpediment.impedimentAt ?? new Date()) : null,
       aiProfile: source.aiProfile,
       aiArea: source.aiArea,
       aiLevel: source.aiLevel,

@@ -41,6 +41,8 @@ export type PriorityApplication = {
   meetsMinimum: boolean;
   createdAt: Date;
   photoPath: string | null;
+  hasImpediment?: boolean;
+  impedimentReason?: string | null;
 };
 
 export function personInitials(name: string): string {

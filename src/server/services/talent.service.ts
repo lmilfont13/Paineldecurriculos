@@ -351,6 +351,8 @@ export async function getStandbyForJob(companyId: string, jobId: string) {
       aiProfile: m.application.aiProfile,
       aiLevel: m.application.aiLevel,
       photoPath: m.application.photoPath,
+      hasImpediment: m.application.hasImpediment,
+      impedimentReason: m.application.impedimentReason,
       originalJobTitle: m.application.job.title,
       folders: m.application.talentItems.map((t) => t.folder),
       score: m.score,

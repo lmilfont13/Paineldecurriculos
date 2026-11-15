@@ -17,6 +17,8 @@ export type StandbyPerson = {
   aiProfile: string | null;
   aiLevel: string | null;
   photoUrl: string | null;
+  hasImpediment?: boolean;
+  impedimentReason?: string | null;
   originalJobTitle: string;
   folders: { id: string; name: string }[];
   score: number | null;
@@ -132,9 +134,20 @@ export function StandbySection({
                   className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
                 />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/candidaturas/${p.id}`} className="text-[13px] font-medium text-[#0a0a0a] hover:underline">
-                    {p.name}
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Link href={`/candidaturas/${p.id}`} className="text-[13px] font-medium text-[#0a0a0a] hover:underline">
+                      {p.name}
+                    </Link>
+                    {p.hasImpediment && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        title={p.impedimentReason ? `Motivo: ${p.impedimentReason}` : "Impedimento de contratação ativo"}
+                      >
+                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span>Tarja Preta</span>
+                      </span>
+                    )}
+                  </div>
                   <p className="truncate text-[11px] text-[#71717a]">
                     {[p.aiProfile, p.aiLevel].filter(Boolean).join(" · ")}
                     {p.aiProfile || p.aiLevel ? " · " : ""}se inscreveu em {p.originalJobTitle}

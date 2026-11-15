@@ -245,7 +245,8 @@ export async function getCandidaturaDetail(id: string) {
   const otherApplications = await getOtherApplicationsOfPerson(
     user.companyId,
     application.email,
-    id
+    id,
+    application.candidateId
   );
   const queue = await getQueueSiblings(user.companyId, id, application.jobId);
   const latestResume = await getLatestPersonResumeInfo(
