@@ -10,6 +10,7 @@ import {
   applicationResumePrefix,
   isAllowedResumePath,
   isDemoResumePath,
+  isImageResumePath,
   profileResumePrefix,
   type ApplicationInput,
   type ResumeUploadTarget,
@@ -120,6 +121,7 @@ import {
 import { formatNotesWithStandbyReason } from "@/server/models/standby.model";
 import {
   captureResumePhoto,
+  captureResumePhotoFromImage,
   removeResumePhotos,
   signLargePhotoUrl,
   withPhotoUrls,
@@ -392,33 +394,92 @@ export async function getExistingApplicationId(
   return existing.id;
 }
 
+/** Verifica se os bytes parecem um PDF (%PDF-) ou uma imagem (JPEG/PNG/WebP). */
+function looksLikePdfBytes(bytes: Uint8Array): boolean {
+  if (bytes.length < 5) return false;
+  // Procura "%PDF-" nos primeiros 1024 bytes (alguns PDFs têm BOM/espaços no início)
+  const limit = Math.min(bytes.length - 5, 1024);
+  for (let i = 0; i <= limit; i++) {
+    if (
+      bytes[i] === 0x25 && // %
+      bytes[i + 1] === 0x50 && // P
+      bytes[i + 2] === 0x44 && // D
+      bytes[i + 3] === 0x46 && // F
+      bytes[i + 4] === 0x2d // -
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Re-extrai a foto do currículo sem re-rodar a análise de IA. Útil para
  * candidatos já analisados cujo currículo tem foto mas ela não foi capturada
  * (ex.: antes do relaxamento dos filtros de proporção). Não toca em aiState.
+ * Nunca lança exceção.
  */
 export async function extractApplicationPhoto(
   companyId: string,
   applicationId: string
 ): Promise<boolean> {
-  const application = await getCompanyApplication(companyId, applicationId);
-  if (!application?.resumeUrl) return false;
-  const { getDocumentProxy, extractText } = await import("unpdf");
-  const pdf = await getDocumentProxy(await loadResumeBytes(application.resumeUrl));
-  // Aproveita a leitura do PDF para indexar o texto (busca por conteúdo).
-  if (!application.resumeText) {
-    try {
-      const text = (await extractText(pdf, { mergePages: true })).text.trim();
-      if (text) await updateApplicationResumeText(applicationId, text.slice(0, 100_000));
-    } catch (error) {
-      console.error("[busca] Não foi possível indexar o texto do currículo:", error);
+  try {
+    const application = await getCompanyApplication(companyId, applicationId);
+    if (!application) return false;
+
+    let targetResumeUrl = application.resumeUrl;
+    if (!targetResumeUrl) {
+      const latest = await findLatestPersonResumeInfo(
+        companyId,
+        application.email,
+        application.candidateId,
+        null
+      ).catch(() => null);
+      targetResumeUrl = latest?.resumeUrl ?? null;
     }
+    if (!targetResumeUrl) return false;
+
+    let bytes: Uint8Array;
+    try {
+      bytes = await loadResumeBytes(targetResumeUrl);
+    } catch {
+      const latest = await findLatestPersonResumeInfo(
+        companyId,
+        application.email,
+        application.candidateId,
+        targetResumeUrl
+      ).catch(() => null);
+      if (!latest?.resumeUrl) return false;
+      bytes = await loadResumeBytes(latest.resumeUrl);
+      targetResumeUrl = latest.resumeUrl;
+    }
+
+    const target = {
+      companyId,
+      applicationId,
+      currentPath: application.photoPath ?? null,
+    };
+
+    if (isImageResumePath(targetResumeUrl) || !looksLikePdfBytes(bytes)) {
+      return await captureResumePhotoFromImage(bytes, target);
+    }
+
+    const { getDocumentProxy, extractText } = await import("unpdf");
+    const pdf = await getDocumentProxy(bytes);
+    // Aproveita a leitura do PDF para indexar o texto (busca por conteúdo).
+    if (!application.resumeText) {
+      try {
+        const text = (await extractText(pdf, { mergePages: true })).text.trim();
+        if (text) await updateApplicationResumeText(applicationId, text.slice(0, 100_000));
+      } catch (error) {
+        console.error("[busca] Não foi possível indexar o texto do currículo:", error);
+      }
+    }
+    return await captureResumePhoto(pdf, target, bytes);
+  } catch (error) {
+    console.error("[foto] Falha ao extrair foto do currículo:", applicationId, error);
+    return false;
   }
-  return captureResumePhoto(pdf, {
-    companyId,
-    applicationId,
-    currentPath: application.photoPath ?? null,
-  });
 }
 
 /**
@@ -461,7 +522,7 @@ export async function extractPhotosBulk(
   const all = await findApplicationsByCompany(companyId);
   const targets = all
     .filter((a) => a.resumeUrl && (ids ? ids.includes(a.id) : !a.photoPath))
-    .slice(0, 40);
+    .slice(0, 15);
   let found = 0;
   for (const app of targets) {
     try {

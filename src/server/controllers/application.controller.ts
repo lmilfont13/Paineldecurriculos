@@ -264,23 +264,39 @@ export async function suggestMessageAction(
 export async function reextractPhotoAction(
   applicationId: string
 ): Promise<{ ok: boolean; message: string }> {
-  const user = await requireManager();
-  const found = await extractApplicationPhoto(user.companyId, applicationId);
-  revalidatePath(`/candidaturas/${applicationId}`);
-  return found
-    ? { ok: true, message: "Foto extraída com sucesso." }
-    : { ok: false, message: "Nenhuma foto encontrada no currículo." };
+  try {
+    const user = await requireManager();
+    const found = await extractApplicationPhoto(user.companyId, applicationId);
+    revalidatePath(`/candidaturas/${applicationId}`);
+    revalidatePath("/candidaturas");
+    revalidatePath("/buscar-cvs");
+    return found
+      ? { ok: true, message: "Foto extraída com sucesso!" }
+      : { ok: false, message: "Nenhuma foto de perfil foi identificada neste currículo." };
+  } catch (error) {
+    console.error("[foto] Erro em reextractPhotoAction:", error);
+    return {
+      ok: false,
+      message: "Não foi possível extrair a foto deste currículo.",
+    };
+  }
 }
 
 /** Extrai fotos em lote: dos ids selecionados, ou de todos que ainda não têm foto. */
 export async function extractPhotosBulkAction(
   applicationIds?: string[]
 ): Promise<{ processed: number; found: number }> {
-  const user = await requireManager();
-  const ids = applicationIds?.length ? applicationIds.slice(0, 100) : undefined;
-  const result = await extractPhotosBulk(user.companyId, ids);
-  revalidatePath("/candidaturas");
-  return result;
+  try {
+    const user = await requireManager();
+    const ids = applicationIds?.length ? applicationIds.slice(0, 100) : undefined;
+    const result = await extractPhotosBulk(user.companyId, ids);
+    revalidatePath("/candidaturas");
+    revalidatePath("/buscar-cvs");
+    return result;
+  } catch (error) {
+    console.error("[foto] Erro em extractPhotosBulkAction:", error);
+    return { processed: 0, found: 0 };
+  }
 }
 
 /** URL da foto ampliada (clique na foto), sempre do tenant da sessão. */

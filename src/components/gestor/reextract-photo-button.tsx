@@ -1,19 +1,28 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { reextractPhotoAction } from "@/server/controllers/application.controller";
 
 /** Re-extrai a foto do currículo sem re-rodar a análise de IA. */
 export function ReextractPhotoButton({ applicationId }: { applicationId: string }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
   function handleClick() {
     setMessage(null);
     startTransition(async () => {
-      const result = await reextractPhotoAction(applicationId);
-      setMessage(result.message);
+      try {
+        const result = await reextractPhotoAction(applicationId);
+        setMessage(result.message);
+        if (result.ok) {
+          router.refresh();
+        }
+      } catch {
+        setMessage("Não foi possível extrair a foto deste currículo agora.");
+      }
     });
   }
 

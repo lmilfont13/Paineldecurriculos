@@ -45,7 +45,10 @@ import {
   updateAgentRun,
   updateApplicationAi,
 } from "@/server/repositories/application.repository";
-import { captureResumePhoto } from "@/server/services/resume-photo.service";
+import {
+  captureResumePhoto,
+  captureResumePhotoFromImage,
+} from "@/server/services/resume-photo.service";
 import { autoCategorizeTalent } from "@/server/services/talent.service";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
@@ -726,8 +729,12 @@ export async function analyzeApplication(
           mimeFromPath(application.resumeUrl),
           application.company.id
         );
-        // Foto do candidato: para imagens, não faz sentido extrair retrato
-        // (a imagem inteira É o currículo).
+        // Se houver um rosto detectável na imagem do currículo, recorta o avatar.
+        await captureResumePhotoFromImage(bytes, {
+          companyId: application.company.id,
+          applicationId,
+          currentPath: application.photoPath ?? null,
+        });
       } else {
         await onStep("Lendo o texto do PDF");
         const pdf = await getDocumentProxy(bytes);
@@ -741,11 +748,15 @@ export async function analyzeApplication(
         // Foto: referência visual para o gestor — sempre tentada, mesmo em PDFs
         // com pouco texto extraído. captureResumePhoto retorna false sem lançar
         // se não encontrar imagem com cara de foto. A IA não recebe a foto (regra 3).
-        await captureResumePhoto(pdf, {
-          companyId: application.company.id,
-          applicationId,
-          currentPath: application.photoPath ?? null,
-        });
+        await captureResumePhoto(
+          pdf,
+          {
+            companyId: application.company.id,
+            applicationId,
+            currentPath: application.photoPath ?? null,
+          },
+          bytes
+        );
       }
     } else {
       await onStep("Sem PDF: lendo as respostas do formulário");

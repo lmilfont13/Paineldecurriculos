@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Busca inteligente no texto dos currículos com filtros facetados por área, senioridade e competências.",
 };
 
+export const maxDuration = 60;
+
 export default async function BuscarCvsPage() {
   const { candidates, jobs } = await getBuscarCvsData();
 
