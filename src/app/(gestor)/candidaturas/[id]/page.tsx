@@ -206,11 +206,11 @@ export default async function CandidaturaDetailPage({
                   {app.name}
                   {app.hasImpediment && (
                     <span
-                      className="ml-2 inline-flex items-center gap-1.5 rounded bg-black px-2 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wider text-white shadow-sm"
+                      className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 align-middle text-[11px] font-medium text-zinc-600"
                       title={app.impedimentReason ? `Motivo do impedimento: ${app.impedimentReason}` : "Impedimento de contratação ativo em todas as vagas"}
                     >
-                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span>Tarja Preta</span>
+                      <span className="size-1.5 rounded-full bg-rose-500/80" />
+                      <span>Tarja preta</span>
                     </span>
                   )}
                   {app.preRegistered && (
@@ -372,11 +372,11 @@ export default async function CandidaturaDetailPage({
                 <span className="text-[#a1a1aa]"> · {appStatusLabels[other.status as AppStatusKey]}</span>
                 {(other.hasImpediment || app.hasImpediment) && (
                   <span
-                    className="inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
                     title={other.impedimentReason || app.impedimentReason || "Impedimento ativo em todas as vagas"}
                   >
-                    <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                    <span>Tarja Preta</span>
+                    <span className="size-1.5 rounded-full bg-rose-500/80" />
+                    <span>Tarja preta</span>
                   </span>
                 )}
               </li>

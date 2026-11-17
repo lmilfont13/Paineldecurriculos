@@ -1026,9 +1026,9 @@ export function BuscarCvsView({
                             {item.name}
                           </Link>
                           {item.hasImpediment && (
-                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
-                              <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                              <span>Tarja Preta</span>
+                            <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
+                              <span className="size-1.5 rounded-full bg-rose-500/80" />
+                              <span>Tarja preta</span>
                             </span>
                           )}
                           {item.aiLevel && (
@@ -1120,19 +1120,19 @@ export function BuscarCvsView({
                             setDrawerTab("pdf");
                           }}
                           title="Ver currículo / Dossiê"
-                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-stone-200 bg-white px-2 text-[11px] font-semibold text-[#3f3f46] hover:bg-stone-100 hover:text-[#0a0a0a]"
+                          className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
                         >
                           <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">Ver CV</span>
+                          <span className="hidden sm:inline">CV</span>
                         </button>
                         <a
                           href={`/candidaturas/${item.id}/cv?download=1`}
                           onClick={(e) => e.stopPropagation()}
                           title="Baixar currículo em PDF"
-                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-[#0a0a0a] px-2 text-[11px] font-semibold text-white hover:opacity-90"
+                          aria-label="Baixar currículo em PDF"
+                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
                         >
-                          <Download className="size-3.5" />
-                          <span className="hidden sm:inline">PDF</span>
+                          <Download className="size-3.5" strokeWidth={1.75} />
                         </a>
                       </div>
                     </div>
@@ -1199,9 +1199,9 @@ export function BuscarCvsView({
                               </Link>
                             </h2>
                             {item.hasImpediment && (
-                              <span className="rounded bg-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm inline-flex items-center gap-1.5" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
-                                <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                                <span>Tarja Preta · Impedimento</span>
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
+                                <span className="size-1.5 rounded-full bg-rose-500/80" />
+                                <span>Tarja preta</span>
                               </span>
                             )}
                             {item.isPcd && (
@@ -1441,18 +1441,19 @@ export function BuscarCvsView({
                             setSelectedCandidate(item);
                             setDrawerTab("pdf");
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
+                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                         >
-                          <Eye className="size-3.5 text-[#52525b]" />
-                          Ver currículo
+                          <Eye className="size-3.5" />
+                          Ver CV
                         </button>
                         <a
                           href={`/candidaturas/${item.id}/cv?download=1`}
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                          title="Baixar currículo em PDF"
                         >
-                          <Download className="size-3.5" />
-                          Baixar PDF
+                          <Download className="size-3.5" strokeWidth={1.75} />
+                          PDF
                         </a>
                         <Link
                           href={`/candidaturas/${item.id}`}

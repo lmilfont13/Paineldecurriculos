@@ -377,11 +377,11 @@ export default async function PainelPage() {
                     <span className="truncate">{app.name}</span>
                     {app.hasImpediment && (
                       <span
-                        className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
                         title={app.impedimentReason ? `Motivo: ${app.impedimentReason}` : "Impedimento de contratação ativo"}
                       >
-                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span>Tarja Preta</span>
+                        <span className="size-1.5 rounded-full bg-rose-500/80" />
+                        <span>Tarja preta</span>
                       </span>
                     )}
                   </span>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
@@ -58,11 +59,11 @@ export default async function TalentFolderPage({
                   <span className="truncate">{person.name}</span>
                   {person.hasImpediment && (
                     <span
-                      className="shrink-0 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
                       title={person.impedimentReason ? `Motivo: ${person.impedimentReason}` : "Impedimento de contratação ativo"}
                     >
-                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span>Tarja Preta</span>
+                      <span className="size-1.5 rounded-full bg-rose-500/80" />
+                      <span>Tarja preta</span>
                     </span>
                   )}
                 </span>
@@ -85,22 +86,23 @@ export default async function TalentFolderPage({
               aiState={person.aiState}
               meetsMinimum={person.aiScore !== null && person.aiScore >= person.job.aiMinScore}
             />
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <a
                 href={`/candidaturas/${person.id}/cv`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-semibold text-[#3f3f46] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                 title="Visualizar currículo em nova aba"
               >
                 Ver CV
               </a>
               <a
                 href={`/candidaturas/${person.id}/cv?download=1`}
-                className="inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2.5 text-[11px] font-semibold text-white transition hover:opacity-90"
+                className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                 title="Baixar currículo em PDF"
+                aria-label="Baixar currículo em PDF"
               >
-                Baixar PDF
+                <Download className="size-3.5" strokeWidth={1.75} />
               </a>
             </div>
             <RemoveFromFolderButton folderId={folder.id} applicationId={person.id} name={person.name} />

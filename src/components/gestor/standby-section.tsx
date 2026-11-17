@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Check, FolderOpen, Loader2, MessageCircle, RefreshCw, UserPlus } from "lucide-react";
+import { Check, Download, FolderOpen, Loader2, MessageCircle, RefreshCw, UserPlus } from "lucide-react";
 
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { MatchScore } from "@/components/gestor/talent-pool-card";
@@ -140,11 +140,11 @@ export function StandbySection({
                     </Link>
                     {p.hasImpediment && (
                       <span
-                        className="inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
                         title={p.impedimentReason ? `Motivo: ${p.impedimentReason}` : "Impedimento de contratação ativo"}
                       >
-                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span>Tarja Preta</span>
+                        <span className="size-1.5 rounded-full bg-rose-500/80" />
+                        <span>Tarja preta</span>
                       </span>
                     )}
                   </div>
@@ -161,17 +161,18 @@ export function StandbySection({
                     href={`/candidaturas/${p.id}/cv`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#3f3f46] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                    className="inline-flex h-7 items-center rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                     title="Visualizar currículo em nova aba"
                   >
                     Ver CV
                   </a>
                   <a
                     href={`/candidaturas/${p.id}/cv?download=1`}
-                    className="inline-flex items-center gap-1 rounded-lg bg-[#0a0a0a] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                    className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                     title="Baixar currículo em PDF"
+                    aria-label="Baixar currículo em PDF"
                   >
-                    Baixar PDF
+                    <Download className="size-3.5" strokeWidth={1.75} />
                   </a>
                   {importedIds.has(p.id) ? (
                     <span className="inline-flex items-center gap-1 rounded-lg bg-[#e4f6ec] px-2.5 py-1 text-[11px] font-medium text-[#1f7a4d]">

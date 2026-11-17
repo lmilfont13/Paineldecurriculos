@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Download } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
@@ -905,11 +906,11 @@ export function CandidaturasTable({
                     <p className="mt-3 line-clamp-2 text-center text-[13px] font-semibold text-[#0a0a0a] leading-snug">{row.name}</p>
                     {row.hasImpediment && (
                       <span
-                        className="mt-1.5 inline-flex items-center gap-1.5 rounded bg-black px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
                         title={row.impedimentReason ? `Motivo do impedimento: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
                       >
-                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span>Tarja Preta</span>
+                        <span className="size-1.5 rounded-full bg-rose-500/80" />
+                        <span>Tarja preta</span>
                       </span>
                     )}
                     {row.age != null && (
@@ -968,29 +969,30 @@ export function CandidaturasTable({
                     )}
                   </Link>
 
-                  <div className="mt-auto border-t border-[#f1f0ed] px-4 py-2 flex items-center justify-between">
-                    <span className="text-[11px] text-[#71717a] truncate">{jobLabel(row.jobTitle, row.jobCode)}</span>
-                    {row.aiScore !== null && (
-                      <span className={"ml-2 shrink-0 text-[11px] font-semibold " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
-                    )}
-                  </div>
-                  <div className="border-t border-[#f1f0ed] bg-[#fafaf9]/70 px-3 py-2 flex items-center gap-1.5 rounded-b-2xl">
-                    <a
-                      href={`/candidaturas/${row.id}/cv`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2 text-[10px] font-semibold text-[#3f3f46] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                      title="Visualizar currículo em nova aba"
-                    >
-                      Ver CV
-                    </a>
-                    <a
-                      href={`/candidaturas/${row.id}/cv?download=1`}
-                      className="flex-1 inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2 text-[10px] font-semibold text-white transition hover:opacity-90"
-                      title="Baixar currículo em PDF"
-                    >
-                      Baixar PDF
-                    </a>
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#f1f0ed] px-3.5 py-2">
+                    <span className="truncate text-[11px] text-[#71717a]">{jobLabel(row.jobTitle, row.jobCode)}</span>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <a
+                        href={`/candidaturas/${row.id}/cv`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                        title="Visualizar currículo em nova aba"
+                      >
+                        CV
+                      </a>
+                      <a
+                        href={`/candidaturas/${row.id}/cv?download=1`}
+                        className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                        title="Baixar currículo em PDF"
+                        aria-label="Baixar currículo em PDF"
+                      >
+                        <Download className="size-3.5" strokeWidth={1.75} />
+                      </a>
+                      {row.aiScore !== null && (
+                        <span className={"ml-1 text-[11px] font-semibold tabular-nums " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 </Fragment>
@@ -1088,11 +1090,11 @@ export function CandidaturasTable({
                     {row.name}
                     {row.hasImpediment && (
                       <span
-                        className="ml-1.5 inline-flex items-center gap-1 rounded bg-black px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+                        className="ml-1.5 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 align-middle text-[10px] font-medium text-zinc-600"
                         title={row.impedimentReason ? `Motivo do impedimento: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
                       >
-                        <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span>Tarja Preta</span>
+                        <span className="size-1.5 rounded-full bg-rose-500/80" />
+                        <span>Tarja preta</span>
                       </span>
                     )}
                     {row.preRegistered && (
@@ -1169,22 +1171,23 @@ export function CandidaturasTable({
                   </span>
                 )}
               </span>
-              <div className="col-span-full flex items-center justify-end gap-1.5 md:col-span-1 md:justify-start">
+              <div className="col-span-full flex items-center justify-end gap-1 md:col-span-1 md:justify-start">
                 <a
                   href={`/candidaturas/${row.id}/cv`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white px-2.5 text-[11px] font-semibold text-[#3f3f46] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                  className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                   title="Visualizar currículo em nova aba"
                 >
                   Ver CV
                 </a>
                 <a
                   href={`/candidaturas/${row.id}/cv?download=1`}
-                  className="inline-flex h-7 items-center justify-center rounded-lg bg-[#0a0a0a] px-2.5 text-[11px] font-semibold text-white transition hover:opacity-90"
+                  className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                   title="Baixar currículo em PDF"
+                  aria-label="Baixar currículo em PDF"
                 >
-                  PDF ↓
+                  <Download className="size-3.5" strokeWidth={1.75} />
                 </a>
               </div>
               <Link
