@@ -9,6 +9,7 @@ import { geminiGenerate } from "@/lib/gemini";
 import { requireManager } from "@/server/controllers/guards";
 import {
   applicationInputSchema,
+  type ManagerUpdateRegistrationInput,
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
 import {
@@ -56,6 +57,7 @@ import {
   requestApplicationResumeUpload,
   requestApplicationInfo,
   correctApplicationAnswers,
+  updateCandidateRegistrationByManager,
   requestReanalysis,
   reanalyzePendingApplications,
   saveInfoAnswers,
@@ -1032,4 +1034,47 @@ export async function syncApplicationResumeAction(applicationId: string) {
     revalidatePath("/buscar-cvs");
   }
   return res;
+}
+
+/**
+ * Permite ao gestor editar todo o cadastro do candidato (dados pessoais,
+ * contato, endereço, documentos, uniforme, banco, perfil e respostas).
+ */
+export async function updateCandidateRegistrationAction(
+  applicationId: string,
+  input: ManagerUpdateRegistrationInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireManager();
+  const result = await updateCandidateRegistrationByManager(
+    user.companyId,
+    applicationId,
+    input
+  );
+  if (!result.ok) return result;
+
+  runInBackground("auditoria de edicao de cadastro", async () => {
+    try {
+      await createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        action: "RESPOSTAS_CORRIGIDAS",
+        entityType: "CANDIDATURA",
+        entityId: applicationId,
+        entityLabel: input.name,
+        metadata: { tipo: "cadastro_completo_editado" },
+      });
+    } catch {
+      /* auditoria nunca bloqueia a ação principal */
+    }
+  });
+
+  revalidatePath(`/candidaturas/${applicationId}`);
+  revalidatePath("/candidaturas");
+  revalidatePath("/buscar-cvs");
+  revalidatePath("/vagas");
+  revalidatePath("/talentos");
+  revalidatePath("/painel");
+  return { ok: true };
 }

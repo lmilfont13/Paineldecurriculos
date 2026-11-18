@@ -11,8 +11,10 @@ import {
   isAllowedResumePath,
   isDemoResumePath,
   isImageResumePath,
+  managerUpdateRegistrationSchema,
   profileResumePrefix,
   type ApplicationInput,
+  type ManagerUpdateRegistrationInput,
   type ResumeUploadTarget,
   type SubmitApplicationResult,
 } from "@/server/models/application.model";
@@ -55,6 +57,7 @@ import {
   findApplicationsMissingPhoto,
   findExistingPersonPhotoPath,
   updateApplicationPhoto,
+  updateApplicationRegistration,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { titleCasePt } from "@/server/models/text.model";
@@ -601,6 +604,138 @@ export async function correctApplicationAnswers(
   }
   if (updates.length > 0) await updateAnswerValues(id, updates);
   return { ok: true, changed };
+}
+
+/**
+ * Permite ao gestor abrir e editar todo o cadastro do candidato
+ * (dados pessoais, contato, endereço, documentos, admissão, perfil e respostas).
+ * Regra 1: sempre valida que a candidatura pertence ao companyId da sessão.
+ */
+export async function updateCandidateRegistrationByManager(
+  companyId: string,
+  applicationId: string,
+  rawInput: unknown
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const application = await getCompanyApplication(companyId, applicationId);
+  if (!application) {
+    return { ok: false, error: "Candidatura não encontrada." };
+  }
+
+  const parsed = managerUpdateRegistrationSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+    };
+  }
+
+  const d: ManagerUpdateRegistrationInput = parsed.data;
+  const igParsed = parseInstagram(d.instagram ?? "");
+  if ("error" in igParsed) {
+    return { ok: false, error: igParsed.error };
+  }
+
+  let birthDate: Date | null = null;
+  if (d.birthDate && d.birthDate.trim()) {
+    const dt = new Date(`${d.birthDate.trim()}T12:00:00Z`);
+    if (!Number.isNaN(dt.getTime())) {
+      birthDate = dt;
+    }
+  }
+
+  const cleanName = titleCasePt(d.name.trim());
+  const cleanEmail = d.email.trim().toLowerCase();
+  const cleanPhone = d.phone?.trim() || null;
+  const cleanZip = cepDigits(d.zipCode) || null;
+  const cleanState = d.state?.trim().toUpperCase().slice(0, 2) || null;
+
+  const registrationData = {
+    name: cleanName,
+    email: cleanEmail,
+    phone: cleanPhone,
+    birthDate,
+    rg: d.rg?.trim() || null,
+    cpf: d.cpf?.trim() || null,
+    maritalStatus: d.maritalStatus?.trim() || null,
+    hasChildren: d.hasChildren ?? null,
+    childrenCount: d.hasChildren ? (d.childrenCount ?? null) : null,
+    zipCode: cleanZip,
+    street: d.street?.trim() || null,
+    streetNumber: d.streetNumber?.trim() || null,
+    complement: d.complement?.trim() || null,
+    neighborhood: d.neighborhood?.trim() || null,
+    city: d.city?.trim() || null,
+    state: cleanState,
+    desiredRole: d.desiredRole?.trim() || null,
+    salaryExpectation: d.salaryExpectation?.trim() || null,
+    instagram: igParsed.handle ?? null,
+    workPreference: d.workPreference?.trim() || null,
+    availability: d.availability?.trim() || null,
+    hasCnh: d.hasCnh?.trim() || null,
+    isPcd: Boolean(d.isPcd),
+    pcdDetails: d.isPcd ? (d.pcdDetails?.trim() || null) : null,
+    bootSize: d.bootSize?.trim() || null,
+    pantsSize: d.pantsSize?.trim() || null,
+    shirtSize: d.shirtSize?.trim() || null,
+    hasBankAccount: d.hasBankAccount?.trim() || null,
+    bankNames: d.bankNames?.trim() || null,
+    bankAccountType: d.bankAccountType?.trim() || null,
+    professionalSummary: d.professionalSummary?.trim() || null,
+    aiProfile: d.aiProfile?.trim() || null,
+    aiArea: d.aiArea?.trim() || null,
+    aiLevel: d.aiLevel?.trim() || null,
+  };
+
+  await updateApplicationRegistration(applicationId, registrationData);
+
+  if (application.candidateId) {
+    await updateCandidateProfile(application.candidateId, {
+      name: registrationData.name,
+      phone: registrationData.phone,
+      birthDate: registrationData.birthDate,
+      rg: registrationData.rg,
+      cpf: registrationData.cpf,
+      zipCode: registrationData.zipCode,
+      street: registrationData.street,
+      streetNumber: registrationData.streetNumber,
+      complement: registrationData.complement,
+      neighborhood: registrationData.neighborhood,
+      city: registrationData.city,
+      state: registrationData.state,
+      desiredRole: registrationData.desiredRole,
+      salaryExpectation: registrationData.salaryExpectation,
+      instagram: registrationData.instagram,
+      workPreference: registrationData.workPreference,
+      availability: registrationData.availability,
+      hasCnh: registrationData.hasCnh,
+      isPcd: registrationData.isPcd,
+      pcdDetails: registrationData.pcdDetails,
+      bootSize: registrationData.bootSize,
+      pantsSize: registrationData.pantsSize,
+      shirtSize: registrationData.shirtSize,
+      hasBankAccount: registrationData.hasBankAccount,
+      bankNames: registrationData.bankNames,
+      bankAccountType: registrationData.bankAccountType,
+    }).catch(() => {});
+  }
+
+  if (d.answers && Object.keys(d.answers).length > 0) {
+    const current = new Map(application.answers.map((a) => [a.id, a]));
+    const answerUpdates: { id: string; value: string }[] = [];
+    for (const [ansId, rawVal] of Object.entries(d.answers)) {
+      const existing = current.get(ansId);
+      if (!existing) continue;
+      const val = String(rawVal ?? "").trim().slice(0, 2000);
+      if (val && val !== existing.value) {
+        answerUpdates.push({ id: ansId, value: val });
+      }
+    }
+    if (answerUpdates.length > 0) {
+      await updateAnswerValues(applicationId, answerUpdates);
+    }
+  }
+
+  return { ok: true };
 }
 
 /**

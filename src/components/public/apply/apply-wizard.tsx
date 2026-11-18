@@ -10,9 +10,13 @@ import { parseInstagram } from "@/server/models/instagram.model";
 import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
-import type { PublicJob } from "@/server/models/job.model";
+import { isTemporaryJob, type PublicJob } from "@/server/models/job.model";
 import {
+  CLT_AWARENESS_REQUIRED_MESSAGE,
+  CLT_AWARENESS_TEXT,
   CONSENT_REQUIRED_MESSAGE,
+  TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE,
+  TEMPORARY_JOB_AWARENESS_TEXT,
   consentCheckboxText,
 } from "@/server/models/consent.model";
 import {
@@ -115,6 +119,10 @@ export function ApplyWizard({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // Ciência obrigatória de contratação CLT (todas as vagas) e Vaga Temporária (quando aplicável).
+  const isTempJob = useMemo(() => isTemporaryJob(job), [job]);
+  const [cltAware, setCltAware] = useState(false);
+  const [tempAware, setTempAware] = useState(false);
   // LGPD: aceite do Aviso de Privacidade, exigido para enviar (e de novo no servidor).
   const [consent, setConsent] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -134,6 +142,8 @@ export function ApplyWizard({
 
   const stepError = useMemo(() => {
     if (step === 0) {
+      if (!cltAware) return CLT_AWARENESS_REQUIRED_MESSAGE;
+      if (isTempJob && !tempAware) return TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE;
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
       const ig = parseInstagram(data.instagram);
@@ -152,7 +162,7 @@ export function ApplyWizard({
       }
     }
     return null;
-  }, [step, data, resume, candidate.resumeUrl, filteredCoreFields, filteredCustomFields]);
+  }, [step, cltAware, isTempJob, tempAware, data, resume, candidate.resumeUrl, filteredCoreFields, filteredCustomFields]);
 
   function next() {
     if (stepError) {
@@ -182,6 +192,14 @@ export function ApplyWizard({
   }
 
   function submit() {
+    if (!cltAware) {
+      setError(CLT_AWARENESS_REQUIRED_MESSAGE);
+      return;
+    }
+    if (isTempJob && !tempAware) {
+      setError(TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE);
+      return;
+    }
     if (!consent) {
       setError(CONSENT_REQUIRED_MESSAGE);
       return;
@@ -341,6 +359,57 @@ export function ApplyWizard({
               title="Vamos começar por você"
               subtitle="Só o básico pra gente te identificar e adequar as vagas da sua região."
             >
+              {/* Avisos obrigatórios de ciência (CLT em todas as vagas + Temporária quando marcada) */}
+              <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                  Confirmação obrigatória para prosseguir
+                </p>
+
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
+                    cltAware
+                      ? "border-[var(--brand-primary)] bg-white shadow-2xs"
+                      : "border-amber-200/80 bg-white/80"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={cltAware}
+                    onChange={(e) => {
+                      setCltAware(e.target.checked);
+                      if (e.target.checked) setError(null);
+                    }}
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                  />
+                  <span className="text-[13px] font-medium leading-5 text-[#1c1917]">
+                    {CLT_AWARENESS_TEXT}
+                  </span>
+                </label>
+
+                {isTempJob && (
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition ${
+                      tempAware
+                        ? "border-[var(--brand-primary)] bg-white shadow-2xs"
+                        : "border-amber-200/80 bg-white/80"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={tempAware}
+                      onChange={(e) => {
+                        setTempAware(e.target.checked);
+                        if (e.target.checked) setError(null);
+                      }}
+                      className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                    />
+                    <span className="text-[13px] font-medium leading-5 text-[#1c1917]">
+                      {TEMPORARY_JOB_AWARENESS_TEXT}
+                    </span>
+                  </label>
+                )}
+              </div>
+
               <Field label="Nome completo">
                 <TextInput
                   value={data.name}
@@ -688,37 +757,83 @@ export function ApplyWizard({
                 />
               </dl>
 
-              {/* LGPD: consentimento específico e destacado antes do envio */}
-              <label
-                className={`mb-4 mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
-                  consent
-                    ? "border-[var(--brand-primary)] bg-white"
-                    : "border-[#e4e4e7] bg-[#fafaf9]"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => {
-                    setConsent(e.target.checked);
-                    if (e.target.checked) setError(null);
-                  }}
-                  className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
-                />
-                <span className="text-[13px] leading-5 text-[#3f3f46]">
-                  {consentCheckboxText(company.name)}{" "}
-                  <a
-                    href={`/${company.slug}/privacidade`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="font-medium underline underline-offset-2"
-                    style={{ color: "var(--brand-primary)" }}
+              {/* Confirmações obrigatórias: Regime CLT, Vaga Temporária (se aplicável) e LGPD */}
+              <div className="mb-4 mt-6 space-y-3">
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                    cltAware
+                      ? "border-[var(--brand-primary)] bg-white"
+                      : "border-[#e4e4e7] bg-[#fafaf9]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={cltAware}
+                    onChange={(e) => {
+                      setCltAware(e.target.checked);
+                      if (e.target.checked) setError(null);
+                    }}
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                  />
+                  <span className="text-[13px] font-medium leading-5 text-[#3f3f46]">
+                    {CLT_AWARENESS_TEXT}
+                  </span>
+                </label>
+
+                {isTempJob && (
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                      tempAware
+                        ? "border-[var(--brand-primary)] bg-white"
+                        : "border-[#e4e4e7] bg-[#fafaf9]"
+                    }`}
                   >
-                    Ler o Aviso de Privacidade
-                  </a>
-                </span>
-              </label>
+                    <input
+                      type="checkbox"
+                      checked={tempAware}
+                      onChange={(e) => {
+                        setTempAware(e.target.checked);
+                        if (e.target.checked) setError(null);
+                      }}
+                      className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                    />
+                    <span className="text-[13px] font-medium leading-5 text-[#3f3f46]">
+                      {TEMPORARY_JOB_AWARENESS_TEXT}
+                    </span>
+                  </label>
+                )}
+
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                    consent
+                      ? "border-[var(--brand-primary)] bg-white"
+                      : "border-[#e4e4e7] bg-[#fafaf9]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => {
+                      setConsent(e.target.checked);
+                      if (e.target.checked) setError(null);
+                    }}
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--brand-primary)]"
+                  />
+                  <span className="text-[13px] leading-5 text-[#3f3f46]">
+                    {consentCheckboxText(company.name)}{" "}
+                    <a
+                      href={`/${company.slug}/privacidade`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium underline underline-offset-2"
+                      style={{ color: "var(--brand-primary)" }}
+                    >
+                      Ler o Aviso de Privacidade
+                    </a>
+                  </span>
+                </label>
+              </div>
             </StepShell>
           )}
         </div>
@@ -759,8 +874,16 @@ export function ApplyWizard({
             <button
               type="button"
               onClick={submit}
-              disabled={pending || !consent}
-              title={consent ? undefined : CONSENT_REQUIRED_MESSAGE}
+              disabled={pending || !consent || !cltAware || (isTempJob && !tempAware)}
+              title={
+                !cltAware
+                  ? CLT_AWARENESS_REQUIRED_MESSAGE
+                  : isTempJob && !tempAware
+                    ? TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE
+                    : consent
+                      ? undefined
+                      : CONSENT_REQUIRED_MESSAGE
+              }
               className="flex h-10 w-[200px] items-center justify-center gap-2 rounded-2xl text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60"
               style={{
                 backgroundColor: "var(--brand-primary)",

@@ -14,6 +14,20 @@ export const CONSENT_VERSION = "2026-11-03.2"; // .2: inclui o Instagram (opcion
 export const CONSENT_REQUIRED_MESSAGE =
   "Para enviar, marque que você leu e concorda com o Aviso de Privacidade.";
 
+/** Declaração obrigatória de ciência de contratação CLT em todas as vagas. */
+export const CLT_AWARENESS_TEXT =
+  "Estou ciente de que a vaga anunciada é para contrato CLT (carteira assinada) e que não é possível trabalhar sem carteira assinada sob nenhuma hipótese.";
+
+export const CLT_AWARENESS_REQUIRED_MESSAGE =
+  "Para prosseguir, marque que você está ciente de que a vaga é para contrato CLT e que não é possível trabalhar sem carteira assinada.";
+
+/** Declaração obrigatória de ciência quando a vaga é temporária. */
+export const TEMPORARY_JOB_AWARENESS_TEXT =
+  "Estou ciente de que esta vaga é temporária, que os dias e condições do período constam na descrição da vaga, e que só posso seguir estando de acordo.";
+
+export const TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE =
+  "Para prosseguir, marque que você está ciente de que esta vaga é temporária e conferiu os dias na descrição da vaga.";
+
 /**
  * Texto da caixa de aceite, no fim do formulário. Específico e destacado
  * (art. 8º, §4º e art. 11, I): diz quem usa, para quê, inclui o dado sensível

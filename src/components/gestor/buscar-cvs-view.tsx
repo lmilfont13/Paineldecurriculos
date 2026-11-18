@@ -1456,6 +1456,13 @@ export function BuscarCvsView({
                           PDF
                         </a>
                         <Link
+                          href={`/candidaturas/${item.id}?edit=1`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                        >
+                          Editar
+                        </Link>
+                        <Link
                           href={`/candidaturas/${item.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 text-[#71717a] hover:text-[#0a0a0a] hover:underline"

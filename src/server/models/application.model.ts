@@ -162,6 +162,46 @@ export const applicationInputSchema = z.object({
 
 export type ApplicationInput = z.infer<typeof applicationInputSchema>;
 
+export const managerUpdateRegistrationSchema = z.object({
+  name: z.string().trim().min(2, "Informe o nome completo."),
+  email: z.string().trim().email("Informe um e-mail válido."),
+  phone: z.string().trim().optional().nullable(),
+  birthDate: z.string().trim().optional().nullable(),
+  rg: z.string().trim().optional().nullable(),
+  cpf: z.string().trim().optional().nullable(),
+  maritalStatus: z.string().trim().optional().nullable(),
+  hasChildren: z.boolean().optional().nullable(),
+  childrenCount: z.number().int().min(0).max(30).optional().nullable(),
+  zipCode: z.string().trim().optional().nullable(),
+  street: z.string().trim().optional().nullable(),
+  streetNumber: z.string().trim().optional().nullable(),
+  complement: z.string().trim().optional().nullable(),
+  neighborhood: z.string().trim().optional().nullable(),
+  city: z.string().trim().optional().nullable(),
+  state: z.string().trim().optional().nullable(),
+  desiredRole: z.string().trim().optional().nullable(),
+  salaryExpectation: z.string().trim().optional().nullable(),
+  instagram: z.string().trim().optional().nullable(),
+  workPreference: z.string().trim().optional().nullable(),
+  availability: z.string().trim().optional().nullable(),
+  hasCnh: z.string().trim().optional().nullable(),
+  isPcd: z.boolean().optional(),
+  pcdDetails: z.string().trim().optional().nullable(),
+  bootSize: z.string().trim().optional().nullable(),
+  pantsSize: z.string().trim().optional().nullable(),
+  shirtSize: z.string().trim().optional().nullable(),
+  hasBankAccount: z.string().trim().optional().nullable(),
+  bankNames: z.string().trim().optional().nullable(),
+  bankAccountType: z.string().trim().optional().nullable(),
+  professionalSummary: z.string().trim().optional().nullable(),
+  aiProfile: z.string().trim().optional().nullable(),
+  aiArea: z.string().trim().optional().nullable(),
+  aiLevel: z.string().trim().optional().nullable(),
+  answers: z.record(z.string(), z.string()).optional(),
+});
+
+export type ManagerUpdateRegistrationInput = z.infer<typeof managerUpdateRegistrationSchema>;
+
 export type SubmitApplicationResult =
   | { ok: true; applicationId: string }
   | { ok: false; error: string };

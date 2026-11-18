@@ -94,13 +94,46 @@ export function formatPublishedAgo(createdAt: Date): string {
   return `publicada há ${days} dias`;
 }
 
+export const TEMPORARY_JOB_MARKER = "[VAGA_TEMPORARIA]";
+
+/** Verifica se a vaga foi marcada como temporária pelo gestor ou no tipo/texto da vaga. */
+export function isTemporaryJob(
+  job: Pick<PublicJob, "title" | "description" | "requirements" | "contract">
+): boolean {
+  if (job.contract === "FREELANCE") return true;
+  if ((job.requirements ?? "").includes(TEMPORARY_JOB_MARKER)) return true;
+  if ((job.description ?? "").includes(TEMPORARY_JOB_MARKER)) return true;
+  const text = `${job.title} ${job.description ?? ""} ${job.requirements ?? ""}`;
+  return /\b(vaga\s+tempor[aá]ria|contrato\s+tempor[aá]rio|tempor[aá]ri[oa])\b/i.test(text);
+}
+
+/** Remove o marcador interno de vaga temporária para exibição limpa em formulários. */
+export function stripTemporaryJobMarker(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .filter((line) => line.trim() !== TEMPORARY_JOB_MARKER)
+    .join("\n")
+    .trim();
+}
+
+/** Aplica ou remove o marcador de vaga temporária no texto de requisitos salvo no banco. */
+export function withTemporaryJobMarker(
+  requirements: string | null | undefined,
+  isTemporary: boolean
+): string {
+  const clean = stripTemporaryJobMarker(requirements);
+  if (!isTemporary) return clean;
+  return clean ? `${TEMPORARY_JOB_MARKER}\n${clean}` : TEMPORARY_JOB_MARKER;
+}
+
 /** Quebra o campo `requirements` (texto livre) em bullets, uma por linha. */
 export function requirementsToBullets(requirements: string | null): string[] {
   if (!requirements) return [];
   return requirements
     .split("\n")
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0 && line !== TEMPORARY_JOB_MARKER);
 }
 
 const normalizeJobText = (s: string | null | undefined) =>

@@ -5,7 +5,10 @@ import { useActionState, useMemo, useState } from "react";
 
 import {
   contractLabels,
+  isTemporaryJob,
   jobFormSchema,
+  stripTemporaryJobMarker,
+  withTemporaryJobMarker,
   workModeLabels,
   type JobFormInput,
 } from "@/server/models/job.model";
@@ -51,6 +54,16 @@ export function JobWizard({
   const [organizeMsg, setOrganizeMsg] = useState<
     { ok: boolean; text: string } | null
   >(null);
+  const [isTemporary, setIsTemporary] = useState<boolean>(() =>
+    initial
+      ? isTemporaryJob({
+          title: initial.title ?? "",
+          description: initial.description ?? "",
+          requirements: initial.requirements ?? null,
+          contract: initial.contract ?? "CLT",
+        })
+      : false
+  );
   const [draft, setDraft] = useState<Draft>({
     code: initial?.code ?? "",
     title: initial?.title ?? "",
@@ -58,7 +71,7 @@ export function JobWizard({
     contract: initial?.contract ?? "CLT",
     workMode: initial?.workMode ?? "REMOTE",
     description: initial?.description ?? "",
-    requirements: initial?.requirements ?? "",
+    requirements: stripTemporaryJobMarker(initial?.requirements),
     aiCriteria: initial?.aiCriteria ?? [],
     aiMinScore: initial?.aiMinScore ?? 70,
   });
@@ -214,7 +227,11 @@ export function JobWizard({
           <input type="hidden" name="contract" value={draft.contract} />
           <input type="hidden" name="workMode" value={draft.workMode} />
           <input type="hidden" name="description" value={draft.description} />
-          <input type="hidden" name="requirements" value={draft.requirements} />
+          <input
+            type="hidden"
+            name="requirements"
+            value={withTemporaryJobMarker(draft.requirements, isTemporary)}
+          />
           <input
             type="hidden"
             name="aiCriteria"
@@ -324,6 +341,21 @@ export function JobWizard({
                         </option>
                       ))}
                     </select>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3.5 transition hover:border-[#0a0a0a]/40">
+                    <input
+                      type="checkbox"
+                      checked={isTemporary}
+                      onChange={(e) => setIsTemporary(e.target.checked)}
+                      className="mt-0.5 size-4 shrink-0 accent-[#0a0a0a]"
+                    />
+                    <span className="text-xs leading-5 text-[#3f3f46]">
+                      <strong className="block text-[13px] font-semibold text-[#0a0a0a]">
+                        Vaga temporária (exigir ciência do candidato)
+                      </strong>
+                      Quando marcada, o candidato só consegue prosseguir na inscrição se marcar que está ciente de que a vaga é temporária e que os dias constam na descrição da vaga.
+                    </span>
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">

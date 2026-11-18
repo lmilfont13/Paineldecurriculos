@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { DecisionBlock } from "@/components/gestor/decision-block";
 import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
 import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
+import { CandidateRegistrationEditor } from "@/components/gestor/candidate-registration-editor";
 import { SyncResumeBanner } from "@/components/gestor/sync-resume-banner";
 import { extractStandbyReason } from "@/server/models/standby.model";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
@@ -161,6 +162,54 @@ export default async function CandidaturaDetailPage({
     hasEvaluations: evaluations.length > 0,
   });
 
+  const editableAnswers = [...coreAnswers, ...customAnswers]
+    .filter((a) => a.field.type !== "FILE_UPLOAD")
+    .map((a) => ({
+      id: a.id,
+      label: a.field.label,
+      value: a.value,
+      type: a.field.type,
+      options: a.field.options,
+    }));
+
+  const registrationInitial = {
+    id: app.id,
+    name: app.name,
+    email: app.email,
+    phone: app.phone,
+    birthDate: app.birthDate ? app.birthDate.toISOString().split("T")[0] : null,
+    rg: app.rg,
+    cpf: app.cpf,
+    maritalStatus: app.maritalStatus,
+    hasChildren: app.hasChildren,
+    childrenCount: app.childrenCount,
+    zipCode: app.zipCode,
+    street: app.street,
+    streetNumber: app.streetNumber,
+    complement: app.complement,
+    neighborhood: app.neighborhood,
+    city: app.city,
+    state: app.state,
+    desiredRole: app.desiredRole,
+    salaryExpectation: app.salaryExpectation,
+    instagram: app.instagram ? `@${app.instagram}` : null,
+    workPreference: app.workPreference,
+    availability: app.availability,
+    hasCnh: app.hasCnh,
+    isPcd: Boolean(app.isPcd),
+    pcdDetails: app.pcdDetails,
+    bootSize: app.bootSize,
+    pantsSize: app.pantsSize,
+    shirtSize: app.shirtSize,
+    hasBankAccount: app.hasBankAccount,
+    bankNames: app.bankNames,
+    bankAccountType: app.bankAccountType,
+    professionalSummary: app.professionalSummary,
+    aiProfile: app.aiProfile,
+    aiArea: app.aiArea,
+    aiLevel: app.aiLevel,
+  };
+
   return (
     <CandidateDetailSplitView
       applicationId={app.id}
@@ -262,6 +311,11 @@ export default async function CandidaturaDetailPage({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:gap-2.5">
+            <CandidateRegistrationEditor
+              initial={registrationInitial}
+              answers={editableAnswers}
+              variant="header"
+            />
             <a
               href={`/candidaturas/${app.id}/cv`}
               target="_blank"
@@ -639,6 +693,14 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-[#0a0a0a]">Dados cadastrais do candidato</h2>
+              <CandidateRegistrationEditor
+                initial={registrationInitial}
+                answers={editableAnswers}
+                variant="inline"
+              />
+            </div>
             <dl className="mb-6 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
               {infoPairs.slice(0, 2 + (formatAddress(app) ? 1 : 0) + (uniformLine ? 1 : 0) + (bankLine ? 1 : 0)).map(([label, value]) => (
                 <div key={label}>

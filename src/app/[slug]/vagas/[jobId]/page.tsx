@@ -10,6 +10,7 @@ import { WhatsAppShareButton } from "@/components/public/whatsapp-share-button";
 import {
   contractLabels,
   formatPublishedAgo,
+  isTemporaryJob,
   requirementsToBullets,
   workModeLabels,
 } from "@/server/models/job.model";
@@ -83,10 +84,12 @@ export default async function PublicJobDetailPage({
   const jobPostingLd = buildJobPostingJsonLd({ company, job, url: publicJobUrl });
   const bullets = requirementsToBullets(job.requirements);
   const applyHref = `/${company.slug}/vagas/${job.id}/candidatar`;
+  const isTemp = isTemporaryJob(job);
   const tags = [
     job.location,
     workModeLabels[job.workMode],
     contractLabels[job.contract],
+    ...(isTemp ? ["Vaga Temporária"] : []),
   ].filter(Boolean) as string[];
 
   return (
@@ -128,6 +131,18 @@ export default async function PublicJobDetailPage({
               <span className="px-1 py-1 text-xs text-[#a8a29e]">
                 {formatPublishedAgo(job.createdAt)}
               </span>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-[13px] leading-5 text-amber-950 space-y-1.5">
+              <p>
+                <strong>Importante (Regime CLT):</strong> Esta vaga é exclusivamente para contratação com{" "}
+                <strong>carteira assinada (CLT)</strong>. Não é possível trabalhar sem registro em carteira sob nenhuma hipótese.
+              </p>
+              {isTemp && (
+                <p>
+                  <strong>Vaga Temporária:</strong> Confira na descrição abaixo os dias e condições do período temporário antes de prosseguir com a inscrição.
+                </p>
+              )}
             </div>
 
             <h2 className="mt-10 text-[15px] font-semibold text-[#1c1917]">

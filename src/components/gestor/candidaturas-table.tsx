@@ -1797,12 +1797,20 @@ export function CandidaturasTable({
                 )}
               </div>
 
-              <Link
-                href={`/candidaturas/${quickPeekRow.id}`}
-                className="inline-flex h-9 items-center rounded-xl bg-[#0a0a0a] px-4 text-xs font-semibold text-white transition hover:opacity-90"
-              >
-                Abrir dossiê completo →
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/candidaturas/${quickPeekRow.id}?edit=1`}
+                  className="inline-flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
+                >
+                  Editar cadastro
+                </Link>
+                <Link
+                  href={`/candidaturas/${quickPeekRow.id}`}
+                  className="inline-flex h-9 items-center rounded-xl bg-[#0a0a0a] px-4 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                  Abrir dossiê completo →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

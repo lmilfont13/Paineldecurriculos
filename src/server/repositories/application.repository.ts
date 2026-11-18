@@ -1171,6 +1171,52 @@ export function updateInfoRequest(
   });
 }
 
+/** Atualiza todos os dados cadastrais da candidatura editados pelo gestor. */
+export function updateApplicationRegistration(
+  id: string,
+  data: {
+    name: string;
+    email: string;
+    phone: string | null;
+    birthDate: Date | null;
+    rg: string | null;
+    cpf: string | null;
+    maritalStatus: string | null;
+    hasChildren: boolean | null;
+    childrenCount: number | null;
+    zipCode: string | null;
+    street: string | null;
+    streetNumber: string | null;
+    complement: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    desiredRole: string | null;
+    salaryExpectation: string | null;
+    instagram: string | null;
+    workPreference: string | null;
+    availability: string | null;
+    hasCnh: string | null;
+    isPcd: boolean;
+    pcdDetails: string | null;
+    bootSize: string | null;
+    pantsSize: string | null;
+    shirtSize: string | null;
+    hasBankAccount: string | null;
+    bankNames: string | null;
+    bankAccountType: string | null;
+    professionalSummary: string | null;
+    aiProfile: string | null;
+    aiArea: string | null;
+    aiLevel: string | null;
+  }
+) {
+  return prisma.application.update({
+    where: { id },
+    data,
+  });
+}
+
 /** Grava o que o candidato respondeu (só as chaves pedidas chegam aqui). */
 export function updateInfoAnswers(
   id: string,
