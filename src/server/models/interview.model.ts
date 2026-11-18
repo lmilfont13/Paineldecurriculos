@@ -27,22 +27,38 @@ export const interviewSchema = z.object({
 
 export type InterviewInput = z.infer<typeof interviewSchema>;
 
-/** "20 de agosto, 14:00" — como o candidato lê no e-mail e na tela. */
+/**
+ * Converte um valor `datetime-local` ("2026-08-20T14:00") para Date no fuso
+ * do Brasil (-03:00), mesmo quando o servidor roda em UTC (Vercel).
+ */
+export function parseBrazilDateTimeLocal(raw: string): Date {
+  const s = raw.trim();
+  if (/[Z+-]\d*$/.test(s)) return new Date(s);
+  const withSeconds = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s) ? `${s}:00` : s;
+  return new Date(`${withSeconds}-03:00`);
+}
+
+/** "20 de agosto, 14:00" — como o candidato lê no e-mail e na tela (sempre fuso America/Sao_Paulo). */
 export function formatInterviewAt(at: Date): string {
   const day = at.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "long",
+    timeZone: "America/Sao_Paulo",
   });
   const time = at.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
   return `${day}, ${time}`;
 }
 
 /** "quinta-feira, 20 de agosto, 14:00" — versão longa, para o destaque. */
 export function formatInterviewLong(at: Date): string {
-  const weekday = at.toLocaleDateString("pt-BR", { weekday: "long" });
+  const weekday = at.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    timeZone: "America/Sao_Paulo",
+  });
   return `${weekday}, ${formatInterviewAt(at)}`;
 }
 

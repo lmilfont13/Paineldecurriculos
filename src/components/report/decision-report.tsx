@@ -138,7 +138,12 @@ export function DecisionReport({
   const compared = data.ranking.slice(0, 12);
   const criteria = data.job.criteria.slice(0, 8);
   const critRows = criteriaSummary(data).slice(0, 6);
-  const date = data.generatedAt.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  const date = data.generatedAt.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  });
   const jobLabel = `${data.job.title}${data.job.code ? ` #${data.job.code}` : ""}`;
   const st = data.stats;
   const leader = data.ranking[0];

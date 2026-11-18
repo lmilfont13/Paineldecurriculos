@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { requireManager } from "@/server/controllers/guards";
+import { parseBrazilDateTimeLocal } from "@/server/models/interview.model";
 import { findAuditLogs } from "@/server/repositories/audit.repository";
 
 export const metadata: Metadata = { title: "Auditoria · Triagem" };
@@ -31,8 +32,17 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
 function formatDateTime(date: Date): { date: string; time: string } {
   const d = new Date(date);
   return {
-    date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }),
-    time: d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    date: d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "America/Sao_Paulo",
+    }),
+    time: d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Sao_Paulo",
+    }),
   };
 }
 
@@ -46,8 +56,16 @@ function metadataDetail(action: string, meta: Record<string, unknown> | null): s
     if (meta.jobTitle) parts.push(String(meta.jobTitle));
     if (meta.mode) parts.push(String(meta.mode));
     if (meta.at) {
-      const d = new Date(String(meta.at));
-      parts.push(d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }));
+      const d = parseBrazilDateTimeLocal(String(meta.at));
+      parts.push(
+        d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "America/Sao_Paulo",
+        })
+      );
     }
     return parts.join(" · ") || null;
   }

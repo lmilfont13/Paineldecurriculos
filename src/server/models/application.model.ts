@@ -230,16 +230,18 @@ export function formatWaiting(since: Date): string {
   return `há ${days} dias`;
 }
 
-/** "candidatou-se em 9 jul" / "…em 9 jul, 14:32" (E3/E4). */
+/** "candidatou-se em 9 jul" / "…em 9 jul, 14:32" (E3/E4). Sempre no fuso do Brasil (America/Sao_Paulo). */
 export function formatAppliedAt(date: Date, withTime = false): string {
   const day = date.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "short",
+    timeZone: "America/Sao_Paulo",
   });
   if (!withTime) return day;
   const time = date.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
   return `${day}, ${time}`;
 }

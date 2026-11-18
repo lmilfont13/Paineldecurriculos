@@ -255,6 +255,7 @@ export function TalentDashboardReport({
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "America/Sao_Paulo",
   });
 
   const genderDonutData = [

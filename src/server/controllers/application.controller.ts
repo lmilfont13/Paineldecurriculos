@@ -16,7 +16,7 @@ import {
   ATTRIBUTION_COOKIE,
   REFERRER_COOKIE, detectSourceFromHeaders,
 } from "@/server/models/attribution.model";
-import { interviewSchema } from "@/server/models/interview.model";
+import { interviewSchema, parseBrazilDateTimeLocal } from "@/server/models/interview.model";
 import { rejectionMessage } from "@/server/models/message-templates.model";
 import { INFO_FIELDS, type InfoField } from "@/server/models/pre-interview.model";
 import { channelsFromCsv, parseChannels } from "@/server/models/contact-channels.model";
@@ -129,7 +129,7 @@ export async function scheduleInterviewAction(
     user.companyId,
     applicationId,
     {
-      at: new Date(parsed.data.at),
+      at: parseBrazilDateTimeLocal(parsed.data.at),
       mode: parsed.data.mode,
       location: parsed.data.location.trim() || null,
     },
