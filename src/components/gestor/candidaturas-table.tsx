@@ -151,6 +151,7 @@ export function CandidaturasTable({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [report, setReport] = useState<CandidateSummary[] | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [quickPeekRow, setQuickPeekRow] = useState<CandidaturaRow | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Busca no conteúdo do currículo (servidor), com debounce; nome/e-mail filtram na hora.
@@ -781,47 +782,63 @@ export function CandidaturasTable({
           <option value="NONE">Limpar seleção</option>
         </select>
 
-        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
-          <input
-            type="checkbox"
-            checked={onlyMeets}
-            onChange={(e) => setOnlyMeets(e.target.checked)}
-            className="size-3.5 accent-[#0a0a0a]"
-          />
-          Só quem atende o mínimo
-        </label>
+        <button
+          type="button"
+          onClick={() => setOnlyMeets((v) => !v)}
+          className={
+            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
+            (onlyMeets
+              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
+              : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
+          }
+        >
+          <span>✨</span>
+          <span>Acima do corte</span>
+        </button>
 
-        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
-          <input
-            type="checkbox"
-            checked={onlyPhoto}
-            onChange={(e) => {
-              setOnlyPhoto(e.target.checked);
-              if (e.target.checked) setOnlyWithoutPhoto(false);
-            }}
-            className="size-3.5 accent-[#0a0a0a]"
-          />
-          Somente com foto
-        </label>
+        <button
+          type="button"
+          onClick={() => {
+            setOnlyPhoto((v) => {
+              const next = !v;
+              if (next) setOnlyWithoutPhoto(false);
+              return next;
+            });
+          }}
+          className={
+            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
+            (onlyPhoto
+              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
+              : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
+          }
+        >
+          <span>Com foto</span>
+        </button>
 
-        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a]">
-          <input
-            type="checkbox"
-            checked={onlyWithoutPhoto}
-            onChange={(e) => {
-              setOnlyWithoutPhoto(e.target.checked);
-              if (e.target.checked) setOnlyPhoto(false);
-            }}
-            className="size-3.5 accent-[#0a0a0a]"
-          />
-          Sem foto ({missingPhotoCount})
-        </label>
+        <button
+          type="button"
+          onClick={() => {
+            setOnlyWithoutPhoto((v) => {
+              const next = !v;
+              if (next) setOnlyPhoto(false);
+              return next;
+            });
+          }}
+          className={
+            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
+            (onlyWithoutPhoto
+              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
+              : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
+          }
+        >
+          <span>Sem foto ({missingPhotoCount})</span>
+        </button>
 
         {onlyWithoutPhoto && filtered.length > 0 && !photoBusy && (
           <button
             type="button"
             onClick={() => extractPhotos(filtered.map((r) => r.id))}
-            className="h-10 rounded-xl border border-[#0a0a0a] bg-[#0a0a0a] px-3.5 text-[12px] font-semibold text-white transition hover:opacity-90"
+            className="h-10 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
           >
             Extrair fotos desta lista ({filtered.length})
           </button>
@@ -856,13 +873,13 @@ export function CandidaturasTable({
         </div>
       </div>
 
-      {/* Cards de perfil */}
+      {/* Cards de perfil — Opção B: Ashby Scorecard (Bento Box) */}
       {viewMode === "cards" && (
         <div className="mt-5">
           {filtered.length === 0 && (
             <p className="py-8 text-center text-sm text-[#71717a]">Nenhum candidato nesta etapa.</p>
           )}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visible.map((row, index) => {
               const isSelected = selected.has(row.id);
               const levelColors: Record<string, string> = {
@@ -873,128 +890,232 @@ export function CandidaturasTable({
                 Liderança: "bg-[#fef9c3] text-[#854d0e]",
               };
               const levelClass = row.aiLevel ? (levelColors[row.aiLevel] ?? "bg-[#f1f0ed] text-[#57534e]") : "";
+              const rank = aiRanks?.get(row.id);
+              const roleLine = [row.aiProfile || row.aiArea, row.aiLevel].filter(Boolean).join(" · ");
+              const companiesLine =
+                row.tenureCompanies && row.tenureCompanies.length > 0
+                  ? row.tenureCompanies
+                      .slice(0, 2)
+                      .map((c) => c.empresa)
+                      .join(" · ") +
+                    (row.tenureCompanies.length > 2 ? ` +${row.tenureCompanies.length - 2}` : "")
+                  : jobLabel(row.jobTitle, row.jobCode);
+
               return (
                 <Fragment key={row.id}>
-                {groupHeader(row, index, "col-span-full mt-2 border-b border-[#e4e4e7] pb-2 first:mt-0")}
-                <div
-                  className={"group relative flex flex-col rounded-2xl border bg-white transition-shadow hover:shadow-md " + (isSelected ? "border-[#0a0a0a]" : "border-[#e4e4e7]")}
-                >
-                  {aiRanks?.get(row.id) !== undefined && (
-                    <span
-                      className={"absolute left-2.5 top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold " + ((aiRanks.get(row.id) as number) <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#71717a]")}
-                      style={(aiRanks.get(row.id) as number) <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
-                      title="Posição pela indicação da IA nesta vaga"
-                    >
-                      {aiRanks.get(row.id)}º
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => toggle(row.id)}
-                    aria-label={`Selecionar ${row.name}`}
-                    className={"absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full border-2 transition-colors " + (isSelected ? "border-[#0a0a0a] bg-[#0a0a0a]" : "border-[#d4d4d8] bg-white")}
+                  {groupHeader(row, index, "col-span-full mt-3 border-b border-[#e4e4e7] pb-2 first:mt-0")}
+                  <div
+                    onClick={() => setQuickPeekRow(row)}
+                    className={
+                      "group relative flex cursor-pointer flex-col justify-between rounded-2xl border bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.07)] " +
+                      (isSelected
+                        ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
+                        : "border-[#e4e4e7] hover:border-[#d4d4d8]")
+                    }
                   >
-                    {isSelected && <span className="text-[10px] text-white">✓</span>}
-                  </button>
+                    {/* Topo Horizontal: Avatar + Nome/Cargo à esquerda · Match Score & Checkbox à direita */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="relative shrink-0">
+                          <CandidateAvatar
+                            name={row.name}
+                            photoUrl={row.photoUrl}
+                            className="flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold object-cover"
+                          />
+                          {rank !== undefined && (
+                            <span
+                              className={
+                                "absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-2xs " +
+                                (rank <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#57534e]")
+                              }
+                              style={rank <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
+                              title="Posição pela indicação da IA nesta vaga"
+                            >
+                              {rank}º
+                            </span>
+                          )}
+                        </div>
 
-                  <Link href={`/candidaturas/${row.id}`} className="flex flex-col items-center px-4 pb-4 pt-5 focus-visible:outline-none">
-                    <CandidateAvatar
-                      name={row.name}
-                      photoUrl={row.photoUrl}
-                      className="size-16 shrink-0 rounded-full bg-[#1c1917] text-lg font-bold text-white flex items-center justify-center object-cover"
-                    />
-                    <p className="mt-3 line-clamp-2 text-center text-[13px] font-semibold text-[#0a0a0a] leading-snug">{row.name}</p>
-                    {row.hasImpediment && (
-                      <span
-                        className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
-                        title={row.impedimentReason ? `Motivo do impedimento: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
-                      >
-                        <span className="size-1.5 rounded-full bg-rose-500/80" />
-                        <span>Tarja preta</span>
-                      </span>
-                    )}
-                    {row.age != null && (
-                      <p
-                        className="mt-0.5 text-center text-[10px] text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100"
-                        title="Só para sua conferência: não entra na nota nem vai para a IA"
-                      >
-                        {row.age} anos
-                      </p>
-                    )}
-                    {row.aiArea && (
-                      <p className="mt-0.5 text-center text-[11px] text-[#71717a] line-clamp-1">{row.aiArea}</p>
-                    )}
-                    {row.aiProfile && (
-                      <p className="mt-0.5 text-center text-[12px] text-[#3f3f46] font-medium line-clamp-1">{row.aiProfile}</p>
-                    )}
-                    {row.aiLevel && (
-                      <span className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + levelClass}>{row.aiLevel}</span>
-                    )}
-                    {(row.tenureAvg || row.tenureMedian) && (
-                      <div className="mt-2 flex flex-col items-center gap-1">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                            row.tenureStability === "ALTA"
-                              ? "bg-[#e4f6ec] text-[#1f7a4d]"
-                              : row.tenureStability === "BAIXA"
-                                ? "bg-[#fbeae8] text-[#c23b3b]"
-                                : "bg-[#eaf1fb] text-[#2f5fa8]"
-                          }`}
-                          title={`Permanência nas empresas:\nMédia: ${row.tenureAvg || "-"}\nMediana: ${row.tenureMedian || "-"}${
-                            row.tenureCompanies?.length ? "\nEmpresas:\n" + row.tenureCompanies.map(c => "• " + c.empresa + ": " + c.duracaoFormatada).join("\n") : ""
-                          }`}
-                        >
-                          Média: {row.tenureAvg || "-"} · Mediana: {row.tenureMedian || row.tenureAvg || "-"}
-                        </span>
-                        {row.tenureCompanies && row.tenureCompanies.length > 0 && (
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/candidaturas/${row.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="truncate text-[13px] font-bold text-[#0a0a0a] transition-colors group-hover:text-[#7c1d3c] hover:underline"
+                            >
+                              {row.name}
+                            </Link>
+                            {row.age != null && (
+                              <span
+                                className="shrink-0 text-[11px] text-[#a1a1aa]"
+                                title="Só para sua conferência: não entra na nota nem vai para a IA"
+                              >
+                                · {row.age}a
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span className="truncate text-[11px] text-[#71717a]">
+                              {roleLine || (row.aiState === "DONE" ? "Sem perfil identificado" : row.aiState === "FAILED" ? "Análise pendente" : "Analisando…")}
+                            </span>
+                            {row.aiLevel && (
+                              <span className={"rounded-md px-1.5 py-0.2 text-[9px] font-semibold " + levelClass}>
+                                {row.aiLevel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-start gap-2">
+                        {row.hasImpediment ? (
                           <span
-                            className="text-[9px] text-[#71717a] truncate max-w-[200px]"
-                            title={row.tenureCompanies.map(c => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")}
+                            className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                            title={row.impedimentReason ? `Motivo: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
                           >
-                            {row.tenureCompanies.slice(0, 2).map(c => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")}
-                            {row.tenureCompanies.length > 2 ? ` +${row.tenureCompanies.length - 2}` : ""}
+                            <span className="size-1.5 rounded-full bg-rose-500/80" />
+                            <span>Tarja preta</span>
                           </span>
-                        )}
+                        ) : row.aiScore !== null ? (
+                          <div className="text-right leading-none">
+                            <span
+                              className={
+                                "block text-[15px] font-extrabold tabular-nums " +
+                                (row.aiScore >= row.aiMinScore
+                                  ? "text-[#1f7a4d]"
+                                  : row.aiScore >= 60
+                                    ? "text-[#b07818]"
+                                    : "text-[#71717a]")
+                              }
+                            >
+                              {row.aiScore}
+                            </span>
+                            <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                              Match
+                            </span>
+                          </div>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggle(row.id);
+                          }}
+                          aria-label={`Selecionar ${row.name}`}
+                          className={
+                            "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors " +
+                            (isSelected
+                              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                              : "border-[#d4d4d8] bg-white hover:border-[#0a0a0a]")
+                          }
+                        >
+                          {isSelected && <span className="text-[10px]">✓</span>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bento Grid Central: Média perm. x Mediana (2 colunas lado a lado) */}
+                    {row.hasImpediment ? (
+                      <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/40 px-3 py-2 text-[11px] text-zinc-600">
+                        <span className="font-medium text-rose-700">Restrição ativa:</span>{" "}
+                        {row.impedimentReason || "Impedimento de contratação em todas as vagas."}
+                      </div>
+                    ) : row.tenureAvg || row.tenureMedian ? (
+                      <div
+                        className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-[#f1f0ed] bg-[#fafaf9] px-3 py-2 text-[11px]"
+                        title={
+                          row.tenureCompanies?.length
+                            ? "Empresas:\n" +
+                              row.tenureCompanies.map((c) => `• ${c.empresa}: ${c.duracaoFormatada}`).join("\n")
+                            : undefined
+                        }
+                      >
+                        <div className="min-w-0">
+                          <span className="block text-[10px] text-[#a1a1aa]">Média perm.</span>
+                          <strong
+                            className={
+                              "mt-0.5 block truncate font-semibold " +
+                              (row.tenureStability === "ALTA"
+                                ? "text-[#1f7a4d]"
+                                : row.tenureStability === "BAIXA"
+                                  ? "text-[#c23b3b]"
+                                  : "text-[#2f5fa8]")
+                            }
+                          >
+                            {row.tenureAvg || "—"}
+                          </strong>
+                        </div>
+                        <div className="min-w-0 border-l border-[#e4e4e7]/70 pl-2.5">
+                          <span className="block text-[10px] text-[#a1a1aa]">Mediana</span>
+                          <strong className="mt-0.5 block truncate font-semibold text-[#0a0a0a]">
+                            {row.tenureMedian || row.tenureAvg || "—"}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-[#f1f0ed] bg-[#fafaf9]/70 px-3 py-2 text-[11px]">
+                        <div className="min-w-0">
+                          <span className="block text-[10px] text-[#a1a1aa]">Área / Perfil</span>
+                          <strong className="mt-0.5 block truncate font-medium text-[#52525b]">
+                            {row.aiArea || "Em leitura"}
+                          </strong>
+                        </div>
+                        <div className="min-w-0 border-l border-[#e4e4e7]/70 pl-2.5">
+                          <span className="block text-[10px] text-[#a1a1aa]">Etapa</span>
+                          <strong className="mt-0.5 block truncate font-medium text-[#52525b]">
+                            { row.infoState === "ANSWERED"
+                              ? "Pré-entrev. OK"
+                              : appStatusLabels[row.status] }
+                          </strong>
+                        </div>
                       </div>
                     )}
-                    {row.infoState && (
-                      <span
-                        className={"mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold " + (row.infoState === "ANSWERED" ? "bg-[#e4f6ec] text-[#1f7a4d]" : "bg-[#fff7e6] text-[#a16207]")}
-                      >
-                        {row.infoState === "ANSWERED" ? "Respondeu a pré-entrevista" : "Aguardando informações"}
-                      </span>
-                    )}
-                    {!row.aiArea && !row.aiProfile && !row.aiLevel && (
-                      <p className="mt-2 text-[11px] text-[#a1a1aa]">{row.aiState === "DONE" ? "Sem perfil identificado" : row.aiState === "FAILED" ? "Análise falhou" : "Analisando…"}</p>
-                    )}
-                  </Link>
 
-                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#f1f0ed] px-3.5 py-2">
-                    <span className="truncate text-[11px] text-[#71717a]">{jobLabel(row.jobTitle, row.jobCode)}</span>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <a
-                        href={`/candidaturas/${row.id}/cv`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                        title="Visualizar currículo em nova aba"
+                    {/* Rodapé Minimalista: Empresas / Vaga à esquerda · CV + Download + Abrir dossiê à direita */}
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#f4f4f5] pt-2.5 text-[11px]">
+                      <span
+                        className="truncate text-[#71717a]"
+                        title={
+                          row.tenureCompanies?.length
+                            ? row.tenureCompanies.map((c) => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")
+                            : jobLabel(row.jobTitle, row.jobCode)
+                        }
                       >
-                        CV
-                      </a>
-                      <a
-                        href={`/candidaturas/${row.id}/cv?download=1`}
-                        className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                        title="Baixar currículo em PDF"
-                        aria-label="Baixar currículo em PDF"
+                        {companiesLine}
+                      </span>
+
+                      <div
+                        className="flex shrink-0 items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Download className="size-3.5" strokeWidth={1.75} />
-                      </a>
-                      {row.aiScore !== null && (
-                        <span className={"ml-1 text-[11px] font-semibold tabular-nums " + (row.aiScore >= row.aiMinScore ? "text-[#1f7a4d]" : "text-[#a1a1aa]")}>{row.aiScore}</span>
-                      )}
+                        <a
+                          href={`/candidaturas/${row.id}/cv`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                          title="Visualizar currículo em nova aba"
+                        >
+                          CV
+                        </a>
+                        <a
+                          href={`/candidaturas/${row.id}/cv?download=1`}
+                          className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                          title="Baixar currículo em PDF"
+                          aria-label="Baixar currículo em PDF"
+                        >
+                          <Download className="size-3.5" strokeWidth={1.75} />
+                        </a>
+                        <Link
+                          href={`/candidaturas/${row.id}`}
+                          className="ml-0.5 inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-semibold transition-colors hover:bg-[#f4f4f5]"
+                          style={{ color: "var(--brand-primary)" }}
+                        >
+                          Abrir →
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
                 </Fragment>
               );
             })}
@@ -1497,6 +1618,191 @@ export function CandidaturasTable({
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gaveta Lateral de Triagem Rápida (Quick-Peek Slide-Over Drawer) */}
+      {quickPeekRow && (
+        <div
+          className="fixed inset-0 z-[190] flex justify-end bg-black/35 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setQuickPeekRow(null)}
+        >
+          <div
+            className="flex h-full w-full max-w-[540px] flex-col border-l border-[#e4e4e7] bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header da Gaveta */}
+            <div className="flex items-start justify-between gap-3 border-b border-[#e4e4e7] px-6 py-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <CandidateAvatar
+                  name={quickPeekRow.name}
+                  photoUrl={quickPeekRow.photoUrl}
+                  className="flex size-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold object-cover"
+                />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="truncate text-base font-bold text-[#0a0a0a]">
+                      {quickPeekRow.name}
+                    </h2>
+                    {quickPeekRow.age != null && (
+                      <span className="text-xs text-[#71717a]">{quickPeekRow.age} anos</span>
+                    )}
+                    {quickPeekRow.hasImpediment && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                        <span className="size-1.5 rounded-full bg-rose-500" />
+                        <span>Tarja preta</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-[#71717a]">
+                    {[quickPeekRow.aiProfile, quickPeekRow.aiArea, quickPeekRow.aiLevel]
+                      .filter(Boolean)
+                      .join(" · ") || jobLabel(quickPeekRow.jobTitle, quickPeekRow.jobCode)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                {quickPeekRow.aiScore !== null && (
+                  <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1 text-center">
+                    <span
+                      className={
+                        "block text-sm font-extrabold " +
+                        (quickPeekRow.aiScore >= quickPeekRow.aiMinScore
+                          ? "text-[#1f7a4d]"
+                          : "text-[#71717a]")
+                      }
+                    >
+                      {quickPeekRow.aiScore}%
+                    </span>
+                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                      Match
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setQuickPeekRow(null)}
+                  aria-label="Fechar visualização rápida"
+                  className="flex size-8 items-center justify-center rounded-lg text-sm text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Bento Resumo + Visualizador de Currículo em PDF */}
+            <div className="flex flex-1 flex-col overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-2.5 rounded-2xl border border-[#e4e4e7] bg-[#fafaf9] p-3.5 text-xs">
+                <div>
+                  <span className="block text-[10px] text-[#a1a1aa]">Vaga</span>
+                  <strong className="mt-0.5 block truncate text-[#0a0a0a]">
+                    {jobLabel(quickPeekRow.jobTitle, quickPeekRow.jobCode)}
+                  </strong>
+                </div>
+                <div className="border-l border-[#e4e4e7] pl-3">
+                  <span className="block text-[10px] text-[#a1a1aa]">Média perm.</span>
+                  <strong className="mt-0.5 block truncate text-[#0a0a0a]">
+                    {quickPeekRow.tenureAvg || "—"}
+                  </strong>
+                </div>
+                <div className="border-l border-[#e4e4e7] pl-3">
+                  <span className="block text-[10px] text-[#a1a1aa]">Mediana</span>
+                  <strong className="mt-0.5 block truncate text-[#0a0a0a]">
+                    {quickPeekRow.tenureMedian || quickPeekRow.tenureAvg || "—"}
+                  </strong>
+                </div>
+              </div>
+
+              {quickPeekRow.tenureCompanies && quickPeekRow.tenureCompanies.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {quickPeekRow.tenureCompanies.map((c, i) => (
+                    <span
+                      key={i}
+                      className="rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-[11px] text-[#3f3f46]"
+                    >
+                      <strong>{c.empresa}</strong> · {c.duracaoFormatada}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                  Currículo do Candidato
+                </span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/candidaturas/${quickPeekRow.id}/cv`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-[#71717a] hover:text-[#0a0a0a] hover:underline"
+                  >
+                    Abrir em nova aba ↗
+                  </a>
+                  <a
+                    href={`/candidaturas/${quickPeekRow.id}/cv?download=1`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-white px-2.5 py-1 text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+                  >
+                    <Download className="size-3.5" strokeWidth={1.75} />
+                    <span>Baixar PDF</span>
+                  </a>
+                </div>
+              </div>
+
+              <div className="min-h-[340px] flex-1 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-[#f4f4f5]">
+                <iframe
+                  src={`/candidaturas/${quickPeekRow.id}/cv`}
+                  title={`Currículo de ${quickPeekRow.name}`}
+                  className="h-full min-h-[340px] w-full border-0"
+                />
+              </div>
+            </div>
+
+            {/* Rodapé de Decisão Rápida da Gaveta */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e4e4e7] bg-[#fafaf9] px-6 py-4">
+              <div className="flex items-center gap-2">
+                {quickPeekRow.status === "PENDING" && !quickPeekRow.hasImpediment && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      const targetId = quickPeekRow.id;
+                      setQuickPeekRow(null);
+                      runBulk("SHORTLISTED", [targetId]);
+                    }}
+                    className="h-9 rounded-xl px-4 text-xs font-semibold text-white shadow-2xs transition hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: "var(--brand-primary)" }}
+                  >
+                    ✓ Passar p/ Em análise
+                  </button>
+                )}
+                {quickPeekRow.status !== "STANDBY" && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      const targetId = quickPeekRow.id;
+                      setQuickPeekRow(null);
+                      runBulk("STANDBY", [targetId]);
+                    }}
+                    className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-medium text-[#0a0a0a] hover:bg-[#f4f4f5] disabled:opacity-50"
+                  >
+                    Stand-by
+                  </button>
+                )}
+              </div>
+
+              <Link
+                href={`/candidaturas/${quickPeekRow.id}`}
+                className="inline-flex h-9 items-center rounded-xl bg-[#0a0a0a] px-4 text-xs font-semibold text-white transition hover:opacity-90"
+              >
+                Abrir dossiê completo →
+              </Link>
             </div>
           </div>
         </div>
