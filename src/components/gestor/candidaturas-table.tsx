@@ -93,6 +93,15 @@ const BULK_LABELS: Record<AppStatusKey, string> = {
 
 const PAGE = 40;
 
+function compactDuration(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw
+    .replace(/\s*anos?\s*e\s*/gi, "a ")
+    .replace(/\s*anos?\b/gi, "a")
+    .replace(/\s*m[eê]s(es)?\b/gi, "m")
+    .trim();
+}
+
 /**
  * Candidatos (E3/E9). A etapa do funil é o organizador da tela: cada aba traz
  * a contagem, então o gestor vê onde está o trabalho antes de filtrar às
@@ -152,6 +161,7 @@ export function CandidaturasTable({
   const [report, setReport] = useState<CandidateSummary[] | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [quickPeekRow, setQuickPeekRow] = useState<CandidaturaRow | null>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Busca no conteúdo do currículo (servidor), com debounce; nome/e-mail filtram na hora.
@@ -576,42 +586,94 @@ export function CandidaturasTable({
         </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {unevaluatedCount > 0 && (
-            <button
-              type="button"
-              disabled={aiBusy}
-              onClick={() => reanalyzeBatch()}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9] disabled:opacity-60"
-              title="Enfileira a análise de IA para todos os candidatos sem nota ou que falharam"
-            >
-              {aiBusy
-                ? "Avaliando pendentes…"
-                : `Avaliar sem nota (${unevaluatedCount})`}
-            </button>
-          )}
-          <Link
-            href="/buscar-cvs"
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
-          >
-            Buscar CVs
-          </Link>
           <Link
             href="/candidaturas/novo"
             className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"
           >
-            + Adicionar candidatos
+            + Adicionar
           </Link>
-          <button
-            type="button"
-            disabled={photoBusy}
-            onClick={() => extractPhotos()}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-60"
-            title="Varre automaticamente todos os currículos sem foto extraída"
-          >
-            {photoBusy
-              ? `Buscando fotos (${photoProgress?.scanned ?? 0} verificados · ${photoProgress?.found ?? 0} extraídas)…`
-              : `Buscar todas as fotos pendentes${missingPhotoCount > 0 ? ` (${missingPhotoCount})` : ""}`}
-          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMoreMenuOpen((o) => !o)}
+              aria-label="Mais ações"
+              aria-expanded={moreMenuOpen}
+              className="flex h-9 items-center gap-1 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[12px] font-semibold text-[#52525b] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+            >
+              <span>⋯</span>
+              {(photoBusy || aiBusy) && (
+                <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+              )}
+            </button>
+
+            {moreMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-10 z-30 w-64 rounded-2xl border border-[#e4e4e7] bg-white p-1.5 shadow-xl"
+              >
+                <button
+                  type="button"
+                  disabled={photoBusy}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    void extractPhotos();
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-50"
+                >
+                  <span>
+                    {photoBusy
+                      ? "Buscando fotos…"
+                      : "Buscar todas as fotos pendentes"}
+                  </span>
+                  {missingPhotoCount > 0 && (
+                    <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b]">
+                      {missingPhotoCount}
+                    </span>
+                  )}
+                </button>
+
+                {unevaluatedCount > 0 && (
+                  <button
+                    type="button"
+                    disabled={aiBusy}
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      void reanalyzeBatch();
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9] disabled:opacity-50"
+                  >
+                    <span>{aiBusy ? "Avaliando pendentes…" : "Avaliar sem nota com IA"}</span>
+                    <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b]">
+                      {unevaluatedCount}
+                    </span>
+                  </button>
+                )}
+
+                <Link
+                  href="/buscar-cvs"
+                  onClick={() => setMoreMenuOpen(false)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+                >
+                  <span>Buscar CVs (Base aberta)</span>
+                  <span className="text-[#a1a1aa]">↗</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    exportCsv();
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+                >
+                  <span>Exportar lista (CSV)</span>
+                  <span className="text-[#a1a1aa]">↓</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {nextCandidate && (
             <Link href={`/candidaturas/${nextCandidate.id}`} className="flex h-9 items-center rounded-xl px-4 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--brand-primary)" }}>
               Triar agora →
@@ -688,18 +750,18 @@ export function CandidaturasTable({
         })}
       </div>
 
-      {/* Controles secundários: refinam a aba, não competem com ela */}
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-sm text-[#a1a1aa]" aria-hidden>
+      {/* Controles secundários: 1 linha enxuta e minimalista */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+          <span className="text-xs text-[#a1a1aa]" aria-hidden>
             ⌕
           </span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar nome, e-mail ou palavra no currículo…"
+            placeholder="Buscar candidato ou palavra no CV…"
             aria-label="Buscar candidatos"
-            className="w-full bg-transparent text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+            className="w-full bg-transparent text-[12px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
           />
         </div>
 
@@ -708,7 +770,7 @@ export function CandidaturasTable({
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
             aria-label="Filtrar por vaga"
-            className="h-10 max-w-[220px] rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+            className="h-9 max-w-[190px] rounded-xl border border-[#e4e4e7] bg-white px-2.5 text-[12px] text-[#52525b] focus:border-[#0a0a0a] focus:outline-none"
           >
             <option value="">Todas as vagas</option>
             {jobs.map((job) => (
@@ -723,7 +785,7 @@ export function CandidaturasTable({
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="Ordenar por"
-          className="h-10 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-2.5 text-[12px] text-[#52525b] focus:border-[#0a0a0a] focus:outline-none"
         >
           {Object.entries(SORT_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -737,14 +799,14 @@ export function CandidaturasTable({
             onClick={() => setSortInfoOpen((o) => !o)}
             aria-label="Entenda a diferença entre maior aderência e indicação da IA"
             aria-expanded={sortInfoOpen}
-            className="flex size-7 items-center justify-center rounded-full border border-[#d4d4d8] bg-white text-[12px] font-semibold italic text-[#71717a] hover:border-[#0a0a0a] hover:text-[#0a0a0a]"
+            className="flex size-6 items-center justify-center rounded-full border border-[#d4d4d8] bg-white text-[11px] font-semibold italic text-[#71717a] hover:border-[#0a0a0a] hover:text-[#0a0a0a]"
           >
             i
           </button>
           {sortInfoOpen && (
             <div
               role="dialog"
-              className="absolute right-0 top-9 z-30 w-[320px] rounded-xl border border-[#e4e4e7] bg-white p-4 text-[12px] leading-5 text-[#44403c] shadow-lg"
+              className="absolute right-0 top-8 z-30 w-[320px] rounded-xl border border-[#e4e4e7] bg-white p-4 text-[12px] leading-5 text-[#44403c] shadow-lg"
             >
               <p className="font-semibold text-[#0a0a0a]">Maior aderência × Indicação da IA</p>
               <p className="mt-2">
@@ -772,7 +834,7 @@ export function CandidaturasTable({
             else if (mode) setSelected(new Set(selectByCutoff(filtered, mode as CutoffSelection).map((r) => r.id)));
           }}
           aria-label="Selecionar candidatos em massa"
-          className="h-10 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-2.5 text-[12px] text-[#52525b] focus:border-[#0a0a0a] focus:outline-none"
         >
           <option value="">Selecionar…</option>
           <option value="ALL">Todos ({selectByCutoff(filtered, "ALL").length})</option>
@@ -786,9 +848,9 @@ export function CandidaturasTable({
           type="button"
           onClick={() => setOnlyMeets((v) => !v)}
           className={
-            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
+            "flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
             (onlyMeets
-              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
+              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
               : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
           }
         >
@@ -796,51 +858,33 @@ export function CandidaturasTable({
           <span>Acima do corte</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setOnlyPhoto((v) => {
-              const next = !v;
-              if (next) setOnlyWithoutPhoto(false);
-              return next;
-            });
+        <select
+          value={onlyPhoto ? "WITH" : onlyWithoutPhoto ? "WITHOUT" : "ALL"}
+          onChange={(e) => {
+            const v = e.target.value;
+            setOnlyPhoto(v === "WITH");
+            setOnlyWithoutPhoto(v === "WITHOUT");
           }}
+          aria-label="Filtrar por foto"
           className={
-            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
-            (onlyPhoto
-              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
-              : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
+            "h-9 rounded-xl border px-3 text-[12px] font-medium focus:outline-none " +
+            (onlyPhoto || onlyWithoutPhoto
+              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+              : "border-[#e4e4e7] bg-white text-[#52525b]")
           }
         >
-          <span>Com foto</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setOnlyWithoutPhoto((v) => {
-              const next = !v;
-              if (next) setOnlyPhoto(false);
-              return next;
-            });
-          }}
-          className={
-            "flex h-10 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-all " +
-            (onlyWithoutPhoto
-              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-2xs"
-              : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]")
-          }
-        >
-          <span>Sem foto ({missingPhotoCount})</span>
-        </button>
+          <option value="ALL" className="bg-white text-[#0a0a0a]">Foto: Todos</option>
+          <option value="WITH" className="bg-white text-[#0a0a0a]">Com foto</option>
+          <option value="WITHOUT" className="bg-white text-[#0a0a0a]">Sem foto ({missingPhotoCount})</option>
+        </select>
 
         {onlyWithoutPhoto && filtered.length > 0 && !photoBusy && (
           <button
             type="button"
             onClick={() => extractPhotos(filtered.map((r) => r.id))}
-            className="h-10 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3.5 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
+            className="h-9 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
           >
-            Extrair fotos desta lista ({filtered.length})
+            Extrair fotos ({filtered.length})
           </button>
         )}
 
@@ -850,56 +894,65 @@ export function CandidaturasTable({
             disabled={pending}
             onClick={passAllMeetingMinimum}
             title="Move para 'Em análise' todos da triagem que atingiram a nota mínima da vaga"
-            className="h-10 rounded-xl px-4 text-[13px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary)", color: "var(--brand-foreground)" }}
+            className="h-9 rounded-xl px-3.5 text-[12px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "var(--brand-tint)", color: "var(--brand-primary)" }}
           >
-            Passar quem atende o mínimo ({readyToPass.length})
+            Aprovar {readyToPass.length} acima do corte
           </button>
         )}
 
-        <div className="ml-auto flex h-10 items-center gap-0.5 rounded-xl border border-[#e4e4e7] bg-white p-1">
+        <div className="ml-auto flex h-9 items-center gap-0.5 rounded-xl border border-[#e4e4e7] bg-white p-0.5">
           <button
             type="button"
             onClick={() => setViewMode("list")}
             aria-label="Visão lista"
-            className={"flex h-8 w-8 items-center justify-center rounded-lg text-base transition-colors " + (viewMode === "list" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "list" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
           >☰</button>
           <button
             type="button"
             onClick={() => setViewMode("cards")}
             aria-label="Visão cards"
-            className={"flex h-8 w-8 items-center justify-center rounded-lg text-base transition-colors " + (viewMode === "cards" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "cards" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
           >▦</button>
         </div>
       </div>
 
-      {/* Cards de perfil — Opção B: Ashby Scorecard (Bento Box) */}
+      {/* Cards de perfil — Ultra Minimalista (3 linhas limpas, sem caixas cinzas internas) */}
       {viewMode === "cards" && (
         <div className="mt-5">
           {filtered.length === 0 && (
             <p className="py-8 text-center text-sm text-[#71717a]">Nenhum candidato nesta etapa.</p>
           )}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visible.map((row, index) => {
               const isSelected = selected.has(row.id);
-              const levelColors: Record<string, string> = {
-                Operacional: "bg-[#f1f0ed] text-[#57534e]",
-                Júnior: "bg-[#e4f6ec] text-[#1f7a4d]",
-                Pleno: "bg-[#e8f0fe] text-[#1a56db]",
-                Sênior: "bg-[#f5f3ff] text-[#6d28d9]",
-                Liderança: "bg-[#fef9c3] text-[#854d0e]",
-              };
-              const levelClass = row.aiLevel ? (levelColors[row.aiLevel] ?? "bg-[#f1f0ed] text-[#57534e]") : "";
               const rank = aiRanks?.get(row.id);
-              const roleLine = [row.aiProfile || row.aiArea, row.aiLevel].filter(Boolean).join(" · ");
-              const companiesLine =
-                row.tenureCompanies && row.tenureCompanies.length > 0
-                  ? row.tenureCompanies
-                      .slice(0, 2)
-                      .map((c) => c.empresa)
-                      .join(" · ") +
-                    (row.tenureCompanies.length > 2 ? ` +${row.tenureCompanies.length - 2}` : "")
-                  : jobLabel(row.jobTitle, row.jobCode);
+              const subtitleParts = [
+                row.aiProfile || row.aiArea,
+                row.aiLevel,
+                row.age != null ? `${row.age}a` : null,
+              ].filter(Boolean);
+              const subtitleLine =
+                subtitleParts.length > 0
+                  ? subtitleParts.join(" · ")
+                  : row.aiState === "DONE"
+                    ? "Sem perfil identificado"
+                    : row.aiState === "FAILED"
+                      ? "Análise pendente"
+                      : "Analisando…";
+
+              const shortAvg = compactDuration(row.tenureAvg || row.tenureMedian);
+              const firstCompany = row.tenureCompanies?.[0]?.empresa ?? null;
+              const extraCompanies =
+                row.tenureCompanies && row.tenureCompanies.length > 1
+                  ? ` +${row.tenureCompanies.length - 1}`
+                  : "";
+              const stabilityDot =
+                row.tenureStability === "ALTA"
+                  ? "bg-emerald-500"
+                  : row.tenureStability === "BAIXA"
+                    ? "bg-rose-500"
+                    : "bg-sky-500";
 
               return (
                 <Fragment key={row.id}>
@@ -907,95 +960,32 @@ export function CandidaturasTable({
                   <div
                     onClick={() => setQuickPeekRow(row)}
                     className={
-                      "group relative flex cursor-pointer flex-col justify-between rounded-2xl border bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.07)] " +
+                      "group relative cursor-pointer rounded-2xl border bg-white p-3.5 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] " +
                       (isSelected
                         ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
-                        : "border-[#e4e4e7] hover:border-[#d4d4d8]")
+                        : "border-[#e4e4e7]")
                     }
                   >
-                    {/* Topo Horizontal: Avatar + Nome/Cargo à esquerda · Match Score & Checkbox à direita */}
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="relative shrink-0">
-                          <CandidateAvatar
-                            name={row.name}
-                            photoUrl={row.photoUrl}
-                            className="flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold object-cover"
-                          />
-                          {rank !== undefined && (
-                            <span
-                              className={
-                                "absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-2xs " +
-                                (rank <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#57534e]")
-                              }
-                              style={rank <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
-                              title="Posição pela indicação da IA nesta vaga"
-                            >
-                              {rank}º
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <Link
-                              href={`/candidaturas/${row.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="truncate text-[13px] font-bold text-[#0a0a0a] transition-colors group-hover:text-[#7c1d3c] hover:underline"
-                            >
-                              {row.name}
-                            </Link>
-                            {row.age != null && (
-                              <span
-                                className="shrink-0 text-[11px] text-[#a1a1aa]"
-                                title="Só para sua conferência: não entra na nota nem vai para a IA"
-                              >
-                                · {row.age}a
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <span className="truncate text-[11px] text-[#71717a]">
-                              {roleLine || (row.aiState === "DONE" ? "Sem perfil identificado" : row.aiState === "FAILED" ? "Análise pendente" : "Analisando…")}
-                            </span>
-                            {row.aiLevel && (
-                              <span className={"rounded-md px-1.5 py-0.2 text-[9px] font-semibold " + levelClass}>
-                                {row.aiLevel}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-start gap-2">
-                        {row.hasImpediment ? (
+                    <div className="flex items-start gap-3">
+                      {/* Avatar + Checkbox discreto no hover */}
+                      <div className="relative shrink-0">
+                        <CandidateAvatar
+                          name={row.name}
+                          photoUrl={row.photoUrl}
+                          className="flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold object-cover"
+                        />
+                        {rank !== undefined && !isSelected && (
                           <span
-                            className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
-                            title={row.impedimentReason ? `Motivo: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
+                            className={
+                              "absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-2xs " +
+                              (rank <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#57534e]")
+                            }
+                            style={rank <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
+                            title="Posição pela indicação da IA nesta vaga"
                           >
-                            <span className="size-1.5 rounded-full bg-rose-500/80" />
-                            <span>Tarja preta</span>
+                            {rank}º
                           </span>
-                        ) : row.aiScore !== null ? (
-                          <div className="text-right leading-none">
-                            <span
-                              className={
-                                "block text-[15px] font-extrabold tabular-nums " +
-                                (row.aiScore >= row.aiMinScore
-                                  ? "text-[#1f7a4d]"
-                                  : row.aiScore >= 60
-                                    ? "text-[#b07818]"
-                                    : "text-[#71717a]")
-                              }
-                            >
-                              {row.aiScore}
-                            </span>
-                            <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
-                              Match
-                            </span>
-                          </div>
-                        ) : null}
-
+                        )}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1004,115 +994,122 @@ export function CandidaturasTable({
                           }}
                           aria-label={`Selecionar ${row.name}`}
                           className={
-                            "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors " +
+                            "absolute -left-1 -top-1 flex size-4.5 items-center justify-center rounded-full border transition-all " +
                             (isSelected
-                              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                              : "border-[#d4d4d8] bg-white hover:border-[#0a0a0a]")
+                              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white opacity-100"
+                              : "border-[#d4d4d8] bg-white text-transparent opacity-0 group-hover:opacity-100 hover:border-[#0a0a0a]")
                           }
                         >
-                          {isSelected && <span className="text-[10px]">✓</span>}
+                          <span className="text-[9px] leading-none">✓</span>
                         </button>
                       </div>
-                    </div>
 
-                    {/* Bento Grid Central: Média perm. x Mediana (2 colunas lado a lado) */}
-                    {row.hasImpediment ? (
-                      <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/40 px-3 py-2 text-[11px] text-zinc-600">
-                        <span className="font-medium text-rose-700">Restrição ativa:</span>{" "}
-                        {row.impedimentReason || "Impedimento de contratação em todas as vagas."}
-                      </div>
-                    ) : row.tenureAvg || row.tenureMedian ? (
-                      <div
-                        className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-[#f1f0ed] bg-[#fafaf9] px-3 py-2 text-[11px]"
-                        title={
-                          row.tenureCompanies?.length
-                            ? "Empresas:\n" +
-                              row.tenureCompanies.map((c) => `• ${c.empresa}: ${c.duracaoFormatada}`).join("\n")
-                            : undefined
-                        }
-                      >
-                        <div className="min-w-0">
-                          <span className="block text-[10px] text-[#a1a1aa]">Média perm.</span>
-                          <strong
-                            className={
-                              "mt-0.5 block truncate font-semibold " +
-                              (row.tenureStability === "ALTA"
-                                ? "text-[#1f7a4d]"
-                                : row.tenureStability === "BAIXA"
-                                  ? "text-[#c23b3b]"
-                                  : "text-[#2f5fa8]")
+                      {/* 3 Linhas Limpas (Nome + Score / Cargo · Nível · Idade / Permanência + Ações no hover) */}
+                      <div className="min-w-0 flex-1">
+                        {/* Linha 1: Nome completo + Nota em pílula discreta */}
+                        <div className="flex items-center justify-between gap-2">
+                          <Link
+                            href={`/candidaturas/${row.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="truncate text-[13px] font-semibold text-[#0a0a0a] transition-colors group-hover:text-[#7c1d3c] hover:underline"
+                          >
+                            {row.name}
+                          </Link>
+
+                          {row.hasImpediment ? (
+                            <span
+                              className="shrink-0 inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                              title={row.impedimentReason ? `Motivo: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
+                            >
+                              <span className="size-1.5 rounded-full bg-rose-500/80" />
+                              <span>Tarja preta</span>
+                            </span>
+                          ) : row.aiScore !== null ? (
+                            <span
+                              className={
+                                "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums " +
+                                (row.aiScore >= row.aiMinScore
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : row.aiScore >= 60
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-zinc-100 text-zinc-600")
+                              }
+                            >
+                              {row.aiScore}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Linha 2: Perfil · Senioridade · Idade */}
+                        <p className="mt-0.5 truncate text-[11px] text-[#71717a]">
+                          {subtitleLine}
+                        </p>
+
+                        {/* Linha 3: 1 linha única de permanência/empresa + ações discretas no hover */}
+                        <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#71717a]">
+                          <span
+                            className="inline-flex min-w-0 items-center gap-1.5 truncate"
+                            title={
+                              row.tenureAvg || row.tenureMedian
+                                ? `Média: ${row.tenureAvg || "-"} · Mediana: ${row.tenureMedian || row.tenureAvg || "-"}${
+                                    row.tenureCompanies?.length
+                                      ? "\n" +
+                                        row.tenureCompanies
+                                          .map((c) => `• ${c.empresa}: ${c.duracaoFormatada}`)
+                                          .join("\n")
+                                      : ""
+                                  }`
+                                : undefined
                             }
                           >
-                            {row.tenureAvg || "—"}
-                          </strong>
-                        </div>
-                        <div className="min-w-0 border-l border-[#e4e4e7]/70 pl-2.5">
-                          <span className="block text-[10px] text-[#a1a1aa]">Mediana</span>
-                          <strong className="mt-0.5 block truncate font-semibold text-[#0a0a0a]">
-                            {row.tenureMedian || row.tenureAvg || "—"}
-                          </strong>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-[#f1f0ed] bg-[#fafaf9]/70 px-3 py-2 text-[11px]">
-                        <div className="min-w-0">
-                          <span className="block text-[10px] text-[#a1a1aa]">Área / Perfil</span>
-                          <strong className="mt-0.5 block truncate font-medium text-[#52525b]">
-                            {row.aiArea || "Em leitura"}
-                          </strong>
-                        </div>
-                        <div className="min-w-0 border-l border-[#e4e4e7]/70 pl-2.5">
-                          <span className="block text-[10px] text-[#a1a1aa]">Etapa</span>
-                          <strong className="mt-0.5 block truncate font-medium text-[#52525b]">
-                            { row.infoState === "ANSWERED"
-                              ? "Pré-entrev. OK"
-                              : appStatusLabels[row.status] }
-                          </strong>
-                        </div>
-                      </div>
-                    )}
+                            {row.hasImpediment ? (
+                              <span className="truncate text-rose-600">
+                                {row.impedimentReason || "Restrição em todas as vagas"}
+                              </span>
+                            ) : shortAvg ? (
+                              <>
+                                <span className={`size-1.5 shrink-0 rounded-full ${stabilityDot}`} />
+                                <span className="truncate">
+                                  {shortAvg} média
+                                  {firstCompany ? ` · ${firstCompany}${extraCompanies}` : ""}
+                                </span>
+                              </>
+                            ) : !showGroups ? (
+                              <span className="truncate text-[#a1a1aa]">
+                                {jobLabel(row.jobTitle, row.jobCode)}
+                              </span>
+                            ) : (
+                              <span className="truncate text-[#a1a1aa]">
+                                {row.status === "PENDING"
+                                  ? `espera ${formatWaiting(new Date(row.createdAt))}`
+                                  : appStatusLabels[row.status]}
+                              </span>
+                            )}
+                          </span>
 
-                    {/* Rodapé Minimalista: Empresas / Vaga à esquerda · CV + Download + Abrir dossiê à direita */}
-                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#f4f4f5] pt-2.5 text-[11px]">
-                      <span
-                        className="truncate text-[#71717a]"
-                        title={
-                          row.tenureCompanies?.length
-                            ? row.tenureCompanies.map((c) => `${c.empresa} (${c.duracaoFormatada})`).join(" · ")
-                            : jobLabel(row.jobTitle, row.jobCode)
-                        }
-                      >
-                        {companiesLine}
-                      </span>
-
-                      <div
-                        className="flex shrink-0 items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <a
-                          href={`/candidaturas/${row.id}/cv`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                          title="Visualizar currículo em nova aba"
-                        >
-                          CV
-                        </a>
-                        <a
-                          href={`/candidaturas/${row.id}/cv?download=1`}
-                          className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                          title="Baixar currículo em PDF"
-                          aria-label="Baixar currículo em PDF"
-                        >
-                          <Download className="size-3.5" strokeWidth={1.75} />
-                        </a>
-                        <Link
-                          href={`/candidaturas/${row.id}`}
-                          className="ml-0.5 inline-flex h-6 items-center rounded-md px-1.5 text-[11px] font-semibold transition-colors hover:bg-[#f4f4f5]"
-                          style={{ color: "var(--brand-primary)" }}
-                        >
-                          Abrir →
-                        </Link>
+                          <div
+                            className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a
+                              href={`/candidaturas/${row.id}/cv`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#52525b] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              title="Visualizar currículo em nova aba"
+                            >
+                              CV
+                            </a>
+                            <a
+                              href={`/candidaturas/${row.id}/cv?download=1`}
+                              className="inline-flex size-5 items-center justify-center rounded text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              title="Baixar currículo em PDF"
+                              aria-label="Baixar currículo em PDF"
+                            >
+                              <Download className="size-3" strokeWidth={1.75} />
+                            </a>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
