@@ -22,6 +22,15 @@ export function findJobsByCompanyId(companyId: string) {
   });
 }
 
+/** O painel só precisa da identidade e do estado da vaga, sem descrição ou contagens extras. */
+export function findDashboardJobs(companyId: string) {
+  return prisma.job.findMany({
+    where: { companyId, isTalentPool: false },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, code: true, status: true },
+  });
+}
+
 export function countJobsByCompanyId(companyId: string, onlyOpen = false) {
   return prisma.job.count({
     where: { companyId, isTalentPool: false, ...(onlyOpen ? { status: "OPEN" as const } : {}) },
