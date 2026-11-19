@@ -92,6 +92,7 @@ export default async function ApplyPage({
           customFields={data.customFields}
           candidate={data.candidate}
           prefillAnswers={data.prefillAnswers}
+          hasPreviousApplication={data.hasPreviousApplication}
         />
       </main>
     </>
