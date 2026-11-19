@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Check, Download, FolderOpen, Loader2, MessageCircle, RefreshCw, UserPlus } from "lucide-react";
 
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
+import { ResumeLightboxButton } from "@/components/gestor/resume-lightbox-button";
 import { MatchScore } from "@/components/gestor/talent-pool-card";
 import { analyzeStandbyForJobAction } from "@/server/controllers/talent.controller";
 import { importStandbyToJobAction } from "@/server/controllers/application.controller";
@@ -87,7 +88,10 @@ export function StandbySection({
   const good = people.filter((p) => p.state === "DONE" && p.score !== null && p.score >= minScore).length;
 
   return (
-    <section className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-5">
+    <section
+      id="sugestoes-banco"
+      className="mt-6 scroll-mt-6 rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-2xs"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
@@ -157,15 +161,13 @@ export function StandbySection({
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <MatchScore match={{ score: p.score, state: p.state, minScore }} />
-                  <a
-                    href={`/candidaturas/${p.id}/cv`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <ResumeLightboxButton
+                    applicationId={p.id}
+                    candidateName={p.name}
+                    label="Ver CV"
+                    showIcon={false}
                     className="inline-flex h-7 items-center rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                    title="Visualizar currículo em nova aba"
-                  >
-                    Ver CV
-                  </a>
+                  />
                   <a
                     href={`/candidaturas/${p.id}/cv?download=1`}
                     className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
