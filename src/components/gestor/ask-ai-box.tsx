@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { MessagesSquare } from "lucide-react";
+
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 
 import { askAboutCandidateAction, askAcrossCandidatesAction } from "@/server/controllers/application.controller";
 
@@ -66,8 +69,9 @@ export function AskAiBox({ applicationId, jobId }: { applicationId?: string; job
 
   return (
     <div>
-      <h2 className="text-sm font-semibold text-[#0a0a0a]">Pergunte à IA</h2>
-      <p className="mt-0.5 text-[11px] text-[#71717a]">
+      <SectionEyebrow icon={MessagesSquare}>Assistente</SectionEyebrow>
+      <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">Pergunte à IA</h2>
+      <p className="mt-1 text-[12px] text-[#71717a]">
         {mode === "all"
           ? "Ela busca em todas as candidaturas da empresa para responder. Não muda a nota nem a etapa."
           : "Ela responde com base no currículo e nas respostas deste candidato. Não muda a nota nem a etapa."}

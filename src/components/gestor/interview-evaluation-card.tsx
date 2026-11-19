@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Star, X } from "lucide-react";
+import { ClipboardCheck, Plus, Star, X } from "lucide-react";
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 
 import { saveInterviewEvaluationAction } from "@/server/controllers/application.controller";
 import {
@@ -150,8 +151,8 @@ export function InterviewEvaluationCard({
     <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">Entrevista</p>
-          <h2 className="mt-1 text-base font-semibold text-[#0a0a0a]">Ficha de avaliação</h2>
+          <SectionEyebrow icon={ClipboardCheck}>Entrevista</SectionEyebrow>
+          <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">Ficha de avaliação</h2>
           <p className="mt-1 text-[11px] text-[#71717a]">
             {interviewSummary ? `${interviewSummary} · ` : ""}Interna: o candidato nunca vê e a IA não recebe.
           </p>
