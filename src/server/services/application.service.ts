@@ -370,13 +370,15 @@ export async function communicateStatusChange(
 }
 
 /** Respostas da última candidatura na empresa — pré-preenche extras (CA3). */
-export async function getPrefillAnswers(
+export async function getApplicationPrefill(
   candidateId: string,
   companyId: string
-): Promise<Record<string, string>> {
+): Promise<{ answers: Record<string, string>; hasPreviousApplication: boolean }> {
   const latest = await findLatestApplicationWithAnswers(candidateId, companyId);
-  if (!latest) return {};
-  return Object.fromEntries(latest.answers.map((a) => [a.fieldId, a.value]));
+  return {
+    answers: latest ? Object.fromEntries(latest.answers.map((a) => [a.fieldId, a.value])) : {},
+    hasPreviousApplication: Boolean(latest && !latest.preRegistered),
+  };
 }
 
 /** Candidaturas do candidato em todas as empresas (CA4). */

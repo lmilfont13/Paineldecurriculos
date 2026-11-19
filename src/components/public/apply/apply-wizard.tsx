@@ -28,6 +28,13 @@ import { AddressFields } from "@/components/public/address-fields";
 import { AdmissionFields } from "@/components/public/admission-fields";
 import { isRedundantWithCoreProfile } from "@/server/models/question-catalog.model";
 
+import {
+  applicationAwarenessError,
+  canReuseApplicationProfile,
+  nextApplyStep,
+  previousApplyStep,
+} from "@/server/models/apply-flow.model";
+
 const STEPS = ["Você", "Perfil", "Extras", "Envio"] as const;
 
 type WizardData = {
@@ -72,16 +79,21 @@ export function ApplyWizard({
   customFields,
   candidate,
   prefillAnswers,
+  hasPreviousApplication,
 }: {
   company: PublicCompany;
   job: PublicJob;
   coreFields: PublicFormField[];
   customFields: PublicFormField[];
   candidate: CandidateProfile;
+  hasPreviousApplication: boolean;
   prefillAnswers: Record<string, string>;
 }) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<WizardData>({
+  const canReuse = canReuseApplicationProfile(candidate, hasPreviousApplication);
+  const [profileChoice, setProfileChoice] = useState<"reuse" | "update" | null>(null);
+  const reuseProfile = canReuse && profileChoice === "reuse";
+  const savedData: WizardData = {
     name: candidate.name,
     phone: candidate.phone ?? "",
     instagram: candidate.instagram ? `@${candidate.instagram}` : "",
@@ -111,7 +123,8 @@ export function ApplyWizard({
     isPcd: Boolean(candidate.isPcd),
     pcdDetails: candidate.pcdDetails ?? "",
     answers: prefillAnswers,
-  });
+  };
+  const [data, setData] = useState<WizardData>(savedData);
   const [resume, setResume] = useState<File | null>(null);
   // Caminho no Storage do PDF já enviado — numa nova tentativa de envio da
   // candidatura, não sobe o arquivo de novo.
@@ -142,8 +155,9 @@ export function ApplyWizard({
 
   const stepError = useMemo(() => {
     if (step === 0) {
-      if (!cltAware) return CLT_AWARENESS_REQUIRED_MESSAGE;
-      if (isTempJob && !tempAware) return TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE;
+      if (canReuse && !profileChoice) return "Informe se houve alguma mudança nos seus dados ou currículo.";
+      const awarenessError = applicationAwarenessError(cltAware, isTempJob, tempAware);
+      if (awarenessError) return awarenessError;
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
       const ig = parseInstagram(data.instagram);
@@ -162,7 +176,7 @@ export function ApplyWizard({
       }
     }
     return null;
-  }, [step, cltAware, isTempJob, tempAware, data, resume, candidate.resumeUrl, filteredCoreFields, filteredCustomFields]);
+  }, [step, canReuse, profileChoice, cltAware, isTempJob, tempAware, data, resume, candidate.resumeUrl, filteredCoreFields, filteredCustomFields]);
 
   function next() {
     if (stepError) {
@@ -170,12 +184,12 @@ export function ApplyWizard({
       return;
     }
     setError(null);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => nextApplyStep(s, reuseProfile, filteredCoreFields.length > 0));
   }
 
   function back() {
     setError(null);
-    setStep((s) => Math.max(s - 1, 0));
+    setStep((s) => previousApplyStep(s, reuseProfile, filteredCoreFields.length > 0));
   }
 
   async function pickResume(file: File | null) {
@@ -192,12 +206,9 @@ export function ApplyWizard({
   }
 
   function submit() {
-    if (!cltAware) {
-      setError(CLT_AWARENESS_REQUIRED_MESSAGE);
-      return;
-    }
-    if (isTempJob && !tempAware) {
-      setError(TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE);
+    const awarenessError = applicationAwarenessError(cltAware, isTempJob, tempAware);
+    if (awarenessError) {
+      setError(awarenessError);
       return;
     }
     if (!consent) {
@@ -356,9 +367,43 @@ export function ApplyWizard({
         <div className="flex-1">
           {step === 0 && (
             <StepShell
-              title="Vamos começar por você"
-              subtitle="Só o básico pra gente te identificar e adequar as vagas da sua região."
+              title={canReuse ? "Seu cadastro continua atualizado?" : "Vamos começar por você"}
+              subtitle={canReuse
+                ? "Houve alguma mudança nos seus dados ou currículo desde o último envio?"
+                : "Só o básico pra gente te identificar e adequar as vagas da sua região."}
             >
+              {canReuse && (
+                <fieldset className="space-y-3">
+                  <legend className="sr-only">Atualização do cadastro e currículo</legend>
+                  {([
+                    ["reuse", "Não, continua tudo igual", "Usar meus dados e currículo salvos e seguir para as perguntas da vaga."],
+                    ["update", "Sim, quero atualizar", "Revisar meus dados e, se necessário, trocar o currículo."],
+                  ] as const).map(([value, label, description]) => (
+                    <label key={value} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#e4e4e7] p-4">
+                      <input
+                        type="radio"
+                        name="profileChoice"
+                        value={value}
+                        checked={profileChoice === value}
+                        onChange={() => {
+                          setProfileChoice(value);
+                          setError(null);
+                          if (value === "reuse") {
+                            setData((current) => ({ ...savedData, answers: current.answers }));
+                            setResume(null);
+                            setUploadedPath(null);
+                          }
+                        }}
+                        className="mt-1 size-4 shrink-0 accent-[var(--brand-primary)]"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-[#0a0a0a]">{label}</span>
+                        <span className="mt-1 block text-xs text-[#71717a]">{description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
               {/* Avisos obrigatórios de ciência (CLT em todas as vagas + Temporária quando marcada) */}
               <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-900">
@@ -410,6 +455,7 @@ export function ApplyWizard({
                 )}
               </div>
 
+              {(!canReuse || profileChoice === "update") && <>
               <Field label="Nome completo">
                 <TextInput
                   value={data.name}
@@ -472,14 +518,16 @@ export function ApplyWizard({
                   onChange={(a) => setData((d) => ({ ...d, ...a }))}
                 />
               </div>
+              </>}
             </StepShell>
           )}
 
           {step === 1 && (
             <StepShell
-              title="Seu perfil profissional"
-              subtitle="Critérios rápidos para os recrutadores localizarem seu perfil sem você precisar digitar todo o currículo."
+              title={reuseProfile ? "Perguntas da vaga" : "Seu perfil profissional"}
+              subtitle={reuseProfile ? "Seus dados e currículo serão reutilizados. Responda às perguntas abaixo." : "Critérios rápidos para os recrutadores localizarem seu perfil sem você precisar digitar todo o currículo."}
             >
+              {!reuseProfile && <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Função pretendida / Cargo de interesse">
                   <TextInput
@@ -586,6 +634,7 @@ export function ApplyWizard({
                 )}
               </div>
 
+              </>}
               {filteredCoreFields.map((field) => (
                 <DynamicField
                   key={field.id}
@@ -594,6 +643,7 @@ export function ApplyWizard({
                   onChange={(v) => setAnswer(field.id, v)}
                 />
               ))}
+              {!reuseProfile && <>
               <Field label="Currículo em PDF (obrigatório)">
                 <div className="flex items-center gap-4 rounded-md border border-[#e4e4e7] bg-[#fafaf9] p-4">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#e4e4e7] bg-white text-[#78716c]">
@@ -643,6 +693,7 @@ export function ApplyWizard({
                   onChange={(a) => setData((d) => ({ ...d, ...a }))}
                 />
               </div>
+              </>}
             </StepShell>
           )}
 

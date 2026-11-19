@@ -16,7 +16,7 @@ import {
   getCandidateApplication,
   getAppliedJobIds,
   getExistingApplicationId,
-  getPrefillAnswers,
+  getApplicationPrefill,
   listCandidateApplications,
 } from "@/server/services/application.service";
 import { getSessionCandidate } from "@/server/services/candidate.service";
@@ -93,6 +93,7 @@ export async function getApplyPageData(
   candidate: CandidateProfile | null;
   prefillAnswers: Record<string, string>;
   alreadyAppliedId: string | null;
+  hasPreviousApplication: boolean;
 } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
@@ -102,9 +103,9 @@ export async function getApplyPageData(
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
   const { core, custom } = await listApplicationFormFields(company.id, job.id);
   const candidate = await getSessionCandidate();
-  const prefillAnswers = candidate
-    ? await getPrefillAnswers(candidate.id, company.id)
-    : {};
+  const prefill = candidate
+    ? await getApplicationPrefill(candidate.id, company.id)
+    : { answers: {}, hasPreviousApplication: false };
   const alreadyAppliedId = candidate
     ? await getExistingApplicationId(candidate.id, job.id)
     : null;
@@ -114,7 +115,8 @@ export async function getApplyPageData(
     coreFields: core,
     customFields: custom,
     candidate,
-    prefillAnswers,
+    prefillAnswers: prefill.answers,
+    hasPreviousApplication: prefill.hasPreviousApplication,
     alreadyAppliedId,
   };
 }
