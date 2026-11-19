@@ -444,21 +444,26 @@ export function BuscarCvsView({
         </div>
       )}
 
-      {/* Header Ultra Minimalista */}
+      {/* Header Michelin */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900">
                 Buscar CVs
               </h1>
-              <span className="rounded-full bg-[#f1f0ed] px-2.5 py-1 text-[11px] font-medium text-[#57534e]">
+              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-700">
                 {people.length}
               </span>
+              {topMatches > 0 && (
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  <Sparkles className="size-3 text-emerald-600 fill-emerald-600" />
+                  <span>{topMatches} acima de 80%</span>
+                </span>
+              )}
             </div>
-            <p className="mt-0.5 text-sm text-[#71717a]">
-              {people.length} talentos no acervo ·{" "}
-              <span className="font-medium text-[#0a0a0a]">{topMatches} acima de 80%</span>
+            <p className="mt-1 text-xs text-zinc-500">
+              Banco unificado de talentos · Busca inteligente no texto dos currículos e filtros avançados.
             </p>
           </div>
 
@@ -467,40 +472,43 @@ export function BuscarCvsView({
               href="/buscar-cvs/relatorio"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-zinc-200/80 bg-white px-3.5 text-xs font-semibold text-zinc-800 shadow-2xs transition hover:bg-zinc-50 hover:border-zinc-300"
               title="Baixar Dashboard Executivo Completo em PDF"
             >
-              <FileText className="size-3.5 text-[#71717a]" />
+              <FileText className="size-4 text-zinc-500" />
               <span>Dashboard PDF</span>
             </a>
             <button
               type="button"
               disabled={isExtractingPhotos}
               onClick={() => handleExtractAllPhotos()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#52525b] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a] disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-zinc-200/80 bg-white px-3.5 text-xs font-semibold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 hover:text-zinc-950 disabled:opacity-60"
               title="Varre automaticamente todos os currículos que ainda não têm foto extraída"
             >
-              <RotateCcw className={`size-3.5 ${isExtractingPhotos ? "animate-spin" : ""}`} />
-              {isExtractingPhotos
-                ? `Buscando (${photoScanProgress?.scanned ?? 0}/${totalWithoutPhoto})…`
-                : `Buscar fotos (${totalWithoutPhoto})`}
+              <RotateCcw className={`size-3.5 ${isExtractingPhotos ? "animate-spin text-zinc-900" : "text-zinc-500"}`} />
+              <span>
+                {isExtractingPhotos
+                  ? `Buscando (${photoScanProgress?.scanned ?? 0}/${totalWithoutPhoto})…`
+                  : `Buscar fotos (${totalWithoutPhoto})`}
+              </span>
             </button>
             <Link
               href="/candidaturas"
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white shadow-2xs transition hover:opacity-90"
               style={{ backgroundColor: "var(--brand-primary)" }}
             >
-              Funil por vaga →
+              <span>Funil por vaga</span>
+              <ChevronRight className="size-3.5" />
             </Link>
           </div>
         </div>
 
         {isExtractingPhotos && photoScanProgress && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-4 py-3 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white px-4 py-3 shadow-2xs">
             <div className="flex items-center gap-3">
               <span className="size-2 animate-pulse rounded-full bg-emerald-600" />
-              <p className="text-xs text-[#52525b]">
-                <strong className="text-[#0a0a0a]">Varrendo currículos sem foto:</strong>{" "}
+              <p className="text-xs text-zinc-600">
+                <strong className="text-zinc-900">Varrendo currículos sem foto:</strong>{" "}
                 {photoScanProgress.scanned} analisados ·{" "}
                 <strong className="text-emerald-700">{photoScanProgress.found} fotos extraídas</strong> ·{" "}
                 {photoScanProgress.remaining} restantes
@@ -511,25 +519,31 @@ export function BuscarCvsView({
               onClick={() => {
                 stopPhotoScanRef.current = true;
               }}
-              className="h-7 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2.5 text-[11px] font-semibold text-[#0a0a0a] hover:bg-[#f4f4f5]"
+              className="h-7 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-[11px] font-semibold text-zinc-900 hover:bg-zinc-100"
             >
               Pausar
             </button>
           </div>
         )}
 
-        {/* Barra de Filtros Rápidos Minimalista */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#e4e4e7] pb-3.5 text-xs">
+        {/* Barra de Filtros Rápidos Michelin */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200/80 pb-3.5 text-xs">
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, minScore: p.minScore === 80 ? null : 80 }))}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition shadow-2xs ${
               filters.minScore === 80
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                : "border-zinc-200/80 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            <span>✨ Top Match 80%+ ({topMatches})</span>
+            <Sparkles className={`size-3.5 ${filters.minScore === 80 ? "text-amber-400 fill-amber-400" : "text-amber-500"}`} />
+            <span>Top Match 80%+</span>
+            <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+              filters.minScore === 80 ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+            }`}>
+              {topMatches}
+            </span>
           </button>
           <button
             type="button"
@@ -540,13 +554,18 @@ export function BuscarCvsView({
                 onlyWithoutPhoto: !p.onlyWithPhoto ? false : p.onlyWithoutPhoto,
               }))
             }
-            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition shadow-2xs ${
               filters.onlyWithPhoto
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                : "border-zinc-200/80 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            Com foto ({totalWithPhoto})
+            <span>Com foto</span>
+            <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+              filters.onlyWithPhoto ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+            }`}>
+              {totalWithPhoto}
+            </span>
           </button>
           <button
             type="button"
@@ -557,52 +576,64 @@ export function BuscarCvsView({
                 onlyWithPhoto: !p.onlyWithoutPhoto ? false : p.onlyWithPhoto,
               }))
             }
-            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition shadow-2xs ${
               filters.onlyWithoutPhoto
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                : "border-zinc-200/80 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            Sem foto ({totalWithoutPhoto})
+            <span>Sem foto</span>
+            <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+              filters.onlyWithoutPhoto ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+            }`}>
+              {totalWithoutPhoto}
+            </span>
           </button>
           {filters.onlyWithoutPhoto && sorted.length > 0 && !isExtractingPhotos && (
             <button
               type="button"
               onClick={() => handleExtractAllPhotos(sorted.map((c) => c.id))}
-              className="inline-flex h-8 items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
+              className="inline-flex h-8.5 items-center gap-1.5 rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-200 shadow-2xs"
             >
-              Extrair fotos ({sorted.length})
+              <RotateCcw className="size-3 text-zinc-700" />
+              <span>Extrair fotos ({sorted.length})</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, onlyWithPdf: !p.onlyWithPdf }))}
-            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition shadow-2xs ${
               filters.onlyWithPdf
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                : "border-zinc-200/80 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            Com PDF ({totalWithPdf})
+            <span>Com PDF</span>
+            <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+              filters.onlyWithPdf ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+            }`}>
+              {totalWithPdf}
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, onlyRemote: !p.onlyRemote }))}
-            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition shadow-2xs ${
               filters.onlyRemote
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+                ? "border-zinc-900 bg-zinc-900 text-white shadow-xs"
+                : "border-zinc-200/80 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
-            Remoto
+            <span>Remoto</span>
           </button>
           {hasActiveFilters && (
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-auto text-xs font-medium text-[#71717a] underline underline-offset-2 hover:text-[#0a0a0a]"
+              className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition"
             >
-              Limpar filtros
+              <X className="size-3.5 text-zinc-400" />
+              <span>Limpar filtros</span>
             </button>
           )}
         </div>
@@ -613,12 +644,12 @@ export function BuscarCvsView({
         {/* BARRA LATERAL ESQUERDA: Filtros Facetados (Padrão InfoJobs Michelin) */}
         {/* Fixa no desktop com rolagem própria, independente da rolagem da lista de candidatos */}
         <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
-          <div className="rounded-3xl border border-[#e4e4e7] bg-white p-5 shadow-xs">
-            <div className="mb-4 flex items-center justify-between border-b border-[#f4f4f5] pb-3.5">
-              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
-                <Filter className="size-3.5 text-[#71717a]" /> Filtros
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-xs">
+            <div className="mb-4 flex items-center justify-between border-b border-zinc-100 pb-3.5">
+              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-900">
+                <Filter className="size-3.5 text-zinc-500" /> Filtros
               </span>
-              <span className="text-[11px] font-medium tabular-nums text-[#71717a]">
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-zinc-600">
                 {sorted.length} de {people.length}
               </span>
             </div>
@@ -883,14 +914,14 @@ export function BuscarCvsView({
             alinha o card com a barra de filtros (top-6) quando fixo.
           */}
           <div className="sticky top-14 z-20 -mt-6 bg-[#fafaf9] pt-6 md:top-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-5 py-3.5 shadow-xs">
-            <div className="flex items-center gap-2 text-xs text-[#71717a]">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white/95 backdrop-blur-md px-4.5 py-3 shadow-xs">
+            <div className="flex items-center gap-2 text-xs text-zinc-600">
               <span>
-                <strong className="text-sm font-bold text-[#0a0a0a]">{sorted.length}</strong>{" "}
+                <strong className="text-sm font-bold text-zinc-900 tabular-nums">{sorted.length}</strong>{" "}
                 talento{sorted.length === 1 ? "" : "s"} encontrado{sorted.length === 1 ? "" : "s"}
               </span>
               {hasActiveFilters && (
-                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-200">
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-200/80">
                   Filtros Ativos
                 </span>
               )}
@@ -898,15 +929,15 @@ export function BuscarCvsView({
 
             <div className="flex items-center gap-3">
               {/* Alternância de modo de exibição: Dossiê (detalhado) x Compacto */}
-              <div className="flex items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-0.5">
+              <div className="flex items-center rounded-xl border border-zinc-200/80 bg-zinc-100/80 p-0.5">
                 <button
                   type="button"
                   onClick={() => startViewTransition(() => setViewMode("detailed"))}
                   title="Modo Dossiê: cards detalhados"
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                     viewMode === "detailed"
-                      ? "bg-white text-[#0a0a0a] shadow-xs"
-                      : "text-[#71717a] hover:text-[#0a0a0a]"
+                      ? "bg-white text-zinc-900 shadow-2xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   <Rows3 className="size-3.5" />
@@ -916,10 +947,10 @@ export function BuscarCvsView({
                   type="button"
                   onClick={() => startViewTransition(() => setViewMode("compact"))}
                   title="Modo Compacto: linhas resumidas"
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                     viewMode === "compact"
-                      ? "bg-white text-[#0a0a0a] shadow-xs"
-                      : "text-[#71717a] hover:text-[#0a0a0a]"
+                      ? "bg-white text-zinc-900 shadow-2xs"
+                      : "text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   <List className="size-3.5" />
@@ -927,16 +958,18 @@ export function BuscarCvsView({
                 </button>
               </div>
 
-              <span className="text-xs font-medium text-[#71717a]">Ordenar:</span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as CvSearchSort)}
-                className="h-8.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] focus:outline-none"
-              >
-                <option value="score">✨ Maior Aderência IA</option>
-                <option value="recent">📅 Mais Recentes</option>
-                <option value="name">🔤 Nome (A-Z)</option>
-              </select>
+              <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-medium">
+                <span className="hidden sm:inline">Ordenar:</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as CvSearchSort)}
+                  className="h-8.5 rounded-xl border border-zinc-200/80 bg-white px-3 text-xs font-semibold text-zinc-800 focus:outline-none focus:border-zinc-900 shadow-2xs"
+                >
+                  <option value="score">✨ Maior Aderência IA</option>
+                  <option value="recent">📅 Mais Recentes</option>
+                  <option value="name">🔤 Nome (A-Z)</option>
+                </select>
+              </div>
             </div>
           </div>
             {/* Esfumaçado sob a faixa: os cards se dissolvem em vez de cortar seco */}
@@ -948,28 +981,28 @@ export function BuscarCvsView({
 
           {/* Lista de Dossiês */}
           {sorted.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-[#e4e4e7] bg-white p-14 text-center">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-stone-100 text-[#71717a]">
+            <div className="rounded-3xl border border-dashed border-zinc-200 bg-white p-14 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500">
                 <User className="size-6" />
               </div>
-              <h3 className="mt-4 text-base font-bold text-[#0a0a0a]">
+              <h3 className="mt-4 text-base font-bold text-zinc-900">
                 Nenhum talento encontrado com esses filtros
               </h3>
-              <p className="mx-auto mt-1 max-w-sm text-xs text-[#71717a]">
+              <p className="mx-auto mt-1 max-w-sm text-xs text-zinc-500">
                 Tente buscar termos mais amplos ou remover filtros específicos na barra lateral.
               </p>
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#0a0a0a] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#27272a]"
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-zinc-800"
                 >
                   Limpar todos os filtros
                 </button>
               )}
             </div>
           ) : (
-            <div className={viewMode === "compact" ? "divide-y divide-[#f0f0ef] rounded-3xl border border-[#e4e4e7] bg-white shadow-xs" : "space-y-4"}>
+            <div className={viewMode === "compact" ? "space-y-2.5" : "space-y-3.5"}>
               {sorted.map((item, index) => {
                 const isSelected = selectedIndex === index;
                 const snippet = extractResumeSnippet(item.resumeText, filters.keyword);
@@ -983,6 +1016,10 @@ export function BuscarCvsView({
                     )}`
                   : null;
 
+                const locationLabel = formatCandidateLocation(item);
+                const formattedSalary = formatSalaryDisplay(item.salaryExpectation);
+                const roleTitle = titleCaseLabel(item.desiredRole || item.aiProfile || item.job.title);
+
                 if (viewMode === "compact") {
                   return (
                     <div
@@ -991,160 +1028,200 @@ export function BuscarCvsView({
                         cardRefs.current[index] = el;
                       }}
                       onClick={() => router.push(`/candidaturas/${item.id}`)}
-                      className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 transition ${
-                        isSelected ? "bg-stone-50 ring-1 ring-inset ring-[#0a0a0a]/10" : "hover:bg-[#fafaf9]"
+                      className={`group relative flex cursor-pointer items-center justify-between gap-3 rounded-2xl border bg-white p-3 transition-all hover:border-zinc-300 hover:shadow-xs ${
+                        isSelected
+                          ? "border-zinc-900 ring-1 ring-zinc-900/10 shadow-xs"
+                          : "border-zinc-200/80"
                       }`}
                     >
-                      <div className="relative shrink-0">
-                        <ZoomableCandidateAvatar
-                          applicationId={item.id}
-                          name={item.name}
-                          photoUrl={item.photoUrl}
-                          className="size-9 rounded-xl bg-[#1c1917] text-xs font-bold text-white object-cover"
-                        />
-                        {isTopMatch && (
-                          <Sparkles className="absolute -right-1 -top-1 size-3 fill-amber-400 text-amber-500" />
-                        )}
+                      {/* Left: Avatar + Informações principais */}
+                      <div className="flex min-w-0 items-center gap-3 flex-1">
+                        <div className="relative shrink-0">
+                          <ZoomableCandidateAvatar
+                            applicationId={item.id}
+                            name={item.name}
+                            photoUrl={item.photoUrl}
+                            className="size-10 rounded-xl bg-zinc-900 text-xs font-bold text-white object-cover ring-1 ring-black/5"
+                          />
+                          {isTopMatch && (
+                            <span
+                              className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-amber-400 text-white shadow-xs"
+                              title="Top Match (85%+)"
+                            >
+                              <Sparkles className="size-2 fill-white text-white" />
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          {/* Linha 1: Nome + Tarja preta + PCD + Senioridade */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Link
+                              href={`/candidaturas/${item.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Abrir o cadastro"
+                              className="truncate text-[13px] font-bold text-zinc-900 group-hover:text-[var(--brand-primary,#0a0a0a)] hover:underline"
+                            >
+                              {item.name}
+                            </Link>
+
+                            {item.hasImpediment && (
+                              <span
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.2 text-[9px] font-semibold text-rose-700"
+                                title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}
+                              >
+                                <span className="size-1.5 rounded-full bg-rose-500" />
+                                <span>Tarja preta</span>
+                              </span>
+                            )}
+
+                            {item.isPcd && (
+                              <span className="shrink-0 rounded-full border border-purple-200 bg-purple-50 px-1.5 py-0.2 text-[9px] font-semibold text-purple-700">
+                                PcD
+                              </span>
+                            )}
+
+                            {item.aiLevel && (
+                              <span className={`shrink-0 rounded-md border px-1.5 py-0.2 text-[9px] font-bold ${levelBadgeClass}`}>
+                                {item.aiLevel}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Linha 2: Cargo + Vagas adicionais + Localização + Pretensão */}
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-600">
+                            <span className="truncate font-medium text-zinc-800">
+                              {roleTitle}
+                            </span>
+
+                            {item.allJobs && item.allJobs.length > 1 && (
+                              <span
+                                className="rounded bg-zinc-100 px-1 py-0.2 text-[9px] font-bold text-zinc-600 shrink-0"
+                                title={`Também candidatou-se a: ${item.allJobs.filter((j) => j !== item.job.title).join(", ")}`}
+                              >
+                                +{item.allJobs.length - 1} {item.allJobs.length - 1 === 1 ? "vaga" : "vagas"}
+                              </span>
+                            )}
+
+                            {locationLabel && (
+                              <>
+                                <span className="text-zinc-300">·</span>
+                                <span className="inline-flex items-center gap-0.5 text-[11px] text-zinc-500 shrink-0">
+                                  <MapPin className="size-2.5 text-zinc-400" />
+                                  <span>{locationLabel}</span>
+                                </span>
+                              </>
+                            )}
+
+                            {formattedSalary && (
+                              <>
+                                <span className="text-zinc-300">·</span>
+                                <span className="text-[11px] font-medium text-emerald-700 shrink-0">
+                                  {formattedSalary}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                      {/* Right: Data + Score + Botões de ação */}
+                      <div className="flex shrink-0 items-center gap-2.5">
+                        <span
+                          className="hidden shrink-0 text-[10px] tabular-nums text-zinc-400 sm:inline"
+                          title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
+                        >
+                          {formatCadastro(item.createdAt)}
+                        </span>
+
+                        {item.aiScore !== null && (
+                          <span
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums shadow-2xs ${
+                              item.aiScore >= 80
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200/90"
+                                : item.aiScore >= 60
+                                ? "bg-amber-50 text-amber-800 border border-amber-200/90"
+                                : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                            }`}
+                          >
+                            {item.aiScore >= 85 && <Sparkles className="size-2.5 text-emerald-600 fill-emerald-600" />}
+                            <span>{item.aiScore}%</span>
+                          </span>
+                        )}
+
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          {item.instagram && (
+                            <a
+                              href={instagramUrl(item.instagram)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Instagram: @${item.instagram}`}
+                              className="inline-flex size-7.5 items-center justify-center rounded-xl border border-zinc-200/80 bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs transition"
+                            >
+                              <AtSign className="size-3.5" />
+                            </a>
+                          )}
+
+                          {whatsappUrl && (
+                            <a
+                              href={whatsappUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Conversar no WhatsApp"
+                              className="inline-flex h-7.5 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 shadow-2xs transition"
+                            >
+                              <MessageCircle className="size-3.5 text-emerald-600" />
+                              <span className="hidden xl:inline">WhatsApp</span>
+                            </a>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCandidate(item);
+                              setDrawerTab("pdf");
+                            }}
+                            title="Visualizar currículo no painel"
+                            className="inline-flex h-7.5 items-center gap-1 rounded-xl border border-zinc-200/80 bg-white px-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 shadow-2xs transition"
+                          >
+                            <Eye className="size-3.5 text-zinc-500" />
+                            <span>CV</span>
+                          </button>
+
+                          <a
+                            href={`/candidaturas/${item.id}/cv?download=1`}
+                            title="Baixar currículo em PDF"
+                            aria-label="Baixar currículo em PDF"
+                            className="inline-flex size-7.5 items-center justify-center rounded-xl border border-zinc-200/80 bg-white text-zinc-500 hover:text-zinc-950 hover:bg-zinc-50 shadow-2xs transition"
+                          >
+                            <Download className="size-3.5" />
+                          </a>
+
                           <Link
                             href={`/candidaturas/${item.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            title="Abrir o cadastro"
-                            className="truncate text-xs font-bold text-[#0a0a0a] underline-offset-2 hover:underline"
+                            title="Ver processo seletivo"
+                            className="inline-flex size-7.5 items-center justify-center rounded-xl border border-transparent text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition"
                           >
-                            {item.name}
+                            <ChevronRight className="size-4" />
                           </Link>
-                          {item.hasImpediment && (
-                            <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
-                              <span className="size-1.5 rounded-full bg-rose-500/80" />
-                              <span>Tarja preta</span>
-                            </span>
-                          )}
-                          {item.aiLevel && (
-                            <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${levelBadgeClass}`}>
-                              {item.aiLevel}
-                            </span>
-                          )}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-[#71717a]">
-                          <span className="truncate">{item.desiredRole || item.aiProfile || item.job.title}</span>
-                          {item.allJobs && item.allJobs.length > 1 && (
-                            <span
-                              className="rounded bg-[#f4f4f5] px-1 py-0.2 text-[9px] font-semibold text-[#52525b] shrink-0"
-                              title={`Também em: ${item.allJobs.filter((j) => j !== item.job.title).join(", ")}`}
-                            >
-                              +{item.allJobs.length - 1}
-                            </span>
-                          )}
-                          {(item.neighborhood || item.city) && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-0.5 shrink-0">
-                                <MapPin className="size-2.5 text-[#71717a]" />
-                                {[item.neighborhood, item.city].filter(Boolean).join(", ")}
-                              </span>
-                            </>
-                          )}
-                          {item.salaryExpectation && (
-                            <>
-                              <span>•</span>
-                              <span className="shrink-0">{item.salaryExpectation}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <span
-                        className="hidden shrink-0 text-[10px] tabular-nums text-[#71717a] sm:inline"
-                        title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
-                      >
-                        {formatCadastro(item.createdAt)}
-                      </span>
-                      {item.aiScore !== null && (
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            item.aiScore >= 80
-                              ? "bg-emerald-50 text-emerald-700"
-                              : item.aiScore >= 60
-                              ? "bg-amber-50 text-amber-700"
-                              : "bg-stone-100 text-stone-600"
-                          }`}
-                        >
-                          {item.aiScore}%
-                        </span>
-                      )}
-
-                      <div className="flex shrink-0 items-center gap-1">
-                        {item.instagram && (
-                          <a
-                            href={instagramUrl(item.instagram)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            title={`Instagram: @${item.instagram}`}
-                            className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] hover:bg-stone-100 hover:text-[#0a0a0a]"
-                          >
-                            <AtSign className="size-4" />
-                          </a>
-                        )}
-                        {/* Sem Instagram: mesmo espaço, para data e nota ficarem alinhadas entre as linhas. */}
-                        {!item.instagram && <span aria-hidden className="inline-block size-7" />}
-                        {whatsappUrl && (
-                          <a
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            title="WhatsApp"
-                            className="inline-flex size-7 items-center justify-center rounded-lg text-emerald-700 hover:bg-emerald-50"
-                          >
-                            <MessageCircle className="size-4" />
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCandidate(item);
-                            setDrawerTab("pdf");
-                          }}
-                          title="Ver currículo / Dossiê"
-                          className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
-                        >
-                          <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">CV</span>
-                        </button>
-                        <a
-                          href={`/candidaturas/${item.id}/cv?download=1`}
-                          onClick={(e) => e.stopPropagation()}
-                          title="Baixar currículo em PDF"
-                          aria-label="Baixar currículo em PDF"
-                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
-                        >
-                          <Download className="size-3.5" strokeWidth={1.75} />
-                        </a>
                       </div>
                     </div>
                   );
                 }
 
-                const locationText = [item.neighborhood, item.city]
-                  .filter(Boolean)
-                  .join(", ") || item.job.location || null;
+                const locationText = locationLabel || null;
 
                 const subtitleParts = [
-                  item.desiredRole || item.aiProfile,
-                  item.aiArea,
+                  roleTitle,
+                  item.aiArea ? titleCaseLabel(item.aiArea) : null,
                   item.aiLevel,
                   item.age != null ? `${item.age}a` : null,
                   locationText,
                 ].filter(Boolean);
 
                 const extraMetaParts = [
-                  item.salaryExpectation ? `Pretensão ${item.salaryExpectation}` : null,
+                  formattedSalary ? `Pretensão ${formattedSalary}` : null,
                   item.hasCnh && item.hasCnh !== "NONE" ? `CNH ${item.hasCnh}` : null,
                   item.availability && item.availability !== "NEGOTIABLE"
                     ? `Início ${
@@ -1173,25 +1250,25 @@ export function BuscarCvsView({
                       cardRefs.current[index] = el;
                     }}
                     onClick={() => router.push(`/candidaturas/${item.id}`)}
-                    className={`group relative cursor-pointer rounded-2xl border bg-white p-4 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] ${
+                    className={`group relative cursor-pointer rounded-2xl border bg-white p-4.5 transition-all hover:border-zinc-300 hover:shadow-md ${
                       isSelected
-                        ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
-                        : "border-[#e4e4e7]"
+                        ? "border-zinc-900 ring-1 ring-zinc-900/10 shadow-xs"
+                        : "border-zinc-200/80 shadow-2xs"
                     }`}
                   >
-                    <div className="flex items-start gap-3.5">
+                    <div className="flex items-start gap-4">
                       <ZoomableCandidateAvatar
                         applicationId={item.id}
                         name={item.name}
                         photoUrl={item.photoUrl}
-                        className="size-11 shrink-0 rounded-full text-xs font-bold object-cover"
+                        className="size-12 shrink-0 rounded-2xl text-xs font-bold object-cover ring-1 ring-black/5"
                       />
 
                       <div className="min-w-0 flex-1">
                         {/* Linha 1: Nome + Selos discretos + Score pill */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <h2 className="truncate text-[14px] font-semibold text-[#0a0a0a] group-hover:text-[#7c1d3c] transition-colors">
+                            <h2 className="truncate text-[15px] font-bold text-zinc-900 group-hover:text-[var(--brand-primary,#0a0a0a)] transition-colors">
                               <Link
                                 href={`/candidaturas/${item.id}`}
                                 onClick={(e) => e.stopPropagation()}
@@ -1204,87 +1281,96 @@ export function BuscarCvsView({
 
                             {item.hasImpediment && (
                               <span
-                                className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                                className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
                                 title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}
                               >
-                                <span className="size-1.5 rounded-full bg-rose-500/80" />
+                                <span className="size-1.5 rounded-full bg-rose-500" />
                                 <span>Tarja preta</span>
                               </span>
                             )}
 
                             {item.isPcd && (
-                              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                              <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
                                 PcD
+                              </span>
+                            )}
+
+                            {item.aiLevel && (
+                              <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClass}`}>
+                                {item.aiLevel}
                               </span>
                             )}
                           </div>
 
                           {item.aiScore !== null && (
                             <span
-                              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+                              className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums shadow-2xs ${
                                 item.aiScore >= 80
-                                  ? "bg-emerald-50 text-emerald-700"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : item.aiScore >= 60
-                                    ? "bg-amber-50 text-amber-700"
-                                    : "bg-zinc-100 text-zinc-600"
+                                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                    : "bg-zinc-100 text-zinc-700 border border-zinc-200"
                               }`}
                             >
-                              {item.aiScore}%
+                              {item.aiScore >= 85 && <Sparkles className="size-3 text-emerald-600 fill-emerald-600" />}
+                              <span>{item.aiScore}%</span>
                             </span>
                           )}
                         </div>
 
                         {/* Linha 2: Perfil · Área · Senioridade · Idade · Bairro/Cidade */}
-                        <p className="mt-0.5 truncate text-xs text-[#71717a]">
+                        <p className="mt-1 truncate text-xs text-zinc-500 font-medium">
                           {subtitleParts.join(" · ") || item.job.title}
                         </p>
 
                         {/* Linha 3: Síntese da IA limpa (2 linhas) */}
                         {item.aiReasoning && (
-                          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#52525b]">
-                            {item.aiReasoning}
-                          </p>
+                          <div className="mt-2.5 rounded-xl border border-zinc-100 bg-zinc-50/80 p-3">
+                            <p className="line-clamp-2 text-xs leading-relaxed text-zinc-700">
+                              {item.aiReasoning}
+                            </p>
+                          </div>
                         )}
 
                         {/* Snippet quando há busca por palavra-chave */}
                         {snippet && (
-                          <p className="mt-2 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 py-2 text-xs italic text-[#3f3f46]">
+                          <p className="mt-2 rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-xs italic text-amber-900">
                             {snippet}
                           </p>
                         )}
 
                         {/* Linha 4: Metadados neutros + Contatos e Ações discretas */}
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-2.5 text-[11px] text-[#71717a]">
+                        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-2.5 text-[11px] text-zinc-500">
                           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="truncate font-medium text-[#52525b]">
+                            <span className="truncate font-semibold text-zinc-700">
                               {item.job.title}
                               {item.allJobs && item.allJobs.length > 1
-                                ? ` +${item.allJobs.length - 1}`
+                                ? ` (+${item.allJobs.length - 1})`
                                 : ""}
                             </span>
                             {extraMetaParts.length > 0 && (
                               <>
-                                <span className="text-[#d4d4d8]">·</span>
+                                <span className="text-zinc-300">·</span>
                                 <span className="truncate">{extraMetaParts.join(" · ")}</span>
                               </>
                             )}
-                            <span className="text-[#d4d4d8]">·</span>
+                            <span className="text-zinc-300">·</span>
                             <span
-                              className="tabular-nums text-[#71717a]"
+                              className="tabular-nums text-zinc-500"
                               title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
                             >
                               {formatCadastro(item.createdAt)}
                             </span>
                             {item.phone && (
                               <>
-                                <span className="text-[#d4d4d8]">·</span>
+                                <span className="text-zinc-300">·</span>
                                 <span>{formatPhone(item.phone)}</span>
                               </>
                             )}
                           </div>
 
                           <div
-                            className="flex shrink-0 items-center gap-1"
+                            className="flex shrink-0 items-center gap-1.5"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {whatsappUrl && (
@@ -1292,9 +1378,10 @@ export function BuscarCvsView({
                                 href={whatsappUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="rounded-md px-1.5 py-0.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                className="inline-flex h-7.5 items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/80 px-2.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 shadow-2xs"
                               >
-                                WhatsApp
+                                <MessageCircle className="size-3 text-emerald-600" />
+                                <span>WhatsApp</span>
                               </a>
                             )}
                             <button
@@ -1303,29 +1390,32 @@ export function BuscarCvsView({
                                 setSelectedCandidate(item);
                                 setDrawerTab("pdf");
                               }}
-                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              className="inline-flex h-7.5 items-center gap-1 rounded-xl border border-zinc-200/80 bg-white px-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-950 shadow-2xs"
                             >
-                              CV
+                              <Eye className="size-3 text-zinc-500" />
+                              <span>CV</span>
                             </button>
                             <a
                               href={`/candidaturas/${item.id}/cv?download=1`}
-                              className="inline-flex size-6 items-center justify-center rounded-md text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              className="inline-flex size-7.5 items-center justify-center rounded-xl border border-zinc-200/80 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-950 shadow-2xs"
                               title="Baixar currículo em PDF"
                               aria-label="Baixar currículo em PDF"
                             >
-                              <Download className="size-3.5" strokeWidth={1.75} />
+                              <Download className="size-3.5" />
                             </a>
                             <Link
                               href={`/candidaturas/${item.id}?edit=1`}
-                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              className="inline-flex h-7.5 items-center rounded-xl border border-zinc-200/80 bg-white px-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-950 shadow-2xs"
                             >
                               Editar
                             </Link>
                             <Link
                               href={`/candidaturas/${item.id}`}
-                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              className="inline-flex h-7.5 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold text-white shadow-2xs transition hover:opacity-90"
+                              style={{ backgroundColor: "var(--brand-primary, #0a0a0a)" }}
                             >
-                              Abrir →
+                              <span>Ver</span>
+                              <ChevronRight className="size-3" />
                             </Link>
                           </div>
                         </div>
@@ -1700,13 +1790,13 @@ function FilterSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-[#f4f4f5] py-4 first-of-type:border-t-0 first-of-type:pt-0 last:pb-0">
+    <section className="border-t border-zinc-100 py-3.5 first-of-type:border-t-0 first-of-type:pt-0 last:pb-0">
       <div className="mb-2 flex h-5 items-center justify-between gap-2">
-        <h3 className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-          <Icon className="size-3.5 shrink-0 text-[#71717a]" />
+        <h3 className="flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+          <Icon className="size-3.5 shrink-0 text-zinc-400" />
           <span className="truncate">{title}</span>
           {selectedCount > 0 && (
-            <span className="rounded-full bg-[#0a0a0a] px-1.5 text-[10px] font-semibold tabular-nums leading-4 text-white">
+            <span className="rounded-full bg-zinc-900 px-1.5 text-[10px] font-bold tabular-nums leading-4 text-white">
               {selectedCount}
             </span>
           )}
@@ -1715,7 +1805,7 @@ function FilterSection({
           <button
             type="button"
             onClick={onClear}
-            className="shrink-0 text-[11px] font-medium text-[#71717a] transition hover:text-[#0a0a0a]"
+            className="shrink-0 text-[11px] font-semibold text-zinc-400 transition hover:text-zinc-900"
           >
             Limpar
           </button>
@@ -1727,7 +1817,7 @@ function FilterSection({
 }
 
 const FIELD_BASE =
-  "h-9 w-full rounded-xl border border-[#e4e4e7] text-xs text-[#0a0a0a] transition focus:border-[#0a0a0a] focus:outline-none";
+  "h-9 w-full rounded-xl border border-zinc-200 text-xs text-zinc-900 transition focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none";
 
 /** Campo de texto padrão (lupa à esquerda, X para limpar). */
 function FilterTextInput({
@@ -1745,21 +1835,21 @@ function FilterTextInput({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#71717a]" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
       <input
         ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${FIELD_BASE} bg-[#fafaf9] pl-8 pr-8 placeholder:text-[#8b8b94] focus:bg-white`}
+        className={`${FIELD_BASE} bg-zinc-50/70 pl-8.5 pr-8 placeholder:text-zinc-400 focus:bg-white`}
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label="Limpar campo"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717a] hover:text-[#0a0a0a]"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-800"
         >
           <X className="size-3.5" />
         </button>
@@ -1782,7 +1872,7 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`${FIELD_BASE} bg-white px-3 ${value ? "font-semibold" : ""}`}
+      className={`${FIELD_BASE} bg-white px-3 font-medium ${value ? "font-semibold text-zinc-950" : "text-zinc-700"}`}
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -1817,13 +1907,15 @@ function FacetRows({
             onClick={() => onToggle(item.key)}
             aria-pressed={selected}
             className={`flex h-8 w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-xs transition ${
-              selected ? "bg-[#0a0a0a] font-medium text-white" : "text-[#3f3f46] hover:bg-[#fafaf9]"
+              selected
+                ? "bg-zinc-900 font-semibold text-white shadow-2xs"
+                : "text-zinc-700 hover:bg-zinc-100/80"
             }`}
           >
             <span className="truncate" title={item.label}>
-              {item.label}
+              {titleCaseLabel(item.label)}
             </span>
-            <span className={`shrink-0 text-[10px] tabular-nums ${selected ? "text-white/70" : "text-[#71717a]"}`}>
+            <span className={`shrink-0 text-[10px] tabular-nums font-semibold ${selected ? "text-white/80" : "text-zinc-400"}`}>
               {item.count}
             </span>
           </button>
@@ -1845,7 +1937,7 @@ function FacetChips({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="mt-2 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
+    <div className="mt-2 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto pr-1">
       {items.map((item) => {
         const selected = isSelected(item.key, item.label);
         return (
@@ -1855,14 +1947,14 @@ function FacetChips({
             onClick={() => onToggle(item.key, item.label)}
             aria-pressed={selected}
             title={item.label}
-            className={`inline-flex h-7 max-w-full items-center gap-1 rounded-lg border px-2 text-left text-[11px] transition ${
+            className={`inline-flex h-7 max-w-full items-center gap-1.5 rounded-lg border px-2.5 text-left text-[11px] font-medium transition shadow-2xs ${
               selected
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                : "border-[#e4e4e7] bg-[#fafaf9] text-[#3f3f46] hover:border-[#d4d4d8] hover:bg-white"
+                ? "border-zinc-900 bg-zinc-900 text-white"
+                : "border-zinc-200/80 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-white"
             }`}
           >
             <span className="truncate">{titleCaseLabel(item.label)}</span>
-            <span className={`shrink-0 tabular-nums ${selected ? "text-white/70" : "text-[#71717a]"}`}>
+            <span className={`shrink-0 text-[10px] tabular-nums font-semibold ${selected ? "text-white/80" : "text-zinc-400"}`}>
               {item.count}
             </span>
           </button>
@@ -1874,28 +1966,67 @@ function FacetChips({
 
 /** Texto de ajuda padrão, abaixo do campo. */
 function FilterHint({ children }: { children: React.ReactNode }) {
-  return <p className="mt-1.5 text-[10px] leading-snug text-[#71717a]">{children}</p>;
+  return <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{children}</p>;
 }
 
 /**
  * "AMAZONAS IMPORTAÇÕES" → "Amazonas Importações": currículo escrito todo em
  * maiúsculas não pode destoar das outras etiquetas. Siglas curtas (S/A, CE) ficam.
  */
-const LOWER_CONNECTORS = new Set(["e", "de", "da", "do", "das", "dos", "em", "na", "no"]);
-const KEEP_UPPER = /[/&]|^(sa|ltda|me|epp|eireli)$/;
+const LOWER_CONNECTORS = new Set(["e", "de", "da", "do", "das", "dos", "em", "na", "no", "com", "para", "por", "a", "o"]);
+const KEEP_UPPER = /[/&]|^(sa|ltda|me|epp|eireli|cnh|ti|rh|clt|pj|ce|sp|rj|mg|df|pr|sc|rs|ba|pe|am|pa|go|ma|pb|es|rn|al|pi|mt|ms|se|ro|to|ac|ap|rr|pcd|cv|pdf)$/i;
 
 function titleCaseLabel(label: string): string {
-  if (label !== label.toUpperCase()) return label;
-  return label
-    .toLowerCase()
-    .split(" ")
+  if (!label) return "";
+  const words = label.trim().split(/\s+/);
+  return words
     .map((w, i) => {
       if (!w) return w;
-      if (KEEP_UPPER.test(w)) return w.toUpperCase();
-      if (i > 0 && LOWER_CONNECTORS.has(w)) return w;
-      return w[0].toUpperCase() + w.slice(1);
+      const lower = w.toLowerCase();
+      if (KEEP_UPPER.test(lower)) return lower.toUpperCase();
+      if (i > 0 && LOWER_CONNECTORS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
     })
     .join(" ");
+}
+
+function formatCandidateLocation(item: {
+  neighborhood?: string | null;
+  city?: string | null;
+  job?: { location?: string | null };
+}): string | null {
+  const parts = [item.neighborhood, item.city].filter(Boolean) as string[];
+  if (parts.length > 0) {
+    return titleCaseLabel(parts.join(", "));
+  }
+  if (item.job?.location) {
+    return titleCaseLabel(item.job.location);
+  }
+  return null;
+}
+
+function formatSalaryDisplay(salary?: string | null): string | null {
+  if (!salary) return null;
+  const trimmed = salary.trim();
+  if (!trimmed) return null;
+  if (/combinar/i.test(trimmed)) return "A combinar";
+  // Se for apenas dígitos, como "2800"
+  if (/^\d+$/.test(trimmed)) {
+    const n = Number(trimmed);
+    if (!isNaN(n)) return `R$ ${n.toLocaleString("pt-BR")}`;
+  }
+  // Se for algo como "2800.00" ou "2800,00"
+  if (/^\d+[.,]\d{2}$/.test(trimmed)) {
+    const n = Number(trimmed.replace(",", "."));
+    if (!isNaN(n)) return `R$ ${n.toLocaleString("pt-BR")}`;
+  }
+  // Se já tiver R$
+  if (/^r\$/i.test(trimmed)) return trimmed;
+  // Se for formato de milhar "2.800"
+  if (/^\d{1,3}(\.\d{3})+$/.test(trimmed)) {
+    return `R$ ${trimmed}`;
+  }
+  return trimmed;
 }
 
 /**
