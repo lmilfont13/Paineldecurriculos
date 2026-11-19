@@ -45,7 +45,7 @@ export default async function GestorLayout({
 
   return (
     <div
-      className="gestor-shell flex min-h-screen bg-[#f3f2ef]"
+      className="gestor-shell flex min-h-screen bg-[#f3f2ef] isolate"
       style={brandCssVars(company) as React.CSSProperties}
     >
       <CommandPalette enabled={commandPaletteEnabled} />

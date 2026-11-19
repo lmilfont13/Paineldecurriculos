@@ -114,7 +114,7 @@ export function GestorSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#2e1d1c] bg-[#1f1110] md:flex select-none">
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#2e1d1c] bg-[#1f1110] md:flex select-none isolate overflow-x-hidden">
       {/* Topo / Logo oficial com ícone branco e tipografia serifada */}
       <div className="px-5 pt-6 pb-3 flex items-center gap-3">
         <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={32} />
@@ -243,7 +243,7 @@ export function GestorTopbar({
   const section = NAV.find((n) => isActive(pathname, n.href))?.label ?? "Painel";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-[#e4e4e7] bg-white/95 px-4 backdrop-blur md:static md:bg-white md:px-8">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-[#e4e4e7] bg-white px-4 md:static md:px-8">
       <span className="flex min-w-0 items-center gap-2.5 md:hidden">
         <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={28} />
         <span className="truncate text-[13px] font-semibold text-[#0a0a0a]">{companyName}</span>

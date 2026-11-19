@@ -43,9 +43,9 @@ export function BirthdayReminderBadge() {
     <Link
       href="/aniversariantes"
       title={`${count} aniversariante${count > 1 ? "s" : ""} hoje! Clique para ver e enviar felicitações.`}
-      className="group flex items-center gap-1.5 rounded-full border border-amber-300 bg-linear-to-r from-amber-50 to-orange-50 px-2.5 py-1 text-xs font-semibold text-amber-950 shadow-2xs transition hover:border-amber-400 hover:from-amber-100 hover:to-orange-100 active:scale-95 animate-pulse"
+      className="group flex items-center gap-1.5 rounded-full border border-amber-300 bg-linear-to-r from-amber-50 to-orange-50 px-2.5 py-1 text-xs font-semibold text-amber-950 shadow-2xs transition hover:border-amber-400 hover:from-amber-100 hover:to-orange-100 active:scale-95"
     >
-      <span className="flex size-2 rounded-full bg-amber-500 animate-ping" />
+      <span className="flex size-2 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
       <Cake className="size-3.5 text-amber-600 shrink-0" />
       <span className="hidden sm:inline">
         🎂 {count === 1 ? `${firstName} faz aniversário hoje!` : `${count} aniversariantes hoje!`}

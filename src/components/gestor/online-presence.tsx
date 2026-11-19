@@ -514,8 +514,7 @@ export function OnlineCounterBadge({
           className="ml-auto flex items-center gap-2 rounded-full border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1 text-[11px] font-medium text-[#0a0a0a] transition hover:bg-white"
         >
           <span className="relative flex size-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
           </span>
           <span>
             <strong>{total}</strong> online
@@ -545,8 +544,7 @@ export function OnlineCounterBadge({
       >
         <div className="flex items-center gap-2 min-w-0">
           <span className="relative flex size-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
           </span>
           <span className="truncate font-medium text-stone-200">Online agora</span>
         </div>

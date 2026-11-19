@@ -147,8 +147,7 @@ export function LiveAttendanceTopbarButton() {
       {isAttendanceActive ? (
         <>
           <span className="relative flex size-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
           </span>
           <Headphones className="size-3.5 text-emerald-600" />
           <span className="hidden sm:inline">Atendimento ON</span>
