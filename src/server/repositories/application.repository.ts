@@ -1,4 +1,4 @@
-import type { AppStatus } from "@prisma/client";
+import type { AppStatus, JobStatus } from "@prisma/client";
 import { removeNulChars } from "@/server/models/text.model";
 import { withLargePhotoPaths } from "@/server/models/photo.model";
 import "server-only";
@@ -302,8 +302,36 @@ export async function findApplicationsByCompany(
   });
 }
 
+export type DashboardApplicationRow = {
+  id: string;
+  name: string;
+  email?: string;
+  cpf?: string | null;
+  candidateId?: string | null;
+  status: AppStatus;
+  aiScore: number | null;
+  aiState: AIState;
+  aiArea?: string | null;
+  aiLevel?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  photoPath: string | null;
+  hasImpediment: boolean;
+  impedimentReason: string | null;
+  job: {
+    id: string;
+    title: string;
+    code: string | null;
+    aiMinScore: number;
+    status?: JobStatus;
+    isTalentPool?: boolean;
+  };
+};
+
 /** Dados leves do painel: nunca carregar currículo, RG ou notas internas. */
-export async function findDashboardApplications(companyId: string) {
+export async function findDashboardApplications(
+  companyId: string
+): Promise<DashboardApplicationRow[]> {
   await syncCompanyImpediments(companyId);
   return prisma.application.findMany({
     where: { companyId, isDemo: false },

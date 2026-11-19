@@ -59,7 +59,7 @@ export async function getDashboard(companyId: string): Promise<{
 
   // Vagas abertas para a fila de trabalho ativa
   const applications = allApplications.filter(
-    (a) => !a.job.isTalentPool && a.job.status === "OPEN"
+    (a) => !a.job.isTalentPool && (!a.job.status || a.job.status === "OPEN")
   );
 
   const waitingList = applications.filter((a) => a.status === "PENDING");
@@ -224,7 +224,7 @@ export async function getDashboard(companyId: string): Promise<{
     {
       id: string;
       title: string;
-      code: number | null;
+      code: string | null;
       status: JobProgress["status"];
       count: number;
     }
@@ -237,7 +237,7 @@ export async function getDashboard(companyId: string): Promise<{
       id: app.job.id,
       title: app.job.title,
       code: app.job.code,
-      status: app.job.status,
+      status: app.job.status ?? "OPEN",
       count: 0,
     };
     entry.count += 1;

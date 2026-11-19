@@ -56,7 +56,7 @@ export type DailyRegistrationPoint = {
 export type TopJobRegistration = {
   id: string;
   title: string;
-  code: number | null;
+  code: string | null;
   count: number;
   pct: number;
   status: JobStatus;
