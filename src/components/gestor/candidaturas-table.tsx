@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, ExternalLink, MapPin } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
@@ -101,6 +101,21 @@ function compactDuration(raw: string | null | undefined): string {
     .replace(/\s*anos?\b/gi, "a")
     .replace(/\s*m[eê]s(es)?\b/gi, "m")
     .trim();
+}
+
+/** Separa cargo e praça/cidade do título da vaga para dar destaque visual à filial/cidade. */
+function parseJobTitleAndCity(title: string): { role: string; city: string | null } {
+  const trimmed = title.trim();
+  const match = trimmed.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (!match) return { role: trimmed, city: null };
+
+  const inside = match[2].trim();
+  // Se for apenas flexão de gênero como (a), (o), (a/o), (m/f), faz parte do cargo
+  if (/^(a|o|a\/o|o\/a|as|os|m\/f)$/i.test(inside)) {
+    return { role: trimmed, city: null };
+  }
+
+  return { role: match[1].trim(), city: inside };
 }
 
 /**
@@ -331,51 +346,73 @@ export function CandidaturasTable({
     [filtered]
   );
 
+  const [collapsedJobIds, setCollapsedJobIds] = useState<Set<string>>(new Set());
+  function toggleCollapseJob(targetJobId: string) {
+    setCollapsedJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(targetJobId)) next.delete(targetJobId);
+      else next.add(targetJobId);
+      return next;
+    });
+  }
+
   const jobThemeMap = useMemo(() => {
-    // Vagas parecidas se distinguem pela faixa colorida; o resto do cabeçalho
-    // fica neutro para não encher a tela de cor.
     const themes = [
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-indigo-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        code: "bg-indigo-600 text-white",
+        cityTag: "border-indigo-300 bg-indigo-100 text-indigo-950",
+        sectionBorder: "border-indigo-200/90",
+        sectionBg: "bg-indigo-50/20",
+        countBadge: "border-indigo-200 bg-white text-indigo-800",
       },
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-emerald-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        code: "bg-emerald-600 text-white",
+        cityTag: "border-emerald-300 bg-emerald-100 text-emerald-950",
+        sectionBorder: "border-emerald-200/90",
+        sectionBg: "bg-emerald-50/20",
+        countBadge: "border-emerald-200 bg-white text-emerald-800",
       },
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-amber-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        code: "bg-amber-600 text-white",
+        cityTag: "border-amber-300 bg-amber-100 text-amber-950",
+        sectionBorder: "border-amber-200/90",
+        sectionBg: "bg-amber-50/20",
+        countBadge: "border-amber-200 bg-white text-amber-900",
       },
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-violet-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        code: "bg-violet-600 text-white",
+        cityTag: "border-violet-300 bg-violet-100 text-violet-950",
+        sectionBorder: "border-violet-200/90",
+        sectionBg: "bg-violet-50/20",
+        countBadge: "border-violet-200 bg-white text-violet-800",
       },
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
-        bar: "bg-sky-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        bar: "bg-teal-600",
+        code: "bg-teal-600 text-white",
+        cityTag: "border-teal-300 bg-teal-100 text-teal-950",
+        sectionBorder: "border-teal-200/90",
+        sectionBg: "bg-teal-50/20",
+        countBadge: "border-teal-200 bg-white text-teal-800",
       },
       {
-        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-rose-600",
-        code: "bg-[#27272a] text-white",
-        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
-        count: "border-[#e4e4e7] bg-white text-[#52525b]",
+        code: "bg-rose-600 text-white",
+        cityTag: "border-rose-300 bg-rose-100 text-rose-950",
+        sectionBorder: "border-rose-200/90",
+        sectionBg: "bg-rose-50/20",
+        countBadge: "border-rose-200 bg-white text-rose-800",
+      },
+      {
+        bar: "bg-sky-600",
+        code: "bg-sky-600 text-white",
+        cityTag: "border-sky-300 bg-sky-100 text-sky-950",
+        sectionBorder: "border-sky-200/90",
+        sectionBg: "bg-sky-50/20",
+        countBadge: "border-sky-200 bg-white text-sky-800",
       },
     ];
     const map = new Map<string, (typeof themes)[number]>();
@@ -389,58 +426,77 @@ export function CandidaturasTable({
     return map;
   }, [ordered]);
 
-  /** Cabeçalho da vaga com cor distinta por grupo para nunca confundir vagas parecidas. */
+  const jobSections = useMemo(() => {
+    if (!showGroups) {
+      return [{ jobId: jobId ?? "single", jobTitle: "", jobCode: null, rows: visible }];
+    }
+    const map = new Map<string, { jobId: string; jobTitle: string; jobCode?: string | null; rows: CandidaturaRow[] }>();
+    const list: { jobId: string; jobTitle: string; jobCode?: string | null; rows: CandidaturaRow[] }[] = [];
+    for (const r of visible) {
+      let group = map.get(r.jobId);
+      if (!group) {
+        group = { jobId: r.jobId, jobTitle: r.jobTitle, jobCode: r.jobCode, rows: [] };
+        map.set(r.jobId, group);
+        list.push(group);
+      }
+      group.rows.push(r);
+    }
+    return list;
+  }, [visible, showGroups, jobId]);
+
+  /** Cabeçalho da vaga com cor e identificação de praça/cidade na visão de tabela. */
   function groupHeader(row: CandidaturaRow, index: number, mode: "cards" | "list") {
     if (!showGroups || (index > 0 && visible[index - 1].jobId === row.jobId)) return null;
     const theme = jobThemeMap.get(row.jobId) ?? {
-      box: "border-zinc-200 bg-zinc-50",
       bar: "bg-zinc-700",
       code: "bg-zinc-800 text-white",
-      tag: "border-zinc-300 bg-white text-zinc-800",
-      count: "border-zinc-200 bg-white text-zinc-700",
+      cityTag: "border-zinc-300 bg-white text-zinc-800",
+      sectionBorder: "border-zinc-200",
+      sectionBg: "bg-zinc-50/50",
+      countBadge: "border-zinc-200 bg-white text-zinc-700",
     };
-    const trailingMatch = row.jobTitle.trim().match(/^(.*?)\s*\(\s*([^()]{4,})\s*\)\s*$/);
-    const baseTitle = trailingMatch ? trailingMatch[1].trim() : row.jobTitle;
-    const highlightTag = trailingMatch ? trailingMatch[2].trim() : null;
+    const { role, city } = parseJobTitleAndCity(row.jobTitle);
     const count = jobCounts[row.jobId] ?? 0;
 
     return (
-      <div
-        className={
-          mode === "cards"
-            ? `col-span-full mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-2.5 first:mt-0 ${theme.box}`
-            : `flex flex-wrap items-center justify-between gap-2 border-b px-5 py-2.5 ${theme.box}`
-        }
-      >
+      <div className={`flex flex-wrap items-center justify-between gap-2 border-y border-zinc-200/80 px-4 py-2.5 ${theme.sectionBg} mt-4 first:mt-0`}>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className={`h-4 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
+          <span className={`h-4.5 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
           {row.jobCode != null && (
             <span className={`rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums shadow-2xs ${theme.code}`}>
               #{row.jobCode}
             </span>
           )}
           <span className="text-[13px] font-bold text-[#0a0a0a]">
-            {baseTitle}
+            {role}
           </span>
-          {highlightTag && (
-            <span className={`rounded-lg border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-2xs ${theme.tag}`}>
-              {highlightTag}
+          {city && (
+            <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
+              <MapPin className="size-3 shrink-0 opacity-75" />
+              {city}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${theme.count}`}>
+          <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums shadow-2xs ${theme.countBadge}`}>
             {count} {count === 1 ? "candidato" : "candidatos"}
           </span>
           <button
             type="button"
             onClick={() => setJobId(row.jobId)}
-            className="rounded-lg px-2 py-0.5 text-[11px] font-medium text-[#52525b] transition hover:bg-white/80 hover:text-[#0a0a0a]"
+            className="rounded-lg border border-zinc-200/80 bg-white px-2 py-0.5 text-[11px] font-medium text-[#52525b] shadow-2xs transition hover:bg-zinc-50 hover:text-[#0a0a0a]"
             title="Filtrar tela apenas para esta vaga"
           >
             Filtrar vaga →
           </button>
+          <Link
+            href={`/vagas/${row.jobId}`}
+            className="rounded-lg border border-zinc-200/80 bg-white p-1 text-[11px] font-medium text-[#52525b] shadow-2xs transition hover:bg-zinc-50 hover:text-[#0a0a0a]"
+            title="Abrir funil desta vaga"
+          >
+            <ExternalLink className="size-3" />
+          </Link>
         </div>
       </div>
     );
@@ -654,6 +710,195 @@ export function CandidaturasTable({
           </Link>
         </div>
       </>
+    );
+  }
+
+  function renderCandidateCard(row: CandidaturaRow) {
+    const isSelected = selected.has(row.id);
+    const rank = aiRanks?.get(row.id);
+    const subtitleParts = [
+      row.aiProfile || row.aiArea,
+      row.aiLevel,
+      row.age != null ? `${row.age}a` : null,
+    ].filter(Boolean);
+    const subtitleLine =
+      subtitleParts.length > 0
+        ? subtitleParts.join(" · ")
+        : row.aiState === "DONE"
+          ? "Sem perfil identificado"
+          : row.aiState === "FAILED"
+            ? "Análise pendente"
+            : "Analisando…";
+
+    const shortAvg = compactDuration(row.tenureAvg || row.tenureMedian);
+    const firstCompany = row.tenureCompanies?.[0]?.empresa ?? null;
+    const extraCompanies =
+      row.tenureCompanies && row.tenureCompanies.length > 1
+        ? ` +${row.tenureCompanies.length - 1}`
+        : "";
+    const stabilityDot =
+      row.tenureStability === "ALTA"
+        ? "bg-emerald-500"
+        : row.tenureStability === "BAIXA"
+          ? "bg-rose-500"
+          : "bg-sky-500";
+
+    return (
+      <div
+        key={row.id}
+        onClick={() => router.push(`/candidaturas/${row.id}`)}
+        className={
+          "group relative cursor-pointer rounded-2xl border bg-white p-3.5 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] " +
+          (isSelected
+            ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
+            : "border-[#e4e4e7]")
+        }
+      >
+        <div className="flex items-start gap-3">
+          {/* Avatar + Checkbox discreto no hover */}
+          <div className="relative shrink-0">
+            <CandidateAvatar
+              name={row.name}
+              photoUrl={row.photoUrl}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold object-cover"
+            />
+            {rank !== undefined && !isSelected && (
+              <span
+                className={
+                  "absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-2xs " +
+                  (rank <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#57534e]")
+                }
+                style={rank <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
+                title="Posição pela indicação da IA nesta vaga"
+              >
+                {rank}º
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggle(row.id);
+              }}
+              aria-label={`Selecionar ${row.name}`}
+              className={
+                "absolute -left-1 -top-1 flex size-4.5 items-center justify-center rounded-full border transition-all " +
+                (isSelected
+                  ? "border-[#0a0a0a] bg-[#0a0a0a] text-white opacity-100"
+                  : "border-[#d4d4d8] bg-white text-transparent opacity-0 group-hover:opacity-100 hover:border-[#0a0a0a]")
+              }
+            >
+              <span className="text-[9px] leading-none">✓</span>
+            </button>
+          </div>
+
+          {/* 3 Linhas Limpas (Nome + Score / Cargo · Nível · Idade / Permanência + Ações no hover) */}
+          <div className="min-w-0 flex-1">
+            {/* Linha 1: Nome completo + Nota em pílula discreta */}
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                href={`/candidaturas/${row.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="truncate text-[13px] font-semibold text-[#0a0a0a] transition-colors group-hover:text-[#7c1d3c] hover:underline"
+              >
+                {row.name}
+              </Link>
+
+              {row.hasImpediment ? (
+                <span
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                  title={row.impedimentReason ? `Motivo: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
+                >
+                  <span className="size-1.5 rounded-full bg-rose-500/80" />
+                  <span>Tarja preta</span>
+                </span>
+              ) : row.aiScore !== null ? (
+                <span
+                  className={
+                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums " +
+                    (row.aiScore >= row.aiMinScore
+                      ? "bg-emerald-50 text-emerald-700"
+                      : row.aiScore >= 60
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-zinc-100 text-zinc-600")
+                  }
+                >
+                  {row.aiScore}
+                </span>
+              ) : null}
+            </div>
+
+            {/* Linha 2: Perfil · Senioridade · Idade */}
+            <p className="mt-0.5 truncate text-[11px] text-[#71717a]">
+              {subtitleLine}
+            </p>
+
+            {/* Linha 3: 1 linha única de permanência/empresa + ações discretas no hover */}
+            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#71717a]">
+              <span
+                className="inline-flex min-w-0 items-center gap-1.5 truncate"
+                title={
+                  row.tenureAvg || row.tenureMedian
+                    ? `Média: ${row.tenureAvg || "-"} · Mediana: ${row.tenureMedian || row.tenureAvg || "-"}${
+                        row.tenureCompanies?.length
+                          ? "\n" +
+                            row.tenureCompanies
+                              .map((c) => `• ${c.empresa}: ${c.duracaoFormatada}`)
+                              .join("\n")
+                          : ""
+                      }`
+                    : undefined
+                }
+              >
+                {row.hasImpediment ? (
+                  <span className="truncate text-rose-600">
+                    {row.impedimentReason || "Restrição em todas as vagas"}
+                  </span>
+                ) : shortAvg ? (
+                  <>
+                    <span className={`size-1.5 shrink-0 rounded-full ${stabilityDot}`} />
+                    <span className="truncate">
+                      {shortAvg} média
+                      {firstCompany ? ` · ${firstCompany}${extraCompanies}` : ""}
+                    </span>
+                  </>
+                ) : !showGroups ? (
+                  <span className="truncate text-[#a1a1aa]">
+                    {jobLabel(row.jobTitle, row.jobCode)}
+                  </span>
+                ) : (
+                  <span className="truncate text-[#a1a1aa]">
+                    {row.status === "PENDING"
+                      ? `espera ${formatWaiting(new Date(row.createdAt))}`
+                      : appStatusLabels[row.status]}
+                  </span>
+                )}
+              </span>
+
+              <div
+                className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ResumeLightboxButton
+                  applicationId={row.id}
+                  candidateName={row.name}
+                  label="CV"
+                  showIcon={false}
+                  className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#52525b] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                />
+                <a
+                  href={`/candidaturas/${row.id}/cv?download=1`}
+                  className="inline-flex size-5 items-center justify-center rounded text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                  title="Baixar currículo em PDF"
+                  aria-label="Baixar currículo em PDF"
+                >
+                  <Download className="size-3" strokeWidth={1.75} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -1060,206 +1305,100 @@ export function CandidaturasTable({
         </div>
       </div>
 
-      {/* Cards de perfil — Ultra Minimalista (3 linhas limpas, sem caixas cinzas internas) */}
+      {/* Cards de perfil — Agrupados com distinção cristalina por vaga */}
       {viewMode === "cards" && (
         <div className="mt-5">
           {filtered.length === 0 && (
             <p className="py-8 text-center text-sm text-[#71717a]">Nenhum candidato nesta etapa.</p>
           )}
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visible.map((row, index) => {
-              const isSelected = selected.has(row.id);
-              const rank = aiRanks?.get(row.id);
-              const subtitleParts = [
-                row.aiProfile || row.aiArea,
-                row.aiLevel,
-                row.age != null ? `${row.age}a` : null,
-              ].filter(Boolean);
-              const subtitleLine =
-                subtitleParts.length > 0
-                  ? subtitleParts.join(" · ")
-                  : row.aiState === "DONE"
-                    ? ""
-                    : row.aiState === "FAILED"
-                      ? "Análise pendente"
-                      : "Analisando…";
 
-              const shortAvg = compactDuration(row.tenureAvg || row.tenureMedian);
-              const firstCompany = row.tenureCompanies?.[0]?.empresa ?? null;
-              const extraCompanies =
-                row.tenureCompanies && row.tenureCompanies.length > 1
-                  ? ` +${row.tenureCompanies.length - 1}`
-                  : "";
-              const stabilityDot =
-                row.tenureStability === "ALTA"
-                  ? "bg-emerald-500"
-                  : row.tenureStability === "BAIXA"
-                    ? "bg-rose-500"
-                    : "bg-sky-500";
+          {showGroups ? (
+            <div className="space-y-6">
+              {jobSections.map((section) => {
+                const theme = jobThemeMap.get(section.jobId) ?? {
+                  bar: "bg-zinc-700",
+                  code: "bg-zinc-800 text-white",
+                  cityTag: "border-zinc-300 bg-white text-zinc-800",
+                  sectionBorder: "border-zinc-200",
+                  sectionBg: "bg-zinc-50/50",
+                  countBadge: "border-zinc-200 bg-white text-zinc-700",
+                };
+                const { role, city } = parseJobTitleAndCity(section.jobTitle);
+                const count = jobCounts[section.jobId] ?? section.rows.length;
+                const isCollapsed = collapsedJobIds.has(section.jobId);
 
-              return (
-                <Fragment key={row.id}>
-                  {groupHeader(row, index, "cards")}
-                  <div
-                    onClick={() => router.push(`/candidaturas/${row.id}`)}
-                    className={
-                      "group relative cursor-pointer rounded-2xl border bg-white p-3.5 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] " +
-                      (isSelected
-                        ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
-                        : "border-[#e4e4e7]")
-                    }
+                return (
+                  <section
+                    key={section.jobId}
+                    className={`rounded-3xl border ${theme.sectionBorder} ${theme.sectionBg} p-4 sm:p-5 transition-all shadow-2xs space-y-3.5`}
                   >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar + Checkbox discreto no hover */}
-                      <div className="relative shrink-0">
-                        <CandidateAvatar
-                          name={row.name}
-                          photoUrl={row.photoUrl}
-                          className="flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold object-cover"
-                        />
-                        {rank !== undefined && !isSelected && (
-                          <span
-                            className={
-                              "absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-2xs " +
-                              (rank <= 3 ? "text-white" : "bg-[#f1f0ed] text-[#57534e]")
-                            }
-                            style={rank <= 3 ? { backgroundColor: "var(--brand-primary)" } : undefined}
-                            title="Posição pela indicação da IA nesta vaga"
-                          >
-                            {rank}º
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                        <span className={`h-5 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
+                        {section.jobCode != null && (
+                          <span className={`rounded-lg px-2.5 py-0.5 text-[11px] font-bold tabular-nums shadow-2xs ${theme.code}`}>
+                            #{section.jobCode}
                           </span>
                         )}
+                        <h3 className="text-[14px] font-bold text-zinc-900 tracking-tight">
+                          {role}
+                        </h3>
+                        {city && (
+                          <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
+                            <MapPin className="size-3 shrink-0 opacity-80" strokeWidth={2.5} />
+                            {city}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums shadow-2xs ${theme.countBadge}`}>
+                          {count} {count === 1 ? "candidato" : "candidatos"}
+                        </span>
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggle(row.id);
-                          }}
-                          aria-label={`Selecionar ${row.name}`}
-                          className={
-                            "absolute -left-1 -top-1 flex size-4.5 items-center justify-center rounded-full border transition-all " +
-                            (isSelected
-                              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white opacity-100"
-                              : "border-[#d4d4d8] bg-white text-transparent opacity-0 group-hover:opacity-100 hover:border-[#0a0a0a]")
-                          }
+                          onClick={() => setJobId(section.jobId)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-700 shadow-2xs transition hover:bg-zinc-50 hover:text-zinc-900"
+                          title="Filtrar tela apenas para esta vaga"
                         >
-                          <span className="text-[9px] leading-none">✓</span>
+                          Filtrar vaga →
+                        </button>
+                        <Link
+                          href={`/vagas/${section.jobId}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white p-1 text-[11px] font-medium text-zinc-700 shadow-2xs transition hover:bg-zinc-50 hover:text-zinc-900"
+                          title="Abrir funil desta vaga"
+                        >
+                          <ExternalLink className="size-3 text-zinc-500" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapseJob(section.jobId)}
+                          className="inline-flex size-7 items-center justify-center rounded-lg border border-zinc-200/80 bg-white text-zinc-600 shadow-2xs transition hover:bg-zinc-50 hover:text-zinc-900"
+                          title={isCollapsed ? "Expandir candidatos desta vaga" : "Recolher candidatos desta vaga"}
+                        >
+                          {isCollapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
                         </button>
                       </div>
-
-                      {/* 3 Linhas Limpas (Nome + Score / Cargo · Nível · Idade / Permanência + Ações no hover) */}
-                      <div className="min-w-0 flex-1">
-                        {/* Linha 1: Nome completo + Nota em pílula discreta */}
-                        <div className="flex items-center justify-between gap-2">
-                          <Link
-                            href={`/candidaturas/${row.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="truncate text-[13px] font-semibold text-[#0a0a0a] transition-colors group-hover:text-[#7c1d3c] hover:underline"
-                          >
-                            {row.name}
-                          </Link>
-
-                          {row.hasImpediment ? (
-                            <span
-                              className="shrink-0 inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
-                              title={row.impedimentReason ? `Motivo: ${row.impedimentReason}` : "Impedimento de contratação ativo"}
-                            >
-                              <span className="size-1.5 rounded-full bg-rose-500/80" />
-                              <span>Tarja preta</span>
-                            </span>
-                          ) : row.aiScore !== null ? (
-                            <span
-                              className={
-                                "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums " +
-                                (row.aiScore >= row.aiMinScore
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : row.aiScore >= 60
-                                    ? "bg-amber-50 text-amber-700"
-                                    : "bg-zinc-100 text-zinc-600")
-                              }
-                            >
-                              {row.aiScore}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {/* Linha 2: Perfil · Senioridade · Idade */}
-                        {subtitleLine && (
-                          <p className="mt-0.5 truncate text-[11px] text-[#71717a]">
-                            {subtitleLine}
-                          </p>
-                        )}
-
-                        {/* Linha 3: 1 linha única de permanência/empresa + ações discretas no hover */}
-                        <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#71717a]">
-                          <span
-                            className="inline-flex min-w-0 items-center gap-1.5 truncate"
-                            title={
-                              row.tenureAvg || row.tenureMedian
-                                ? `Média: ${row.tenureAvg || "-"} · Mediana: ${row.tenureMedian || row.tenureAvg || "-"}${
-                                    row.tenureCompanies?.length
-                                      ? "\n" +
-                                        row.tenureCompanies
-                                          .map((c) => `• ${c.empresa}: ${c.duracaoFormatada}`)
-                                          .join("\n")
-                                      : ""
-                                  }`
-                                : undefined
-                            }
-                          >
-                            {row.hasImpediment ? (
-                              <span className="truncate text-rose-600">
-                                {row.impedimentReason || "Restrição em todas as vagas"}
-                              </span>
-                            ) : shortAvg ? (
-                              <>
-                                <span className={`size-1.5 shrink-0 rounded-full ${stabilityDot}`} />
-                                <span className="truncate">
-                                  {shortAvg} média
-                                  {firstCompany ? ` · ${firstCompany}${extraCompanies}` : ""}
-                                </span>
-                              </>
-                            ) : !showGroups ? (
-                              <span className="truncate text-[#71717a]">
-                                {jobLabel(row.jobTitle, row.jobCode)}
-                              </span>
-                            ) : (
-                              <span className="truncate text-[#71717a]">
-                                {row.status === "PENDING"
-                                  ? `espera ${formatWaiting(new Date(row.createdAt))}`
-                                  : appStatusLabels[row.status]}
-                              </span>
-                            )}
-                          </span>
-
-                          <div
-                            className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ResumeLightboxButton
-                              applicationId={row.id}
-                              candidateName={row.name}
-                              label="CV"
-                              showIcon={false}
-                              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#52525b] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                            />
-                            <a
-                              href={`/candidaturas/${row.id}/cv?download=1`}
-                              className="inline-flex size-5 items-center justify-center rounded text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                              title="Baixar currículo em PDF"
-                              aria-label="Baixar currículo em PDF"
-                            >
-                              <Download className="size-3" strokeWidth={1.75} />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
                     </div>
-                  </div>
-                </Fragment>
-              );
-            })}
-          </div>
+
+                    {!isCollapsed ? (
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {section.rows.map((row) => renderCandidateCard(row))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-zinc-200 bg-white/60 px-3 py-2 text-center text-[12px] text-zinc-500">
+                        {section.rows.length} candidato{section.rows.length === 1 ? "" : "s"} nesta vaga (recolhida). Clique na seta para expandir.
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {visible.map((row) => renderCandidateCard(row))}
+            </div>
+          )}
           {filtered.length > visible.length && (
             <button
               type="button"
