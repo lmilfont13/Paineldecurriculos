@@ -18,6 +18,7 @@ import {
   type PublicJob,
 } from "@/server/models/job.model";
 import { jobSummary } from "@/server/models/job-description.model";
+import { jobCity, splitJobTitle } from "@/server/models/job-title.model";
 import { StructuredJobDescription } from "@/components/public/structured-job-description";
 
 const NEW_DAYS = 7;
@@ -46,7 +47,7 @@ function FilterRow({
   const all = [{ label: "Todos", value: "" }, ...available];
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-[#b8b2ac]">
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-[#78716c]">
         {label}
       </span>
       {all.map((opt) => {
@@ -61,7 +62,7 @@ function FilterRow({
               "rounded-full border px-3 py-0.5 text-[12px] font-medium transition-all",
               active
                 ? "border-transparent text-[var(--brand-foreground)]"
-                : "border-[#e4e0dc] bg-white text-[#57534e] hover:border-[#c8c2bb]",
+                : "border-[#d6d0c8] bg-white text-[#44403c] hover:border-[#a8a29e]",
             ].join(" ")}
             style={
               active ? { backgroundColor: "var(--brand-primary)" } : undefined
@@ -70,7 +71,7 @@ function FilterRow({
             {opt.label}
             {count !== undefined && (
               <span
-                className={`ml-1 ${active ? "opacity-70" : "text-[#a8a29e]"}`}
+                className={`ml-1 ${active ? "opacity-75" : "text-[#78716c]"}`}
               >
                 {count}
               </span>
@@ -100,79 +101,89 @@ function JobCard({
   const bullets = requirementsToBullets(job.requirements ?? "");
   const summary = jobSummary(job.description);
   const panelId = `vaga-${job.id}`;
+  const title = splitJobTitle(job.title, job.location);
+  const href = `/${slug}/vagas/${job.id}`;
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-[#ebe7e3] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.04)] transition-shadow hover:shadow-[0_4px_18px_rgba(28,25,23,0.07)]">
+    <li className="group relative overflow-hidden rounded-2xl border border-[#e2ddd6] bg-white shadow-[0_1px_3px_rgba(28,25,23,0.06)] transition-[box-shadow,border-color] hover:border-[#cfc8bf] hover:shadow-[0_8px_24px_rgba(28,25,23,0.09)]">
+      {/* Faixa da marca à esquerda: aparece ao passar o mouse. */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1 opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ backgroundColor: "var(--brand-primary)" }}
+      />
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[17px] font-semibold leading-snug tracking-[-0.2px] text-[#1c1917]">
-              {job.title}
-            </h3>
-            {job.code && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            {job.location && (
               <span
-                className="font-mono text-[11px] font-medium tracking-wide text-[#a8a29e]"
-                title={`Código da vaga: #${job.code}`}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                style={{ backgroundColor: "var(--brand-tint)", color: "var(--brand-primary)" }}
               >
-                #{job.code}
+                <MapPin className="size-3.5" />
+                {job.location}
               </span>
             )}
             {isNew(job.createdAt) && (
-              <span className="rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[#059669]">
-                NOVA
+              <span className="rounded-full border border-[#ecd9a6] bg-[#fbf3de] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#7a5a12]">
+                Nova
               </span>
             )}
             {applied && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#f4f3f0] px-2 py-0.5 text-[11px] font-medium text-[#78716c]">
-                <CheckCircle2 className="size-3 text-[#1f7a4d]" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#ecfdf3] px-2 py-0.5 text-[11px] font-semibold text-[#166534]">
+                <CheckCircle2 className="size-3" />
                 Inscrito
               </span>
             )}
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#78716c]">
-            {job.location && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3.5 text-[#a8a29e]" />
-                {job.location}
-              </span>
-            )}
+          <h3 className="mt-2.5 text-[18px] font-semibold leading-snug tracking-[-0.3px] text-[#1c1917]">
+            {/* O card inteiro leva à vaga; o botão de detalhes fica por cima. */}
+            <Link href={href} className="after:absolute after:inset-0 focus-visible:outline-none">
+              {title}
+            </Link>
+          </h3>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#57534e]">
             <span className="inline-flex items-center gap-1">
-              <Briefcase className="size-3.5 text-[#a8a29e]" />
+              <Briefcase className="size-3.5 text-[#78716c]" />
               {workModeLabels[job.workMode]} · {contractLabels[job.contract]}
             </span>
-            <span className="inline-flex items-center gap-1 text-[#a8a29e]">
+            <span className="inline-flex items-center gap-1 text-[#6b645e]">
               <Clock className="size-3.5" />
               {formatPublishedAgo(job.createdAt)}
             </span>
+            {job.code && (
+              <span className="font-mono text-[11.5px] text-[#6b645e]" title={`Código da vaga: #${job.code}`}>
+                #{job.code}
+              </span>
+            )}
           </div>
 
           {summary && (
-            <p className="mt-2.5 line-clamp-2 text-[13px] leading-relaxed text-[#57534e]">
+            <p className="mt-2.5 line-clamp-2 text-[13.5px] leading-relaxed text-[#44403c]">
               {summary}
             </p>
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:self-center">
+        <div className="relative z-10 flex shrink-0 items-center gap-3 sm:self-center">
           <button
             type="button"
             onClick={onToggle}
             aria-expanded={open}
             aria-controls={panelId}
-            className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#e4e0dc] bg-white px-3 text-[12px] font-medium text-[#57534e] transition-colors hover:border-[#c8c2bb] hover:text-[#1c1917]"
+            className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-[12.5px] font-medium text-[#57534e] underline-offset-4 transition-colors hover:text-[#1c1917] hover:underline"
           >
-            <span>{open ? "Menos detalhes" : "Mais detalhes"}</span>
+            <span>{open ? "Menos detalhes" : "Detalhes"}</span>
             <ChevronDown
-              className={`size-3.5 text-[#a8a29e] transition-transform duration-200 ${
-                open ? "rotate-180" : ""
-              }`}
+              className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             />
           </button>
 
           <Link
-            href={`/${slug}/vagas/${job.id}`}
-            className="inline-flex h-9 items-center rounded-xl px-4 text-[12px] font-semibold transition-opacity hover:opacity-90"
+            href={href}
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-xl px-5 text-[13px] font-semibold shadow-sm transition-opacity hover:opacity-90 sm:flex-none"
             style={{
               backgroundColor: "var(--brand-primary)",
               color: "var(--brand-foreground)",
@@ -186,7 +197,7 @@ function JobCard({
       {open && (
         <div
           id={panelId}
-          className="border-t border-[#f4f3f0] bg-[#faf9f7] p-5 text-[13px] leading-relaxed text-[#57534e] sm:p-6"
+          className="relative z-10 border-t border-[#ebe6df] bg-[#faf8f5] p-5 text-[13px] leading-relaxed text-[#44403c] sm:p-6"
         >
           <div className="space-y-4">
             <div>
@@ -231,6 +242,7 @@ export function JobList({
   const [query, setQuery] = useState("");
   const [modeFilter, setModeFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
   // Filtros de vagas internas
@@ -252,11 +264,25 @@ export function JobList({
     [jobs],
   );
 
+  const cityCounts = useMemo(
+    () =>
+      jobs.reduce<Record<string, number>>((acc, j) => {
+        const city = jobCity(j.location);
+        if (city) acc[city] = (acc[city] ?? 0) + 1;
+        return acc;
+      }, {}),
+    [jobs],
+  );
+  const cityOptions = Object.keys(cityCounts)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"))
+    .map((city) => ({ value: city, label: city }));
+
   const filteredInternal = useMemo(() => {
     const q = query.trim().toLowerCase();
     return jobs.filter((j) => {
       if (modeFilter && j.workMode !== modeFilter) return false;
       if (contractFilter && j.contract !== contractFilter) return false;
+      if (cityFilter && jobCity(j.location) !== cityFilter) return false;
       if (!q) return true;
       return (
         j.title.toLowerCase().includes(q) ||
@@ -265,7 +291,7 @@ export function JobList({
         (j.location ?? "").toLowerCase().includes(q)
       );
     });
-  }, [jobs, query, modeFilter, contractFilter]);
+  }, [jobs, query, modeFilter, contractFilter, cityFilter]);
 
   const modeOptions = Object.entries(workModeLabels).map(([value, label]) => ({
     value,
@@ -311,13 +337,13 @@ export function JobList({
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-            <h2 className="text-[15px] font-semibold text-[#1c1917]">
+            <h2 className="text-[16px] font-semibold text-[#1c1917]">
               Vagas abertas
-              <span className="ml-2 text-[13px] font-normal text-[#a8a29e]">
+              <span className="ml-2 text-[13px] font-medium text-[#6b645e]">
                 {jobs.length}
               </span>
             </h2>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex w-full flex-wrap items-center gap-x-5 gap-y-2 sm:w-auto">
               <FilterRow
                 label="Modalidade"
                 options={modeOptions}
@@ -339,11 +365,23 @@ export function JobList({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar por cargo, código ou cidade…"
                   aria-label="Buscar vagas"
-                  className="h-9 w-full rounded-full border border-[#e4e0dc] bg-white px-4 text-[13px] placeholder:text-[#c4bfba] focus:border-[#1c1917] focus:outline-none sm:w-[260px]"
+                  className="h-10 w-full rounded-full border border-[#d6d0c8] bg-white px-4 text-[13px] text-[#1c1917] shadow-sm placeholder:text-[#8a847e] focus:border-[#1c1917] focus:outline-none sm:w-[280px]"
                 />
               )}
             </div>
           </div>
+
+          {cityOptions.length > 1 && (
+            <div className="mt-4">
+              <FilterRow
+                label="Cidade"
+                options={cityOptions}
+                value={cityFilter}
+                onChange={setCityFilter}
+                counts={cityCounts}
+              />
+            </div>
+          )}
 
           {filteredInternal.length === 0 ? (
             <p className="py-10 text-center text-sm text-[#78716c]">

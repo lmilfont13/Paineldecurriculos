@@ -242,7 +242,7 @@ export function CompanyFooter({ company }: { company: PublicCompany }) {
   const iconSrc = company.logoUrl || "/images/tarhget-icon.png";
   return (
     <footer className="mt-24 border-t border-[#ebe7e3]">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-2 px-5 py-8 text-xs text-[#a8a29e] sm:flex-row sm:items-center sm:justify-between md:px-8">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-2 px-5 py-8 text-xs text-[#6b645e] sm:flex-row sm:items-center sm:justify-between md:px-8">
         <span className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={iconSrc} alt="" className="size-4 object-contain opacity-75" />
