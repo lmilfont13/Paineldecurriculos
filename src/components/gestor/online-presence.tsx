@@ -537,23 +537,23 @@ export function OnlineCounterBadge({
 
   return (
     <div className="relative" ref={containerRef}>
-      {/* Botão Principal da Sidebar */}
+      {/* Botão Principal da Sidebar (Adaptado para Lateral Escura) */}
       <button
         type="button"
         onClick={() => setIsOpen((p) => !p)}
-        className="mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-center justify-between rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-[11px] shadow-xs transition hover:border-[#0a0a0a]/20 hover:bg-[#fafaf9] active:scale-98"
+        className="mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] shadow-xs transition hover:border-white/20 hover:bg-white/[0.08] active:scale-98"
       >
         <div className="flex items-center gap-2 min-w-0">
           <span className="relative flex size-2 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
-          <span className="truncate font-medium text-[#0a0a0a]">Online agora</span>
+          <span className="truncate font-medium text-stone-200">Online agora</span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           {!isAttendanceActive ? (
-            <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-stone-300">
               Plantão OFF
             </span>
           ) : pendingDoubtsCount > 0 ? (
@@ -561,19 +561,19 @@ export function OnlineCounterBadge({
               {pendingDoubtsCount} dúvida{pendingDoubtsCount > 1 ? "s" : ""}
             </span>
           ) : cadastroCount > 0 ? (
-            <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-medium text-[#52525b]">
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-stone-300">
               {cadastroCount} no cadastro
             </span>
           ) : candidates.length > 0 ? (
-            <span className="rounded-full bg-[#e4f6ec] px-2 py-0.5 text-[10px] font-semibold text-[#1f7a4d]">
+            <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
               {candidates.length} nas vagas
             </span>
           ) : null}
 
-          <span className="flex items-center gap-1 rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[11px] font-bold text-[#0a0a0a]">
-            <Users className="size-3 text-[#71717a]" />
+          <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white">
+            <Users className="size-3 text-stone-300" />
             {total}
-            {isOpen ? <ChevronUp className="size-2.5 text-[#71717a]" /> : <ChevronDown className="size-2.5 text-[#71717a]" />}
+            {isOpen ? <ChevronUp className="size-2.5 text-stone-300" /> : <ChevronDown className="size-2.5 text-stone-300" />}
           </span>
         </div>
       </button>

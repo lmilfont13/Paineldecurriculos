@@ -45,7 +45,7 @@ function CompanyMark({
   name,
   initials,
   logoUrl,
-  size = 32,
+  size = 28,
 }: {
   name: string;
   initials: string;
@@ -54,25 +54,26 @@ function CompanyMark({
 }) {
   const src = logoUrl || "/images/tarhget-icon.png";
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={name}
-      width={size}
-      height={size}
-      className="shrink-0 object-contain"
-      style={{ width: size, height: size }}
-    />
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 p-0.5 border border-white/15">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        width={size}
+        height={size}
+        className="shrink-0 object-contain rounded-full"
+        style={{ width: size, height: size }}
+      />
+    </div>
   );
 }
 
 function PendingBadge({ count }: { count: number }) {
   return (
     <span
-      className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-medium"
+      className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-xs"
       style={{
-        backgroundColor: "var(--brand-tint)",
-        color: "var(--brand-primary)",
+        backgroundColor: "var(--brand-primary, #7c1d3c)",
       }}
     >
       {count}
@@ -114,16 +115,17 @@ export function GestorSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#e7e5e4] bg-[#fafaf9] md:flex">
-      <div className="mx-3 mt-4 flex items-center gap-2.5 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} />
-        <span className="min-w-0 truncate text-[13px] font-semibold text-[#0a0a0a]">
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#261d1c] bg-[#161010] md:flex select-none">
+      {/* Topo / Logo */}
+      <div className="mx-3 mt-4 mb-1 flex items-center gap-2.5 rounded-xl px-2.5 py-2">
+        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={28} />
+        <span className="min-w-0 truncate font-serif text-[13px] font-bold tracking-[0.16em] text-white uppercase">
           {companyName}
         </span>
       </div>
 
-      <nav className="mt-6 flex flex-col gap-1 px-3">
-        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#b0aba6]">
+      <nav className="mt-5 flex flex-col gap-0.5 px-3">
+        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8e8580]">
           Recrutamento
         </p>
         {NAV.filter((item) => !("secondary" in item && item.secondary)).map((item) => {
@@ -133,26 +135,26 @@ export function GestorSidebar({
               key={item.href}
               href={item.href}
               className={
-                "group flex h-10 items-center gap-2.5 rounded-xl px-3.5 text-sm " +
+                "group flex h-9.5 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
                 (active
-                  ? "font-semibold text-[#0a0a0a] shadow-sm"
-                  : "text-[#71717a] hover:bg-white hover:text-[#0a0a0a]")
+                  ? "bg-white/[0.12] font-semibold text-white shadow-2xs"
+                  : "text-[#a8a19c] hover:bg-white/[0.06] hover:text-white")
               }
             >
               <item.Icon
                 aria-hidden
                 className="size-[17px] shrink-0"
                 strokeWidth={active ? 2.25 : 1.75}
-                style={active ? { color: "var(--brand-primary)" } : undefined}
+                style={active ? { color: "var(--brand-primary, #e11d48)" } : undefined}
               />
-              <span className="flex-1">{item.label}</span>
+              <span className="flex-1 truncate">{item.label}</span>
               {"badge" in item && item.badge && pendingCount > 0 && <PendingBadge count={pendingCount} />}
             </Link>
           );
         })}
 
-        <div className="mx-3 my-3 h-px bg-[#e7e5e4]" />
-        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#b0aba6]">
+        <div className="mx-3 my-2.5 h-px bg-white/[0.08]" />
+        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8e8580]">
           Administração
         </p>
         {NAV.filter((item) => "secondary" in item && item.secondary).map((item) => {
@@ -162,19 +164,19 @@ export function GestorSidebar({
               key={item.href}
               href={item.href}
               className={
-                "group flex h-9 items-center gap-2.5 rounded-xl px-3.5 text-[13px] " +
+                "group flex h-9 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
                 (active
-                  ? "font-semibold text-[#0a0a0a] shadow-sm"
-                  : "text-[#85817d] hover:bg-white hover:text-[#0a0a0a]")
+                  ? "bg-white/[0.12] font-semibold text-white shadow-2xs"
+                  : "text-[#8e8580] hover:bg-white/[0.06] hover:text-stone-200")
               }
             >
               <item.Icon
                 aria-hidden
                 className="size-[16px] shrink-0"
                 strokeWidth={active ? 2.1 : 1.6}
-                style={active ? { color: "var(--brand-primary)" } : undefined}
+                style={active ? { color: "var(--brand-primary, #e11d48)" } : undefined}
               />
-              <span className="flex-1">{item.label}</span>
+              <span className="flex-1 truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -193,18 +195,21 @@ export function GestorSidebar({
           />
         )}
       </div>
-      <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-[#e4e4e7] bg-white p-3">
-        <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white">
+      <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+        <span
+          className="flex size-[28px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-xs"
+          style={{ backgroundColor: "var(--brand-primary, #7c1d3c)" }}
+        >
           {userInitials}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#0a0a0a]">
+        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-stone-200">
           {userName}
         </span>
         <button
           type="button"
           onClick={() => logoutAction()}
           title="Sair"
-          className="rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] hover:bg-[#e7e5e4] hover:text-[#0a0a0a]"
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-stone-400 hover:bg-white/10 hover:text-white transition-colors"
         >
           Sair
         </button>
