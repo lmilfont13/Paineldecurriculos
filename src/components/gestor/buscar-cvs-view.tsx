@@ -990,7 +990,7 @@ export function BuscarCvsView({
                       ref={(el) => {
                         cardRefs.current[index] = el;
                       }}
-                      onClick={() => setSelectedIndex(index)}
+                      onClick={() => router.push(`/candidaturas/${item.id}`)}
                       className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 transition ${
                         isSelected ? "bg-stone-50 ring-1 ring-inset ring-[#0a0a0a]/10" : "hover:bg-[#fafaf9]"
                       }`}
@@ -1172,11 +1172,7 @@ export function BuscarCvsView({
                     ref={(el) => {
                       cardRefs.current[index] = el;
                     }}
-                    onClick={() => {
-                      setSelectedIndex(index);
-                      setSelectedCandidate(item);
-                      setDrawerTab(item.resumeUrl ? "pdf" : "ai");
-                    }}
+                    onClick={() => router.push(`/candidaturas/${item.id}`)}
                     className={`group relative cursor-pointer rounded-2xl border bg-white p-4 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] ${
                       isSelected
                         ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"

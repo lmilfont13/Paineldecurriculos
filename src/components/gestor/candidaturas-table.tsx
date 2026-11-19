@@ -958,7 +958,7 @@ export function CandidaturasTable({
                 <Fragment key={row.id}>
                   {groupHeader(row, index, "col-span-full mt-3 border-b border-[#e4e4e7] pb-2 first:mt-0")}
                   <div
-                    onClick={() => setQuickPeekRow(row)}
+                    onClick={() => router.push(`/candidaturas/${row.id}`)}
                     className={
                       "group relative cursor-pointer rounded-2xl border bg-white p-3.5 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] " +
                       (isSelected
