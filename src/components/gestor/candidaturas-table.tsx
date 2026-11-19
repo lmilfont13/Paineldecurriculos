@@ -1008,6 +1008,19 @@ export function CandidaturasTable({
           )}
         </div>
 
+        {/* Sempre à vista quando há foto pendente (o filtro de foto fica em "Mais opções"). */}
+        {!onlyWithoutPhoto && missingPhotoCount > 0 && (
+          <button
+            type="button"
+            disabled={photoBusy}
+            onClick={() => void extractPhotos()}
+            title="Busca a foto no currículo de quem ainda está sem foto"
+            className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[12px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9] disabled:opacity-50"
+          >
+            {photoBusy ? "Extraindo fotos…" : `Extrair fotos (${missingPhotoCount})`}
+          </button>
+        )}
+
         {onlyWithoutPhoto && filtered.length > 0 && !photoBusy && (
           <button
             type="button"
