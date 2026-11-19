@@ -36,7 +36,7 @@ export default async function PublicJobsPage({
   const { company, jobs, appliedJobIds } = data;
 
   return (
-    <div className="min-h-screen bg-[#faf9f7]">
+    <div className="min-h-screen bg-[#f3f1ec]">
       <section
         className="relative overflow-hidden"
         style={{
@@ -62,13 +62,18 @@ export default async function PublicJobsPage({
               <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.8px] text-white md:text-[38px]">
                 {company.heroTitle}
               </h1>
-              <p className="mt-2 max-w-[560px] text-[14px] leading-6 text-white/70 md:text-[15px]">
+              <p className="mt-2 max-w-[560px] text-[14px] leading-6 text-white/85 md:text-[15px]">
                 {company.heroSubtitle}
               </p>
             </div>
-            <span className="rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[12px] font-medium text-white/85 backdrop-blur">
-              {jobs.length} {jobs.length === 1 ? "oportunidade disponível" : "oportunidades disponíveis"}
-            </span>
+            {jobs.length > 0 && (
+              <div className="flex items-baseline gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-white backdrop-blur">
+                <span className="text-[30px] font-semibold leading-none tracking-[-1px]">{jobs.length}</span>
+                <span className="text-[13px] font-medium leading-tight text-white/85">
+                  {jobs.length === 1 ? "vaga aberta" : "vagas abertas"}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -82,7 +87,7 @@ export default async function PublicJobsPage({
           appliedJobIds={appliedJobIds}
         />
 
-        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e8e3de] bg-white p-6 md:p-7">
+        <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e2ddd6] bg-white p-6 shadow-[0_1px_3px_rgba(28,25,23,0.06)] md:p-7">
           <div className="max-w-[620px]">
             <h2 className="text-lg font-semibold tracking-[-0.2px] text-[#1c1917]">
               Não encontrou a vaga ideal?
@@ -102,16 +107,16 @@ export default async function PublicJobsPage({
         </section>
 
         {company.aboutText && (
-          <section className="mt-10 grid gap-4 rounded-2xl border border-[#e8e3de] bg-white p-6 md:grid-cols-[220px_1fr] md:gap-10 md:p-7">
+          <section className="mt-10 grid gap-4 rounded-2xl border border-[#e2ddd6] bg-white p-6 shadow-[0_1px_3px_rgba(28,25,23,0.06)] md:grid-cols-[220px_1fr] md:gap-10 md:p-7">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8a29e]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#78716c]">
                 Sobre a empresa
               </p>
               <h2 className="mt-2 text-lg font-semibold tracking-[-0.2px] text-[#1c1917]">
                 {company.name}
               </h2>
             </div>
-            <p className="max-w-[680px] whitespace-pre-line text-[14px] leading-7 text-[#57534e]">
+            <p className="max-w-[680px] whitespace-pre-line text-[14px] leading-7 text-[#44403c]">
               {company.aboutText}
             </p>
           </section>
