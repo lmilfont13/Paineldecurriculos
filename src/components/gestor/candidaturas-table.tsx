@@ -42,6 +42,7 @@ import {
 } from "@/server/models/candidate-list.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
 import { ResumeLightboxButton } from "@/components/gestor/resume-lightbox-button";
+import { getJobAccentTheme, parseJobTitleAndCity } from "@/server/models/job.model";
 
 export type { CandidaturaRow };
 
@@ -101,21 +102,6 @@ function compactDuration(raw: string | null | undefined): string {
     .replace(/\s*anos?\b/gi, "a")
     .replace(/\s*m[eê]s(es)?\b/gi, "m")
     .trim();
-}
-
-/** Separa cargo e praça/cidade do título da vaga para dar destaque visual à filial/cidade. */
-function parseJobTitleAndCity(title: string): { role: string; city: string | null } {
-  const trimmed = title.trim();
-  const match = trimmed.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-  if (!match) return { role: trimmed, city: null };
-
-  const inside = match[2].trim();
-  // Se for apenas flexão de gênero como (a), (o), (a/o), (m/f), faz parte do cargo
-  if (/^(a|o|a\/o|o\/a|as|os|m\/f)$/i.test(inside)) {
-    return { role: trimmed, city: null };
-  }
-
-  return { role: match[1].trim(), city: inside };
 }
 
 /**
@@ -357,69 +343,11 @@ export function CandidaturasTable({
   }
 
   const jobThemeMap = useMemo(() => {
-    const themes = [
-      {
-        bar: "bg-indigo-600",
-        code: "bg-indigo-600 text-white",
-        cityTag: "border-indigo-300 bg-indigo-100 text-indigo-950",
-        sectionBorder: "border-indigo-200/90",
-        sectionBg: "bg-indigo-50/20",
-        countBadge: "border-indigo-200 bg-white text-indigo-800",
-      },
-      {
-        bar: "bg-emerald-600",
-        code: "bg-emerald-600 text-white",
-        cityTag: "border-emerald-300 bg-emerald-100 text-emerald-950",
-        sectionBorder: "border-emerald-200/90",
-        sectionBg: "bg-emerald-50/20",
-        countBadge: "border-emerald-200 bg-white text-emerald-800",
-      },
-      {
-        bar: "bg-amber-600",
-        code: "bg-amber-600 text-white",
-        cityTag: "border-amber-300 bg-amber-100 text-amber-950",
-        sectionBorder: "border-amber-200/90",
-        sectionBg: "bg-amber-50/20",
-        countBadge: "border-amber-200 bg-white text-amber-900",
-      },
-      {
-        bar: "bg-violet-600",
-        code: "bg-violet-600 text-white",
-        cityTag: "border-violet-300 bg-violet-100 text-violet-950",
-        sectionBorder: "border-violet-200/90",
-        sectionBg: "bg-violet-50/20",
-        countBadge: "border-violet-200 bg-white text-violet-800",
-      },
-      {
-        bar: "bg-teal-600",
-        code: "bg-teal-600 text-white",
-        cityTag: "border-teal-300 bg-teal-100 text-teal-950",
-        sectionBorder: "border-teal-200/90",
-        sectionBg: "bg-teal-50/20",
-        countBadge: "border-teal-200 bg-white text-teal-800",
-      },
-      {
-        bar: "bg-rose-600",
-        code: "bg-rose-600 text-white",
-        cityTag: "border-rose-300 bg-rose-100 text-rose-950",
-        sectionBorder: "border-rose-200/90",
-        sectionBg: "bg-rose-50/20",
-        countBadge: "border-rose-200 bg-white text-rose-800",
-      },
-      {
-        bar: "bg-sky-600",
-        code: "bg-sky-600 text-white",
-        cityTag: "border-sky-300 bg-sky-100 text-sky-950",
-        sectionBorder: "border-sky-200/90",
-        sectionBg: "bg-sky-50/20",
-        countBadge: "border-sky-200 bg-white text-sky-800",
-      },
-    ];
-    const map = new Map<string, (typeof themes)[number]>();
+    const map = new Map<string, ReturnType<typeof getJobAccentTheme>>();
     let idx = 0;
     for (const r of ordered) {
       if (!map.has(r.jobId)) {
-        map.set(r.jobId, themes[idx % themes.length]);
+        map.set(r.jobId, getJobAccentTheme(r.jobId || idx));
         idx++;
       }
     }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MapPin } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
@@ -26,7 +27,9 @@ import { personInitials } from "@/server/models/dashboard.model";
 import {
   contractLabels,
   formatPublishedAgo,
+  getJobAccentTheme,
   jobStatusLabels,
+  parseJobTitleAndCity,
   workModeLabels,
 } from "@/server/models/job.model";
 
@@ -88,6 +91,9 @@ export default async function VagaHubPage({
     (a) => a.aiState === "WAITING" || a.aiState === "PROCESSING"
   );
 
+  const theme = getJobAccentTheme(job.id);
+  const { role, city } = parseJobTitleAndCity(job.title);
+
   const meta = [
     job.location,
     workModeLabels[job.workMode],
@@ -116,11 +122,18 @@ export default async function VagaHubPage({
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-[#0a0a0a]">{job.title}</h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className={`h-6 w-2 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
             {job.code && (
-              <span className="rounded-md bg-[#f1f0ed] px-2 py-1 text-xs font-medium text-[#57534e]">
+              <span className={`rounded-lg px-2.5 py-0.5 text-xs font-bold tabular-nums shadow-2xs ${theme.code}`}>
                 #{job.code}
+              </span>
+            )}
+            <h1 className="text-2xl font-bold tracking-tight text-[#0a0a0a]">{role}</h1>
+            {city && (
+              <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
+                <MapPin className="size-3.5 shrink-0 opacity-80" strokeWidth={2.5} />
+                {city}
               </span>
             )}
             <span
@@ -130,7 +143,7 @@ export default async function VagaHubPage({
               {jobStatusLabels[job.status]}
             </span>
           </div>
-          <p className="mt-1.5 text-sm text-[#71717a]">{meta}</p>
+          <p className="mt-2 text-sm text-[#71717a]">{meta}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getPainelData } from "@/server/controllers/gestor.controller";
 import { formatWaiting } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
-import { jobStatusLabels } from "@/server/models/job.model";
+import { getJobAccentTheme, jobStatusLabels, parseJobTitleAndCity } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Painel · Triagem" };
 
@@ -775,51 +776,63 @@ export default async function PainelPage() {
             </h2>
           </div>
 
-          <div className="mt-4 max-w-[848px] overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
-            {priority.map((app) => (
-              <Link
-                key={app.id}
-                href={`/candidaturas/${app.id}`}
-                className="flex items-center gap-3.5 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] focus-visible:bg-[#fafaf9] focus-visible:outline-none"
-              >
-                <CandidateAvatar
-                  name={app.name}
-                  photoUrl={app.photoUrl}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-[#0a0a0a]">
-                    <span className="truncate">{app.name}</span>
-                    {app.hasImpediment && (
-                      <span
-                        className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
-                        title={app.impedimentReason ? `Motivo: ${app.impedimentReason}` : "Impedimento de contratação ativo"}
-                      >
-                        <span className="size-1.5 rounded-full bg-rose-500/80" />
-                        <span>Tarja preta</span>
+          <div className="mt-4 max-w-[848px] overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-2xs">
+            {priority.map((app) => {
+              const { role, city } = parseJobTitleAndCity(app.jobTitle);
+              return (
+                <Link
+                  key={app.id}
+                  href={`/candidaturas/${app.id}`}
+                  className="flex items-center gap-3.5 border-b border-[#e4e4e7] px-5 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] focus-visible:bg-[#fafaf9] focus-visible:outline-none"
+                >
+                  <CandidateAvatar
+                    name={app.name}
+                    photoUrl={app.photoUrl}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1c1917] text-[10px] font-bold text-white"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-[#0a0a0a]">
+                      <span className="truncate">{app.name}</span>
+                      {app.hasImpediment && (
+                        <span
+                          className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                          title={app.impedimentReason ? `Motivo: ${app.impedimentReason}` : "Impedimento de contratação ativo"}
+                        >
+                          <span className="size-1.5 rounded-full bg-rose-500/80" />
+                          <span>Tarja preta</span>
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 truncate text-[11px] text-[#71717a]">
+                      <span className="font-medium text-zinc-800">{role}</span>
+                      {city && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.2 text-[10px] font-bold uppercase text-zinc-700">
+                          <MapPin className="size-2.5 opacity-70" strokeWidth={2.5} />
+                          {city}
+                        </span>
+                      )}
+                      <span>·</span>
+                      <span>espera{" "}
+                        <span className="font-medium text-[#b07818]">
+                          {formatWaiting(app.createdAt)}
+                        </span>
                       </span>
-                    )}
-                  </span>
-                  <span className="block truncate text-[11px] text-[#71717a]">
-                    {app.jobTitle} · espera{" "}
-                    <span className="font-medium text-[#b07818]">
-                      {formatWaiting(app.createdAt)}
                     </span>
                   </span>
-                </span>
-                <AiScoreChip
-                  aiScore={app.aiScore}
-                  aiState={app.aiState}
-                  meetsMinimum={app.meetsMinimum}
-                />
-                <span
-                  className="ml-6 text-xs font-medium"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  Abrir ›
-                </span>
-              </Link>
-            ))}
+                  <AiScoreChip
+                    aiScore={app.aiScore}
+                    aiState={app.aiState}
+                    meetsMinimum={app.meetsMinimum}
+                  />
+                  <span
+                    className="ml-6 text-xs font-medium"
+                    style={{ color: "var(--brand-primary)" }}
+                  >
+                    Abrir ›
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}
@@ -831,55 +844,68 @@ export default async function PainelPage() {
             Seus processos
           </h2>
           <div className="mt-4 grid max-w-[848px] grid-cols-1 gap-4 sm:grid-cols-2">
-            {jobs.map((job) => (
-              <Link
-                key={job.id}
-                href={`/vagas/${job.id}`}
-                className="rounded-xl border border-[#e4e4e7] bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#d4d4d8] hover:shadow-[0px_4px_12px_rgba(0,0,0,0.06)]"
-              >
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-sm font-medium text-[#0a0a0a]">
-                    {job.title}
-                  </span>
-                  {job.status !== "OPEN" && (
-                    <span className="shrink-0 text-[10px] font-medium text-[#b07818]">
-                      {jobStatusLabels[job.status]}
-                    </span>
-                  )}
-                </span>
-                <span className="mt-3 block">
-                  <FunnelBar
-                    pending={job.pending}
-                    interview={job.interview}
-                    approved={job.approved}
-                    rejected={job.rejected}
-                  />
-                </span>
-                <span className="mt-2.5 block text-[11px] text-[#71717a]">
-                  {job.status === "DRAFT" ? (
-                    <span
-                      className="font-medium"
-                      style={{ color: "var(--brand-primary)" }}
-                    >
-                      Revisar e publicar ›
-                    </span>
-                  ) : (
-                    <>
-                      {job.total} candidato{job.total === 1 ? "" : "s"}
-                      {job.pending > 0 && (
-                        <>
-                          {" · "}
-                          <span className="font-medium text-[#b07818]">
-                            {job.pending} esperando
-                          </span>
-                        </>
+            {jobs.map((job, idx) => {
+              const theme = getJobAccentTheme(job.id || idx);
+              const { role, city } = parseJobTitleAndCity(job.title);
+              return (
+                <Link
+                  key={job.id}
+                  href={`/vagas/${job.id}`}
+                  className={`group rounded-2xl border ${theme.border} bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0px_4px_16px_rgba(0,0,0,0.06)]`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className={`h-4 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
+                      <span className="truncate text-sm font-bold text-[#0a0a0a] group-hover:text-[#7c1d3c] transition-colors">
+                        {role}
+                      </span>
+                      {city && (
+                        <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
+                          <MapPin className="size-2.5 opacity-80" strokeWidth={2.5} />
+                          {city}
+                        </span>
                       )}
-                      {job.interview > 0 && ` · ${job.interview} em entrevista`}
-                    </>
-                  )}
-                </span>
-              </Link>
-            ))}
+                    </div>
+                    {job.status !== "OPEN" && (
+                      <span className="shrink-0 rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                        {jobStatusLabels[job.status]}
+                      </span>
+                    )}
+                  </div>
+                  <span className="mt-3.5 block">
+                    <FunnelBar
+                      pending={job.pending}
+                      interview={job.interview}
+                      approved={job.approved}
+                      rejected={job.rejected}
+                    />
+                  </span>
+                  <span className="mt-2.5 block text-[11px] text-[#71717a]">
+                    {job.status === "DRAFT" ? (
+                      <span
+                        className="font-medium"
+                        style={{ color: "var(--brand-primary)" }}
+                      >
+                        Revisar e publicar ›
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-zinc-800">{job.total}</span> candidato{job.total === 1 ? "" : "s"}
+                        {job.pending > 0 && (
+                          <>
+                            {" · "}
+                            <span className="font-semibold text-[#b07818]">
+                              {job.pending} esperando
+                            </span>
+                          </>
+                        )}
+                        {job.interview > 0 && ` · ${job.interview} em entrevista`}
+                      </>
+                    )}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

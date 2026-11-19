@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, FileText, MapPin, Plus } from "lucide-react";
 
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getVagasPageData } from "@/server/controllers/gestor.controller";
 import {
   contractLabels,
   formatPublishedAgo,
+  getJobAccentTheme,
   jobStatusLabels,
+  parseJobTitleAndCity,
   workModeLabels,
 } from "@/server/models/job.model";
 import { appUrl } from "@/lib/env";
@@ -14,16 +17,24 @@ import { appUrl } from "@/lib/env";
 export const metadata: Metadata = { title: "Vagas · Triagem" };
 
 const statusStyles = {
-  OPEN: { bg: "bg-[#e4f6ec]", text: "text-[#1f7a4d]" },
-  PAUSED: { bg: "bg-[#f7f0e1]", text: "text-[#b07818]" },
-  CLOSED: { bg: "bg-[#f1f0ed]", text: "text-[#71717a]" },
-  DRAFT: { bg: "bg-[#f1f0ed]", text: "text-[#71717a]" },
+  OPEN: {
+    badge: "border-emerald-200/80 bg-emerald-50 text-emerald-700",
+    dot: "bg-emerald-600",
+  },
+  PAUSED: {
+    badge: "border-amber-200/80 bg-amber-50 text-amber-700",
+    dot: "bg-amber-600",
+  },
+  CLOSED: {
+    badge: "border-zinc-200 bg-zinc-100 text-zinc-600",
+    dot: "bg-zinc-400",
+  },
+  DRAFT: {
+    badge: "border-zinc-200 bg-zinc-100 text-zinc-600",
+    dot: "bg-zinc-400",
+  },
 } as const;
 
-/**
- * E2 · Vagas como lista de processos, não de registros: cada linha leva ao
- * hub da vaga e mostra o andamento, não só o cadastro.
- */
 export default async function VagasPage() {
   const { companySlug, jobs } = await getVagasPageData();
   const openCount = jobs.filter((j) => j.status === "OPEN").length;
@@ -33,10 +44,10 @@ export default async function VagasPage() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="text-2xl font-bold text-[#0a0a0a]">Vagas</h1>
-          <p className="mt-2 text-sm text-[#71717a]">
-            {jobs.length === 1 ? "1 vaga" : `${jobs.length} vagas`} ·{" "}
-            {openCount} abertas
+          <h1 className="text-2xl font-bold tracking-tight text-[#0a0a0a]">Vagas</h1>
+          <p className="mt-1 text-sm text-[#71717a]">
+            {jobs.length === 1 ? "1 vaga cadastrada" : `${jobs.length} vagas cadastradas`} ·{" "}
+            <span className="font-medium text-emerald-700">{openCount} abertas</span>
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -46,87 +57,114 @@ export default async function VagasPage() {
             target="_blank"
             rel="noopener noreferrer"
             title="Relatório em PDF com todas as vagas e o perfil dos candidatos"
-            className="flex h-10 items-center rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+            className="flex h-10 items-center gap-1.5 rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] shadow-2xs transition-colors hover:bg-[#fafaf9]"
           >
-            Relatório geral (PDF)
+            <FileText className="size-3.5 text-zinc-500" />
+            <span>Relatório geral (PDF)</span>
           </a>
           <Link
             href="/vagas/nova"
-            className="flex h-10 items-center rounded-2xl px-5 text-[13px] font-medium transition-opacity hover:opacity-90"
+            className="flex h-10 items-center gap-1.5 rounded-2xl px-5 text-[13px] font-medium shadow-2xs transition-opacity hover:opacity-90"
             style={{
               backgroundColor: "var(--brand-primary)",
               color: "var(--brand-foreground)",
             }}
           >
-            + Nova vaga
+            <Plus className="size-4" strokeWidth={2.5} />
+            <span>Nova vaga</span>
           </Link>
         </div>
       </div>
 
-      <div className="mt-7 divide-y divide-[#e4e4e7] overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+      <div className="mt-7 space-y-3.5">
         {jobs.length === 0 && (
-          <p className="p-6 text-sm text-[#71717a]">
-            Nenhuma vaga ainda. Crie a primeira com “+ Nova vaga”.
-          </p>
+          <div className="rounded-3xl border border-dashed border-[#e4e4e7] bg-white p-8 text-center">
+            <p className="text-sm font-medium text-[#0a0a0a]">Nenhuma vaga cadastrada ainda.</p>
+            <p className="mt-1 text-xs text-[#71717a]">Crie a primeira vaga com &ldquo;+ Nova vaga&rdquo; para começar a receber candidaturas.</p>
+          </div>
         )}
-        {jobs.map((job) => {
+        {jobs.map((job, idx) => {
+          const theme = getJobAccentTheme(job.id || idx);
+          const { role, city } = parseJobTitleAndCity(job.title);
           const style = statusStyles[job.status];
-          const meta = [
-            job.location,
+          const metaParts = [
             workModeLabels[job.workMode],
             contractLabels[job.contract],
             formatPublishedAgo(job.createdAt).replace("publicada ", ""),
-          ]
-            .filter(Boolean)
-            .join(" · ");
+          ].filter(Boolean);
+
           return (
             <Link
               key={job.id}
               href={`/vagas/${job.id}`}
-              className="group flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 transition-colors hover:bg-[#fafaf9] md:px-6"
+              className={`group block rounded-2xl border ${theme.border} bg-white p-4.5 sm:p-5 transition-all hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:border-zinc-300`}
             >
-              <span className="min-w-[240px] flex-1">
-                <span className="flex items-center gap-2.5">
-                  <span className="truncate text-[14px] font-semibold text-[#0a0a0a]">
-                    {job.title}
-                  </span>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Lado Esquerdo: Barra do tema + Código + Cargo + Praça/Cidade em destaque + Status */}
+                <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                  <span className={`h-5 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
                   {job.code && (
-                    <span className="shrink-0 text-xs text-[#71717a]">#{job.code}</span>
+                    <span className={`rounded-lg px-2.5 py-0.5 text-[11px] font-bold tabular-nums shadow-2xs ${theme.code}`}>
+                      #{job.code}
+                    </span>
+                  )}
+                  <h2 className="text-[15px] font-bold tracking-tight text-zinc-900 group-hover:text-[#7c1d3c] transition-colors">
+                    {role}
+                  </h2>
+                  {city && (
+                    <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
+                      <MapPin className="size-3 shrink-0 opacity-80" strokeWidth={2.5} />
+                      {city}
+                    </span>
                   )}
                   <span
-                    className={`flex h-5 shrink-0 items-center rounded-full px-2 text-[10px] font-medium ${style.bg} ${style.text}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${style.badge}`}
                   >
+                    <span className={`size-1.5 rounded-full ${style.dot}`} />
                     {jobStatusLabels[job.status]}
                   </span>
-                </span>
-                <span className="mt-1 block truncate text-xs text-[#71717a]">
-                  {meta}
-                </span>
-              </span>
+                </div>
 
-              <span className="text-xs text-[#71717a]">
-                {job.applicationCount === 1
-                  ? "1 candidato"
-                  : `${job.applicationCount} candidatos`}
-              </span>
-
-              {/* O sinal que decide se essa linha precisa de você hoje */}
-              <span className="min-w-[120px] text-[11px] font-medium">
-                {job.pendingCount > 0 ? (
-                  <span className="text-[#b07818]">
-                    ● {job.pendingCount} esperando resposta
+                {/* Lado Direito: Ação Abrir */}
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-zinc-600 transition-colors group-hover:text-[#0a0a0a]">
+                    <span>Abrir funil</span>
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
-                ) : (
-                  <span className="text-[#71717a]">nada pendente</span>
-                )}
-              </span>
+                </div>
+              </div>
 
-              <span
-                className="text-xs font-semibold opacity-70 transition-opacity group-hover:opacity-100"
-                style={{ color: "var(--brand-primary)" }}
-              >
-                Abrir →
-              </span>
+              {/* Linha Inferior: Meta + Contadores de volume e pendência */}
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-y-2 border-t border-zinc-100 pt-3 text-xs text-[#71717a]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>{metaParts.join(" · ")}</span>
+                  {job.location && !city && (
+                    <>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="size-3" />
+                        {job.location}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 text-[11px] font-medium text-zinc-700 tabular-nums">
+                    {job.applicationCount} {job.applicationCount === 1 ? "candidato" : "candidatos"}
+                  </span>
+
+                  {job.pendingCount > 0 ? (
+                    <span className="rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 tabular-nums">
+                      ● {job.pendingCount} esperando resposta
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                      ✓ fila em dia
+                    </span>
+                  )}
+                </div>
+              </div>
             </Link>
           );
         })}

@@ -166,3 +166,113 @@ export function findDuplicateJob<
     }) ?? null
   );
 }
+
+/** Separa cargo e praça/cidade do título da vaga para dar destaque visual à filial/cidade. */
+export function parseJobTitleAndCity(title: string): { role: string; city: string | null } {
+  const trimmed = title.trim();
+  // Remove código da vaga no final caso já venha formatado como "Cargo (Cidade) #1123"
+  const withoutCode = trimmed.replace(/\s*#\w+\s*$/, "");
+  const match = withoutCode.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (!match) return { role: withoutCode, city: null };
+
+  const inside = match[2].trim();
+  // Se for apenas flexão de gênero como (a), (o), (a/o), (m/f), faz parte do cargo
+  if (/^(a|o|a\/o|o\/a|as|os|m\/f)$/i.test(inside)) {
+    return { role: withoutCode, city: null };
+  }
+
+  return { role: match[1].trim(), city: inside };
+}
+
+export const JOB_ACCENT_THEMES = [
+  {
+    key: "indigo",
+    bar: "bg-indigo-600",
+    code: "bg-indigo-600 text-white",
+    cityTag: "border-indigo-300 bg-indigo-100 text-indigo-950 font-bold",
+    border: "border-indigo-200/90",
+    bg: "bg-indigo-50/20",
+    sectionBorder: "border-indigo-200/90",
+    sectionBg: "bg-indigo-50/20",
+    countBadge: "border-indigo-200 bg-white text-indigo-800",
+  },
+  {
+    key: "emerald",
+    bar: "bg-emerald-600",
+    code: "bg-emerald-600 text-white",
+    cityTag: "border-emerald-300 bg-emerald-100 text-emerald-950 font-bold",
+    border: "border-emerald-200/90",
+    bg: "bg-emerald-50/20",
+    sectionBorder: "border-emerald-200/90",
+    sectionBg: "bg-emerald-50/20",
+    countBadge: "border-emerald-200 bg-white text-emerald-800",
+  },
+  {
+    key: "amber",
+    bar: "bg-amber-600",
+    code: "bg-amber-600 text-white",
+    cityTag: "border-amber-300 bg-amber-100 text-amber-950 font-bold",
+    border: "border-amber-200/90",
+    bg: "bg-amber-50/20",
+    sectionBorder: "border-amber-200/90",
+    sectionBg: "bg-amber-50/20",
+    countBadge: "border-amber-200 bg-white text-amber-900",
+  },
+  {
+    key: "violet",
+    bar: "bg-violet-600",
+    code: "bg-violet-600 text-white",
+    cityTag: "border-violet-300 bg-violet-100 text-violet-950 font-bold",
+    border: "border-violet-200/90",
+    bg: "bg-violet-50/20",
+    sectionBorder: "border-violet-200/90",
+    sectionBg: "bg-violet-50/20",
+    countBadge: "border-violet-200 bg-white text-violet-800",
+  },
+  {
+    key: "teal",
+    bar: "bg-teal-600",
+    code: "bg-teal-600 text-white",
+    cityTag: "border-teal-300 bg-teal-100 text-teal-950 font-bold",
+    border: "border-teal-200/90",
+    bg: "bg-teal-50/20",
+    sectionBorder: "border-teal-200/90",
+    sectionBg: "bg-teal-50/20",
+    countBadge: "border-teal-200 bg-white text-teal-800",
+  },
+  {
+    key: "rose",
+    bar: "bg-rose-600",
+    code: "bg-rose-600 text-white",
+    cityTag: "border-rose-300 bg-rose-100 text-rose-950 font-bold",
+    border: "border-rose-200/90",
+    bg: "bg-rose-50/20",
+    sectionBorder: "border-rose-200/90",
+    sectionBg: "bg-rose-50/20",
+    countBadge: "border-rose-200 bg-white text-rose-800",
+  },
+  {
+    key: "sky",
+    bar: "bg-sky-600",
+    code: "bg-sky-600 text-white",
+    cityTag: "border-sky-300 bg-sky-100 text-sky-950 font-bold",
+    border: "border-sky-200/90",
+    bg: "bg-sky-50/20",
+    sectionBorder: "border-sky-200/90",
+    sectionBg: "bg-sky-50/20",
+    countBadge: "border-sky-200 bg-white text-sky-800",
+  },
+] as const;
+
+/** Retorna a paleta consistente por ID ou por índice da vaga */
+export function getJobAccentTheme(indexOrId: number | string) {
+  if (typeof indexOrId === "number") {
+    return JOB_ACCENT_THEMES[Math.abs(indexOrId) % JOB_ACCENT_THEMES.length];
+  }
+  let hash = 0;
+  for (let i = 0; i < indexOrId.length; i++) {
+    hash = (hash << 5) - hash + indexOrId.charCodeAt(i);
+    hash |= 0;
+  }
+  return JOB_ACCENT_THEMES[Math.abs(hash) % JOB_ACCENT_THEMES.length];
+}
