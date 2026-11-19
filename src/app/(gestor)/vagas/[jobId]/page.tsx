@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { MapPin, Share2 } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
@@ -146,6 +146,14 @@ export default async function VagaHubPage({
           <p className="mt-2 text-sm text-[#71717a]">{meta}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={`/divulgacao?vaga=${job.id}`}
+            title="Gerar post oficial para Instagram desta vaga"
+            className="flex h-10 items-center gap-1.5 rounded-2xl border border-[#ecd9c6] bg-[#faf6f0] px-4 text-[13px] font-semibold text-[#8f281e] hover:bg-[#f5ede2] transition-colors shadow-2xs"
+          >
+            <Share2 className="size-4" />
+            Post Instagram
+          </Link>
           <Link
             href={`/vagas/${job.id}/editar`}
             className="flex h-10 items-center rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"

@@ -12,6 +12,7 @@ import {
   LogOut,
   Search,
   Settings,
+  Share2,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/painel", label: "Painel", Icon: LayoutDashboard },
   { href: "/vagas", label: "Vagas", Icon: Briefcase },
   { href: "/candidaturas", label: "Candidatos", Icon: Users, badge: true },
+  { href: "/divulgacao", label: "Divulgação / Posts", short: "Divulgação", Icon: Share2 },
   // Desativado momentaneamente para evolução futura:
   // { href: "/suporte-ao-vivo", label: "Suporte ao Vivo", short: "Suporte", Icon: Headphones },
   { href: "/buscar-cvs", label: "Buscar CVs", short: "Buscar", Icon: Search },
