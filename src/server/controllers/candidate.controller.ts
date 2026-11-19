@@ -126,12 +126,13 @@ export async function updateProfileAction(
   const rawBirthDate = String(formData.get("birthDate") ?? "").trim();
   let birthDate: Date | null | undefined = undefined;
   if (rawBirthDate) {
-    const d = new Date(rawBirthDate);
-    if (!isNaN(d.getTime())) {
-      birthDate = d;
+    const d = new Date(`${rawBirthDate}T12:00:00Z`);
+    if (isNaN(d.getTime())) {
+      return { error: "Informe uma data de nascimento válida." };
     }
+    birthDate = d;
   } else if (formData.has("birthDate")) {
-    birthDate = null;
+    return { error: "Informe sua data de nascimento." };
   }
 
   const neighborhood = formData.has("neighborhood")

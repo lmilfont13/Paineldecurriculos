@@ -308,9 +308,15 @@ export type DashboardApplicationRow = {
   email?: string;
   cpf?: string | null;
   candidateId?: string | null;
+  birthDate?: Date | null;
+  city?: string | null;
+  neighborhood?: string | null;
+  hasCnh?: string | null;
+  availability?: string | null;
   status: AppStatus;
   aiScore: number | null;
   aiState: AIState;
+  aiProfile?: string | null;
   aiArea?: string | null;
   aiLevel?: string | null;
   createdAt: Date;
@@ -342,9 +348,15 @@ export async function findDashboardApplications(
       email: true,
       cpf: true,
       candidateId: true,
+      birthDate: true,
+      city: true,
+      neighborhood: true,
+      hasCnh: true,
+      availability: true,
       status: true,
       aiScore: true,
       aiState: true,
+      aiProfile: true,
       aiArea: true,
       aiLevel: true,
       createdAt: true,

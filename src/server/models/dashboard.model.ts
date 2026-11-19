@@ -84,6 +84,18 @@ export type DashboardAnalytics = {
     topMatchCount: number;
   };
   topAreas: { label: string; count: number; pct: number }[];
+  topRoles: { label: string; count: number; pct: number }[];
+  topCities: { label: string; count: number; pct: number }[];
+  levels: { label: string; count: number; pct: number }[];
+  ageSummary: {
+    avgAge: number | null;
+    brackets: { label: string; count: number; pct: number }[];
+  };
+  readiness: {
+    withCnhCount: number;
+    immediateCount: number;
+    readyToAdvanceCount: number;
+  };
   funnel: {
     pending: number;
     shortlisted: number;

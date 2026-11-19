@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Cake, ChevronRight, MessageCircle } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { CopyLink } from "@/components/gestor/copy-link";
 import { getPainelData } from "@/server/controllers/gestor.controller";
-import { getCompanyBirthdaysAction } from "@/server/controllers/birthday.controller";
 import { formatWaiting } from "@/server/models/application.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
-import { BirthdayCardButtonAndModal } from "@/components/gestor/birthday-card-modal";
 import { jobStatusLabels } from "@/server/models/job.model";
 
 export const metadata: Metadata = { title: "Painel · Triagem" };
@@ -60,9 +57,6 @@ function FunnelBar({
 export default async function PainelPage() {
   const { userName, companyName, publicUrl, stats, priority, jobs, analytics } =
     await getPainelData();
-  const birthdayData = await getCompanyBirthdaysAction().catch(() => null);
-  const birthdaysToday = birthdayData?.today ?? [];
-  const birthdaysTomorrow = birthdayData?.thisWeek.filter((b) => b.daysUntil === 1) ?? [];
   const firstName = userName.split(" ")[0];
 
   // Primeiro uso (nenhuma vaga ainda): induz a criar a vaga, sem mostrar zeros.
@@ -489,6 +483,196 @@ export default async function PainelPage() {
               </div>
             </div>
           </div>
+
+          {/* Card 5: Principais Funções / Cargos na Base */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Principais funções
+                </span>
+                {analytics.topRoles[0] && (
+                  <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b] tabular-nums">
+                    {analytics.topRoles[0].pct}% líder
+                  </span>
+                )}
+              </div>
+
+              {analytics.topRoles.length > 0 ? (
+                <div className="mt-2.5 space-y-2">
+                  {analytics.topRoles.slice(0, 3).map((role) => (
+                    <div key={role.label}>
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate font-medium text-[#0a0a0a]">
+                          {role.label}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-semibold text-[#52525b] tabular-nums">
+                          {role.count} ({role.pct}%)
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
+                        <div
+                          className="h-full rounded-full bg-[#0a0a0a]/80"
+                          style={{ width: `${Math.max(8, role.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[#a1a1aa]">
+                  Aguardando leitura de perfis pela IA
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3 border-t border-[#f4f4f5] pt-2 text-[10px] text-[#71717a]">
+              <Link href="/buscar-cvs" className="font-medium text-[#52525b] hover:text-[#0a0a0a] hover:underline">
+                Filtrar por função na busca de CVs →
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 6: Cidades / Regiões & Mobilidade */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Cidades & Mobilidade
+                </span>
+                {analytics.topCities[0] && (
+                  <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b] tabular-nums">
+                    {analytics.topCities[0].label}
+                  </span>
+                )}
+              </div>
+
+              {analytics.topCities.length > 0 ? (
+                <div className="mt-2.5 space-y-1.5">
+                  {analytics.topCities.slice(0, 3).map((city) => (
+                    <div
+                      key={city.label}
+                      className="flex items-center justify-between gap-2 text-xs"
+                    >
+                      <span className="truncate text-[#3f3f46]">{city.label}</span>
+                      <span className="shrink-0 font-semibold text-[#0a0a0a] tabular-nums">
+                        {city.count}{" "}
+                        <span className="text-[10px] font-normal text-[#a1a1aa]">
+                          ({city.pct}%)
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[#a1a1aa]">
+                  Localidades em preenchimento
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-2.5 text-[10px] text-[#71717a] tabular-nums">
+              <span>
+                Com CNH:{" "}
+                <strong className="text-[#0a0a0a]">
+                  {analytics.readiness.withCnhCount}
+                </strong>
+              </span>
+              <span>·</span>
+              <span>
+                Início imediato:{" "}
+                <strong className="text-emerald-700">
+                  {analytics.readiness.immediateCount}
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Card 7: Faixa Etária da Base */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Faixa etária
+                </span>
+                {analytics.ageSummary.avgAge !== null && (
+                  <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#0a0a0a] tabular-nums">
+                    Média {analytics.ageSummary.avgAge} anos
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2.5 space-y-1.5">
+                {analytics.ageSummary.brackets.map((b) => (
+                  <div key={b.label} className="flex items-center gap-2 text-[11px]">
+                    <span className="w-16 shrink-0 text-[#52525b]">{b.label}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f4f4f5]">
+                      <div
+                        className="h-full rounded-full bg-[#52525b]"
+                        style={{ width: `${b.count > 0 ? Math.max(8, b.pct) : 0}%` }}
+                      />
+                    </div>
+                    <span className="w-12 shrink-0 text-right font-semibold text-[#0a0a0a] tabular-nums">
+                      {b.count}{" "}
+                      <span className="text-[10px] font-normal text-[#a1a1aa]">
+                        ({b.pct}%)
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 border-t border-[#f4f4f5] pt-2 text-[10px] text-[#71717a]">
+              Informativo demográfico (não altera nota da IA)
+            </div>
+          </div>
+
+          {/* Card 8: Senioridade & Prontidão para Avançar */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Senioridade & Prontidão
+                </span>
+                <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b] tabular-nums">
+                  Stand-by: {analytics.funnel.standby}
+                </span>
+              </div>
+
+              {analytics.levels.length > 0 ? (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {analytics.levels.map((lvl) => (
+                    <span
+                      key={lvl.label}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-1 text-[11px] font-medium text-[#0a0a0a] tabular-nums"
+                    >
+                      <span>{lvl.label}</span>
+                      <span className="text-[10px] font-bold text-[#71717a]">
+                        {lvl.count} ({lvl.pct}%)
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[#a1a1aa]">
+                  Senioridade calculada na triagem
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3 border-t border-[#f4f4f5] pt-2.5">
+              <Link
+                href="/candidaturas"
+                className="flex items-center justify-between text-[11px] font-semibold text-[#0a0a0a] hover:underline"
+              >
+                <span>Prontos p/ avançar na triagem</span>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 tabular-nums">
+                  {analytics.readiness.readyToAdvanceCount} acima do corte →
+                </span>
+              </Link>
+            </div>
+          </div>
         </section>
       )}
 
@@ -523,101 +707,6 @@ export default async function PainelPage() {
             Revisar e publicar
           </span>
         </Link>
-      )}
-
-      {/* Lembrete de Aniversariantes de Hoje ou de Amanhã */}
-      {(birthdaysToday.length > 0 || birthdaysTomorrow.length > 0) && (
-        <section className="mt-8 overflow-hidden rounded-2xl border border-amber-300 bg-linear-to-r from-amber-50 via-orange-50/50 to-amber-50/30 p-6 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
-                <Cake className="size-5" />
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-[#0a0a0a]">
-                    {birthdaysToday.length > 0
-                      ? "Aniversariantes de Hoje! 🎉"
-                      : "Aniversariantes de Amanhã! 🎈"}
-                  </h2>
-                  <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {birthdaysToday.length > 0 ? birthdaysToday.length : birthdaysTomorrow.length}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-[#71717a]">
-                  {birthdaysToday.length > 0
-                    ? "Fortaleça o vínculo com seus talentos enviando uma mensagem personalizada de parabéns pelo WhatsApp."
-                    : "Prepare com antecedência as felicitações para os talentos que comemoram aniversário amanhã."}
-                </p>
-              </div>
-            </div>
-
-            <Link
-              href="/aniversariantes"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 text-xs font-semibold text-amber-900 shadow-2xs hover:bg-amber-50 transition"
-            >
-              <span>Ver todos os aniversariantes</span>
-              <ChevronRight className="size-3.5 text-amber-700" />
-            </Link>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(birthdaysToday.length > 0 ? birthdaysToday : birthdaysTomorrow).map((person) => (
-              <div
-                key={person.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-white/95 p-3.5 shadow-2xs backdrop-blur-xs"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <CandidateAvatar
-                    name={person.name}
-                    photoUrl={person.photoUrl}
-                    className="size-9 shrink-0 rounded-full border border-amber-200 bg-[#1c1917] text-xs font-bold text-white"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-[#0a0a0a]">
-                      {person.name}
-                    </p>
-                    <p className="truncate text-[11px] font-medium text-amber-800">
-                      {person.isToday
-                        ? (person.turningAge > 0
-                            ? `Completando ${person.turningAge} anos hoje 🎂`
-                            : `Aniversário Hoje (${person.dayMonthFormatted}) 🎂`)
-                        : (person.turningAge > 0
-                            ? `Fará ${person.turningAge} anos amanhã (${person.dayMonthFormatted}) 🎂`
-                            : `Aniversário Amanhã (${person.dayMonthFormatted}) 🎂`)}
-                    </p>
-                    <p className="truncate text-[10px] text-[#71717a]">
-                      {person.jobTitle}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <BirthdayCardButtonAndModal
-                    name={person.name}
-                    turningAge={person.turningAge}
-                    companyName={companyName}
-                    whatsappUrl={person.whatsappUrl}
-                    greetingMessage={person.greetingMessage}
-                    variant="icon"
-                  />
-                  {person.whatsappUrl && (
-                    <a
-                      href={person.whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-2xs hover:bg-emerald-700 transition"
-                      title={`Mandar parabéns para ${person.name} no WhatsApp`}
-                    >
-                      <MessageCircle className="size-3.5" />
-                      <span>WhatsApp</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* A fila: o único número que muda o que o gestor faz agora */}

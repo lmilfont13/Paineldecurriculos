@@ -90,7 +90,9 @@ export function ApplyWizard({
   prefillAnswers: Record<string, string>;
 }) {
   const [step, setStep] = useState(0);
-  const canReuse = canReuseApplicationProfile(candidate, hasPreviousApplication);
+  const canReuse =
+    Boolean(candidate.birthDate) &&
+    canReuseApplicationProfile(candidate, hasPreviousApplication);
   const [profileChoice, setProfileChoice] = useState<"reuse" | "update" | null>(null);
   const reuseProfile = canReuse && profileChoice === "reuse";
   const savedData: WizardData = {
@@ -159,6 +161,9 @@ export function ApplyWizard({
       const awarenessError = applicationAwarenessError(cltAware, isTempJob, tempAware);
       if (awarenessError) return awarenessError;
       if (data.name.trim().length < 2) return "Informe seu nome completo.";
+      if (!data.birthDate.trim()) return "Informe sua data de nascimento.";
+      const parsedBirth = new Date(`${data.birthDate.trim()}T12:00:00Z`);
+      if (Number.isNaN(parsedBirth.getTime())) return "Informe uma data de nascimento válida.";
       if (data.phone.trim().length < 8) return "Informe um telefone válido.";
       const ig = parseInstagram(data.instagram);
       if ("error" in ig) return ig.error;
@@ -209,6 +214,10 @@ export function ApplyWizard({
     const awarenessError = applicationAwarenessError(cltAware, isTempJob, tempAware);
     if (awarenessError) {
       setError(awarenessError);
+      return;
+    }
+    if (!data.birthDate.trim()) {
+      setError("Informe sua data de nascimento.");
       return;
     }
     if (!consent) {
@@ -465,9 +474,10 @@ export function ApplyWizard({
                 />
               </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Data de nascimento">
+                <Field label="Data de nascimento (obrigatório)">
                   <input
                     type="date"
+                    required
                     value={data.birthDate}
                     onChange={(e) =>
                       setData((d) => ({ ...d, birthDate: e.target.value }))

@@ -251,12 +251,19 @@ export async function getDashboard(companyId: string): Promise<{
       pct: totalNonPoolApps > 0 ? Math.round((j.count / totalNonPoolApps) * 100) : 0,
     }));
 
-  // 4) Qualidade IA, Top Áreas e Funil
+  // 4) Qualidade IA, Top Áreas, Top Funções, Cidades, Idade, Senioridade e Funil
   let scoreSum = 0;
   let scoredCount = 0;
   let aboveCutoffCount = 0;
   let topMatchCount = 0;
+  let readyToAdvanceCount = 0;
+  let withCnhCount = 0;
+  let immediateCount = 0;
   const areaCounts = new Map<string, number>();
+  const roleCounts = new Map<string, number>();
+  const cityCounts = new Map<string, number>();
+  const levelCounts = new Map<string, number>();
+  const ages: number[] = [];
   const funnel = {
     pending: 0,
     shortlisted: 0,
@@ -265,6 +272,8 @@ export async function getDashboard(companyId: string): Promise<{
     approved: 0,
     rejected: 0,
   };
+
+  const currentYear = new Date(now).getUTCFullYear();
 
   for (const app of allApplications) {
     if (app.status === "PENDING") funnel.pending += 1;
@@ -277,25 +286,78 @@ export async function getDashboard(companyId: string): Promise<{
     if (app.aiScore !== null) {
       scoreSum += app.aiScore;
       scoredCount += 1;
-      if (app.aiScore >= app.job.aiMinScore) aboveCutoffCount += 1;
+      if (app.aiScore >= app.job.aiMinScore) {
+        aboveCutoffCount += 1;
+        if (app.status === "PENDING" && !app.hasImpediment) {
+          readyToAdvanceCount += 1;
+        }
+      }
       if (app.aiScore >= 80) topMatchCount += 1;
+    }
+
+    if (app.hasCnh && app.hasCnh !== "NONE") withCnhCount += 1;
+    if (app.availability === "IMMEDIATE") immediateCount += 1;
+
+    if (app.birthDate) {
+      const bYear = app.birthDate.getUTCFullYear();
+      const age = currentYear - bYear;
+      if (age >= 15 && age <= 85) {
+        ages.push(age);
+      }
     }
 
     if (app.aiArea && app.aiArea.trim()) {
       const area = titleCasePt(app.aiArea.trim());
       areaCounts.set(area, (areaCounts.get(area) ?? 0) + 1);
     }
+
+    if (app.aiProfile && app.aiProfile.trim()) {
+      const role = titleCasePt(app.aiProfile.trim());
+      roleCounts.set(role, (roleCounts.get(role) ?? 0) + 1);
+    }
+
+    if (app.aiLevel && app.aiLevel.trim()) {
+      const lvl = titleCasePt(app.aiLevel.trim());
+      levelCounts.set(lvl, (levelCounts.get(lvl) ?? 0) + 1);
+    }
+
+    const locRaw = app.city?.trim() || app.neighborhood?.trim();
+    if (locRaw) {
+      const loc = titleCasePt(locRaw);
+      cityCounts.set(loc, (cityCounts.get(loc) ?? 0) + 1);
+    }
   }
 
-  const totalAreaTagged = Array.from(areaCounts.values()).reduce((a, b) => a + b, 0);
-  const topAreas = Array.from(areaCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([label, count]) => ({
-      label,
-      count,
-      pct: totalAreaTagged > 0 ? Math.round((count / totalAreaTagged) * 100) : 0,
-    }));
+  const toRankedList = (map: Map<string, number>, maxItems: number) => {
+    const total = Array.from(map.values()).reduce((a, b) => a + b, 0);
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, maxItems)
+      .map(([label, count]) => ({
+        label,
+        count,
+        pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      }));
+  };
+
+  const topAreas = toRankedList(areaCounts, 3);
+  const topRoles = toRankedList(roleCounts, 4);
+  const topCities = toRankedList(cityCounts, 4);
+  const levels = toRankedList(levelCounts, 4);
+
+  const avgAge =
+    ages.length > 0
+      ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length)
+      : null;
+  const ageBuckets = [
+    { label: "Até 24a", count: ages.filter((a) => a <= 24).length },
+    { label: "25 a 34a", count: ages.filter((a) => a >= 25 && a <= 34).length },
+    { label: "35 a 44a", count: ages.filter((a) => a >= 35 && a <= 44).length },
+    { label: "45+ anos", count: ages.filter((a) => a >= 45).length },
+  ].map((b) => ({
+    ...b,
+    pct: ages.length > 0 ? Math.round((b.count / ages.length) * 100) : 0,
+  }));
 
   const analytics: DashboardAnalytics = {
     totalRegistrations: allApplications.length,
@@ -319,6 +381,18 @@ export async function getDashboard(companyId: string): Promise<{
       topMatchCount,
     },
     topAreas,
+    topRoles,
+    topCities,
+    levels,
+    ageSummary: {
+      avgAge,
+      brackets: ageBuckets,
+    },
+    readiness: {
+      withCnhCount,
+      immediateCount,
+      readyToAdvanceCount,
+    },
     funnel,
   };
 

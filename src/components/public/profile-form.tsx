@@ -78,11 +78,12 @@ export function ProfileForm({
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-              Data de nascimento
+              Data de nascimento *
             </span>
             <input
               type="date"
               name="birthDate"
+              required
               defaultValue={
                 candidate.birthDate
                   ? new Date(candidate.birthDate).toISOString().split("T")[0]

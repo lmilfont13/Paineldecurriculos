@@ -575,6 +575,16 @@ export async function submitApplicationAction(
     };
   }
 
+  const rawBirth = String(parsed.data.birthDate ?? "").trim();
+  const hasValidInputBirth =
+    rawBirth.length > 0 && !Number.isNaN(new Date(`${rawBirth}T12:00:00Z`).getTime());
+  if (!hasValidInputBirth && !candidate.birthDate) {
+    return {
+      ok: false,
+      error: "Informe sua data de nascimento para concluir o cadastro.",
+    };
+  }
+
   const company = await getPublicCompanyBySlug(parsed.data.slug);
   if (!company) {
     return { ok: false, error: "Empresa não encontrada." };
