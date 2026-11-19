@@ -280,12 +280,12 @@ export function VagaPipeline({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1.5 py-1">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-8 w-48 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-2.5">
-              <Search className="size-3.5 text-[#a1a1aa]" />
+              <Search className="size-3.5 text-[#71717a]" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar no funil…"
-                className="w-full bg-transparent text-[11px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+                className="w-full bg-transparent text-[11px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:outline-none"
               />
             </div>
 
@@ -409,7 +409,7 @@ export function VagaPipeline({
                 Limpar
               </button>
             )}
-            <span className="text-[11px] text-[#a1a1aa]">
+            <span className="text-[11px] text-[#71717a]">
               Só muda o que você vê aqui. A idade não entra na nota.
             </span>
           </div>
@@ -610,7 +610,7 @@ export function VagaPipeline({
                               {person.age != null && (
                                 <span
                                   className={
-                                    "mt-0.5 block text-[10px] text-[#a1a1aa] transition-opacity " +
+                                    "mt-0.5 block text-[10px] text-[#71717a] transition-opacity " +
                                     (ageFiltering
                                       ? "opacity-100"
                                       : "opacity-0 group-hover:opacity-100")
@@ -651,7 +651,7 @@ export function VagaPipeline({
                               <a
                                 href={`/candidaturas/${person.id}/cv?download=1`}
                                 draggable={false}
-                                className="inline-flex size-5 items-center justify-center rounded text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                                className="inline-flex size-5 items-center justify-center rounded text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                                 title="Baixar currículo em PDF"
                                 aria-label="Baixar currículo em PDF"
                               >

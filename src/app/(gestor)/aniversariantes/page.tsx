@@ -50,7 +50,7 @@ export default async function AniversariantesPage() {
           className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#0a0a0a] shadow-2xs hover:bg-[#fafaf9] transition self-start sm:self-auto"
         >
           <span>Ver todas as candidaturas</span>
-          <ChevronRight className="size-3.5 text-[#a1a1aa]" />
+          <ChevronRight className="size-3.5 text-[#71717a]" />
         </Link>
       </div>
 
@@ -162,7 +162,7 @@ export default async function AniversariantesPage() {
                         : `Aniversariante de hoje (${candidate.dayMonthFormatted})!`}
                     </p>
                     <p className="text-[11px] text-[#71717a] mt-1 flex items-center gap-1.5">
-                      <Phone className="size-3 text-[#a1a1aa]" />
+                      <Phone className="size-3 text-[#71717a]" />
                       {candidate.phoneFormatted}
                     </p>
                   </div>
@@ -188,7 +188,7 @@ export default async function AniversariantesPage() {
                       <span>WhatsApp</span>
                     </a>
                   ) : (
-                    <span className="flex-1 text-center text-xs text-[#a1a1aa] py-1.5">
+                    <span className="flex-1 text-center text-xs text-[#71717a] py-1.5">
                       Telefone não informado
                     </span>
                   )}

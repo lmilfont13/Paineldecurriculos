@@ -95,7 +95,7 @@ export function StandbySection({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
-            <FolderOpen className="size-4 text-[#a1a1aa]" aria-hidden /> Banco de talentos em stand-by
+            <FolderOpen className="size-4 text-[#71717a]" aria-hidden /> Banco de talentos em stand-by
           </h2>
           <p className="mt-0.5 text-[12px] text-[#71717a]">
             {poolSize === 0
@@ -170,7 +170,7 @@ export function StandbySection({
                   />
                   <a
                     href={`/candidaturas/${p.id}/cv?download=1`}
-                    className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                    className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                     title="Baixar currículo em PDF"
                     aria-label="Baixar currículo em PDF"
                   >
@@ -214,7 +214,7 @@ export function StandbySection({
       )}
 
       {people.length > 0 && (
-        <p className="mt-3 text-[11px] text-[#a1a1aa]">
+        <p className="mt-3 text-[11px] text-[#71717a]">
           {isOpen
             ? "“Convidar” abre o WhatsApp com a mensagem e o link desta vaga. A pessoa só entra no funil quando se candidatar."
             : "Publique a vaga para poder convidar pelo WhatsApp."}

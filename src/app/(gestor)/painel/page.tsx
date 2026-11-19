@@ -199,7 +199,7 @@ export default async function PainelPage() {
 
             {/* Mini gráfico de barras: cadastros por dia nos últimos 7 dias */}
             <div className="mt-3.5 border-t border-[#f4f4f5] pt-2.5">
-              <div className="mb-1.5 flex items-center justify-between text-[10px] text-[#a1a1aa]">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] text-[#71717a]">
                 <span>Cadastros por dia (7d)</span>
                 <span className="font-medium text-[#52525b] tabular-nums">
                   {analytics.last7DaysTotal} na semana
@@ -258,7 +258,7 @@ export default async function PainelPage() {
                               "text-[9px] leading-none " +
                               (d.isToday
                                 ? "font-bold text-[#0a0a0a]"
-                                : "text-[#a1a1aa]")
+                                : "text-[#71717a]")
                             }
                           >
                             {d.weekday}
@@ -307,7 +307,7 @@ export default async function PainelPage() {
                   </p>
                 </Link>
               ) : (
-                <p className="mt-2 text-xs text-[#a1a1aa]">Sem vagas com inscritos</p>
+                <p className="mt-2 text-xs text-[#71717a]">Sem vagas com inscritos</p>
               )}
             </div>
 
@@ -351,37 +351,37 @@ export default async function PainelPage() {
                 <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
                   Homens e Mulheres
                 </span>
-                <span className="text-[10px] font-medium text-[#a1a1aa] tabular-nums">
+                <span className="text-[10px] font-medium text-[#71717a] tabular-nums">
                   {analytics.uniquePeople} únicos
                 </span>
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-rose-50/60 px-2.5 py-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-rose-700">
-                    <span className="size-1.5 rounded-full bg-rose-500" />
+                <div className="rounded-xl bg-[#f4f4f5] px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#3f3f46]">
+                    <span className="size-1.5 rounded-full bg-[var(--brand-primary)]" />
                     <span>Mulheres</span>
                   </div>
                   <p className="mt-0.5 flex items-baseline gap-1">
                     <span className="text-lg font-bold text-[#0a0a0a] tabular-nums">
                       {analytics.gender.femaleCount}
                     </span>
-                    <span className="text-[11px] font-semibold text-rose-700 tabular-nums">
+                    <span className="text-[11px] font-semibold text-[#52525b] tabular-nums">
                       {analytics.gender.femalePct}%
                     </span>
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-indigo-50/60 px-2.5 py-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-700">
-                    <span className="size-1.5 rounded-full bg-indigo-500" />
+                <div className="rounded-xl bg-[#f4f4f5] px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#3f3f46]">
+                    <span className="size-1.5 rounded-full bg-[#a1a1aa]" />
                     <span>Homens</span>
                   </div>
                   <p className="mt-0.5 flex items-baseline gap-1">
                     <span className="text-lg font-bold text-[#0a0a0a] tabular-nums">
                       {analytics.gender.maleCount}
                     </span>
-                    <span className="text-[11px] font-semibold text-indigo-700 tabular-nums">
+                    <span className="text-[11px] font-semibold text-[#52525b] tabular-nums">
                       {analytics.gender.malePct}%
                     </span>
                   </p>
@@ -393,13 +393,13 @@ export default async function PainelPage() {
               <div className="flex h-2 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
                 {analytics.gender.femalePct > 0 && (
                   <span
-                    className="h-full bg-rose-500 transition-all"
+                    className="h-full bg-[var(--brand-primary)] transition-all"
                     style={{ width: `${analytics.gender.femalePct}%` }}
                   />
                 )}
                 {analytics.gender.malePct > 0 && (
                   <span
-                    className="h-full bg-indigo-500 transition-all"
+                    className="h-full bg-[#a1a1aa] transition-all"
                     style={{ width: `${analytics.gender.malePct}%` }}
                   />
                 )}
@@ -520,7 +520,7 @@ export default async function PainelPage() {
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-xs text-[#a1a1aa]">
+                <p className="mt-3 text-xs text-[#71717a]">
                   Aguardando leitura de perfis pela IA
                 </p>
               )}
@@ -557,7 +557,7 @@ export default async function PainelPage() {
                       <span className="truncate text-[#3f3f46]">{city.label}</span>
                       <span className="shrink-0 font-semibold text-[#0a0a0a] tabular-nums">
                         {city.count}{" "}
-                        <span className="text-[10px] font-normal text-[#a1a1aa]">
+                        <span className="text-[10px] font-normal text-[#71717a]">
                           ({city.pct}%)
                         </span>
                       </span>
@@ -565,7 +565,7 @@ export default async function PainelPage() {
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-xs text-[#a1a1aa]">
+                <p className="mt-3 text-xs text-[#71717a]">
                   Localidades em preenchimento
                 </p>
               )}
@@ -614,7 +614,7 @@ export default async function PainelPage() {
                     </div>
                     <span className="w-12 shrink-0 text-right font-semibold text-[#0a0a0a] tabular-nums">
                       {b.count}{" "}
-                      <span className="text-[10px] font-normal text-[#a1a1aa]">
+                      <span className="text-[10px] font-normal text-[#71717a]">
                         ({b.pct}%)
                       </span>
                     </span>
@@ -655,7 +655,7 @@ export default async function PainelPage() {
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-xs text-[#a1a1aa]">
+                <p className="mt-3 text-xs text-[#71717a]">
                   Senioridade calculada na triagem
                 </p>
               )}
@@ -724,7 +724,7 @@ export default async function PainelPage() {
               className={
                 "text-5xl font-bold " +
                 (nobodyYet
-                  ? "text-[#a1a1aa]"
+                  ? "text-[#71717a]"
                   : clear
                     ? "text-[#1f7a4d]"
                     : "text-[#b07818]")

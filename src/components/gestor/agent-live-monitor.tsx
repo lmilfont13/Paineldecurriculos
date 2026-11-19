@@ -97,13 +97,13 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
                 AO VIVO
               </span>
             </div>
-            <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
+            <p className="mt-0.5 text-[11px] text-[#71717a]">
               Atualiza sozinho a cada etapa enquanto houver agentes trabalhando
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 text-[10px] text-[#a1a1aa]">
+          <div className="flex items-center gap-2 text-[10px] text-[#71717a]">
             <Clock3 className="size-3.5" />
             {new Date(now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </div>
@@ -139,7 +139,7 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-[11px] font-semibold text-[#292524]">{agentLabel(run.agent)}</p>
-                    <p className="truncate text-[10px] text-[#a1a1aa]">
+                    <p className="truncate text-[10px] text-[#71717a]">
                       {run.status === "RUNNING" && run.summary ? run.summary : taskLabel(run)}
                     </p>
                   </div>
@@ -155,7 +155,7 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
               </div>
 
               <div className="mt-3 flex items-center justify-between text-[10px]">
-                <span className="text-[#a1a1aa]">Tempo de execução</span>
+                <span className="text-[#71717a]">Tempo de execução</span>
                 <span className="font-semibold text-[#57534e]">{elapsedLabel(run.startedAt, run.createdAt)}</span>
               </div>
             </div>
@@ -164,11 +164,11 @@ export function AgentLiveMonitor({ runs }: { runs: LiveAgentRun[] }) {
       ) : (
         <div className="mt-5 flex items-center gap-4 rounded-2xl border border-dashed border-[#d8d5d1] bg-[#fafaf9] px-4 py-5">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-[#e7e5e4]">
-            <Zap className="size-4 text-[#a1a1aa]" />
+            <Zap className="size-4 text-[#71717a]" />
           </span>
           <div className="min-w-0">
             <p className="text-[12px] font-semibold text-[#44403c]">Nenhum agente executando neste momento</p>
-            <p className="mt-1 text-[10px] leading-5 text-[#a1a1aa]">
+            <p className="mt-1 text-[10px] leading-5 text-[#71717a]">
               Quando uma candidatura chegar ou o status de um candidato mudar, a execução aparecerá aqui automaticamente.
             </p>
           </div>

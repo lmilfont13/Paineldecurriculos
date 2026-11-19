@@ -36,7 +36,7 @@ export function TalentFolderActions({ folderId, name }: { folderId: string; name
         onClick={rename}
         disabled={pending}
         aria-label={`Renomear a pasta ${name}`}
-        className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
+        className="rounded-md p-1.5 text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
       >
         <Pencil className="size-3.5" />
       </button>
@@ -45,7 +45,7 @@ export function TalentFolderActions({ folderId, name }: { folderId: string; name
         onClick={remove}
         disabled={pending}
         aria-label={`Apagar a pasta ${name}`}
-        className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-[#fef2f2] hover:text-[#c23b3b] disabled:opacity-50"
+        className="rounded-md p-1.5 text-[#71717a] hover:bg-[#fef2f2] hover:text-[#c23b3b] disabled:opacity-50"
       >
         <Trash2 className="size-3.5" />
       </button>
@@ -71,7 +71,7 @@ export function RemoveFromFolderButton({
       onClick={() => startTransition(() => removeFromTalentFolderAction(folderId, applicationId))}
       aria-label={`Tirar ${name} desta pasta`}
       title="Tirar desta pasta"
-      className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
+      className="rounded-md p-1.5 text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
     >
       <X className="size-4" />
     </button>

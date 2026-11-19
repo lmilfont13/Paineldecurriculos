@@ -29,7 +29,7 @@ function Form() {
           type="text"
           required
           placeholder="Ex: Maria Silva"
-          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -42,7 +42,7 @@ function Form() {
           type="email"
           required
           placeholder="maria@suaempresa.com"
-          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
       </div>
 
@@ -110,7 +110,7 @@ function ProfileForm({ currentName, currentEmail }: { currentName: string | null
           required
           defaultValue={currentName ?? ""}
           placeholder="Seu nome"
-          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -123,7 +123,7 @@ function ProfileForm({ currentName, currentEmail }: { currentName: string | null
           type="email"
           required
           defaultValue={currentEmail}
-          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
       </div>
 

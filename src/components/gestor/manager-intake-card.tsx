@@ -74,7 +74,7 @@ export function ManagerIntakeCard({
         (preRegistered ? "border-[#fde68a] bg-[#fffbeb]" : "border-[#e4e4e7] bg-white")
       }
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
         {preRegistered ? "Cadastro incompleto" : "Currículo recebido por fora?"}
       </p>
       {preRegistered && (
@@ -127,7 +127,7 @@ export function ManagerIntakeCard({
         {pending ? <Loader2 className="size-3.5 animate-spin" /> : <FileUp className="size-3.5" />}
         {pending ? "Enviando…" : hasResume ? "Trocar currículo" : "Anexar currículo"}
       </button>
-      <p className="mt-1.5 text-[10px] text-[#a1a1aa]">PDF ou imagem, até 5 MB.</p>
+      <p className="mt-1.5 text-[10px] text-[#71717a]">PDF ou imagem, até 5 MB.</p>
 
       {message && (
         <p className="mt-2 break-words text-[11px] text-[#52525b]" role="status">

@@ -53,7 +53,7 @@ export function Toast({
         type="button"
         onClick={onDone}
         aria-label="Fechar"
-        className="ml-1 text-[13px] text-[#a1a1aa] hover:text-[#0a0a0a]"
+        className="ml-1 text-[13px] text-[#71717a] hover:text-[#0a0a0a]"
       >
         ✕
       </button>

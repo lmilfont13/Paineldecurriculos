@@ -30,7 +30,7 @@ export function NotesForm({
         defaultValue={notes ?? ""}
         onChange={() => setDirty(true)}
         placeholder="Impressões da conversa, combinados, próximos passos…"
-        className="w-full resize-y rounded-lg border border-[#e4e4e7] bg-white p-3 text-[13px] leading-5 text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+        className="w-full resize-y rounded-lg border border-[#e4e4e7] bg-white p-3 text-[13px] leading-5 text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
       />
       <div className="mt-2 flex items-center gap-3">
         <button

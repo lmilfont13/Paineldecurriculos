@@ -108,7 +108,7 @@ export function SoundToggleControl({ enabled = true }: { enabled?: boolean }) {
       className="flex size-9 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition-colors"
     >
       {muted ? (
-        <VolumeX className="size-4 text-[#a1a1aa]" />
+        <VolumeX className="size-4 text-[#71717a]" />
       ) : (
         <Volume2 className="size-4 text-[#15803d]" />
       )}

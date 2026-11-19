@@ -92,7 +92,7 @@ export function CompareSuggestion({ ids }: { ids: string[] }) {
 
           {outcome.reasons.length > 0 && (
             <div className="mt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">Motivos</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">Motivos</p>
               <ul className="mt-2 space-y-1.5 text-[13px] leading-5 text-[#0a0a0a]">
                 {outcome.reasons.map((r) => (
                   <li key={r} className="flex gap-2">

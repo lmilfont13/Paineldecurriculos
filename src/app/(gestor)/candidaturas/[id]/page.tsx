@@ -364,7 +364,7 @@ export default async function CandidaturaDetailPage({
               )}
               {app.consentAt && (
                 <span
-                  className="text-[#a1a1aa]"
+                  className="text-[#71717a]"
                   title={`Aceitou o Aviso de Privacidade (LGPD) em ${formatAppliedAt(app.consentAt, true)} · versão ${app.consentVersion ?? "-"}`}
                 >
                   · LGPD aceita
@@ -488,7 +488,7 @@ export default async function CandidaturaDetailPage({
                 >
                   {jobLabel(other.job.title, other.job.code)}
                 </Link>
-                <span className="text-[#a1a1aa]"> · {appStatusLabels[other.status as AppStatusKey]}</span>
+                <span className="text-[#71717a]"> · {appStatusLabels[other.status as AppStatusKey]}</span>
                 {(other.hasImpediment || app.hasImpediment) && (
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
@@ -518,7 +518,7 @@ export default async function CandidaturaDetailPage({
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
                   Leitura da IA
                 </p>
                 <h2 className="mt-1 text-base font-semibold text-[#0a0a0a]">
@@ -603,7 +603,7 @@ export default async function CandidaturaDetailPage({
                 <h3 className="text-[13px] font-semibold text-[#0a0a0a]">
                   Critério por critério
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
+                <p className="mt-0.5 text-[11px] text-[#71717a]">
                   Explica a nota; não muda o cálculo dela.
                 </p>
                 <ul className="mt-3 space-y-2.5">
@@ -617,7 +617,7 @@ export default async function CandidaturaDetailPage({
                             ? "bg-[#e4f6ec] text-[#1f7a4d]"
                             : item.met === "parcial"
                               ? "bg-[#fff7e6] text-[#a16207]"
-                              : "bg-[#f4f4f5] text-[#a1a1aa]")
+                              : "bg-[#f4f4f5] text-[#71717a]")
                         }
                       >
                         {item.met === "sim" ? "✓" : item.met === "parcial" ? "~" : "–"}
@@ -635,7 +635,7 @@ export default async function CandidaturaDetailPage({
               </div>
             ) : app.job.aiCriteria.length > 0 && (
               <div className="mt-6 border-t border-[#e4e4e7] pt-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
                   Critérios avaliados
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -673,7 +673,7 @@ export default async function CandidaturaDetailPage({
                       <span className="text-[#0a0a0a]">
                         {historyLine(event.from, event.to, event.actor)}
                       </span>
-                      <span className="ml-2 text-[#a1a1aa]">
+                      <span className="ml-2 text-[#71717a]">
                         {formatAppliedAt(event.createdAt, true)}
                       </span>
                     </div>
@@ -691,7 +691,7 @@ export default async function CandidaturaDetailPage({
             <h2 className="text-sm font-semibold text-[#0a0a0a]">
               Recado para o candidato
             </h2>
-            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] text-[#71717a]">
               {app.name.split(" ")[0]} recebe por e-mail e nas novidades da área dele.
             </p>
             <MessageBox
@@ -710,7 +710,7 @@ export default async function CandidaturaDetailPage({
             <h2 className="text-sm font-semibold text-[#0a0a0a]">
               Pré-entrevista
             </h2>
-            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] text-[#71717a]">
               Peça as informações que faltam antes de marcar a conversa. RG e CPF
               só aparecem mascarados até você pedir para ver.
             </p>
@@ -749,7 +749,7 @@ export default async function CandidaturaDetailPage({
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <h2 className="text-sm font-semibold text-[#0a0a0a]">Notas internas</h2>
-            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] text-[#71717a]">
               Visível só para sua equipe. O candidato nunca vê.
             </p>
             <div className="mt-4">
@@ -854,7 +854,7 @@ export default async function CandidaturaDetailPage({
           )}
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
               Currículo
             </p>
             <div className="mt-4 flex items-center gap-3">

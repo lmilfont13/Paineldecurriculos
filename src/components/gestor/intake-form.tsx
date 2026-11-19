@@ -66,7 +66,7 @@ export function IntakeForm({
             className="mt-1.5 w-full rounded-xl border border-[#e4e4e7] px-3 py-2.5 font-mono text-[12px] font-normal leading-5 outline-none focus:border-[#a1a1aa]"
           />
         </label>
-        <p className="mt-1 text-[11px] text-[#a1a1aa]">
+        <p className="mt-1 text-[11px] text-[#71717a]">
           Só o e-mail já basta. Nome e telefone (para o convite no WhatsApp) são opcionais, separados por vírgula. Até 50
           por vez.
         </p>
@@ -109,7 +109,7 @@ export function IntakeForm({
                       <span className="block truncate text-[13px] font-medium text-[#0a0a0a] hover:underline">
                         {c.name}
                       </span>
-                      <span className="block truncate text-[11px] text-[#a1a1aa]">{c.email}</span>
+                      <span className="block truncate text-[11px] text-[#71717a]">{c.email}</span>
                     </Link>
                     <button
                       type="button"

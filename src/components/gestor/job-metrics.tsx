@@ -114,7 +114,7 @@ export function JobMetrics({ jobId }: { jobId: string }) {
   return (
     <section className="mt-6 rounded-xl border border-[#e4e4e7] bg-white p-5">
       <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
-        <BarChart3 className="size-4 text-[#a1a1aa]" aria-hidden />
+        <BarChart3 className="size-4 text-[#71717a]" aria-hidden />
         Indicadores desta vaga
       </h2>
 
@@ -125,7 +125,7 @@ export function JobMetrics({ jobId }: { jobId: string }) {
             <Users className="size-3.5" /> De onde vieram
           </h3>
           {sourceEntries.length === 0 ? (
-            <p className="mt-2 text-[11px] text-[#a1a1aa]">
+            <p className="mt-2 text-[11px] text-[#71717a]">
               Ainda sem candidaturas com origem rastreada. Divulgue com{" "}
               <code className="rounded bg-[#f4f4f5] px-1">?origem=instagram</code>{" "}
               no link.
@@ -151,7 +151,7 @@ export function JobMetrics({ jobId }: { jobId: string }) {
             <TrendingUp className="size-3.5" /> Funil
           </h3>
           {funnelEntries.length === 0 ? (
-            <p className="mt-2 text-[11px] text-[#a1a1aa]">
+            <p className="mt-2 text-[11px] text-[#71717a]">
               Sem candidaturas ainda.
             </p>
           ) : (
@@ -186,7 +186,7 @@ export function JobMetrics({ jobId }: { jobId: string }) {
                   : "—"}
               </p>
               {metrics.avgDaysToHire === null && (
-                <p className="text-[10px] text-[#a1a1aa]">
+                <p className="text-[10px] text-[#71717a]">
                   Aparece quando houver aprovações
                 </p>
               )}
@@ -211,13 +211,13 @@ export function JobMetrics({ jobId }: { jobId: string }) {
                           height: `${Math.max((count / maxDay) * 48, 3)}px`,
                         }}
                       />
-                      <span className="absolute -bottom-4 left-1/2 hidden -translate-x-1/2 text-[9px] text-[#a1a1aa] group-hover:block">
+                      <span className="absolute -bottom-4 left-1/2 hidden -translate-x-1/2 text-[9px] text-[#71717a] group-hover:block">
                         {day.slice(5)}
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-5 flex justify-between text-[9px] text-[#a1a1aa]">
+                <div className="mt-5 flex justify-between text-[9px] text-[#71717a]">
                   <span>{timelineEntries[0]?.[0]?.slice(5)}</span>
                   <span>{timelineEntries.at(-1)?.[0]?.slice(5)}</span>
                 </div>

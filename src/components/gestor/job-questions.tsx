@@ -83,7 +83,7 @@ export function JobQuestions({
     >
       <span className="min-w-0">
         <span className="block text-[12px] text-[#0a0a0a]">{s.label}</span>
-        <span className="text-[10px] text-[#a1a1aa]">
+        <span className="text-[10px] text-[#71717a]">
           {TYPE_LABELS[s.type]}
           {s.type === "DROPDOWN" && `: ${s.options.join(", ")}`}
         </span>
@@ -143,7 +143,7 @@ export function JobQuestions({
                       </span>
                     )}
                   </span>
-                  <span className="text-[10px] text-[#a1a1aa]">
+                  <span className="text-[10px] text-[#71717a]">
                     {TYPE_LABELS[q.type] ?? q.type}
                     {q.type === "DROPDOWN" && `: ${q.options.join(", ")}`}
                   </span>
@@ -166,7 +166,7 @@ export function JobQuestions({
                   aria-label={`Remover a pergunta ${q.label}`}
                   disabled={pending}
                   onClick={() => run(q.id, () => deleteJobQuestionAction(jobId, q.id))}
-                  className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-[#fafafa] hover:text-[#b91c1c] disabled:opacity-50"
+                  className="rounded-md p-1.5 text-[#71717a] hover:bg-[#fafafa] hover:text-[#b91c1c] disabled:opacity-50"
                 >
                   {busyId === q.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                 </button>
@@ -287,7 +287,7 @@ export function JobQuestions({
       </div>
 
       {companyQuestions.length > 0 && (
-        <p className="mt-4 text-[11px] leading-4 text-[#a1a1aa]">
+        <p className="mt-4 text-[11px] leading-4 text-[#71717a]">
           Também aparecem em todas as vagas (Configurações → Formulário): {companyQuestions.join(" · ")}.
         </p>
       )}

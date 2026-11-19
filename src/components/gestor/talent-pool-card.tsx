@@ -23,7 +23,7 @@ export function MatchScore({ match }: { match: { score: number | null; state: st
   if (match.state !== "DONE" || match.score === null) {
     const label =
       match.state === "FAILED" ? "falhou" : match.state === "NO_RESUME" ? "sem material" : "analisando…";
-    return <span className="shrink-0 text-[11px] text-[#a1a1aa]">{label}</span>;
+    return <span className="shrink-0 text-[11px] text-[#71717a]">{label}</span>;
   }
   const meets = match.score >= match.minScore;
   return (
@@ -113,7 +113,7 @@ export function TalentPoolCard({
         (highlight && saved.length === 0 ? "border-[#fde68a] bg-[#fffbeb]" : "border-[#e4e4e7] bg-white")
       }
     >
-      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
         <FolderOpen className="size-3.5" aria-hidden /> Banco de talentos
       </p>
 
@@ -140,7 +140,7 @@ export function TalentPoolCard({
               >
                 {f.name}
               </Link>
-              <span className="text-[11px] text-[#a1a1aa]">
+              <span className="text-[11px] text-[#71717a]">
                 {f.count} {f.count === 1 ? "candidato" : "candidatos"} nesta pasta
               </span>
             </li>
@@ -160,7 +160,7 @@ export function TalentPoolCard({
               disabled={pending}
               aria-label="Conferir de novo com as vagas abertas"
               title="Conferir de novo com as vagas abertas"
-              className="rounded-md p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
+              className="rounded-md p-1 text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-50"
             >
               <RefreshCw className={"size-3.5" + (pending ? " animate-spin" : "")} />
             </button>
@@ -196,7 +196,7 @@ export function TalentPoolCard({
                 className="accent-[var(--brand-primary)]"
               />
               <span className="flex-1">{f.name}</span>
-              <span className="text-[10px] text-[#a1a1aa]">{f.count}</span>
+              <span className="text-[10px] text-[#71717a]">{f.count}</span>
             </label>
           ))}
           <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#0a0a0a]">
@@ -220,7 +220,7 @@ export function TalentPoolCard({
                 className="h-9 w-full rounded-lg border border-[#e4e4e7] bg-white px-3 text-[12px] outline-none focus:border-[#a1a1aa]"
               />
               {suggestedName && (
-                <p className="mt-1 text-[10px] text-[#a1a1aa]">Nome sugerido pelo perfil do currículo. Pode mudar.</p>
+                <p className="mt-1 text-[10px] text-[#71717a]">Nome sugerido pelo perfil do currículo. Pode mudar.</p>
               )}
             </div>
           )}
@@ -263,7 +263,7 @@ export function TalentPoolCard({
           {message}
         </p>
       )}
-      <p className="mt-2 text-[10px] leading-4 text-[#a1a1aa]">
+      <p className="mt-2 text-[10px] leading-4 text-[#71717a]">
         Não muda a etapa nem a nota desta vaga, e o candidato não é avisado.
       </p>
     </section>

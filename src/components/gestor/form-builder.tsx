@@ -92,7 +92,7 @@ export function FormBuilder({ fields }: { fields: PublicFormField[] }) {
               <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">
                 {field.label}
               </span>
-              <span className="block text-[10px] text-[#a1a1aa]">
+              <span className="block text-[10px] text-[#71717a]">
                 {fieldTypeLabels[field.type]}
                 {field.isCore ? " · passo Perfil" : ""}
               </span>
@@ -137,7 +137,7 @@ export function FormBuilder({ fields }: { fields: PublicFormField[] }) {
                 })
               }
               aria-label={`Remover ${field.label}`}
-              className="text-[13px] text-[#a1a1aa] hover:text-[#c23b3b]"
+              className="text-[13px] text-[#71717a] hover:text-[#c23b3b]"
             >
               ✕
             </button>

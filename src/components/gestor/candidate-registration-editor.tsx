@@ -50,7 +50,7 @@ export type CandidateRegistrationInitial = {
 type SectionTab = "pessoal" | "perfil" | "endereco" | "admissao" | "respostas";
 
 const inputClass =
-  "mt-1 h-10 w-full rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
+  "mt-1 h-10 w-full rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none";
 
 const labelClass = "block text-xs font-medium text-[#52525b]";
 

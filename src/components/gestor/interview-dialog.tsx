@@ -184,7 +184,7 @@ export function InterviewDialog({
         <label className="mt-4 block">
           <span className="mb-1.5 block text-[13px] font-medium text-[#0a0a0a]">
             {locationLabel[mode]}{" "}
-            <span className="font-normal text-[#a1a1aa]">(opcional)</span>
+            <span className="font-normal text-[#71717a]">(opcional)</span>
           </span>
           <input
             name="location"

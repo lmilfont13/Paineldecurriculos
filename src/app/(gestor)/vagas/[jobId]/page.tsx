@@ -47,7 +47,7 @@ const STAGES: { key: AppStatusKey; label: string; accent: string }[] = [
 const statusStyles: Record<string, string> = {
   OPEN: "bg-[#e4f6ec] text-[#1f7a4d]",
   PAUSED: "bg-[#f7f0e1] text-[#b07818]",
-  CLOSED: "bg-[#f1f0ed] text-[#a1a1aa]",
+  CLOSED: "bg-[#f1f0ed] text-[#71717a]",
   DRAFT: "bg-[#f1f0ed] text-[#71717a]",
 };
 
@@ -186,7 +186,7 @@ export default async function VagaHubPage({
           </p>
           <p className="mt-1.5 flex items-center gap-1 text-sm font-medium text-[#0a0a0a]">
             esperando resposta
-            <span className="text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-[#71717a] opacity-0 transition-opacity group-hover:opacity-100">
               ›
             </span>
           </p>
@@ -203,7 +203,7 @@ export default async function VagaHubPage({
           <p className="text-3xl font-bold text-[#1f7a4d]">{meeting}</p>
           <p className="mt-1.5 flex items-center gap-1 text-sm font-medium text-[#0a0a0a]">
             atendem o mínimo
-            <span className="text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-[#71717a] opacity-0 transition-opacity group-hover:opacity-100">
               ›
             </span>
           </p>
@@ -218,7 +218,7 @@ export default async function VagaHubPage({
           <p className="text-3xl font-bold text-[#0e7a6b]">{standbyStage.length}</p>
           <p className="mt-1.5 flex items-center gap-1 text-sm font-medium text-[#0a0a0a]">
             em stand-by
-            <span className="text-[#a1a1aa] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-[#71717a] opacity-0 transition-opacity group-hover:opacity-100">
               ›
             </span>
           </p>
@@ -325,7 +325,7 @@ export default async function VagaHubPage({
               Nenhum critério definido. A IA avalia só pela descrição da vaga.
             </p>
           )}
-          <p className="mt-3 text-[11px] text-[#a1a1aa]">
+          <p className="mt-3 text-[11px] text-[#71717a]">
             Apoio à decisão: a IA pontua de 0 a 100 e sinaliza quem passa de{" "}
             {job.aiMinScore}. Ela nunca move ninguém de etapa.
           </p>

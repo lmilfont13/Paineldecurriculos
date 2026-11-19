@@ -48,19 +48,21 @@ export function TalentBackfillButton() {
           type="button"
           onClick={runBackfill}
           disabled={isPending}
+          title="A IA coloca em uma pasta de área quem ainda não tem pasta."
           className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] font-medium text-[#3f3f46] transition-colors hover:bg-[#f4f4f5] disabled:opacity-50"
         >
           <Sparkles className="size-3.5" aria-hidden />
-          {isPending ? "Processando..." : "Categorizar existentes"}
+          {isPending ? "Processando..." : "Separar por área"}
         </button>
         <button
           type="button"
           onClick={runConsolidate}
           disabled={isPending}
+          title="Junta pastas com nomes parecidos (ex.: 'Logística' e 'Logistica') em uma só."
           className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] font-medium text-[#3f3f46] transition-colors hover:bg-[#f4f4f5] disabled:opacity-50"
         >
           <FolderSync className="size-3.5" aria-hidden />
-          {isPending ? "Processando..." : "Consolidar pastas"}
+          {isPending ? "Processando..." : "Juntar pastas repetidas"}
         </button>
       </div>
       {message && !isPending && (

@@ -17,7 +17,7 @@ type Initial = {
 };
 
 const input =
-  "h-9 w-full rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
+  "h-9 w-full rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none";
 
 /** E-mails do sistema: respostas dos candidatos e remetente, com o estado do envio. */
 export function EmailSettingsForm({ initial }: { initial: Initial }) {
@@ -57,7 +57,7 @@ export function EmailSettingsForm({ initial }: { initial: Initial }) {
           placeholder="rh@suaempresa.com.br"
           className={input}
         />
-        <p className="text-[11px] text-[#a1a1aa]">
+        <p className="text-[11px] text-[#71717a]">
           Quando um candidato responde a um e-mail do sistema, a resposta chega aqui.
         </p>
       </div>
@@ -74,7 +74,7 @@ export function EmailSettingsForm({ initial }: { initial: Initial }) {
           placeholder="rh@suaempresa.com.br"
           className={input}
         />
-        <p className="text-[11px] leading-4 text-[#a1a1aa]">
+        <p className="text-[11px] leading-4 text-[#71717a]">
           Endereço de onde os e-mails saem. Só funciona se o domínio dele estiver verificado no Resend; com um endereço
           não verificado os e-mails deixam de ser enviados. Deixe vazio para usar o padrão do sistema.
         </p>
@@ -110,7 +110,7 @@ export function EmailSettingsForm({ initial }: { initial: Initial }) {
           {testing ? "Enviando teste…" : "Enviar e-mail de teste"}
         </button>
       </div>
-      <p className="text-[11px] text-[#a1a1aa]">
+      <p className="text-[11px] text-[#71717a]">
         O teste usa o que está salvo acima e é enviado para o e-mail da empresa.
       </p>
       {test && "error" in test && (

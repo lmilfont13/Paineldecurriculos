@@ -31,7 +31,7 @@ export default async function TalentFolderPage({
       </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
             {folderArea(folder)}
           </p>
           <h1 className="mt-1 text-2xl font-bold text-[#0a0a0a]">{folder.name}</h1>
@@ -78,7 +78,7 @@ export default async function TalentFolderPage({
                 )}
               </span>
             </Link>
-            <span className="hidden text-[11px] text-[#a1a1aa] sm:block">
+            <span className="hidden text-[11px] text-[#71717a] sm:block">
               {appStatusLabels[person.status]}
             </span>
             <AiScoreChip
@@ -98,7 +98,7 @@ export default async function TalentFolderPage({
               </a>
               <a
                 href={`/candidaturas/${person.id}/cv?download=1`}
-                className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                 title="Baixar currículo em PDF"
                 aria-label="Baixar currículo em PDF"
               >
@@ -109,7 +109,7 @@ export default async function TalentFolderPage({
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[11px] text-[#a1a1aa]">
+      <p className="mt-3 text-[11px] text-[#71717a]">
         A nota ao lado é a da vaga em que a pessoa se inscreveu. Em verde, a vaga aberta em que ela foi melhor na análise de stand-by.
       </p>
     </>

@@ -181,13 +181,13 @@ export function BulkMessageDialog({
               placeholder="Escreva aqui. Use {nome}, {vaga} e {empresa}: cada pessoa recebe o dela."
               className="mt-1 w-full resize-y rounded-lg border border-[#e4e4e7] p-3 text-[13px] leading-5 focus:border-[#0a0a0a] focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] text-[#71717a]">
               Marcadores: {"{nome}"}, {"{vaga}"} e {"{empresa}"}. Com assunto, o texto fica salvo para os próximos envios.
             </p>
 
             {preview && (
               <div className="mt-3 rounded-lg border border-[#ebe7e3] bg-[#fdfcfb] p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717a]">
                   Como {sample?.firstName} vai receber
                 </p>
                 <p className="mt-1 whitespace-pre-line text-[13px] leading-5 text-[#3f3f46]">{preview}</p>
@@ -196,7 +196,7 @@ export function BulkMessageDialog({
 
             <div className="mt-4">
               <ChannelPicker value={channels} onChange={setChannels} hasPhone />
-              <p className="mt-1 text-[11px] text-[#a1a1aa]">
+              <p className="mt-1 text-[11px] text-[#71717a]">
                 Quem não tem telefone, e-mail ou conta no site não recebe naquele canal. O WhatsApp gera um link por pessoa, que você abre ao final.
               </p>
             </div>

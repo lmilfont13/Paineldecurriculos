@@ -49,7 +49,7 @@ export function ChannelPicker({
               className={
                 "flex items-center gap-2 rounded-full border px-3 py-1 text-[12px] " +
                 (off
-                  ? "cursor-not-allowed border-[#e4e4e7] bg-[#fafafa] text-[#a1a1aa]"
+                  ? "cursor-not-allowed border-[#e4e4e7] bg-[#fafafa] text-[#71717a]"
                   : on
                     ? "cursor-pointer border-[#0a0a0a] bg-white text-[#0a0a0a]"
                     : "cursor-pointer border-[#e4e4e7] bg-white text-[#57534e] hover:border-[#0a0a0a]")

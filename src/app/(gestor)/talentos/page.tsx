@@ -60,7 +60,7 @@ export default async function TalentosPage() {
 
       {folders.length === 0 ? (
         <div className="mt-7 rounded-2xl border border-dashed border-[#e4e4e7] bg-white p-8 text-center">
-          <FolderOpen className="mx-auto size-6 text-[#a1a1aa]" aria-hidden />
+          <FolderOpen className="mx-auto size-6 text-[#71717a]" aria-hidden />
           <p className="mt-3 text-sm font-medium text-[#0a0a0a]">Nenhuma pasta ainda</p>
           <p className="mx-auto mt-1 max-w-[440px] text-[13px] text-[#71717a]">
             Na tela de um candidato, use &ldquo;Guardar em uma pasta&rdquo;. Quem fica abaixo do mínimo da vaga já aparece com a
@@ -72,14 +72,14 @@ export default async function TalentosPage() {
           {/* Resumo */}
           <div className="mt-6 flex flex-wrap gap-4">
             <div className="flex items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3.5 py-2">
-              <FolderOpen className="size-4 text-[#a1a1aa]" aria-hidden />
+              <FolderOpen className="size-4 text-[#71717a]" aria-hidden />
               <span className="text-[13px] text-[#71717a]">
                 <strong className="font-semibold text-[#0a0a0a]">{folders.length}</strong>{" "}
                 {folders.length === 1 ? "pasta" : "pastas"}
               </span>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-[#e4e4e7] bg-white px-3.5 py-2">
-              <Users className="size-4 text-[#a1a1aa]" aria-hidden />
+              <Users className="size-4 text-[#71717a]" aria-hidden />
               <span className="text-[13px] text-[#71717a]">
                 <strong className="font-semibold text-[#0a0a0a]">{total}</strong>{" "}
                 {total === 1 ? "pessoa" : "pessoas"}
@@ -109,7 +109,7 @@ export default async function TalentosPage() {
                     <span className="block truncate text-[15px] font-medium text-[#0a0a0a] group-hover:text-[var(--brand-primary)]">
                       {folder.name}
                     </span>
-                    <span className="text-[13px] text-[#a1a1aa]">
+                    <span className="text-[13px] text-[#71717a]">
                       {folder.count} {folder.count === 1 ? "pessoa" : "pessoas"}
                     </span>
                   </span>

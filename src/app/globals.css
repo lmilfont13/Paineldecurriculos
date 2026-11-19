@@ -118,6 +118,15 @@
 }
 
 @layer base {
+  /*
+   * Painel do gestor: os blocos brancos ganham uma sombra leve para se
+   * destacarem do fundo (mesmo tratamento da página pública de vagas).
+   * Fica em "base", então qualquer shadow-* do próprio elemento prevalece.
+   */
+  .gestor-shell :is(div, section, article, li, ul, a).bg-white:is(.rounded-xl, .rounded-2xl).border {
+    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.03);
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
