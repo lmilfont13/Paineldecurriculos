@@ -255,7 +255,12 @@ export function DecisionBlock({
   }
 
   return (
-    <section className="mt-8 rounded-xl border border-[#e4e4e7] bg-white p-5">
+    <section className="relative mt-8 overflow-hidden rounded-xl border border-[#e4e4e7] bg-white p-5 shadow-sm">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ background: "linear-gradient(90deg, var(--brand-primary), var(--brand-deep))" }}
+      />
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {confirming && (
         <ConfirmReject
@@ -305,11 +310,14 @@ export function DecisionBlock({
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-[#0a0a0a]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.6px]" style={{ color: "var(--brand-primary)" }}>
+        Etapa atual
+      </p>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 className="text-base font-semibold text-[#0a0a0a]">
           {appStatusLabels[status]}
         </h2>
-        <span className="text-[13px] text-[#71717a]">{STAGE_COPY[status]}</span>
+        <span className="text-[13px] text-[#52525b]">{STAGE_COPY[status]}</span>
       </div>
 
       {/* O combinado, à vista: sem isto "Entrevista" é um status que mente */}

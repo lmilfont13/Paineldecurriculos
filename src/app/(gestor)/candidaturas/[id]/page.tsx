@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Download, Eye } from "lucide-react";
+import { Download, Eye, Sparkles } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -244,7 +244,13 @@ export default async function CandidaturaDetailPage({
         </div>
       )}
 
-      <header className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-2xs sm:p-6">
+      <header className="relative overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
+        {/* Faixa da marca: dá identidade ao topo da ficha sem pesar a base neutra. */}
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-1"
+          style={{ background: "linear-gradient(90deg, var(--brand-primary), var(--brand-deep))" }}
+        />
         {/* Linha 1: Contexto da vaga + Status + Match Score + Fechar */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -255,18 +261,34 @@ export default async function CandidaturaDetailPage({
               Candidatura · {jobLabel(app.job.title, app.job.code)}
             </Link>
             <span className="text-[#e4e4e7]" aria-hidden>·</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[11px] font-medium text-[#3f3f46]">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                app.status === "APPROVED"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : app.status === "REJECTED"
+                    ? "border-zinc-200 bg-zinc-100 text-zinc-700"
+                    : app.status === "INTERVIEW"
+                      ? "border-sky-200 bg-sky-50 text-sky-800"
+                      : app.status === "SHORTLISTED"
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : app.status === "STANDBY"
+                          ? "border-teal-200 bg-teal-50 text-teal-800"
+                          : "border-[#e4e4e7] bg-[#f4f4f5] text-[#3f3f46]"
+              }`}
+            >
               <span
                 className={`size-1.5 rounded-full ${
                   app.status === "APPROVED"
                     ? "bg-emerald-500"
                     : app.status === "REJECTED"
-                      ? "bg-rose-500"
+                      ? "bg-zinc-400"
                       : app.status === "INTERVIEW"
                         ? "bg-sky-500"
                         : app.status === "SHORTLISTED"
                           ? "bg-amber-500"
-                          : "bg-zinc-400"
+                          : app.status === "STANDBY"
+                            ? "bg-teal-500"
+                            : "bg-zinc-400"
                 }`}
               />
               {appStatusLabels[app.status as AppStatusKey]}
@@ -279,7 +301,7 @@ export default async function CandidaturaDetailPage({
                 className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold tabular-nums ${
                   meets
                     ? "bg-[#e4f6ec] text-[#1f7a4d]"
-                    : "bg-[#f4f4f5] text-[#52525b]"
+                    : "bg-[#fff4e0] text-[#9a5b00]"
                 }`}
                 title={
                   meets
@@ -339,32 +361,32 @@ export default async function CandidaturaDetailPage({
               )}
             </div>
 
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-[#71717a]">
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-[#52525b]">
               <span>
                 {app.preRegistered ? "Cadastrado por você em" : "Candidatou-se em"}{" "}
                 {formatAppliedAt(app.createdAt, true)}
               </span>
               {app.age !== null && (
                 <span
-                  className="text-[#71717a]"
+                  className="text-[#52525b]"
                   title="Só para sua conferência: não entra na nota nem vai para a IA"
                 >
                   · {app.age} anos
                 </span>
               )}
               {(app.city || app.state) && (
-                <span className="text-[#71717a]">
+                <span className="text-[#52525b]">
                   · {[app.city, app.state].filter(Boolean).join(" - ")}
                 </span>
               )}
               {(app.aiProfile || app.aiLevel) && (
-                <span className="font-medium text-[#52525b]">
+                <span className="font-semibold text-[#0a0a0a]">
                   · {[app.aiProfile, app.aiLevel].filter(Boolean).join(" · ")}
                 </span>
               )}
               {app.consentAt && (
                 <span
-                  className="text-[#71717a]"
+                  className="text-[#52525b]"
                   title={`Aceitou o Aviso de Privacidade (LGPD) em ${formatAppliedAt(app.consentAt, true)} · versão ${app.consentVersion ?? "-"}`}
                 >
                   · LGPD aceita
@@ -518,10 +540,19 @@ export default async function CandidaturaDetailPage({
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                <p
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.6px]"
+                  style={{ color: "var(--brand-primary)" }}
+                >
+                  <span
+                    className="flex size-5 items-center justify-center rounded-md"
+                    style={{ backgroundColor: "var(--brand-tint)" }}
+                  >
+                    <Sparkles className="size-3" aria-hidden />
+                  </span>
                   Leitura da IA
                 </p>
-                <h2 className="mt-1 text-base font-semibold text-[#0a0a0a]">
+                <h2 className="mt-1.5 text-lg font-semibold text-[#0a0a0a]">
                   Apoio à decisão
                 </h2>
               </div>
@@ -537,23 +568,45 @@ export default async function CandidaturaDetailPage({
                     {app.aiReasoning}
                   </p>
                 )}
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <span
-                    className={
-                      "inline-flex h-9 items-center gap-2 rounded-xl px-3.5 text-xs font-bold " +
-                      (meets
-                        ? "bg-[#e4f6ec] text-[#1f7a4d]"
-                        : "bg-[#f1f0ed] text-[#71717a]")
-                    }
-                  >
-                    <span className="size-1.5 rounded-full bg-current" />
-                    {app.aiScore} / 100
-                  </span>
-                  <span className="text-xs text-[#71717a]">
-                    {meets
-                      ? `Acima do mínimo da vaga (${app.job.aiMinScore})`
-                      : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
-                  </span>
+                <div
+                  className={`mt-5 rounded-xl border p-4 ${
+                    meets ? "border-[#cdebd9] bg-[#f3fbf6]" : "border-[#f3dfbd] bg-[#fffaf1]"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <p className="flex items-baseline gap-1 tabular-nums">
+                      <span
+                        className={`text-[34px] font-bold leading-none tracking-[-1px] ${
+                          meets ? "text-[#1f7a4d]" : "text-[#9a5b00]"
+                        }`}
+                      >
+                        {app.aiScore}
+                      </span>
+                      <span className="text-sm font-medium text-[#71717a]">/ 100</span>
+                    </p>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        meets ? "bg-[#dcf3e5] text-[#1f7a4d]" : "bg-[#fdebc8] text-[#8a5200]"
+                      }`}
+                    >
+                      {meets
+                        ? `Acima do mínimo da vaga (${app.job.aiMinScore})`
+                        : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
+                    </span>
+                  </div>
+                  <div className="relative mt-3 h-2 rounded-full bg-white/80 ring-1 ring-black/5">
+                    <div
+                      className={`h-full rounded-full ${meets ? "bg-[#2f9e62]" : "bg-[#e0a43a]"}`}
+                      style={{ width: `${Math.max(0, Math.min(100, app.aiScore))}%` }}
+                    />
+                    {/* Marca da nota mínima da vaga */}
+                    <span
+                      aria-hidden
+                      className="absolute -top-1 h-4 w-0.5 rounded-full bg-[#3f3f46]"
+                      style={{ left: `${Math.max(0, Math.min(100, app.job.aiMinScore))}%` }}
+                      title={`Mínimo da vaga: ${app.job.aiMinScore}`}
+                    />
+                  </div>
                 </div>
                 {scoredWithoutResumeText(app) && (
                   <p
