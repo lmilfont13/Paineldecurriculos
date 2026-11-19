@@ -302,6 +302,28 @@ export async function findApplicationsByCompany(
   });
 }
 
+/** Dados leves do painel: nunca carregar currículo, RG/CPF ou notas internas. */
+export async function findDashboardApplications(companyId: string) {
+  await syncCompanyImpediments(companyId);
+  return prisma.application.findMany({
+    where: { companyId, isDemo: false, job: { isTalentPool: false, status: "OPEN" } },
+    orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      aiScore: true,
+      aiState: true,
+      createdAt: true,
+      updatedAt: true,
+      photoPath: true,
+      hasImpediment: true,
+      impedimentReason: true,
+      job: { select: { id: true, title: true, code: true, aiMinScore: true } },
+    },
+  });
+}
+
 /** Data de nascimento e texto do currículo de uma vaga, só para calcular a idade exibida ao gestor. */
 export function findAgeSourcesForJob(companyId: string, jobId: string) {
   return prisma.application.findMany({

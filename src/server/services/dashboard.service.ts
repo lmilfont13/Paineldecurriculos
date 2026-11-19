@@ -8,8 +8,8 @@ import type {
   JobProgress,
   PriorityApplication,
 } from "@/server/models/dashboard.model";
-import { findApplicationsByCompany } from "@/server/repositories/application.repository";
-import { findJobsByCompanyId } from "@/server/repositories/job.repository";
+import { findDashboardApplications } from "@/server/repositories/application.repository";
+import { findDashboardJobs } from "@/server/repositories/job.repository";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -28,8 +28,8 @@ export async function getDashboard(companyId: string): Promise<{
   const since7d = new Date(Date.now() - WEEK_MS);
   // Sequencial: com connection_limit=1 o Promise.all só enfileira na
   // mesma conexão e aumenta o risco de P2024 (pool_timeout).
-  const applications = await findApplicationsByCompany(companyId, { includeDemo: false, onlyOpenJobs: true });
-  const allJobs = await findJobsByCompanyId(companyId);
+  const applications = await findDashboardApplications(companyId);
+  const allJobs = await findDashboardJobs(companyId);
 
   const waitingList = applications.filter((a) => a.status === "PENDING");
   const oldestWaitingAt = waitingList.reduce<Date | null>(
@@ -72,24 +72,33 @@ export async function getDashboard(companyId: string): Promise<{
     })
     .slice(0, 5);
 
+  // Uma passagem pela base, em vez de varrer todas as candidaturas para cada vaga.
+  const countsByJob = new Map<string, {
+    total: number; pending: number; interview: number; approved: number; rejected: number;
+  }>();
+  for (const application of applications) {
+    const counts = countsByJob.get(application.job.id) ?? {
+      total: 0, pending: 0, interview: 0, approved: 0, rejected: 0,
+    };
+    counts.total += 1;
+    if (application.status === "PENDING") counts.pending += 1;
+    if (application.status === "INTERVIEW") counts.interview += 1;
+    if (application.status === "APPROVED") counts.approved += 1;
+    if (application.status === "REJECTED") counts.rejected += 1;
+    countsByJob.set(application.job.id, counts);
+  }
+
   // Rascunho entra na lista: é trabalho parado esperando o dono publicar.
   const jobs: JobProgress[] = allJobs
     .filter((j) => j.status !== "CLOSED")
-    .map((job) => {
-      const ofJob = applications.filter((a) => a.job.id === job.id);
-      const count = (status: string) =>
-        ofJob.filter((a) => a.status === status).length;
-      return {
-        id: job.id,
-        title: jobLabel(job.title, job.code),
-        status: job.status,
-        total: ofJob.length,
-        pending: count("PENDING"),
-        interview: count("INTERVIEW"),
-        approved: count("APPROVED"),
-        rejected: count("REJECTED"),
-      };
-    })
+    .map((job) => ({
+      id: job.id,
+      title: jobLabel(job.title, job.code),
+      status: job.status,
+      ...(countsByJob.get(job.id) ?? {
+        total: 0, pending: 0, interview: 0, approved: 0, rejected: 0,
+      }),
+    }))
     .sort((a, b) => {
       if (a.status === "DRAFT" && b.status !== "DRAFT") return -1;
       if (b.status === "DRAFT" && a.status !== "DRAFT") return 1;

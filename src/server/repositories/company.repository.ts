@@ -1,15 +1,19 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { prisma } from "@/lib/prisma";
 import { HIDDEN_FROM_DIRECTORY_SLUGS } from "@/server/models/company.model";
 
-export function findCompanyBySlug(slug: string) {
+// Deduplica layout, metadata e página apenas dentro do mesmo render/request.
+// Não mantém dados de tenant entre requisições nem atrasa alterações de configuração.
+export const findCompanyBySlug = cache((slug: string) => {
   return prisma.company.findUnique({ where: { slug } });
-}
+});
 
-export function findCompanyById(id: string) {
+export const findCompanyById = cache((id: string) => {
   return prisma.company.findUnique({ where: { id } });
-}
+});
 
 /** Lista para o console admin (A1): contagens + gestor. */
 export function findAllCompaniesForAdmin() {
