@@ -15,6 +15,7 @@ describe("anonymizeApplicationsByCandidate (LGPD)", () => {
     const { where, data } = updateMany.mock.calls[0][0];
     expect(where).toEqual({ candidateId: "c1" });
     expect(data).toMatchObject({
+      messagePhone: null,
       rg: null,
       cpf: null,
       maritalStatus: null,

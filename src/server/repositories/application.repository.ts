@@ -557,6 +557,7 @@ export function anonymizeApplicationsByCandidate(candidateId: string) {
       name: "Candidato(a) — conta excluída",
       email: "conta-excluida",
       phone: null,
+      messagePhone: null,
       resumeUrl: null,
       photoPath: null,
       // pré-entrevista: dados pessoais e sensíveis também saem (LGPD)
@@ -888,6 +889,7 @@ export async function createApplication(data: {
   name: string;
   email: string;
   phone: string | null;
+  messagePhone?: string | null;
   resumeUrl: string | null;
   birthDate?: Date | null;
   city?: string | null;
@@ -1159,6 +1161,7 @@ export async function completePreRegisteredApplication(
   data: {
     name: string;
     phone: string | null;
+    messagePhone?: string | null;
     resumeUrl: string | null;
     birthDate?: Date | null;
     city?: string | null;
@@ -1254,6 +1257,7 @@ export function updateApplicationRegistration(
     name: string;
     email: string;
     phone: string | null;
+    messagePhone?: string | null;
     birthDate: Date | null;
     rg: string | null;
     cpf: string | null;
@@ -1528,6 +1532,7 @@ export async function cloneStandbyApplicationToJob(
       name: source.name,
       email: source.email,
       phone: source.phone,
+      messagePhone: source.messagePhone,
       resumeUrl: source.resumeUrl,
       resumeText: source.resumeText,
       photoPath: source.photoPath,

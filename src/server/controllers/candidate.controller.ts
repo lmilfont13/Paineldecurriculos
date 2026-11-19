@@ -1,5 +1,7 @@
 "use server";
 
+import { domesticPhoneError } from "@/lib/phone";
+
 import { safeInternalPath } from "@/server/models/safe-redirect.model";
 import { parseInstagram } from "@/server/models/instagram.model";
 import { signInPath } from "@/server/models/candidate.model";
@@ -95,6 +97,10 @@ export async function updateProfileAction(
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   if (name.length < 2) return { error: "Informe seu nome completo." };
+  const messagePhone = String(formData.get("messagePhone") ?? "").trim();
+  const contactError = domesticPhoneError(phone, { mobile: true }) ??
+    domesticPhoneError(messagePhone, { optional: true });
+  if (contactError) return { error: contactError };
 
   // Regra 5: o PDF já foi enviado pelo navegador direto ao Storage.
   let resumeUrl: string | null | undefined = undefined;
@@ -182,7 +188,8 @@ export async function updateProfileAction(
 
   await updateCandidateProfile(candidate.id, {
     name,
-    phone: phone || null,
+    phone: phone.replace(/\D/g, ""),
+    messagePhone: messagePhone.replace(/\D/g, "") || null,
     ...(resumeUrl !== undefined ? { resumeUrl } : {}),
     ...(birthDate !== undefined ? { birthDate } : {}),
     ...(neighborhood !== undefined ? { neighborhood } : {}),

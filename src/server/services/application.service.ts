@@ -1,3 +1,4 @@
+import { domesticPhoneError } from "@/lib/phone";
 import type { AppStatus } from "@prisma/client";
 import { replyToEmail } from "@/server/models/company.model";
 import "server-only";
@@ -1225,6 +1226,13 @@ export async function submitApplication(
     return { ok: false, error: "Esta vaga não está mais aberta." };
   }
 
+  const contactError = domesticPhoneError(input.phone, { mobile: true }) ??
+    domesticPhoneError(input.messagePhone ?? "", { optional: true });
+  if (contactError) return { ok: false, error: contactError };
+  const phone = input.phone.replace(/\D/g, "");
+  const messagePhone = input.messagePhone === undefined ? candidate.messagePhone ?? null :
+    input.messagePhone?.replace(/\D/g, "") || null;
+
   const existing = await findApplicationByCandidateAndJob(candidate.id, job.id);
   if (existing && !existing.preRegistered) {
     return { ok: false, error: "Você já se candidatou a esta vaga." };
@@ -1321,7 +1329,8 @@ export async function submitApplication(
   const application = existing
     ? await completePreRegisteredApplication(existing.id, {
         name: titleCasePt(input.name),
-        phone: input.phone || null,
+        phone,
+        messagePhone,
         resumeUrl,
         birthDate,
         city,
@@ -1357,7 +1366,8 @@ export async function submitApplication(
         candidateId: candidate.id,
         name: titleCasePt(input.name),
         email: candidate.email,
-        phone: input.phone || null,
+        phone,
+        messagePhone,
         resumeUrl,
         birthDate,
         city,
@@ -1397,7 +1407,8 @@ export async function submitApplication(
   // CA2: o que o candidato preencheu vira perfil para as próximas vagas
   await updateCandidateProfile(candidate.id, {
     name: titleCasePt(input.name),
-    phone: input.phone || null,
+    phone,
+    messagePhone,
     resumeUrl,
     birthDate,
     city,

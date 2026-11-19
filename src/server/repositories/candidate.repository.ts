@@ -23,6 +23,7 @@ export function updateCandidate(
   data: Partial<{
     name: string;
     phone: string | null;
+    messagePhone: string | null;
     resumeUrl: string | null;
     birthDate: Date | null;
     city: string | null;

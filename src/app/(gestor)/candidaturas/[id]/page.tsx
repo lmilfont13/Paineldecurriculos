@@ -143,7 +143,8 @@ export default async function CandidaturaDetailPage({
         : null;
   const infoPairs: [string, string][] = [
     ["E-mail", app.email],
-    ["Telefone", formatPhone(app.phone) || "—"],
+    ["WhatsApp", formatPhone(app.phone) || "—"],
+    ...(app.messagePhone ? ([["Número de recado", formatPhone(app.messagePhone)]] as [string, string][]) : []),
     ...(formatAddress(app) ? ([["Endereço", formatAddress(app) as string]] as [string, string][]) : []),
     ...(uniformLine ? ([["Uniforme", uniformLine]] as [string, string][]) : []),
     ...(bankLine ? ([["Conta bancária", bankLine]] as [string, string][]) : []),

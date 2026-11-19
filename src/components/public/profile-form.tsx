@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPhone, maskPhoneInput } from "@/lib/phone";
+import { formatPhone, maskDomesticPhoneInput, WHATSAPP_HELP } from "@/lib/phone";
 import { useActionState, useRef, useState, useTransition } from "react";
 
 import type { CandidateProfile } from "@/server/models/candidate.model";
@@ -108,18 +108,36 @@ export function ProfileForm({
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">
-              Telefone / WhatsApp
+              WhatsApp com DDD
             </span>
             <input
               name="phone"
+              required
+              type="tel"
+              autoComplete="tel-national"
               defaultValue={formatPhone(candidate.phone)}
-              onChange={(e) => (e.currentTarget.value = maskPhoneInput(e.currentTarget.value))}
+              onChange={(e) => (e.currentTarget.value = maskDomesticPhoneInput(e.currentTarget.value))}
               inputMode="tel"
               placeholder="(85) 99999-0000"
               className={inputClass}
             />
+            <p className="mt-1 text-xs text-[#71717a]">{WHATSAPP_HELP}</p>
           </label>
         </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-[#0a0a0a]">Número de recado com DDD (opcional)</span>
+          <input
+            name="messagePhone"
+            type="tel"
+            inputMode="tel"
+            defaultValue={formatPhone(candidate.messagePhone)}
+            onChange={(e) => (e.currentTarget.value = maskDomesticPhoneInput(e.currentTarget.value))}
+            placeholder="(85) 3333-4444"
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-[#71717a]">Outro número para contato, sem +55. Pode deixar em branco.</p>
+        </label>
 
         {/* Endereço completo: usado na admissão, na adequação de vagas e no VT */}
         <div className="rounded-2xl border border-[#f4f4f5] bg-[#fafaf9] p-4">

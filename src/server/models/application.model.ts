@@ -1,3 +1,4 @@
+import { domesticPhoneError } from "@/lib/phone";
 import { z } from "zod";
 
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB (regra 5)
@@ -128,7 +129,10 @@ export const applicationInputSchema = z.object({
   jobId: z.string().min(1),
   name: z.string().min(2, "Informe seu nome completo."),
   // e-mail vem da conta do candidato (sessão), não do formulário
-  phone: z.string().min(8, "Informe um telefone válido."),
+  phone: z.string().refine((v) => !domesticPhoneError(v, { mobile: true }),
+    "Informe o WhatsApp com DDD, sem +55. Exemplo: (85) 99999-9999."),
+  messagePhone: z.string().optional().nullable().refine((v) => !domesticPhoneError(v ?? "", { optional: true }),
+    "Informe o número de recado com DDD, sem +55, ou deixe em branco."),
   /** LGPD: aceite do Aviso de Privacidade (exigido em submitApplication). */
   consent: z.boolean().optional(),
   birthDate: z.string().optional().nullable(),

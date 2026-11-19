@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPhone, maskPhoneInput } from "@/lib/phone";
+import { formatPhone, maskDomesticPhoneInput, domesticPhoneError, WHATSAPP_HELP } from "@/lib/phone";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -52,6 +52,7 @@ type WizardData = {
   complement: string;
   name: string;
   phone: string;
+  messagePhone: string;
   instagram: string;
   birthDate: string;
   neighborhood: string;
@@ -97,7 +98,8 @@ export function ApplyWizard({
   const reuseProfile = canReuse && profileChoice === "reuse";
   const savedData: WizardData = {
     name: candidate.name,
-    phone: candidate.phone ?? "",
+    phone: formatPhone(candidate.phone),
+    messagePhone: formatPhone(candidate.messagePhone),
     instagram: candidate.instagram ? `@${candidate.instagram}` : "",
     birthDate: candidate.birthDate
       ? new Date(candidate.birthDate).toISOString().split("T")[0]
@@ -164,7 +166,9 @@ export function ApplyWizard({
       if (!data.birthDate.trim()) return "Informe sua data de nascimento.";
       const parsedBirth = new Date(`${data.birthDate.trim()}T12:00:00Z`);
       if (Number.isNaN(parsedBirth.getTime())) return "Informe uma data de nascimento válida.";
-      if (data.phone.trim().length < 8) return "Informe um telefone válido.";
+      const contactError = domesticPhoneError(data.phone, { mobile: true }) ??
+        domesticPhoneError(data.messagePhone, { optional: true });
+      if (contactError) return contactError;
       const ig = parseInstagram(data.instagram);
       if ("error" in ig) return ig.error;
     }
@@ -254,6 +258,7 @@ export function ApplyWizard({
         formData.set("jobId", job.id);
         formData.set("name", data.name.trim());
         formData.set("phone", data.phone.trim());
+        formData.set("messagePhone", data.messagePhone.trim());
         if (data.instagram.trim()) formData.set("instagram", data.instagram.trim());
         if (data.birthDate) formData.set("birthDate", data.birthDate);
         if (data.rg) formData.set("rg", data.rg.trim());
@@ -485,16 +490,27 @@ export function ApplyWizard({
                     className="h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] focus:border-[#0a0a0a] focus:outline-none"
                   />
                 </Field>
-                <Field label="Telefone / WhatsApp">
+                <Field label="WhatsApp com DDD">
                   <TextInput
                     type="tel"
                     value={data.phone}
-                    onChange={(v) => setData((d) => ({ ...d, phone: maskPhoneInput(v) }))}
+                    onChange={(v) => setData((d) => ({ ...d, phone: maskDomesticPhoneInput(v) }))}
                     placeholder="(85) 99999-0000"
-                    autoComplete="tel"
+                    autoComplete="tel-national"
                   />
+                  <p className="mt-1 text-xs text-[#71717a]">{WHATSAPP_HELP}</p>
                 </Field>
               </div>
+              <Field label="Número de recado com DDD (opcional)">
+                <TextInput
+                  type="tel"
+                  value={data.messagePhone}
+                  onChange={(v) => setData((d) => ({ ...d, messagePhone: maskDomesticPhoneInput(v) }))}
+                  placeholder="(85) 3333-4444"
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-[#71717a]">Outro número para contato, sem +55. Pode deixar em branco.</p>
+              </Field>
               <Field label="E-mail">
                 <input
                   type="email"
@@ -747,7 +763,8 @@ export function ApplyWizard({
               <dl>
                 <ReviewRow label="Nome" value={data.name} />
                 <ReviewRow label="E-mail" value={candidate.email} />
-                <ReviewRow label="Telefone" value={formatPhone(data.phone)} />
+                <ReviewRow label="WhatsApp com DDD" value={formatPhone(data.phone)} />
+                {data.messagePhone && <ReviewRow label="Número de recado" value={formatPhone(data.messagePhone)} />}
                 {data.instagram.trim() && (
                   <ReviewRow
                     label="Instagram"
