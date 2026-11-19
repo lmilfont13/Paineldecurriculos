@@ -118,7 +118,7 @@ export function BuscarCvsView({
   const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
   const [roleSearch, setRoleSearch] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showHotkeysHelp, setShowHotkeysHelp] = useState(true);
+  const [showHotkeysHelp, setShowHotkeysHelp] = useState(false);
   const [isExtractingPhotos, setIsExtractingPhotos] = useState(false);
   const [photoScanProgress, setPhotoScanProgress] = useState<{
     scanned: number;
@@ -444,100 +444,92 @@ export function BuscarCvsView({
         </div>
       )}
 
-      {/* Header Michelin de Última Geração */}
-      <div className="relative overflow-hidden rounded-3xl border border-[#e4e4e7] bg-linear-to-b from-white via-white to-[#fafaf9] p-6 shadow-sm sm:p-8">
-        <div className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      {/* Header Ultra Minimalista */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-lg bg-amber-500/15 text-amber-800">
-                <Sparkles className="size-3.5" />
-              </span>
-              <span className="text-[11px] font-bold tracking-widest uppercase text-amber-800">
-                Talent Intelligence · Base Aberta
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
+                Buscar CVs
+              </h1>
+              <span className="rounded-full bg-[#f1f0ed] px-2.5 py-1 text-[11px] font-medium text-[#57534e]">
+                {people.length}
               </span>
             </div>
-            <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-[#0a0a0a] sm:text-3xl lg:text-4xl">
-              Radar de Talentos & Currículos
-            </h1>
-            <p className="mt-2 max-w-2xl text-xs sm:text-sm text-[#71717a] leading-relaxed">
-              Explore o acervo completo da empresa com busca semântica no PDF, tags de competências,
-              scorecard de aderência e navegação instantânea por atalhos.
+            <p className="mt-0.5 text-sm text-[#71717a]">
+              {people.length} talentos no acervo ·{" "}
+              <span className="font-medium text-[#0a0a0a]">{topMatches} acima de 80%</span>
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <a
               href="/buscar-cvs/relatorio"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9.5 items-center gap-2 rounded-xl border border-amber-300 bg-linear-to-b from-amber-50 to-amber-100/70 px-4 text-xs font-bold text-amber-950 shadow-xs transition hover:from-amber-100 hover:to-amber-200/80 hover:border-amber-400 active:scale-98"
-              title="Baixar Dashboard Executivo Completo em PDF (Gênero, Idade, Cargos, Empresas e Experiências)"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
+              title="Baixar Dashboard Executivo Completo em PDF"
             >
-              <FileText className="size-3.5 text-amber-800" />
+              <FileText className="size-3.5 text-[#71717a]" />
               <span>Dashboard PDF</span>
             </a>
             <button
               type="button"
               disabled={isExtractingPhotos}
               onClick={() => handleExtractAllPhotos()}
-              className="inline-flex h-9.5 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-4 text-xs font-semibold text-[#0a0a0a] shadow-xs transition hover:bg-[#fafaf9] hover:border-[#0a0a0a]/30 active:scale-98 disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-xs font-semibold text-[#52525b] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a] disabled:opacity-60"
               title="Varre automaticamente todos os currículos que ainda não têm foto extraída"
             >
               <RotateCcw className={`size-3.5 ${isExtractingPhotos ? "animate-spin" : ""}`} />
               {isExtractingPhotos
-                ? `Buscando (${photoScanProgress?.scanned ?? 0} verificados · ${photoScanProgress?.found ?? 0} fotos)…`
-                : `Buscar todas as fotos pendentes (${totalWithoutPhoto})`}
+                ? `Buscando (${photoScanProgress?.scanned ?? 0}/${totalWithoutPhoto})…`
+                : `Buscar fotos (${totalWithoutPhoto})`}
             </button>
             <Link
               href="/candidaturas"
-              className="inline-flex h-9.5 items-center gap-1.5 rounded-xl bg-[#0a0a0a] px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-[#27272a] active:scale-98"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white shadow-2xs transition hover:opacity-90"
+              style={{ backgroundColor: "var(--brand-primary)" }}
             >
-              Ver Funil por Vaga →
+              Funil por vaga →
             </Link>
           </div>
         </div>
 
         {isExtractingPhotos && photoScanProgress && (
-          <div className="relative z-10 mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-4 py-3 shadow-2xs">
             <div className="flex items-center gap-3">
-              <span className="size-2.5 animate-pulse rounded-full bg-emerald-600" />
-              <div>
-                <p className="text-xs font-bold text-[#0a0a0a]">
-                  Varrendo automaticamente todos os currículos sem foto…
-                </p>
-                <p className="text-[11px] text-[#52525b]">
-                  <strong>{photoScanProgress.scanned}</strong> currículo(s) analisado(s) ·{" "}
-                  <strong className="text-emerald-700">{photoScanProgress.found}</strong> foto(s) extraída(s) ·{" "}
-                  <strong>{photoScanProgress.remaining}</strong> restante(s)
-                </p>
-              </div>
+              <span className="size-2 animate-pulse rounded-full bg-emerald-600" />
+              <p className="text-xs text-[#52525b]">
+                <strong className="text-[#0a0a0a]">Varrendo currículos sem foto:</strong>{" "}
+                {photoScanProgress.scanned} analisados ·{" "}
+                <strong className="text-emerald-700">{photoScanProgress.found} fotos extraídas</strong> ·{" "}
+                {photoScanProgress.remaining} restantes
+              </p>
             </div>
             <button
               type="button"
               onClick={() => {
                 stopPhotoScanRef.current = true;
               }}
-              className="h-8 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs hover:bg-[#fafaf9]"
+              className="h-7 rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2.5 text-[11px] font-semibold text-[#0a0a0a] hover:bg-[#f4f4f5]"
             >
-              Pausar busca
+              Pausar
             </button>
           </div>
         )}
 
-        {/* Barra de Filtros Rápidos Pré-configurados (Chips Inteligentes) */}
-        <div className="relative z-10 mt-6 flex flex-wrap items-center gap-2 border-t border-[#f4f4f5] pt-4 text-xs">
-          <span className="text-[11px] font-semibold text-[#71717a]">Acesso Rápido:</span>
+        {/* Barra de Filtros Rápidos Minimalista */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#e4e4e7] pb-3.5 text-xs">
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, minScore: p.minScore === 80 ? null : 80 }))}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+            className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 font-medium transition ${
               filters.minScore === 80
-                ? "bg-amber-100 text-amber-950 font-semibold ring-1 ring-amber-300"
-                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
             }`}
           >
-            <Zap className="size-3 text-amber-600" />
-            Top Match (80%+) ({topMatches})
+            <span>✨ Top Match 80%+ ({topMatches})</span>
           </button>
           <button
             type="button"
@@ -548,13 +540,13 @@ export function BuscarCvsView({
                 onlyWithoutPhoto: !p.onlyWithPhoto ? false : p.onlyWithoutPhoto,
               }))
             }
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
               filters.onlyWithPhoto
-                ? "bg-[#0a0a0a] text-white font-semibold"
-                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
             }`}
           >
-            <span>📸</span> Com foto ({totalWithPhoto})
+            Com foto ({totalWithPhoto})
           </button>
           <button
             type="button"
@@ -565,52 +557,52 @@ export function BuscarCvsView({
                 onlyWithPhoto: !p.onlyWithoutPhoto ? false : p.onlyWithPhoto,
               }))
             }
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
               filters.onlyWithoutPhoto
-                ? "bg-[#0a0a0a] text-white font-semibold"
-                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
             }`}
           >
-            <span>🔍</span> Sem foto ({totalWithoutPhoto})
+            Sem foto ({totalWithoutPhoto})
           </button>
           {filters.onlyWithoutPhoto && sorted.length > 0 && !isExtractingPhotos && (
             <button
               type="button"
               onClick={() => handleExtractAllPhotos(sorted.map((c) => c.id))}
-              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-3 py-1 font-semibold text-white transition hover:bg-emerald-800"
+              className="inline-flex h-8 items-center rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 font-semibold text-[#0a0a0a] transition hover:bg-[#f4f4f5]"
             >
-              Extrair fotos desta lista ({sorted.length})
+              Extrair fotos ({sorted.length})
             </button>
           )}
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, onlyWithPdf: !p.onlyWithPdf }))}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
               filters.onlyWithPdf
-                ? "bg-[#0a0a0a] text-white font-semibold"
-                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
             }`}
           >
-            <FileText className="size-3 text-blue-600" /> Com PDF ({totalWithPdf})
+            Com PDF ({totalWithPdf})
           </button>
           <button
             type="button"
             onClick={() => setFilters((p) => ({ ...p, onlyRemote: !p.onlyRemote }))}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition ${
+            className={`inline-flex h-8 items-center rounded-xl border px-3 font-medium transition ${
               filters.onlyRemote
-                ? "bg-[#0a0a0a] text-white font-semibold"
-                : "bg-white border border-[#e4e4e7] text-[#52525b] hover:bg-[#f4f4f5]"
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
             }`}
           >
-            <MapPin className="size-3 text-purple-600" /> Remoto
+            Remoto
           </button>
           {hasActiveFilters && (
             <button
               type="button"
               onClick={clearAllFilters}
-              className="text-[11px] font-semibold text-red-600 hover:underline ml-auto"
+              className="ml-auto text-xs font-medium text-[#71717a] underline underline-offset-2 hover:text-[#0a0a0a]"
             >
-              Limpar todos
+              Limpar filtros
             </button>
           )}
         </div>
@@ -1139,45 +1131,106 @@ export function BuscarCvsView({
                   );
                 }
 
+                const locationText = [item.neighborhood, item.city]
+                  .filter(Boolean)
+                  .join(", ") || item.job.location || null;
+
+                const subtitleParts = [
+                  item.desiredRole || item.aiProfile,
+                  item.aiArea,
+                  item.aiLevel,
+                  item.age != null ? `${item.age}a` : null,
+                  locationText,
+                ].filter(Boolean);
+
+                const extraMetaParts = [
+                  item.salaryExpectation ? `Pretensão ${item.salaryExpectation}` : null,
+                  item.hasCnh && item.hasCnh !== "NONE" ? `CNH ${item.hasCnh}` : null,
+                  item.availability && item.availability !== "NEGOTIABLE"
+                    ? `Início ${
+                        item.availability === "IMMEDIATE"
+                          ? "imediato"
+                          : item.availability === "15_DAYS"
+                            ? "15 dias"
+                            : "30 dias"
+                      }`
+                    : null,
+                  item.workPreference && item.workPreference !== "ANY"
+                    ? item.workPreference === "ONSITE"
+                      ? "Presencial"
+                      : item.workPreference === "HYBRID"
+                        ? "Híbrido"
+                        : "Remoto"
+                    : null,
+                  item.education || null,
+                  item.languages || null,
+                ].filter(Boolean);
+
                 return (
                   <div
                     key={item.id}
                     ref={(el) => {
                       cardRefs.current[index] = el;
                     }}
-                    onClick={() => setSelectedIndex(index)}
-                    className={`group relative rounded-3xl border bg-white p-6 transition duration-150 ${
+                    onClick={() => {
+                      setSelectedIndex(index);
+                      setSelectedCandidate(item);
+                      setDrawerTab(item.resumeUrl ? "pdf" : "ai");
+                    }}
+                    className={`group relative cursor-pointer rounded-2xl border bg-white p-4 transition-all hover:border-[#d4d4d8] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] ${
                       isSelected
-                        ? "border-[#0a0a0a] ring-2 ring-[#0a0a0a]/10 shadow-lg scale-[1.003]"
-                        : "border-[#e4e4e7] hover:border-[#0a0a0a]/30 shadow-xs hover:shadow-md"
-                    } ${isTopMatch ? "border-amber-300/80 bg-linear-to-b from-amber-50/20 via-white to-white" : ""}`}
+                        ? "border-[#0a0a0a] ring-1 ring-[#0a0a0a]/10"
+                        : "border-[#e4e4e7]"
+                    }`}
                   >
-                    {/* Top Match Banner (Michelin Glow) */}
-                    {isTopMatch && (
-                      <div className="mb-3 flex items-center gap-1.5 text-[11px] font-bold text-amber-800">
-                        <Sparkles className="size-3.5 text-amber-500 fill-amber-400" />
-                        <span>TOP MATCH IA · FORTE ADERÊNCIA</span>
-                      </div>
-                    )}
+                    <div className="flex items-start gap-3.5">
+                      <ZoomableCandidateAvatar
+                        applicationId={item.id}
+                        name={item.name}
+                        photoUrl={item.photoUrl}
+                        className="size-11 shrink-0 rounded-full text-xs font-bold object-cover"
+                      />
 
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      {/* Avatar e Perfil */}
-                      <div className="flex min-w-0 items-start gap-4">
-                        <div className="relative shrink-0">
-                          <ZoomableCandidateAvatar
-                            applicationId={item.id}
-                            name={item.name}
-                            photoUrl={item.photoUrl}
-                            className="size-16 sm:size-20 rounded-2xl bg-[#1c1917] text-xl font-bold text-white shadow-xs object-cover"
-                          />
+                      <div className="min-w-0 flex-1">
+                        {/* Linha 1: Nome + Selos discretos + Score pill */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h2 className="truncate text-[14px] font-semibold text-[#0a0a0a] group-hover:text-[#7c1d3c] transition-colors">
+                              <Link
+                                href={`/candidaturas/${item.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Abrir o cadastro"
+                                className="hover:underline"
+                              >
+                                {item.name}
+                              </Link>
+                            </h2>
+
+                            {item.hasImpediment && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600"
+                                title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}
+                              >
+                                <span className="size-1.5 rounded-full bg-rose-500/80" />
+                                <span>Tarja preta</span>
+                              </span>
+                            )}
+
+                            {item.isPcd && (
+                              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                                PcD
+                              </span>
+                            )}
+                          </div>
+
                           {item.aiScore !== null && (
                             <span
-                              className={`absolute -bottom-2 -right-2 flex size-7 items-center justify-center rounded-full text-[10px] font-bold shadow-xs ${
+                              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
                                 item.aiScore >= 80
-                                  ? "bg-emerald-600 text-white"
+                                  ? "bg-emerald-50 text-emerald-700"
                                   : item.aiScore >= 60
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-stone-200 text-stone-700"
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-zinc-100 text-zinc-600"
                               }`}
                             >
                               {item.aiScore}%
@@ -1185,291 +1238,101 @@ export function BuscarCvsView({
                           )}
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          {/* Nome do candidato — sempre o título em destaque, igual ao modo Compacto */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="truncate text-base sm:text-lg font-bold text-[#0a0a0a]">
-                              <Link
-                                href={`/candidaturas/${item.id}`}
-                                onClick={(e) => e.stopPropagation()}
-                                title="Abrir o cadastro"
-                                className="underline-offset-4 hover:underline"
-                              >
-                                {item.name}
-                              </Link>
-                            </h2>
-                            {item.hasImpediment && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600" title={item.impedimentReason ? `Motivo: ${item.impedimentReason}` : "Impedimento de contratação ativo"}>
-                                <span className="size-1.5 rounded-full bg-rose-500/80" />
-                                <span>Tarja preta</span>
-                              </span>
-                            )}
-                            {item.isPcd && (
-                              <span className="rounded-md bg-purple-100 border border-purple-300 px-2 py-0.5 text-[10px] font-extrabold text-purple-900">
-                                ♿ PCD
-                              </span>
-                            )}
-                            {item.age !== null && item.age !== undefined && (
-                              <span className="rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-900">
-                                🎂 {item.age} anos
-                              </span>
-                            )}
-                            {item.aiLevel && (
-                              <span
-                                className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${levelBadgeClass}`}
-                              >
-                                {item.aiLevel}
-                              </span>
-                            )}
-                            {item.aiArea && (
-                              <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-700">
-                                {item.aiArea}
-                              </span>
-                            )}
-                          </div>
+                        {/* Linha 2: Perfil · Área · Senioridade · Idade · Bairro/Cidade */}
+                        <p className="mt-0.5 truncate text-xs text-[#71717a]">
+                          {subtitleParts.join(" · ") || item.job.title}
+                        </p>
 
-                          {/* Cargo Pretendido/Perfil IA + Localização / Bairro + Vaga */}
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#71717a]">
-                            {(item.desiredRole || item.aiProfile) && (
+                        {/* Linha 3: Síntese da IA limpa (2 linhas) */}
+                        {item.aiReasoning && (
+                          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#52525b]">
+                            {item.aiReasoning}
+                          </p>
+                        )}
+
+                        {/* Snippet quando há busca por palavra-chave */}
+                        {snippet && (
+                          <p className="mt-2 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 py-2 text-xs italic text-[#3f3f46]">
+                            {snippet}
+                          </p>
+                        )}
+
+                        {/* Linha 4: Metadados neutros + Contatos e Ações discretas */}
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-2.5 text-[11px] text-[#71717a]">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="truncate font-medium text-[#52525b]">
+                              {item.job.title}
+                              {item.allJobs && item.allJobs.length > 1
+                                ? ` +${item.allJobs.length - 1}`
+                                : ""}
+                            </span>
+                            {extraMetaParts.length > 0 && (
                               <>
-                                <span className="flex items-center gap-1 font-semibold text-[#0a0a0a]">
-                                  <Target className="size-3 text-indigo-600" />
-                                  {item.desiredRole || item.aiProfile}
-                                </span>
-                                <span>•</span>
+                                <span className="text-[#d4d4d8]">·</span>
+                                <span className="truncate">{extraMetaParts.join(" · ")}</span>
                               </>
                             )}
-                            {(item.neighborhood || item.city) ? (
-                              <span className="flex items-center gap-1 font-medium text-emerald-950 bg-emerald-50/80 rounded px-1.5 py-0.5 border border-emerald-200/60">
-                                <MapPin className="size-3 text-emerald-600" />
-                                {[item.neighborhood, item.city].filter(Boolean).join(", ")}{item.state ? ` - ${item.state}` : ""}
-                              </span>
-                            ) : item.job.location ? (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="size-3 text-[#a1a1aa]" />
-                                {item.job.location}
-                              </span>
-                            ) : null}
-                            <span>•</span>
+                            <span className="text-[#d4d4d8]">·</span>
                             <span
-                              className="flex items-center gap-1"
-                              title={item.allJobs && item.allJobs.length > 1 ? `Candidaturas unificadas nesta pessoa: ${item.allJobs.join(" • ")}` : undefined}
+                              className="tabular-nums text-[#a1a1aa]"
+                              title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
                             >
-                              <Briefcase className="size-3 text-[#a1a1aa]" />
-                              <span>{item.job.title}</span>
-                              {item.allJobs && item.allJobs.length > 1 && (
-                                <span className="rounded bg-[#f4f4f5] px-1.5 py-0.5 text-[10px] font-semibold text-[#52525b]">
-                                  +{item.allJobs.length - 1} {item.allJobs.length === 2 ? "outra vaga" : "outras vagas"}
-                                </span>
-                              )}
+                              {formatCadastro(item.createdAt)}
                             </span>
+                            {item.phone && (
+                              <>
+                                <span className="text-[#d4d4d8]">·</span>
+                                <span>{formatPhone(item.phone)}</span>
+                              </>
+                            )}
                           </div>
 
-                          {/* Resumo da IA */}
-                          {item.aiReasoning && (
-                            <p className="mt-3 text-xs leading-relaxed text-[#52525b] line-clamp-2">
-                              <span className="font-bold text-[#0a0a0a]">Síntese da IA:</span>{" "}
-                              {item.aiReasoning}
-                            </p>
-                          )}
-
-                          {/* Snippet do Currículo quando há busca */}
-                          {snippet && (
-                            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-950">
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                                <FileText className="size-3.5" />
-                                Trecho localizado no currículo:
-                              </div>
-                              <p className="mt-1 italic leading-relaxed">{snippet}</p>
-                            </div>
-                          )}
-
-                          {/* Tags Inteligentes de Competências Detectadas */}
-                          {item.skills && item.skills.length > 0 && (
-                            <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                              {item.skills.map((skill) => (
-                                <button
-                                  key={skill}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFilters((p) => ({ ...p, keyword: skill }));
-                                  }}
-                                  className="rounded-lg border border-[#e4e4e7] bg-[#fafaf9] px-2 py-0.5 text-[11px] font-medium text-[#3f3f46] hover:bg-white hover:border-[#0a0a0a] transition"
-                                  title={`Filtrar por ${skill}`}
-                                >
-                                  {skill}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Metadados Extras estruturados */}
-                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#71717a]">
-                            {item.salaryExpectation && (
-                              <span className="flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                                <DollarSign className="size-3.5 text-emerald-600" />
-                                Pretensão: {item.salaryExpectation}
-                              </span>
+                          <div
+                            className="flex shrink-0 items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {whatsappUrl && (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-md px-1.5 py-0.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                              >
+                                WhatsApp
+                              </a>
                             )}
-                            {item.workPreference && item.workPreference !== "ANY" && (
-                              <span className="flex items-center gap-1 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700">
-                                <Compass className="size-3 text-stone-500" />
-                                {item.workPreference === "ONSITE"
-                                  ? "Presencial"
-                                  : item.workPreference === "HYBRID"
-                                  ? "Híbrido"
-                                  : "100% Remoto"}
-                              </span>
-                            )}
-                            {item.hasCnh && item.hasCnh !== "NONE" && (
-                              <span className="flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                <Car className="size-3 text-blue-600" />
-                                CNH {item.hasCnh}
-                              </span>
-                            )}
-                            {item.availability && item.availability !== "NEGOTIABLE" && (
-                              <span className="flex items-center gap-1 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700">
-                                ⏱️ Início{" "}
-                                {item.availability === "IMMEDIATE"
-                                  ? "Imediato"
-                                  : item.availability === "15_DAYS"
-                                  ? "em 15 dias"
-                                  : "em 30 dias"}
-                              </span>
-                            )}
-                            {item.education && (
-                              <span className="flex items-center gap-1 text-[#52525b]">
-                                <GraduationCap className="size-3.5 text-[#a1a1aa]" />
-                                {item.education}
-                              </span>
-                            )}
-                            {item.languages && (
-                              <span className="flex items-center gap-1 text-[#52525b]">
-                                <Languages className="size-3.5 text-[#a1a1aa]" />
-                                {item.languages}
-                              </span>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCandidate(item);
+                                setDrawerTab("pdf");
+                              }}
+                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                            >
+                              CV
+                            </button>
+                            <a
+                              href={`/candidaturas/${item.id}/cv?download=1`}
+                              className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              title="Baixar currículo em PDF"
+                              aria-label="Baixar currículo em PDF"
+                            >
+                              <Download className="size-3.5" strokeWidth={1.75} />
+                            </a>
+                            <Link
+                              href={`/candidaturas/${item.id}?edit=1`}
+                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                            >
+                              Editar
+                            </Link>
+                            <Link
+                              href={`/candidaturas/${item.id}`}
+                              className="rounded-md px-1.5 py-0.5 font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                            >
+                              Abrir →
+                            </Link>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Botão de Ação Direita */}
-                      <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCandidate(item);
-                            setDrawerTab(item.resumeUrl ? "pdf" : "ai");
-                          }}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0a0a0a] px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-[#27272a] active:scale-98"
-                        >
-                          <Eye className="size-3.5" />
-                          Ver Dossiê / PDF
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Rodapé do Card */}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-3 text-xs">
-                      <div className="flex flex-wrap items-center gap-2 text-[#71717a]">
-                        <span
-                          className="tabular-nums text-[#a1a1aa]"
-                          title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
-                        >
-                          Cadastro {formatCadastro(item.createdAt)}
-                        </span>
-                        <span className="text-[#d4d4d8]">•</span>
-                        <span>{item.email}</span>
-                        {item.phone && (
-                          <>
-                            <span>•</span>
-                            <span>{formatPhone(item.phone)}</span>
-                          </>
-                        )}
-                        {item.instagram && (
-                          <>
-                            <span>•</span>
-                            <a
-                              href={instagramUrl(item.instagram)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Abrir o Instagram"
-                              className="inline-flex items-center gap-0.5 font-medium text-[#0a0a0a] hover:underline"
-                            >
-                              <AtSign className="size-3" />
-                              {item.instagram}
-                            </a>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopy(`${item.name} <${item.email}>`, item.id);
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[#a1a1aa] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
-                        >
-                          {copiedId === item.id ? (
-                            <Check className="size-3 text-emerald-600" />
-                          ) : (
-                            <Copy className="size-3" />
-                          )}
-                          {copiedId === item.id ? "Copiado!" : "Copiar"}
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        {whatsappUrl && (
-                          <a
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-emerald-700 font-semibold hover:underline"
-                          >
-                            <MessageCircle className="size-3.5" />
-                            WhatsApp
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCandidate(item);
-                            setDrawerTab("pdf");
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                        >
-                          <Eye className="size-3.5" />
-                          Ver CV
-                        </button>
-                        <a
-                          href={`/candidaturas/${item.id}/cv?download=1`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                          title="Baixar currículo em PDF"
-                        >
-                          <Download className="size-3.5" strokeWidth={1.75} />
-                          PDF
-                        </a>
-                        <Link
-                          href={`/candidaturas/${item.id}?edit=1`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                        >
-                          Editar
-                        </Link>
-                        <Link
-                          href={`/candidaturas/${item.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-[#71717a] hover:text-[#0a0a0a] hover:underline"
-                        >
-                          <ExternalLink className="size-3.5" />
-                          Página
-                        </Link>
                       </div>
                     </div>
                   </div>

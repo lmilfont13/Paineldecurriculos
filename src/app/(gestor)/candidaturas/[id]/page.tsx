@@ -232,98 +232,169 @@ export default async function CandidaturaDetailPage({
     >
       <LiveRefresh active={analyzing} applicationIds={[app.id]} />
 
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <Link
-          href="/candidaturas"
-          className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
-        >
-          ← Voltar para candidatos
-        </Link>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.7px] text-[#a1a1aa]">
-          Detalhe da candidatura
-        </span>
-      </div>
+      {!app.queue && (
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <Link
+            href="/candidaturas"
+            className="text-xs font-medium text-[#71717a] hover:text-[#0a0a0a]"
+          >
+            ← Voltar para candidatos
+          </Link>
+        </div>
+      )}
 
-      <header className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-7">
-        {/* No celular os botões vão para baixo do nome: lado a lado, espremiam o
-            nome numa coluna de 60px e o WhatsApp saía da tela. */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.7px] text-[#71717a]">
+      <header className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-2xs sm:p-6">
+        {/* Linha 1: Contexto da vaga + Status + Match Score + Fechar */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Link
+              href={`/vagas/${app.job.id}`}
+              className="truncate text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a] transition hover:text-[#0a0a0a]"
+            >
               Candidatura · {jobLabel(app.job.title, app.job.code)}
-            </p>
-            <div className="mt-5 flex items-center gap-4">
-              <ZoomableCandidateAvatar
-                applicationId={app.id}
-                name={app.name}
-                photoUrl={app.photoUrl}
-                className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-sm"
+            </Link>
+            <span className="text-[#e4e4e7]" aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[11px] font-medium text-[#3f3f46]">
+              <span
+                className={`size-1.5 rounded-full ${
+                  app.status === "APPROVED"
+                    ? "bg-emerald-500"
+                    : app.status === "REJECTED"
+                      ? "bg-rose-500"
+                      : app.status === "INTERVIEW"
+                        ? "bg-sky-500"
+                        : app.status === "SHORTLISTED"
+                          ? "bg-amber-500"
+                          : "bg-zinc-400"
+                }`}
               />
-              <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a]">
-                  {app.name}
-                  {app.hasImpediment && (
-                    <span
-                      className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 align-middle text-[11px] font-medium text-zinc-600"
-                      title={app.impedimentReason ? `Motivo do impedimento: ${app.impedimentReason}` : "Impedimento de contratação ativo em todas as vagas"}
-                    >
-                      <span className="size-1.5 rounded-full bg-rose-500/80" />
-                      <span>Tarja preta</span>
-                    </span>
-                  )}
-                  {app.preRegistered && (
-                    <span className="ml-2 rounded-full bg-[#fff7e6] px-2 py-0.5 align-middle text-[11px] font-medium text-[#a16207]">
-                      Cadastro incompleto
-                    </span>
-                  )}
-                  {app.isDemo && (
-                    <span className="ml-2 rounded-full bg-[#f5f3ff] px-2 py-0.5 align-middle text-[11px] font-medium text-[#6d28d9]">
-                      Demonstração
-                    </span>
-                  )}
-                </h1>
-                <p className="mt-1 text-xs text-[#71717a]">
-                  {app.preRegistered ? "Cadastrado por você em" : "Candidatou-se em"} {formatAppliedAt(app.createdAt, true)}
-                  {app.age !== null && (
-                    <span className="text-[#a1a1aa]" title="Só para sua conferência: não entra na nota nem vai para a IA">
-                      {" · "}
-                      {app.age} anos
-                    </span>
-                  )}
-                  {app.consentAt && (
-                    <span
-                      className="text-[#a1a1aa]"
-                      title={`Aceitou o Aviso de Privacidade (LGPD) em ${formatAppliedAt(app.consentAt, true)} · versão ${app.consentVersion ?? "-"}`}
-                    >
-                      {" · "}
-                      LGPD aceita
-                    </span>
-                  )}
-                  {app.status === "PENDING" && (
-                    <>
-                      {" · "}
-                      <span className="font-medium text-[#b07818]">
-                        esperando resposta {formatWaiting(app.createdAt)}
-                      </span>
-                    </>
-                  )}
-                  {app.status === "STANDBY" && (
-                    <>
-                      {" · "}
-                      <span className="font-medium text-[#0e7a6b]">
-                        em stand-by{extractStandbyReason(app.managerNotes) ? ` (${extractStandbyReason(app.managerNotes)})` : ""}
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
+              {appStatusLabels[app.status as AppStatusKey]}
+            </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:gap-2.5">
-            <CandidateRegistrationEditor
-              initial={registrationInitial}
-              answers={editableAnswers}
-              variant="header"
+
+          <div className="flex shrink-0 items-center gap-2">
+            {app.aiState === "DONE" && app.aiScore !== null && (
+              <span
+                className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold tabular-nums ${
+                  meets
+                    ? "bg-[#e4f6ec] text-[#1f7a4d]"
+                    : "bg-[#f4f4f5] text-[#52525b]"
+                }`}
+                title={
+                  meets
+                    ? `Nota ${app.aiScore}/100 — acima do mínimo da vaga (${app.job.aiMinScore})`
+                    : `Nota ${app.aiScore}/100 — abaixo do mínimo da vaga (${app.job.aiMinScore})`
+                }
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+                {app.aiScore}% match
+              </span>
+            )}
+            <Link
+              href="/candidaturas"
+              aria-label="Fechar e voltar para candidatos"
+              className="flex size-8 shrink-0 items-center justify-center rounded-xl text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+            >
+              ✕
+            </Link>
+          </div>
+        </div>
+
+        {/* Linha 2: Identidade em largura 100% livre (nome nunca fica espremido) */}
+        <div className="mt-4 flex items-start gap-4">
+          <ZoomableCandidateAvatar
+            applicationId={app.id}
+            name={app.name}
+            photoUrl={app.photoUrl}
+            className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#1c1917] text-base font-bold text-white shadow-xs sm:size-15"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold tracking-[-0.02em] text-[#0a0a0a] sm:text-2xl">
+                {app.name}
+              </h1>
+              {app.hasImpediment && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-zinc-50 px-2.5 py-0.5 text-[11px] font-medium text-zinc-600"
+                  title={
+                    app.impedimentReason
+                      ? `Motivo do impedimento: ${app.impedimentReason}`
+                      : "Impedimento de contratação ativo em todas as vagas"
+                  }
+                >
+                  <span className="size-1.5 rounded-full bg-rose-500/80" />
+                  <span>Tarja preta</span>
+                </span>
+              )}
+              {app.preRegistered && (
+                <span className="rounded-full bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-medium text-[#a16207]">
+                  Cadastro incompleto
+                </span>
+              )}
+              {app.isDemo && (
+                <span className="rounded-full bg-[#f5f3ff] px-2.5 py-0.5 text-[11px] font-medium text-[#6d28d9]">
+                  Demonstração
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-[#71717a]">
+              <span>
+                {app.preRegistered ? "Cadastrado por você em" : "Candidatou-se em"}{" "}
+                {formatAppliedAt(app.createdAt, true)}
+              </span>
+              {app.age !== null && (
+                <span
+                  className="text-[#71717a]"
+                  title="Só para sua conferência: não entra na nota nem vai para a IA"
+                >
+                  · {app.age} anos
+                </span>
+              )}
+              {(app.city || app.state) && (
+                <span className="text-[#71717a]">
+                  · {[app.city, app.state].filter(Boolean).join(" - ")}
+                </span>
+              )}
+              {(app.aiProfile || app.aiLevel) && (
+                <span className="font-medium text-[#52525b]">
+                  · {[app.aiProfile, app.aiLevel].filter(Boolean).join(" · ")}
+                </span>
+              )}
+              {app.consentAt && (
+                <span
+                  className="text-[#a1a1aa]"
+                  title={`Aceitou o Aviso de Privacidade (LGPD) em ${formatAppliedAt(app.consentAt, true)} · versão ${app.consentVersion ?? "-"}`}
+                >
+                  · LGPD aceita
+                </span>
+              )}
+              {app.status === "PENDING" && (
+                <span className="font-medium text-[#b07818]">
+                  · esperando resposta {formatWaiting(app.createdAt)}
+                </span>
+              )}
+              {app.status === "STANDBY" && (
+                <span className="font-medium text-[#0e7a6b]">
+                  · em stand-by
+                  {extractStandbyReason(app.managerNotes)
+                    ? ` (${extractStandbyReason(app.managerNotes)})`
+                    : ""}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Linha 3: Barra de Ações Minimalista */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-[#f4f4f5] pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <WhatsAppQuickButton
+              candidateName={app.name}
+              candidatePhone={app.phone}
+              jobTitle={app.job.title}
+              companyName={app.company.name}
+              enabled={whatsappTemplatesEnabled}
             />
             <a
               href={`/candidaturas/${app.id}/cv`}
@@ -337,38 +408,28 @@ export default async function CandidaturaDetailPage({
             </a>
             <a
               href={`/candidaturas/${app.id}/cv?download=1`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold shadow-2xs transition hover:opacity-90"
-              style={{
-                backgroundColor: "var(--brand-primary)",
-                color: "var(--brand-foreground)",
-              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs transition hover:bg-[#fafaf9]"
               title="Baixar currículo em PDF"
             >
-              <Download className="size-3.5" />
+              <Download className="size-3.5 text-[#52525b]" />
               <span>Baixar PDF</span>
             </a>
-            {!app.hasImpediment && (
+            <CandidateRegistrationEditor
+              initial={registrationInitial}
+              answers={editableAnswers}
+              variant="header"
+            />
+          </div>
+
+          {!app.hasImpediment && (
+            <div className="flex items-center">
               <ImpedimentToggle
                 applicationId={app.id}
                 candidateName={app.name}
                 hasImpediment={false}
               />
-            )}
-            <WhatsAppQuickButton
-              candidateName={app.name}
-              candidatePhone={app.phone}
-              jobTitle={app.job.title}
-              companyName={app.company.name}
-              enabled={whatsappTemplatesEnabled}
-            />
-            <Link
-              href="/candidaturas"
-              aria-label="Fechar e voltar para candidatos"
-              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] sm:ml-0"
-            >
-              ✕
-            </Link>
-          </div>
+            </div>
+          )}
         </div>
       </header>
 

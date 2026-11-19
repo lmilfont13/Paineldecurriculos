@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Zap, Columns, FileText, Download, Keyboard } from "lucide-react";
+import { ChevronLeft, ChevronRight, Zap, Columns, Keyboard } from "lucide-react";
 
 export type QueueBarProps = {
   applicationId: string;
@@ -22,7 +22,6 @@ export type QueueBarProps = {
 };
 
 export function CandidateQueueBar({
-  applicationId,
   jobId,
   jobTitle,
   hasResume,
@@ -67,58 +66,43 @@ export function CandidateQueueBar({
   }, [queue, router, hasResume, onToggleSplitView]);
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-4 py-3 shadow-xs">
-      <div className="flex items-center gap-3">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4e4e7] bg-white px-4 py-2.5 shadow-2xs">
+      <div className="flex min-w-0 items-center gap-2 text-xs">
+        <Link
+          href="/candidaturas"
+          className="shrink-0 font-medium text-[#71717a] transition hover:text-[#0a0a0a]"
+        >
+          ← Candidatos
+        </Link>
+        <span className="text-[#e4e4e7]" aria-hidden>/</span>
         <Link
           href={`/vagas/${jobId}`}
-          className="text-xs font-semibold text-[#71717a] hover:text-[#0a0a0a]"
+          className="truncate font-semibold text-[#3f3f46] transition hover:text-[#0a0a0a]"
+          title={jobTitle}
         >
-          ← {jobTitle}
+          {jobTitle}
         </Link>
-        <span className="text-[#d4d4d8]" aria-hidden>|</span>
-        <span className="rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[11px] font-medium text-[#52525b]">
-          Candidato {queue.currentPosition} de {queue.total}
+        <span className="shrink-0 rounded-full bg-[#f4f4f5] px-2.5 py-0.5 text-[11px] font-medium text-[#52525b] tabular-nums">
+          {queue.currentPosition} de {queue.total}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {hasResume && (
-          <>
-            <button
-              type="button"
-              onClick={onToggleSplitView}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-medium transition ${
-                splitView
-                  ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-                  : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
-              }`}
-              title="Alterna a exibição do PDF original lado a lado com a análise (Atalho: V)"
-            >
-              <Columns className="size-3.5" />
-              <span className="hidden sm:inline">Ver CV lado a lado</span>
-              <span className="sm:hidden">Ver CV</span>
-            </button>
-
-            <a
-              href={`/candidaturas/${applicationId}/cv`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[11px] font-medium text-[#52525b] transition hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
-              title="Abrir currículo em nova aba"
-            >
-              <FileText className="size-3.5" />
-              <span className="hidden md:inline">Ver currículo</span>
-            </a>
-
-            <a
-              href={`/candidaturas/${applicationId}/cv?download=1`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[11px] font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
-              title="Baixar currículo em PDF"
-            >
-              <Download className="size-3.5" />
-              <span>Baixar PDF</span>
-            </a>
-          </>
+          <button
+            type="button"
+            onClick={onToggleSplitView}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-medium transition ${
+              splitView
+                ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:bg-[#fafaf9] hover:text-[#0a0a0a]"
+            }`}
+            title="Alterna a exibição do PDF original lado a lado com a análise (Atalho: V)"
+          >
+            <Columns className="size-3.5" />
+            <span className="hidden sm:inline">Ver CV lado a lado</span>
+            <span className="sm:hidden">Ver CV</span>
+          </button>
         )}
 
         {queue.nextPendingId && queue.nextPendingId !== queue.nextId && (
@@ -195,4 +179,3 @@ export function CandidateQueueBar({
     </div>
   );
 }
-

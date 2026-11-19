@@ -79,20 +79,21 @@ export function ImpedimentToggle({
           type="button"
           onClick={openModal}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-800 hover:text-white disabled:opacity-50"
         >
           <ShieldCheck className="size-3.5 text-emerald-400" />
-          <span>Desmarcar Tarja Preta</span>
+          <span>Remover Tarja Preta</span>
         </button>
       ) : (
         <button
           type="button"
           onClick={openModal}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-800 transition hover:border-black hover:bg-zinc-50 disabled:opacity-50 shadow-xs"
+          title="Sinalizar impedimento de contratação (Tarja Preta) em todas as vagas"
+          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-medium text-[#71717a] transition hover:border-zinc-400 hover:bg-[#fafaf9] hover:text-[#0a0a0a] disabled:opacity-50"
         >
-          <ShieldAlert className="size-3.5 text-zinc-900" />
-          <span>Sinalizar Impedimento (Tarja Preta)</span>
+          <ShieldAlert className="size-3.5 text-[#71717a]" />
+          <span>Tarja preta</span>
         </button>
       )}
 
