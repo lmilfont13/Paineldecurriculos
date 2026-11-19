@@ -42,7 +42,7 @@ export function CareerCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0a0a0a]">
-            <Compass className="size-4 text-[#a1a1aa]" aria-hidden /> Perfil profissional
+            <Compass className="size-4 text-[#71717a]" aria-hidden /> Perfil profissional
           </h2>
           <p className="mt-0.5 text-[12px] text-[#71717a]">
             Onde esta pessoa seria um bom candidato, além desta vaga. Leitura geral do currículo; não muda a nota nem a etapa.
@@ -74,7 +74,7 @@ export function CareerCard({
             {pending ? <Loader2 className="size-4 animate-spin" /> : <Compass className="size-4" />}
             {pending ? "O agente está lendo o currículo…" : "Analisar perfil com o agente"}
           </button>
-          <p className="mt-2 text-[11px] text-[#a1a1aa]">
+          <p className="mt-2 text-[11px] text-[#71717a]">
             Leva uns 15 segundos. Diz as áreas em que a pessoa se sairia bem, com nota estimada, e compara com até 3
             vagas abertas parecidas.
           </p>
@@ -106,7 +106,7 @@ export function CareerCard({
           </ul>
 
           <div className="mt-5 rounded-xl bg-[#fafaf9] px-4 py-3 ring-1 ring-[#f4f4f5]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
               Seria bem aproveitado em
             </p>
             <p className="mt-1 text-[13px] leading-6 text-[#0a0a0a]">{career.summary}</p>
@@ -137,7 +137,7 @@ export function CareerCard({
                 ))}
               </ul>
             )}
-            <p className="mt-2 text-[11px] text-[#a1a1aa]">
+            <p className="mt-2 text-[11px] text-[#71717a]">
               A nota por área é uma estimativa geral. A nota de cada vaga usa os critérios dela, como na triagem.
             </p>
           </div>

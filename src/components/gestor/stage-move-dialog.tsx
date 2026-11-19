@@ -66,7 +66,7 @@ export function StageMoveDialog({
         className="max-h-[92vh] w-full max-w-[540px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a1a1aa]">Mover candidato</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#71717a]">Mover candidato</p>
         <h3 className="mt-1 text-lg font-semibold text-[#0a0a0a]">{candidateName}</h3>
         <p className="mt-1 flex items-center gap-2 text-[13px] text-[#71717a]">
           <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5">{appStatusLabels[from]}</span>
@@ -96,7 +96,7 @@ export function StageMoveDialog({
           <div className="mt-2 space-y-2">
             {preview.email && (
               <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">E-mail</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717a]">E-mail</p>
                 <p className="mt-1 text-[12px] text-[#71717a]">
                   Assunto: <span className="font-medium text-[#0a0a0a]">{preview.email.subject}</span>
                 </p>
@@ -112,7 +112,7 @@ export function StageMoveDialog({
             )}
             {preview.site && (
               <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717a]">
                   Aviso na área do candidato
                 </p>
                 <p className="mt-1 text-[13px] font-semibold text-[#0a0a0a]">{preview.site.title}</p>
@@ -139,7 +139,7 @@ export function StageMoveDialog({
               maxLength={2000}
               className="mt-1 w-full resize-y rounded-lg border border-[#e4e4e7] p-3 text-[13px] leading-5 focus:border-[#0a0a0a] focus:outline-none"
             />
-            <p className="mt-1 text-[11px] leading-4 text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] leading-4 text-[#71717a]">
               {edited
                 ? "Vai como recado, por e-mail e na área do candidato, no lugar da mensagem padrão — uma só."
                 : "Altere o texto para enviar a sua versão. Sem alteração, vai a mensagem padrão."}

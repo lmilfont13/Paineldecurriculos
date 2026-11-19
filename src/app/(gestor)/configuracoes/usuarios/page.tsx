@@ -74,7 +74,7 @@ export default async function UsuariosPage() {
                   <p className="truncate text-[13px] font-medium text-[#0a0a0a]">
                     {u.name ?? u.email}
                     {u.id === manager.id && (
-                      <span className="ml-2 text-[11px] font-normal text-[#a1a1aa]">você</span>
+                      <span className="ml-2 text-[11px] font-normal text-[#71717a]">você</span>
                     )}
                   </p>
                   <p className="truncate text-[11px] text-[#71717a]">

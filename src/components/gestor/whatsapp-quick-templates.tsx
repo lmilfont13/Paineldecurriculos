@@ -142,7 +142,7 @@ export function WhatsAppQuickTemplatesModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+            className="rounded-lg p-1 text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
           >
             <X className="size-4" />
           </button>
@@ -150,7 +150,7 @@ export function WhatsAppQuickTemplatesModal({
 
         {/* Templates selector */}
         <div className="border-b border-[#e4e4e7] bg-[#fafaf9] p-3">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#a1a1aa]">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#71717a]">
             Selecione o modelo
           </p>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -242,7 +242,7 @@ export function WhatsAppQuickTemplatesModal({
               <button
                 type="button"
                 disabled
-                className="flex items-center gap-1.5 rounded-xl bg-[#e4e4e7] px-4 py-2 text-xs font-semibold text-[#a1a1aa] cursor-not-allowed"
+                className="flex items-center gap-1.5 rounded-xl bg-[#e4e4e7] px-4 py-2 text-xs font-semibold text-[#71717a] cursor-not-allowed"
               >
                 <MessageCircle className="size-4" />
                 <span>Sem WhatsApp</span>

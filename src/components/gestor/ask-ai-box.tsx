@@ -67,7 +67,7 @@ export function AskAiBox({ applicationId, jobId }: { applicationId?: string; job
   return (
     <div>
       <h2 className="text-sm font-semibold text-[#0a0a0a]">Pergunte à IA</h2>
-      <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
+      <p className="mt-0.5 text-[11px] text-[#71717a]">
         {mode === "all"
           ? "Ela busca em todas as candidaturas da empresa para responder. Não muda a nota nem a etapa."
           : "Ela responde com base no currículo e nas respostas deste candidato. Não muda a nota nem a etapa."}
@@ -96,7 +96,7 @@ export function AskAiBox({ applicationId, jobId }: { applicationId?: string; job
               ? "Ex.: Tenho opções melhores para esta vaga entre os outros candidatos?"
               : "Ex.: Ele já trabalhou com atendimento ao público? Por quanto tempo?"
           }
-          className="h-9 min-w-0 flex-1 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="h-9 min-w-0 flex-1 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
         <button
           type="submit"
@@ -121,7 +121,7 @@ export function AskAiBox({ applicationId, jobId }: { applicationId?: string; job
               {t.answer && <p className="mt-1.5 whitespace-pre-line text-[#44403c]">{t.answer}</p>}
               {t.mentioned.length > 0 && (
                 <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
-                  <span className="text-[#a1a1aa]">Abrir:</span>
+                  <span className="text-[#71717a]">Abrir:</span>
                   {t.mentioned.map((m) => (
                     <Link
                       key={m.id}
@@ -133,7 +133,7 @@ export function AskAiBox({ applicationId, jobId }: { applicationId?: string; job
                   ))}
                 </p>
               )}
-              {t.scope && <p className="mt-1.5 text-[11px] text-[#a1a1aa]">{t.scope}</p>}
+              {t.scope && <p className="mt-1.5 text-[11px] text-[#71717a]">{t.scope}</p>}
               {t.error && (
                 <p role="alert" className="mt-1.5 text-[#c23b3b]">
                   {t.error}

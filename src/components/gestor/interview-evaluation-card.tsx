@@ -150,9 +150,9 @@ export function InterviewEvaluationCard({
     <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">Entrevista</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">Entrevista</p>
           <h2 className="mt-1 text-base font-semibold text-[#0a0a0a]">Ficha de avaliação</h2>
-          <p className="mt-1 text-[11px] text-[#a1a1aa]">
+          <p className="mt-1 text-[11px] text-[#71717a]">
             {interviewSummary ? `${interviewSummary} · ` : ""}Interna: o candidato nunca vê e a IA não recebe.
           </p>
         </div>
@@ -182,7 +182,7 @@ export function InterviewEvaluationCard({
                       onClick={() => setCriteria((list) => list.filter((_, j) => j !== i))}
                       aria-label={`Remover ${c.name}`}
                       title="Remover critério"
-                      className="ml-1 rounded p-1 text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                      className="ml-1 rounded p-1 text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                     >
                       <X className="size-3.5" />
                     </button>
@@ -193,7 +193,7 @@ export function InterviewEvaluationCard({
                   onChange={(e) => update(i, { note: e.target.value })}
                   maxLength={500}
                   placeholder="Comentário (opcional)"
-                  className="mt-2 h-8 w-full rounded-lg border border-[#ececec] bg-[#fafaf9] px-2.5 text-[12px] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:bg-white focus:outline-none"
+                  className="mt-2 h-8 w-full rounded-lg border border-[#ececec] bg-[#fafaf9] px-2.5 text-[12px] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:bg-white focus:outline-none"
                 />
               </li>
             ))}
@@ -307,7 +307,7 @@ export function InterviewEvaluationCard({
                   )}
                   <div>
                     {e.average !== null && <Stars value={Math.round(e.average)} size="size-3.5" label={`Média ${e.average}`} />}
-                    <p className="mt-0.5 text-[11px] text-[#a1a1aa]">
+                    <p className="mt-0.5 text-[11px] text-[#71717a]">
                       {e.evaluatorId === currentUserId ? "Você" : e.evaluatorName || e.evaluatorEmail} ·{" "}
                       {formatWhen(e.updatedAt)}
                     </p>

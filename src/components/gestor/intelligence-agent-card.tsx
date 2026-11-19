@@ -32,7 +32,7 @@ export function IntelligenceAgentCard({
             sugerir a próxima ação.
           </p>
         </div>
-        <BrainCircuit aria-hidden className="mt-0.5 size-5 shrink-0 text-[#a1a1aa]" />
+        <BrainCircuit aria-hidden className="mt-0.5 size-5 shrink-0 text-[#71717a]" />
       </div>
 
       <div className="mt-4 flex-1 rounded-xl bg-[#fafaf9] p-4">
@@ -43,7 +43,7 @@ export function IntelligenceAgentCard({
         ) : latestSummary ? (
           <p className="whitespace-pre-line text-[12px] leading-5 text-[#3f3f46]">{latestSummary}</p>
         ) : (
-          <p className="text-[12px] leading-5 text-[#a1a1aa]">
+          <p className="text-[12px] leading-5 text-[#71717a]">
             Nenhuma leitura ainda. Gere a primeira para ver o diagnóstico do processo.
           </p>
         )}

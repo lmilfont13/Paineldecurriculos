@@ -573,7 +573,7 @@ export function OnlineCounterBadge({
           <span className="flex items-center gap-1 rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[11px] font-bold text-[#0a0a0a]">
             <Users className="size-3 text-[#71717a]" />
             {total}
-            {isOpen ? <ChevronUp className="size-2.5 text-[#a1a1aa]" /> : <ChevronDown className="size-2.5 text-[#a1a1aa]" />}
+            {isOpen ? <ChevronUp className="size-2.5 text-[#71717a]" /> : <ChevronDown className="size-2.5 text-[#71717a]" />}
           </span>
         </div>
       </button>
@@ -846,7 +846,7 @@ export function OnlineCounterBadge({
 
                   {/* Lista de Sessões Ativas */}
                   <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
                       Candidatos Online ({candidates.length})
                     </p>
                     <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">

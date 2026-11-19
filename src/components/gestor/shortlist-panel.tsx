@@ -75,7 +75,7 @@ export function ShortlistPanel({
       </div>
 
       {!canAnalyze && (
-        <p className="mt-4 text-[12px] text-[#a1a1aa]">
+        <p className="mt-4 text-[12px] text-[#71717a]">
           Precisa de pelo menos 2 candidatos nesta vaga para comparar.
         </p>
       )}
@@ -118,7 +118,7 @@ export function ShortlistPanel({
                       nota {pick.aiScore}
                     </span>
                   )}
-                  <span className="text-[11px] text-[#a1a1aa]">
+                  <span className="text-[11px] text-[#71717a]">
                     {appStatusLabels[pick.status as AppStatusKey] ?? pick.status}
                   </span>
                   <div className="ml-auto flex items-center gap-1.5">
@@ -162,7 +162,7 @@ export function ShortlistPanel({
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-[11px] text-[#a1a1aa]">
+          <p className="mt-3 text-[11px] text-[#71717a]">
             A IA leu {result.analyzed} de {result.total} candidatos (os de maior nota
             primeiro; candidatos no banco de dados ficam de fora). Cada análise pode dar um resultado um pouco diferente.
           </p>

@@ -94,7 +94,7 @@ export function ReferrerManager({
       {/* Adicionar indicador */}
       <section>
         <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
-          <Plus className="size-4 text-[#a1a1aa]" />
+          <Plus className="size-4 text-[#71717a]" />
           Novo indicador
         </h2>
         <p className="mt-1 text-[12px] text-[#71717a]">
@@ -109,7 +109,7 @@ export function ReferrerManager({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            className="h-10 w-64 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#0a0a0a)]/20"
+            className="h-10 w-64 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#0a0a0a)]/20"
           />
           <button
             type="button"
@@ -141,7 +141,7 @@ export function ReferrerManager({
           <p className="mt-2 text-[13px] text-[#71717a]">
             Nenhum indicador cadastrado ainda.
           </p>
-          <p className="text-[11px] text-[#a1a1aa]">
+          <p className="text-[11px] text-[#71717a]">
             Crie o primeiro acima para gerar links de indicação.
           </p>
         </section>
@@ -149,7 +149,7 @@ export function ReferrerManager({
         <>
           <section>
             <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
-              <Trophy className="size-4 text-[#a1a1aa]" />
+              <Trophy className="size-4 text-[#71717a]" />
               Ranking de indicações
             </h2>
             <div className="mt-3 space-y-2">
@@ -170,7 +170,7 @@ export function ReferrerManager({
                               ? "bg-[#f1f0ed] text-[#71717a]"
                               : i === 2
                                 ? "bg-[#fef0e1] text-[#b07818]"
-                                : "bg-[#f4f4f5] text-[#a1a1aa]")
+                                : "bg-[#f4f4f5] text-[#71717a]")
                         }
                       >
                         {i + 1}
@@ -198,7 +198,7 @@ export function ReferrerManager({
 
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1.5 rounded-lg bg-[#fafaf9] px-2.5 py-1.5 ring-1 ring-[#e4e4e7]">
-                        <Link2 className="size-3 text-[#a1a1aa]" />
+                        <Link2 className="size-3 text-[#71717a]" />
                         <code className="max-w-[180px] truncate text-[11px] text-[#52525b] sm:max-w-[300px]">
                           {link}
                         </code>
@@ -208,7 +208,7 @@ export function ReferrerManager({
                         type="button"
                         title="Remover indicador"
                         onClick={() => handleRemove(ref.id)}
-                        className="rounded-lg p-1.5 text-[#a1a1aa] hover:bg-[#fef2f2] hover:text-red-500"
+                        className="rounded-lg p-1.5 text-[#71717a] hover:bg-[#fef2f2] hover:text-red-500"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -240,7 +240,7 @@ export function ReferrerManager({
                 atualiza automaticamente.
               </li>
             </ol>
-            <p className="mt-3 text-[11px] text-[#a1a1aa]">
+            <p className="mt-3 text-[11px] text-[#71717a]">
               O link funciona para todas as vagas da empresa. O parâmetro{" "}
               <code className="rounded bg-[#e4e4e7] px-1">?ref=</code> identifica
               o indicador; ele fica salvo num cookie de 30 dias no navegador do

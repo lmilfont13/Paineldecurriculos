@@ -242,7 +242,7 @@ export function GestorTopbar({
 
       <span className="hidden text-[13px] md:inline">
         <span className="text-[#71717a]">{companyName}</span>
-        <span className="mx-2 text-[#a1a1aa]">/</span>
+        <span className="mx-2 text-[#71717a]">/</span>
         <span className="font-medium text-[#0a0a0a]">{section}</span>
       </span>
 

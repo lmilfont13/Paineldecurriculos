@@ -84,7 +84,7 @@ export function AnswersEditor({
 
       {editing ? (
         <div className="mt-4">
-          <p className="text-[11px] text-[#a1a1aa]">
+          <p className="text-[11px] text-[#71717a]">
             Corrija o que o candidato preencheu errado (por exemplo, nível ou tempo de experiência). A resposta corrigida passa a valer no sistema.
           </p>
           <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">

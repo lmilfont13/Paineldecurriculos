@@ -199,9 +199,9 @@ export function BatchResumeForm({
             (dragging ? "border-[var(--brand-primary)] bg-[#fafaf9]" : "border-[#e4e4e7] hover:bg-[#fafaf9]")
           }
         >
-          <Upload className="size-5 text-[#a1a1aa]" aria-hidden />
+          <Upload className="size-5 text-[#71717a]" aria-hidden />
           <p className="mt-2 text-[13px] font-medium text-[#0a0a0a]">Arraste os currículos aqui ou clique para escolher</p>
-          <p className="mt-0.5 text-[11px] text-[#a1a1aa]">PDF ou imagem até 5 MB cada · até {LIMIT} por vez</p>
+          <p className="mt-0.5 text-[11px] text-[#71717a]">PDF ou imagem até 5 MB cada · até {LIMIT} por vez</p>
           <input
             ref={inputRef}
             type="file"
@@ -244,7 +244,7 @@ export function BatchResumeForm({
                 ) : (
                   <span className="block truncate text-[13px] font-medium text-[#0a0a0a]">{row.name ?? row.file.name}</span>
                 )}
-                <span className="block truncate text-[11px] text-[#a1a1aa]">
+                <span className="block truncate text-[11px] text-[#71717a]">
                   {row.email ? `${row.email} · ` : ""}
                   {row.file.name}
                 </span>

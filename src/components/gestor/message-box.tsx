@@ -171,7 +171,7 @@ export function MessageBox({
             onChange={(e) => setSubject(e.target.value)}
             maxLength={80}
             placeholder="Ex.: Documentos para o registro"
-            className="h-9 min-w-0 flex-1 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+            className="h-9 min-w-0 flex-1 rounded-lg border border-[#e4e4e7] bg-white px-3 text-[13px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
           />
           <button
             type="button"
@@ -184,7 +184,7 @@ export function MessageBox({
         </div>
         {templates.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-[#a1a1aa]">Salvos:</span>
+            <span className="text-[11px] text-[#71717a]">Salvos:</span>
             {templates.map((t) => (
               <button
                 key={t.id}
@@ -237,7 +237,7 @@ export function MessageBox({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={`Escreva para ${firstName} ou escolha um assunto acima para a IA sugerir o texto…`}
-          className="w-full resize-y rounded-lg border border-[#e4e4e7] bg-white p-3 text-[13px] leading-5 text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+          className="w-full resize-y rounded-lg border border-[#e4e4e7] bg-white p-3 text-[13px] leading-5 text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
         />
 
         {state && "error" in state && (

@@ -153,7 +153,7 @@ export function BulkRejectDialog({
           </>
         ) : (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a1a1aa]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#71717a]">
               Banco de dados em massa
             </p>
             <h2 className="mt-1 text-lg font-semibold text-[#0a0a0a]">
@@ -251,14 +251,14 @@ export function BulkRejectDialog({
               maxLength={2000}
               className="mt-1 w-full resize-y rounded-lg border border-[#e4e4e7] p-3 text-[13px] leading-5 focus:border-[#0a0a0a] focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-[#a1a1aa]">
+            <p className="mt-1 text-[11px] text-[#71717a]">
               {"{nome}"}, {"{vaga}"} e {"{empresa}"} viram o nome, a vaga e a empresa de cada pessoa. O texto fica salvo
               como modelo com este assunto.
             </p>
 
             {preview && (
               <div className="mt-3 rounded-lg border border-[#ebe7e3] bg-[#fdfcfb] p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717a]">
                   Como {sampleName || "o candidato"} vai receber
                 </p>
                 <p className="mt-1 whitespace-pre-line text-[13px] leading-5 text-[#3f3f46]">{preview}</p>

@@ -40,7 +40,7 @@ export function DeleteApplicationButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#a1a1aa] hover:text-[#c23b3b]"
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#71717a] hover:text-[#c23b3b]"
       >
         <Trash2 aria-hidden className="size-3.5" />
         Excluir candidatura

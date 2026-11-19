@@ -140,11 +140,11 @@ export default async function AgentesPage() {
           <div key={label} className="rounded-2xl border border-[#e4e4e7] bg-white px-4 py-3">
             <p className="text-[11px] font-medium text-[#71717a]">{label}</p>
             <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#18181b]">{value}</p>
-            <p className="text-[10px] text-[#a1a1aa]">{detail}</p>
+            <p className="text-[10px] text-[#71717a]">{detail}</p>
           </div>
         ))}
       </section>
-      <p className="mt-1.5 text-right text-[10px] text-[#a1a1aa]">{data.windowLabel}</p>
+      <p className="mt-1.5 text-right text-[10px] text-[#71717a]">{data.windowLabel}</p>
 
       {/* 4. Histórico + Inteligência lado a lado */}
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_1fr]">
@@ -170,7 +170,7 @@ export default async function AgentesPage() {
                       <p className="truncate text-[12px] font-medium text-[#292524]">
                         {agentName}: {run.application?.name ?? "processo da empresa"}
                       </p>
-                      <p className="truncate text-[11px] text-[#a1a1aa]">
+                      <p className="truncate text-[11px] text-[#71717a]">
                         {run.status === "FAILED" ? (run.error ?? "Falhou") : (run.summary ?? run.eventName)}
                       </p>
                     </div>
@@ -196,7 +196,7 @@ export default async function AgentesPage() {
               );
             })}
             {runs.length === 0 && (
-              <li className="py-6 text-center text-[12px] text-[#a1a1aa]">
+              <li className="py-6 text-center text-[12px] text-[#71717a]">
                 Nada por aqui ainda. Inicie a simulação para ver a primeira execução.
               </li>
             )}
@@ -213,7 +213,7 @@ export default async function AgentesPage() {
       <details className="group mt-6 rounded-2xl border border-[#e4e4e7] bg-white">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[14px] font-semibold text-[#18181b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
           Como os agentes funcionam
-          <span aria-hidden className="text-[#a1a1aa] transition-transform group-open:rotate-180">⌄</span>
+          <span aria-hidden className="text-[#71717a] transition-transform group-open:rotate-180">⌄</span>
         </summary>
         <div className="border-t border-[#f0efed] p-5">
           <div className="grid gap-4 lg:grid-cols-3">
@@ -226,7 +226,7 @@ export default async function AgentesPage() {
                     <h3 className="text-[13px] font-semibold text-[#0a0a0a]">{agent.name}</h3>
                   </div>
                   <p className="mt-2 text-[12px] leading-5 text-[#71717a]">{agent.description}</p>
-                  <p className="mt-3 text-[11px] text-[#a1a1aa]">
+                  <p className="mt-3 text-[11px] text-[#71717a]">
                     Entrega: {agent.outputs.join(", ")}
                   </p>
                   <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-5 text-[#57534e]">

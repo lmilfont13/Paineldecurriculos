@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Vagas · Triagem" };
 const statusStyles = {
   OPEN: { bg: "bg-[#e4f6ec]", text: "text-[#1f7a4d]" },
   PAUSED: { bg: "bg-[#f7f0e1]", text: "text-[#b07818]" },
-  CLOSED: { bg: "bg-[#f1f0ed]", text: "text-[#a1a1aa]" },
+  CLOSED: { bg: "bg-[#f1f0ed]", text: "text-[#71717a]" },
   DRAFT: { bg: "bg-[#f1f0ed]", text: "text-[#71717a]" },
 } as const;
 
@@ -40,7 +40,7 @@ export default async function VagasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <CopyLink url={publicUrl} />
+          <CopyLink url={publicUrl} compact />
           <a
             href="/relatorio-geral"
             target="_blank"
@@ -91,7 +91,7 @@ export default async function VagasPage() {
                     {job.title}
                   </span>
                   {job.code && (
-                    <span className="shrink-0 text-xs text-[#a1a1aa]">#{job.code}</span>
+                    <span className="shrink-0 text-xs text-[#71717a]">#{job.code}</span>
                   )}
                   <span
                     className={`flex h-5 shrink-0 items-center rounded-full px-2 text-[10px] font-medium ${style.bg} ${style.text}`}
@@ -117,7 +117,7 @@ export default async function VagasPage() {
                     ● {job.pendingCount} esperando resposta
                   </span>
                 ) : (
-                  <span className="text-[#a1a1aa]">nada pendente</span>
+                  <span className="text-[#71717a]">nada pendente</span>
                 )}
               </span>
 

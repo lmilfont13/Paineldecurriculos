@@ -89,7 +89,7 @@ export function JobStatusActions({
           type="button"
           disabled={pending}
           onClick={() => setConfirming(true)}
-          className="text-[13px] font-medium text-[#a1a1aa] hover:text-[#0a0a0a] disabled:opacity-50"
+          className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a] disabled:opacity-50"
         >
           Encerrar
         </button>

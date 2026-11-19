@@ -157,7 +157,7 @@ export function CandidateQueueBar({
         <button
           type="button"
           onClick={() => setShowShortcuts((s) => !s)}
-          className="inline-flex size-8 items-center justify-center rounded-xl text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+          className="inline-flex size-8 items-center justify-center rounded-xl text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
           title="Atalhos de teclado (?)"
           aria-label="Atalhos de teclado"
         >

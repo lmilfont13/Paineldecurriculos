@@ -19,7 +19,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
     return (
       <div className="mt-6 rounded-2xl border border-dashed border-[#e4e4e7] bg-[#fafaf9] p-4 text-xs text-[#71717a]">
         <div className="flex items-center gap-2 font-medium text-[#0a0a0a]">
-          <History className="size-4 text-[#a1a1aa]" />
+          <History className="size-4 text-[#71717a]" />
           <span>Tempo de permanência nas empresas (Média & Mediana)</span>
         </div>
         <p className="mt-1 text-[11px] text-[#52525b]">
@@ -94,7 +94,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
           <p className="mt-1 text-base font-bold text-[#0a0a0a]">
             {tenure.tempoMedioFormatado}
           </p>
-          <span className="text-[10px] text-[#a1a1aa]">Tempo médio aritmético</span>
+          <span className="text-[10px] text-[#71717a]">Tempo médio aritmético</span>
         </div>
 
         <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3 transition hover:bg-white">
@@ -105,7 +105,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
           <p className="mt-1 text-base font-bold text-[#0a0a0a]">
             {tenure.tempoMedianoFormatado}
           </p>
-          <span className="text-[10px] text-[#a1a1aa]">Ponto central sem distorções</span>
+          <span className="text-[10px] text-[#71717a]">Ponto central sem distorções</span>
         </div>
 
         <div className="rounded-xl border border-[#e4e4e7] bg-[#fafaf9] p-3 transition hover:bg-white">
@@ -116,7 +116,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
           <p className="mt-1 text-base font-bold text-[#0a0a0a]">
             {tenure.totalExperiencias} {tenure.totalExperiencias === 1 ? "empresa" : "empresas"}
           </p>
-          <span className="text-[10px] text-[#a1a1aa]">Com datas no currículo</span>
+          <span className="text-[10px] text-[#71717a]">Com datas no currículo</span>
         </div>
       </div>
 
@@ -142,10 +142,10 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
       {/* Histórico detalhado por empresa: quanto tempo ficou em cada uma */}
       <div className="mt-5">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717a]">
             Quanto tempo ficou em cada empresa ({tenure.empresas.length})
           </p>
-          <span className="text-[10px] text-[#a1a1aa]">Período & Duração</span>
+          <span className="text-[10px] text-[#71717a]">Período & Duração</span>
         </div>
 
         <div className="mt-2.5 space-y-2">
@@ -176,7 +176,7 @@ export function TenureCard({ tenure }: { tenure: TenureAnalysis | null }) {
                         )}
                       </div>
                       <span className="block truncate text-[11px] text-[#71717a]">
-                        {item.cargo} · <span className="text-[#a1a1aa]">{item.periodo}</span>
+                        {item.cargo} · <span className="text-[#71717a]">{item.periodo}</span>
                       </span>
                     </div>
                   </div>

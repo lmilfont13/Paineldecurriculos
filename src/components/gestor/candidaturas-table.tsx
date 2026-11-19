@@ -140,6 +140,7 @@ export function CandidaturasTable({
   const [onlyMeets, setOnlyMeets] = useState(initialOnlyMeets);
   const [sort, setSort] = useState<SortKey>("WAITING");
   const [sortInfoOpen, setSortInfoOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const router = useRouter();
@@ -331,48 +332,50 @@ export function CandidaturasTable({
   );
 
   const jobThemeMap = useMemo(() => {
+    // Vagas parecidas se distinguem pela faixa colorida; o resto do cabeçalho
+    // fica neutro para não encher a tela de cor.
     const themes = [
       {
-        box: "border-indigo-200/90 bg-indigo-50/75",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-indigo-600",
-        code: "bg-indigo-600 text-white",
-        tag: "border-indigo-300/80 bg-white text-indigo-800",
-        count: "border-indigo-200/80 bg-white/90 text-indigo-700",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
       {
-        box: "border-emerald-200/90 bg-emerald-50/75",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-emerald-600",
-        code: "bg-emerald-600 text-white",
-        tag: "border-emerald-300/80 bg-white text-emerald-800",
-        count: "border-emerald-200/80 bg-white/90 text-emerald-700",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
       {
-        box: "border-amber-200/90 bg-amber-50/80",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-amber-600",
-        code: "bg-amber-600 text-white",
-        tag: "border-amber-300/80 bg-white text-amber-900",
-        count: "border-amber-200/80 bg-white/90 text-amber-800",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
       {
-        box: "border-violet-200/90 bg-violet-50/75",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-violet-600",
-        code: "bg-violet-600 text-white",
-        tag: "border-violet-300/80 bg-white text-violet-800",
-        count: "border-violet-200/80 bg-white/90 text-violet-700",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
       {
-        box: "border-sky-200/90 bg-sky-50/75",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-sky-600",
-        code: "bg-sky-600 text-white",
-        tag: "border-sky-300/80 bg-white text-sky-800",
-        count: "border-sky-200/80 bg-white/90 text-sky-700",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
       {
-        box: "border-rose-200/90 bg-rose-50/75",
+        box: "border-[#e4e2de] bg-white shadow-[0_1px_2px_rgba(28,25,23,0.05)]",
         bar: "bg-rose-600",
-        code: "bg-rose-600 text-white",
-        tag: "border-rose-300/80 bg-white text-rose-800",
-        count: "border-rose-200/80 bg-white/90 text-rose-700",
+        code: "bg-[#27272a] text-white",
+        tag: "border-[#d4d4d8] bg-[#fafaf9] text-[#3f3f46]",
+        count: "border-[#e4e4e7] bg-white text-[#52525b]",
       },
     ];
     const map = new Map<string, (typeof themes)[number]>();
@@ -631,7 +634,7 @@ export function CandidaturasTable({
         </div>
         <div className="mt-10 flex flex-col items-center rounded-2xl border border-dashed border-[#e4e4e7] bg-white px-6 py-12 text-center">
           <div className="flex size-12 items-center justify-center rounded-xl bg-[#f5f3ff]">
-            <svg className="size-6 text-[#a1a1aa]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="size-6 text-[#71717a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
           </div>
@@ -755,7 +758,7 @@ export function CandidaturasTable({
                   className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
                 >
                   <span>Buscar CVs (Base aberta)</span>
-                  <span className="text-[#a1a1aa]">↗</span>
+                  <span className="text-[#71717a]">↗</span>
                 </Link>
 
                 <button
@@ -767,7 +770,7 @@ export function CandidaturasTable({
                   className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
                 >
                   <span>Exportar lista (CSV)</span>
-                  <span className="text-[#a1a1aa]">↓</span>
+                  <span className="text-[#71717a]">↓</span>
                 </button>
               </div>
             )}
@@ -839,7 +842,7 @@ export function CandidaturasTable({
                   "rounded-full px-1.5 text-[11px] font-medium " +
                   (active
                     ? "bg-[#e7e5e4] text-[#0a0a0a]"
-                    : "bg-[#f1f0ed] text-[#a1a1aa]")
+                    : "bg-[#f1f0ed] text-[#71717a]")
                 }
               >
                 {counts[item.key]}
@@ -852,7 +855,7 @@ export function CandidaturasTable({
       {/* Controles secundários: 1 linha enxuta e minimalista */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-white px-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <span className="text-xs text-[#a1a1aa]" aria-hidden>
+          <span className="text-xs text-[#71717a]" aria-hidden>
             ⌕
           </span>
           <input
@@ -860,7 +863,7 @@ export function CandidaturasTable({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar candidato ou palavra no CV…"
             aria-label="Buscar candidatos"
-            className="w-full bg-transparent text-[12px] text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+            className="w-full bg-transparent text-[12px] text-[#0a0a0a] placeholder:text-[#8b8b94] focus:outline-none"
           />
         </div>
 
@@ -925,23 +928,6 @@ export function CandidaturasTable({
           )}
         </div>
 
-        <select
-          value=""
-          onChange={(e) => {
-            const mode = e.target.value;
-            if (mode === "NONE") setSelected(new Set());
-            else if (mode) setSelected(new Set(selectByCutoff(filtered, mode as CutoffSelection).map((r) => r.id)));
-          }}
-          aria-label="Selecionar candidatos em massa"
-          className="h-9 rounded-xl border border-[#e4e4e7] bg-white px-2.5 text-[12px] text-[#52525b] focus:border-[#0a0a0a] focus:outline-none"
-        >
-          <option value="">Selecionar…</option>
-          <option value="ALL">Todos ({selectByCutoff(filtered, "ALL").length})</option>
-          <option value="ABOVE">Acima do corte ({selectByCutoff(filtered, "ABOVE").length})</option>
-          <option value="BELOW">Abaixo do corte ({selectByCutoff(filtered, "BELOW").length})</option>
-          <option value="UNANALYZED">Sem análise ({selectByCutoff(filtered, "UNANALYZED").length})</option>
-          <option value="NONE">Limpar seleção</option>
-        </select>
 
         <button
           type="button"
@@ -956,26 +942,71 @@ export function CandidaturasTable({
           <span>✨</span>
           <span>Acima do corte</span>
         </button>
-
-        <select
-          value={onlyPhoto ? "WITH" : onlyWithoutPhoto ? "WITHOUT" : "ALL"}
-          onChange={(e) => {
-            const v = e.target.value;
-            setOnlyPhoto(v === "WITH");
-            setOnlyWithoutPhoto(v === "WITHOUT");
-          }}
-          aria-label="Filtrar por foto"
-          className={
-            "h-9 rounded-xl border px-3 text-[12px] font-medium focus:outline-none " +
-            (onlyPhoto || onlyWithoutPhoto
-              ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
-              : "border-[#e4e4e7] bg-white text-[#52525b]")
-          }
-        >
-          <option value="ALL" className="bg-white text-[#0a0a0a]">Foto: Todos</option>
-          <option value="WITH" className="bg-white text-[#0a0a0a]">Com foto</option>
-          <option value="WITHOUT" className="bg-white text-[#0a0a0a]">Sem foto ({missingPhotoCount})</option>
-        </select>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-expanded={moreOpen}
+            className={
+              "flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition-colors " +
+              (moreOpen || onlyPhoto || onlyWithoutPhoto
+                ? "border-[#0a0a0a] bg-white text-[#0a0a0a]"
+                : "border-[#e4e4e7] bg-white text-[#52525b] hover:text-[#0a0a0a]")
+            }
+          >
+            Mais opções
+            {(onlyPhoto || onlyWithoutPhoto) && (
+              <span className="rounded-full bg-[#0a0a0a] px-1.5 text-[10px] font-semibold text-white">1</span>
+            )}
+            <span aria-hidden className={`text-[10px] transition-transform ${moreOpen ? "rotate-180" : ""}`}>▾</span>
+          </button>
+          {moreOpen && (
+            <div className="absolute left-0 top-11 z-30 w-[260px] space-y-3 rounded-xl border border-[#e4e4e7] bg-white p-3 shadow-lg">
+              <label className="block space-y-1">
+                <span className="text-[11px] font-semibold text-[#52525b]">Foto do candidato</span>
+                <select
+                  value={onlyPhoto ? "WITH" : onlyWithoutPhoto ? "WITHOUT" : "ALL"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setOnlyPhoto(v === "WITH");
+                    setOnlyWithoutPhoto(v === "WITHOUT");
+                  }}
+                  aria-label="Filtrar por foto"
+                  className={
+                    "h-9 w-full rounded-xl border px-3 text-[12px] font-medium focus:outline-none " +
+                    (onlyPhoto || onlyWithoutPhoto
+                      ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                      : "border-[#e4e4e7] bg-white text-[#52525b]")
+                  }
+                >
+                  <option value="ALL" className="bg-white text-[#0a0a0a]">Foto: Todos</option>
+                  <option value="WITH" className="bg-white text-[#0a0a0a]">Com foto</option>
+                  <option value="WITHOUT" className="bg-white text-[#0a0a0a]">Sem foto ({missingPhotoCount})</option>
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-semibold text-[#52525b]">Selecionar em massa</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const mode = e.target.value;
+                    if (mode === "NONE") setSelected(new Set());
+                    else if (mode) setSelected(new Set(selectByCutoff(filtered, mode as CutoffSelection).map((r) => r.id)));
+                  }}
+                  aria-label="Selecionar candidatos em massa"
+                  className="h-9 w-full rounded-xl border border-[#e4e4e7] bg-white px-2.5 text-[12px] text-[#52525b] focus:border-[#0a0a0a] focus:outline-none"
+                >
+                  <option value="">Selecionar…</option>
+                  <option value="ALL">Todos ({selectByCutoff(filtered, "ALL").length})</option>
+                  <option value="ABOVE">Acima do corte ({selectByCutoff(filtered, "ABOVE").length})</option>
+                  <option value="BELOW">Abaixo do corte ({selectByCutoff(filtered, "BELOW").length})</option>
+                  <option value="UNANALYZED">Sem análise ({selectByCutoff(filtered, "UNANALYZED").length})</option>
+                  <option value="NONE">Limpar seleção</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
 
         {onlyWithoutPhoto && filtered.length > 0 && !photoBusy && (
           <button
@@ -1005,13 +1036,13 @@ export function CandidaturasTable({
             type="button"
             onClick={() => setViewMode("list")}
             aria-label="Visão lista"
-            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "list" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "list" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#71717a] hover:text-[#0a0a0a]")}
           >☰</button>
           <button
             type="button"
             onClick={() => setViewMode("cards")}
             aria-label="Visão cards"
-            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "cards" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#a1a1aa] hover:text-[#0a0a0a]")}
+            className={"flex h-7 w-7 items-center justify-center rounded-lg text-sm transition-colors " + (viewMode === "cards" ? "bg-[#f1f0ed] text-[#0a0a0a]" : "text-[#71717a] hover:text-[#0a0a0a]")}
           >▦</button>
         </div>
       </div>
@@ -1035,7 +1066,7 @@ export function CandidaturasTable({
                 subtitleParts.length > 0
                   ? subtitleParts.join(" · ")
                   : row.aiState === "DONE"
-                    ? "Sem perfil identificado"
+                    ? ""
                     : row.aiState === "FAILED"
                       ? "Análise pendente"
                       : "Analisando…";
@@ -1140,9 +1171,11 @@ export function CandidaturasTable({
                         </div>
 
                         {/* Linha 2: Perfil · Senioridade · Idade */}
-                        <p className="mt-0.5 truncate text-[11px] text-[#71717a]">
-                          {subtitleLine}
-                        </p>
+                        {subtitleLine && (
+                          <p className="mt-0.5 truncate text-[11px] text-[#71717a]">
+                            {subtitleLine}
+                          </p>
+                        )}
 
                         {/* Linha 3: 1 linha única de permanência/empresa + ações discretas no hover */}
                         <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#71717a]">
@@ -1174,11 +1207,11 @@ export function CandidaturasTable({
                                 </span>
                               </>
                             ) : !showGroups ? (
-                              <span className="truncate text-[#a1a1aa]">
+                              <span className="truncate text-[#71717a]">
                                 {jobLabel(row.jobTitle, row.jobCode)}
                               </span>
                             ) : (
-                              <span className="truncate text-[#a1a1aa]">
+                              <span className="truncate text-[#71717a]">
                                 {row.status === "PENDING"
                                   ? `espera ${formatWaiting(new Date(row.createdAt))}`
                                   : appStatusLabels[row.status]}
@@ -1248,7 +1281,7 @@ export function CandidaturasTable({
           ].map((h, i) => (
             <span
               key={i}
-              className="text-[11px] font-medium tracking-[0.6px] text-[#a1a1aa]"
+              className="text-[11px] font-medium tracking-[0.6px] text-[#71717a]"
             >
               {h}
             </span>
@@ -1330,7 +1363,7 @@ export function CandidaturasTable({
                       </span>
                     )}
                   </span>
-                  <span className="block truncate text-[11px] text-[#a1a1aa]">
+                  <span className="block truncate text-[11px] text-[#71717a]">
                     {jobLabel(row.jobTitle, row.jobCode)}
                     {row.age != null && <span title="Só para sua conferência: não entra na nota nem vai para a IA">{" · "}{row.age} anos</span>}
                     {(row.tenureAvg || row.tenureMedian) && (
@@ -1352,7 +1385,7 @@ export function CandidaturasTable({
                           <span className="text-[#71717a]">· Mediana {row.tenureMedian}</span>
                         )}
                         {row.tenureCompanies && row.tenureCompanies.length > 0 && (
-                          <span className="text-[#a1a1aa]">({row.tenureCompanies.length} emp.)</span>
+                          <span className="text-[#71717a]">({row.tenureCompanies.length} emp.)</span>
                         )}
                       </span>
                     )}
@@ -1396,7 +1429,7 @@ export function CandidaturasTable({
                 />
                 <a
                   href={`/candidaturas/${row.id}/cv?download=1`}
-                  className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                  className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                   title="Baixar currículo em PDF"
                   aria-label="Baixar currículo em PDF"
                 >
@@ -1664,7 +1697,7 @@ export function CandidaturasTable({
                   type="button"
                   onClick={() => setReport(null)}
                   aria-label="Fechar"
-                  className="text-sm text-[#a1a1aa] hover:text-[#0a0a0a]"
+                  className="text-sm text-[#71717a] hover:text-[#0a0a0a]"
                 >
                   ✕
                 </button>
@@ -1685,7 +1718,7 @@ export function CandidaturasTable({
                   )}
                   {r.pontos_fortes.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
                         Pontos fortes
                       </p>
                       <ul className="mt-1.5 space-y-1">
@@ -1700,7 +1733,7 @@ export function CandidaturasTable({
                   )}
                   {r.justificativa && (
                     <div className="mt-3 rounded-xl bg-[#f7f7f6] px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#a1a1aa]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
                         Por que vale a pena entrevistar
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-[#3f3f46]">
@@ -1771,7 +1804,7 @@ export function CandidaturasTable({
                     >
                       {quickPeekRow.aiScore}%
                     </span>
-                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                    <span className="block text-[9px] font-semibold uppercase tracking-wider text-[#71717a]">
                       Match
                     </span>
                   </div>
@@ -1791,19 +1824,19 @@ export function CandidaturasTable({
             <div className="flex flex-1 flex-col overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-3 gap-2.5 rounded-2xl border border-[#e4e4e7] bg-[#fafaf9] p-3.5 text-xs">
                 <div>
-                  <span className="block text-[10px] text-[#a1a1aa]">Vaga</span>
+                  <span className="block text-[10px] text-[#71717a]">Vaga</span>
                   <strong className="mt-0.5 block truncate text-[#0a0a0a]">
                     {jobLabel(quickPeekRow.jobTitle, quickPeekRow.jobCode)}
                   </strong>
                 </div>
                 <div className="border-l border-[#e4e4e7] pl-3">
-                  <span className="block text-[10px] text-[#a1a1aa]">Média perm.</span>
+                  <span className="block text-[10px] text-[#71717a]">Média perm.</span>
                   <strong className="mt-0.5 block truncate text-[#0a0a0a]">
                     {quickPeekRow.tenureAvg || "—"}
                   </strong>
                 </div>
                 <div className="border-l border-[#e4e4e7] pl-3">
-                  <span className="block text-[10px] text-[#a1a1aa]">Mediana</span>
+                  <span className="block text-[10px] text-[#71717a]">Mediana</span>
                   <strong className="mt-0.5 block truncate text-[#0a0a0a]">
                     {quickPeekRow.tenureMedian || quickPeekRow.tenureAvg || "—"}
                   </strong>
@@ -1824,7 +1857,7 @@ export function CandidaturasTable({
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
                   Currículo do Candidato
                 </span>
                 <div className="flex items-center gap-2">

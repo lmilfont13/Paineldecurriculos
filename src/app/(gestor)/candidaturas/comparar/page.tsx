@@ -91,7 +91,7 @@ export default async function CompararPage({
               </div>
 
               <hr className="my-4 border-[#e4e4e7]" />
-              <p className="text-[10px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
+              <p className="text-[10px] font-medium uppercase tracking-[0.6px] text-[#71717a]">
                 Análise da IA
               </p>
               <p className="mt-2 min-h-[54px] text-xs leading-[18px] text-[#0a0a0a]">
@@ -101,14 +101,14 @@ export default async function CompararPage({
               <hr className="my-4 border-[#e4e4e7]" />
               <dl className="flex-1 space-y-3">
                 <div>
-                  <dt className="text-[11px] text-[#a1a1aa]">E-mail</dt>
+                  <dt className="text-[11px] text-[#71717a]">E-mail</dt>
                   <dd className="truncate text-[13px] font-medium text-[#0a0a0a]">
                     {app.email}
                   </dd>
                 </div>
                 {app.answers.map((answer) => (
                   <div key={answer.id}>
-                    <dt className="text-[11px] text-[#a1a1aa]">
+                    <dt className="text-[11px] text-[#71717a]">
                       {answer.field.label}
                     </dt>
                     <dd className="truncate text-[13px] font-medium text-[#0a0a0a]">

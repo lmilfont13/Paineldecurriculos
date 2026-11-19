@@ -109,9 +109,9 @@ export default async function AuditoriaPage() {
         <div className="overflow-hidden rounded-2xl border border-[#e4e4e7] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
           {/* Cabeçalho */}
           <div className="hidden md:grid grid-cols-[120px_1fr_160px] gap-4 border-b border-[#e4e4e7] bg-[#fafaf9] px-5 py-3">
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Data · Hora</span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Ação</span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#a1a1aa]">Quem</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#71717a]">Data · Hora</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#71717a]">Ação</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#71717a]">Quem</span>
           </div>
 
           {/* Linhas */}
@@ -133,7 +133,7 @@ export default async function AuditoriaPage() {
                   {/* Data e hora */}
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-[#0a0a0a]">{date}</span>
-                    <span className="text-[11px] text-[#a1a1aa]">{time}</span>
+                    <span className="text-[11px] text-[#71717a]">{time}</span>
                   </div>
 
                   {/* Ação + detalhes */}
@@ -162,7 +162,7 @@ export default async function AuditoriaPage() {
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-[#0a0a0a] truncate">{who}</span>
                     {log.userEmail && log.userName && (
-                      <span className="text-[11px] text-[#a1a1aa] truncate">{log.userEmail}</span>
+                      <span className="text-[11px] text-[#71717a] truncate">{log.userEmail}</span>
                     )}
                   </div>
                 </li>

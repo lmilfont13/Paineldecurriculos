@@ -616,7 +616,7 @@ export function BuscarCvsView({
           <div className="rounded-3xl border border-[#e4e4e7] bg-white p-5 shadow-xs">
             <div className="mb-4 flex items-center justify-between border-b border-[#f4f4f5] pb-3.5">
               <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
-                <Filter className="size-3.5 text-[#a1a1aa]" /> Filtros
+                <Filter className="size-3.5 text-[#71717a]" /> Filtros
               </span>
               <span className="text-[11px] font-medium tabular-nums text-[#71717a]">
                 {sorted.length} de {people.length}
@@ -927,7 +927,7 @@ export function BuscarCvsView({
                 </button>
               </div>
 
-              <span className="text-xs font-medium text-[#a1a1aa]">Ordenar:</span>
+              <span className="text-xs font-medium text-[#71717a]">Ordenar:</span>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as CvSearchSort)}
@@ -1043,7 +1043,7 @@ export function BuscarCvsView({
                             <>
                               <span>•</span>
                               <span className="flex items-center gap-0.5 shrink-0">
-                                <MapPin className="size-2.5 text-[#a1a1aa]" />
+                                <MapPin className="size-2.5 text-[#71717a]" />
                                 {[item.neighborhood, item.city].filter(Boolean).join(", ")}
                               </span>
                             </>
@@ -1058,7 +1058,7 @@ export function BuscarCvsView({
                       </div>
 
                       <span
-                        className="hidden shrink-0 text-[10px] tabular-nums text-[#a1a1aa] sm:inline"
+                        className="hidden shrink-0 text-[10px] tabular-nums text-[#71717a] sm:inline"
                         title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
                       >
                         {formatCadastro(item.createdAt)}
@@ -1122,7 +1122,7 @@ export function BuscarCvsView({
                           onClick={(e) => e.stopPropagation()}
                           title="Baixar currículo em PDF"
                           aria-label="Baixar currículo em PDF"
-                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
+                          className="inline-flex size-7 items-center justify-center rounded-lg text-[#71717a] transition-colors hover:bg-stone-100 hover:text-[#0a0a0a]"
                         >
                           <Download className="size-3.5" strokeWidth={1.75} />
                         </a>
@@ -1270,7 +1270,7 @@ export function BuscarCvsView({
                             )}
                             <span className="text-[#d4d4d8]">·</span>
                             <span
-                              className="tabular-nums text-[#a1a1aa]"
+                              className="tabular-nums text-[#71717a]"
                               title={`Cadastro em ${formatCadastro(item.createdAt, true)}`}
                             >
                               {formatCadastro(item.createdAt)}
@@ -1309,7 +1309,7 @@ export function BuscarCvsView({
                             </button>
                             <a
                               href={`/candidaturas/${item.id}/cv?download=1`}
-                              className="inline-flex size-6 items-center justify-center rounded-md text-[#a1a1aa] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
+                              className="inline-flex size-6 items-center justify-center rounded-md text-[#71717a] transition-colors hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
                               title="Baixar currículo em PDF"
                               aria-label="Baixar currículo em PDF"
                             >
@@ -1522,11 +1522,11 @@ export function BuscarCvsView({
                     </h4>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <span className="text-[10px] text-[#a1a1aa]">E-mail</span>
+                        <span className="text-[10px] text-[#71717a]">E-mail</span>
                         <p className="font-semibold text-[#0a0a0a]">{selectedCandidate.email}</p>
                       </div>
                       <div>
-                        <span className="text-[10px] text-[#a1a1aa]">Telefone</span>
+                        <span className="text-[10px] text-[#71717a]">Telefone</span>
                         <p className="font-semibold text-[#0a0a0a]">
                           {formatPhone(selectedCandidate.phone) || "Não informado"}
                         </p>
@@ -1645,7 +1645,7 @@ export function BuscarCvsView({
               {drawerTab === "text" && (
                 <div className="max-h-[600px] overflow-y-auto rounded-2xl border border-[#e4e4e7] bg-[#fafaf9] p-5 text-xs font-mono leading-relaxed text-[#3f3f46] whitespace-pre-wrap">
                   {selectedCandidate.resumeText || (
-                    <span className="italic text-[#a1a1aa]">
+                    <span className="italic text-[#71717a]">
                       O texto deste currículo ainda não foi lido. Clique em &quot;Sincronizar fotos do CV&quot;
                       para indexar o arquivo PDF.
                     </span>
@@ -1703,7 +1703,7 @@ function FilterSection({
     <section className="border-t border-[#f4f4f5] py-4 first-of-type:border-t-0 first-of-type:pt-0 last:pb-0">
       <div className="mb-2 flex h-5 items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#71717a]">
-          <Icon className="size-3.5 shrink-0 text-[#a1a1aa]" />
+          <Icon className="size-3.5 shrink-0 text-[#71717a]" />
           <span className="truncate">{title}</span>
           {selectedCount > 0 && (
             <span className="rounded-full bg-[#0a0a0a] px-1.5 text-[10px] font-semibold tabular-nums leading-4 text-white">
@@ -1745,21 +1745,21 @@ function FilterTextInput({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#a1a1aa]" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#71717a]" />
       <input
         ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${FIELD_BASE} bg-[#fafaf9] pl-8 pr-8 placeholder:text-[#a1a1aa] focus:bg-white`}
+        className={`${FIELD_BASE} bg-[#fafaf9] pl-8 pr-8 placeholder:text-[#8b8b94] focus:bg-white`}
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label="Limpar campo"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#0a0a0a]"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717a] hover:text-[#0a0a0a]"
         >
           <X className="size-3.5" />
         </button>
@@ -1823,7 +1823,7 @@ function FacetRows({
             <span className="truncate" title={item.label}>
               {item.label}
             </span>
-            <span className={`shrink-0 text-[10px] tabular-nums ${selected ? "text-white/70" : "text-[#a1a1aa]"}`}>
+            <span className={`shrink-0 text-[10px] tabular-nums ${selected ? "text-white/70" : "text-[#71717a]"}`}>
               {item.count}
             </span>
           </button>
@@ -1862,7 +1862,7 @@ function FacetChips({
             }`}
           >
             <span className="truncate">{titleCaseLabel(item.label)}</span>
-            <span className={`shrink-0 tabular-nums ${selected ? "text-white/70" : "text-[#a1a1aa]"}`}>
+            <span className={`shrink-0 tabular-nums ${selected ? "text-white/70" : "text-[#71717a]"}`}>
               {item.count}
             </span>
           </button>
@@ -1874,7 +1874,7 @@ function FacetChips({
 
 /** Texto de ajuda padrão, abaixo do campo. */
 function FilterHint({ children }: { children: React.ReactNode }) {
-  return <p className="mt-1.5 text-[10px] leading-snug text-[#a1a1aa]">{children}</p>;
+  return <p className="mt-1.5 text-[10px] leading-snug text-[#71717a]">{children}</p>;
 }
 
 /**

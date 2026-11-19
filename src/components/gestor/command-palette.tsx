@@ -196,7 +196,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
       >
         {/* Input de busca */}
         <div className="relative flex items-center border-b border-[#e4e4e7] px-4 py-3.5">
-          <Search className="size-5 shrink-0 text-[#a1a1aa]" />
+          <Search className="size-5 shrink-0 text-[#71717a]" />
           <input
             ref={inputRef}
             type="text"
@@ -204,13 +204,13 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleNavigationKeys}
             placeholder="Buscar candidatos, vagas ou ações rápidas..."
-            className="w-full bg-transparent px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+            className="w-full bg-transparent px-3 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:outline-none"
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="mr-2 text-[#a1a1aa] hover:text-[#0a0a0a]"
+              className="mr-2 text-[#71717a] hover:text-[#0a0a0a]"
             >
               <X className="size-4" />
             </button>
@@ -228,7 +228,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
               <p className="mt-2 text-sm font-medium text-[#71717a]">
                 Nenhum resultado encontrado
               </p>
-              <p className="text-xs text-[#a1a1aa]">
+              <p className="text-xs text-[#71717a]">
                 Tente buscar pelo nome do candidato, título da vaga ou use as ações rápidas.
               </p>
             </div>
@@ -237,7 +237,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
               {/* Agrupamento: Candidatos */}
               {candidates.length > 0 && (
                 <div>
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a1a1aa]">
+                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#71717a]">
                     Candidatos
                   </p>
                   {candidates.map((c) => {
@@ -262,7 +262,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
                           </div>
                           <div className="min-w-0">
                             <p className="truncate font-medium text-[#0a0a0a]">{c.name}</p>
-                            <p className="truncate text-xs text-[#a1a1aa]">
+                            <p className="truncate text-xs text-[#71717a]">
                               {c.jobTitle} · {c.email}
                             </p>
                           </div>
@@ -287,7 +287,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
               {/* Agrupamento: Vagas */}
               {jobs.length > 0 && (
                 <div className="pt-2">
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a1a1aa]">
+                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#71717a]">
                     Vagas
                   </p>
                   {jobs.map((j) => {
@@ -309,7 +309,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
                           <div className="min-w-0">
                             <span className="truncate font-medium text-[#0a0a0a]">{j.title}</span>
                             {j.code && (
-                              <span className="ml-1.5 text-xs text-[#a1a1aa]">({j.code})</span>
+                              <span className="ml-1.5 text-xs text-[#71717a]">({j.code})</span>
                             )}
                           </div>
                         </div>
@@ -336,7 +336,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
               {/* Agrupamento: Ações Rápidas */}
               {filteredActions.length > 0 && (
                 <div className="pt-2">
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a1a1aa]">
+                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#71717a]">
                     Ações Rápidas
                   </p>
                   {filteredActions.map((a) => {
@@ -358,7 +358,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
                           <Icon className="size-4 shrink-0 text-[#71717a]" />
                           <span className="font-medium text-[#0a0a0a]">{a.label}</span>
                         </div>
-                        <ArrowRight className="size-3.5 text-[#a1a1aa]" />
+                        <ArrowRight className="size-3.5 text-[#71717a]" />
                       </button>
                     );
                   })}
@@ -382,7 +382,7 @@ export function CommandPalette({ enabled = true }: CommandPaletteProps) {
               <kbd className="rounded bg-white px-1.5 py-0.5 font-semibold shadow-2xs">esc</kbd> fechar
             </span>
           </div>
-          <span className="hidden sm:inline font-medium text-[#a1a1aa]">
+          <span className="hidden sm:inline font-medium text-[#71717a]">
             Command Palette
           </span>
         </div>
@@ -402,7 +402,7 @@ export function CommandPaletteTrigger({ enabled = true }: { enabled?: boolean })
       title="Buscar ou abrir comandos (Ctrl+K)"
       className="hidden items-center gap-2 rounded-xl border border-[#e4e4e7] bg-[#fafaf9] px-3 py-1.5 text-xs text-[#71717a] transition-colors hover:border-[#d4d4d8] hover:bg-white hover:text-[#0a0a0a] sm:flex"
     >
-      <Search className="size-3.5 text-[#a1a1aa]" />
+      <Search className="size-3.5 text-[#71717a]" />
       <span>Buscar no painel...</span>
       <kbd className="ml-1.5 flex items-center gap-0.5 rounded border border-[#e4e4e7] bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#71717a] shadow-2xs">
         <Command className="size-2.5" /> K

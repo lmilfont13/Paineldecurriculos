@@ -426,7 +426,7 @@ export function DecisionBlock({
           <button
             type="button"
             onClick={() => setCorrecting(true)}
-            className="text-[13px] font-medium text-[#a1a1aa] hover:text-[#0a0a0a]"
+            className="text-[13px] font-medium text-[#71717a] hover:text-[#0a0a0a]"
           >
             {closed ? "Reabrir processo…" : "Corrigir etapa…"}
           </button>

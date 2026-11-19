@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Share2 } from "lucide-react";
 
 const CHANNELS = [
   { key: "instagram", label: "Instagram" },
@@ -10,8 +11,27 @@ const CHANNELS = [
 ] as const;
 
 /** Caixa "link público + Copiar" da E2, com atalhos de link rastreável por canal. */
-export function CopyLink({ url }: { url: string }) {
+export function CopyLink({ url, compact = false }: { url: string; compact?: boolean }) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Balão do modo compacto: fecha ao clicar fora ou no Esc.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   async function copy(targetUrl: string, key: string) {
     await navigator.clipboard.writeText(targetUrl);
@@ -25,7 +45,7 @@ export function CopyLink({ url }: { url: string }) {
 
   const mainCopied = copiedKey === "main";
 
-  return (
+  const content = (
     <div className="flex flex-col gap-2">
       <div
         className={
@@ -51,7 +71,7 @@ export function CopyLink({ url }: { url: string }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-[#a1a1aa]">Link por canal:</span>
+        <span className="text-[11px] text-[#71717a]">Link por canal:</span>
         {CHANNELS.map((ch) => {
           const isCopied = copiedKey === ch.key;
           return (
@@ -72,6 +92,28 @@ export function CopyLink({ url }: { url: string }) {
           );
         })}
       </div>
+    </div>
+  );
+
+  if (!compact) return content;
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex h-10 items-center gap-2 rounded-2xl border border-[#e4e4e7] bg-white px-4 text-[13px] font-medium text-[#0a0a0a] hover:bg-[#fafaf9]"
+      >
+        <Share2 className="size-4" aria-hidden />
+        Compartilhar vagas
+      </button>
+      {open && (
+        <div className="absolute right-0 top-12 z-30 w-[min(92vw,420px)] rounded-xl border border-[#e4e4e7] bg-white p-3 shadow-lg">
+          <p className="mb-2 text-[12px] font-semibold text-[#0a0a0a]">Link da página de vagas</p>
+          {content}
+        </div>
+      )}
     </div>
   );
 }

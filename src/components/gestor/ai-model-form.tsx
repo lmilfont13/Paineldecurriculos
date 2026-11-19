@@ -59,7 +59,7 @@ export function AiModelForm({ current, options }: { current: string; options: Op
       >
         {pending ? "Salvando…" : "Salvar"}
       </button>
-      <p className="text-[11px] text-[#a1a1aa]">
+      <p className="text-[11px] text-[#71717a]">
         Análises já feitas não mudam. A IA só sugere a nota; nota e etapa continuam sendo decisão sua.
       </p>
     </form>

@@ -157,7 +157,7 @@ export function JobWizard({
 
   const parsed = jobFormSchema.safeParse(draft);
   const inputClass =
-    "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
+    "h-10 w-full rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none";
   const progress = ["w-0", "w-1/3", "w-2/3", "w-full"][step];
 
   return (
@@ -273,7 +273,7 @@ export function JobWizard({
                   </div>
                   <textarea
                     rows={4}
-                    className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+                    className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="Cole aqui a vaga do jeito que você recebeu. A IA preenche título, local, contrato, descrição, requisitos e critérios."
@@ -415,7 +415,7 @@ export function JobWizard({
                     </div>
                     <textarea
                       rows={7}
-                      className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+                      className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
                       value={draft.description}
                       onChange={(e) => set("description", e.target.value)}
                       placeholder="Responsabilidades, time, desafios…"
@@ -445,7 +445,7 @@ export function JobWizard({
                     </div>
                     <textarea
                       rows={5}
-                      className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none"
+                      className="w-full rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none"
                       value={draft.requirements}
                       onChange={(e) => set("requirements", e.target.value)}
                       placeholder={"3+ anos com React\nInglês para leitura técnica"}
@@ -486,7 +486,7 @@ export function JobWizard({
                           )
                         }
                         aria-label={`Remover ${criterion}`}
-                        className="text-[13px] text-[#a1a1aa] hover:text-[#0a0a0a]"
+                        className="text-[13px] text-[#71717a] hover:text-[#0a0a0a]"
                       >
                         ✕
                       </button>
@@ -495,7 +495,7 @@ export function JobWizard({
                 </ul>
                 <div className="mt-3 flex h-11 items-center gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] px-3">
                   <input
-                    className="h-full flex-1 bg-transparent text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:outline-none"
+                    className="h-full flex-1 bg-transparent text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:outline-none"
                     value={criterionInput}
                     onChange={(e) => setCriterionInput(e.target.value)}
                     onKeyDown={(e) => {

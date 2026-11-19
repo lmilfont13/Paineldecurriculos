@@ -2250,7 +2250,7 @@ export function GestorRadioPlayer({
                                 onClick={() => moveTrackInQueue(idx, "up")}
                                 disabled={idx === 0}
                                 title="Mover para cima"
-                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <ArrowUp className="size-3.5" />
                               </button>
@@ -2259,7 +2259,7 @@ export function GestorRadioPlayer({
                                 onClick={() => moveTrackInQueue(idx, "down")}
                                 disabled={idx === playlistTracks.length - 1}
                                 title="Mover para baixo"
-                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <ArrowDown className="size-3.5" />
                               </button>
@@ -2267,7 +2267,7 @@ export function GestorRadioPlayer({
                                 type="button"
                                 onClick={() => removeTrackFromQueue(idx)}
                                 title="Remover da fila"
-                                className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
+                                className="flex size-7 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] disabled:opacity-30"
                               >
                                 <Trash2 className="size-3.5" />
                               </button>
@@ -2570,7 +2570,7 @@ export function GestorRadioPlayer({
                                   type="button"
                                   onClick={() => deleteSpot(spot.id)}
                                   title="Apagar vinheta"
-                                  className="flex size-7 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition"
+                                  className="flex size-7 items-center justify-center rounded-md text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a] transition"
                                 >
                                   <Trash2 className="size-3.5" />
                                 </button>
@@ -2659,7 +2659,7 @@ export function GestorRadioPlayer({
                               setSelectedCandidate("all");
                             }
                           }}
-                          className="flex-1 bg-transparent text-xs font-bold text-[#0a0a0a] placeholder:text-[#a1a1aa] placeholder:font-normal outline-none"
+                          className="flex-1 bg-transparent text-xs font-bold text-[#0a0a0a] placeholder:text-[#8b8b94] placeholder:font-normal outline-none"
                         />
                         {customCandidateInput && (
                           <button
@@ -2668,7 +2668,7 @@ export function GestorRadioPlayer({
                               setCustomCandidateInput("");
                               setSelectedCandidate("all");
                             }}
-                            className="text-[#a1a1aa] hover:text-[#0a0a0a]"
+                            className="text-[#71717a] hover:text-[#0a0a0a]"
                             title="Limpar nome"
                           >
                             <X className="size-3.5" />

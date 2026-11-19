@@ -176,7 +176,7 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
                       )}
                     </div>
                     <span
-                      className="text-[11px] tabular-nums text-[#a1a1aa]"
+                      className="text-[11px] tabular-nums text-[#71717a]"
                       title={r.minIsDefault ? "Vaga sem nota mínima (banco de talentos): comparado com 60" : undefined}
                     >
                       {r.jobTitle} · mínimo {r.minScore}
@@ -195,7 +195,7 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
                         <div key={role} className="rounded-lg bg-white p-2.5 ring-1 ring-[#f0f0ef]">
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-[11px] font-medium text-[#71717a]">
-                              {label} <span className="text-[#a1a1aa]">({role})</span>
+                              {label} <span className="text-[#71717a]">({role})</span>
                             </span>
                             <span className="flex items-baseline gap-1.5">
                               <span className="text-lg font-bold tabular-nums text-[#0a0a0a]">{scoreText(sc)}</span>
@@ -216,7 +216,7 @@ export function ModelTrialCard({ options, labelFor }: { options: Option[]; label
                 </li>
               ))}
           </ul>
-          <p className="mt-2 text-[11px] text-[#a1a1aa]">
+          <p className="mt-2 text-[11px] text-[#71717a]">
             {ok.rows.some((r) => r.minIsDefault) && "* Vaga sem nota mínima (banco de talentos): comparado com 60. "}
             Notas de IA variam alguns pontos até no mesmo modelo; o que pesa é a mesma decisão. Para desempatar, teste
             também um terceiro modelo (ex.: Claude Sonnet 5.5) e veja com qual dos dois ele concorda.

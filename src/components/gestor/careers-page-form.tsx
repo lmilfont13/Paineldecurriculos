@@ -14,7 +14,7 @@ import {
 } from "@/server/models/company.model";
 
 const input =
-  "w-full rounded-lg border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#a1a1aa] focus:border-[#0a0a0a] focus:outline-none";
+  "w-full rounded-lg border border-[#e4e4e7] bg-white px-3 text-sm text-[#0a0a0a] placeholder:text-[#8b8b94] focus:border-[#0a0a0a] focus:outline-none";
 
 type Company = {
   name: string;
@@ -61,7 +61,7 @@ function LogoPicker({
             className="max-h-full max-w-full object-contain"
           />
         ) : (
-          <span className="text-[10px] text-[#a1a1aa]">sem imagem</span>
+          <span className="text-[10px] text-[#71717a]">sem imagem</span>
         )}
       </span>
       <span className="min-w-0 flex-1">
@@ -178,7 +178,7 @@ export function CareersPageForm({
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-[#0a0a0a]">
                 Sobre a empresa{" "}
-                <span className="font-normal text-[#a1a1aa]">(opcional)</span>
+                <span className="font-normal text-[#71717a]">(opcional)</span>
               </span>
               <textarea
                 name="aboutText"
@@ -276,7 +276,7 @@ export function CareersPageForm({
 
       {/* Prévia: como o candidato vai ver, atualizada a cada tecla */}
       <aside className="xl:sticky xl:top-6 xl:self-start">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.6px] text-[#a1a1aa]">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.6px] text-[#71717a]">
           Prévia
         </p>
         <div className="overflow-hidden rounded-2xl border border-[#e4e4e7] bg-[#faf8f6] shadow-sm">
