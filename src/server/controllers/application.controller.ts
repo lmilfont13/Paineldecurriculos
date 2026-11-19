@@ -532,6 +532,7 @@ export async function submitApplicationAction(
     jobId: formData.get("jobId"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    messagePhone: formData.get("messagePhone"),
     birthDate: formData.get("birthDate") || undefined,
     city: formData.get("city") || undefined,
     state: formData.get("state") || undefined,

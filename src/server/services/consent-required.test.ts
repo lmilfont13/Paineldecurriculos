@@ -53,3 +53,30 @@ describe("consentimento LGPD na candidatura", () => {
     expect(saved.consentAt.getTime()).toBeGreaterThanOrEqual(before);
   });
 });
+
+describe("contatos da candidatura", () => {
+  it("recusa DDI no WhatsApp ou recado antes de gravar", async () => {
+    for (const contact of [
+      { phone: "(55) 85 99999-1234" },
+      { messagePhone: "+55 85 3333-4444" },
+    ]) {
+      const result = await submitApplication("co1", candidate, { ...base, consent: true, ...contact } as never, null);
+      expect(result.ok).toBe(false);
+      expect(createApplication).not.toHaveBeenCalled();
+    }
+  });
+  it("grava WhatsApp e recado separadamente, somente com dígitos nacionais", async () => {
+    createApplication.mockRejectedValue(new Error("parou-aqui"));
+    await expect(submitApplication("co1", candidate, {
+      ...base, phone: "(55) 99999-1234", messagePhone: "(85) 3333-4444", consent: true,
+    } as never, null)).rejects.toThrow("parou-aqui");
+    expect(createApplication.mock.calls[0][0]).toMatchObject({ phone: "55999991234", messagePhone: "8533334444" });
+  });
+  it("permite candidatura sem número de recado", async () => {
+    createApplication.mockRejectedValue(new Error("parou-aqui"));
+    await expect(submitApplication("co1", candidate, {
+      ...base, messagePhone: "", consent: true,
+    } as never, null)).rejects.toThrow("parou-aqui");
+    expect(createApplication.mock.calls[0][0].messagePhone).toBeNull();
+  });
+});

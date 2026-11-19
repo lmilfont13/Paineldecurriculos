@@ -8,6 +8,7 @@ export type CandidateProfile = Pick<
   | "email"
   | "name"
   | "phone"
+  | "messagePhone"
   | "resumeUrl"
   | "birthDate"
   | "city"

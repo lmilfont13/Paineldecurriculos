@@ -51,6 +51,7 @@ export const getSessionCandidate = cache(
       email: candidate.email,
       name: candidate.name,
       phone: candidate.phone,
+      messagePhone: candidate.messagePhone,
       resumeUrl: candidate.resumeUrl,
       birthDate: candidate.birthDate,
       city: candidate.city,

@@ -152,6 +152,7 @@ model Candidate {
   authId    String?  @unique
   email     String   @unique
   name      String
+  messagePhone String?
   phone     String?
   resumeUrl String?
 
@@ -199,6 +200,7 @@ model Application {
   candidateId   String?
   name          String
   email         String
+  messagePhone String?
   phone         String?
   resumeUrl     String?
 

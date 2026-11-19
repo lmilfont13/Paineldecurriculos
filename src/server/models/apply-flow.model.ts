@@ -1,3 +1,4 @@
+import { domesticPhoneError, formatPhone } from "@/lib/phone";
 import {
   CLT_AWARENESS_REQUIRED_MESSAGE,
   TEMPORARY_JOB_AWARENESS_REQUIRED_MESSAGE,
@@ -11,7 +12,7 @@ export function canReuseApplicationProfile(
   hasPreviousApplication: boolean,
 ): boolean {
   return hasPreviousApplication && Boolean(candidate.resumeUrl) &&
-    candidate.name.trim().length >= 2 && (candidate.phone ?? "").trim().length >= 8 &&
+    candidate.name.trim().length >= 2 && !domesticPhoneError(formatPhone(candidate.phone), { mobile: true }) &&
     !("error" in parseInstagram(candidate.instagram ?? ""));
 }
 
