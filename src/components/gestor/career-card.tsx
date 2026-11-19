@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Compass, Loader2, RefreshCw } from "lucide-react";
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 
 import { MatchScore, type StandbyMatch } from "@/components/gestor/talent-pool-card";
 import { analyzeCareerAction } from "@/server/controllers/talent.controller";
@@ -41,10 +42,9 @@ export function CareerCard({
     <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0a0a0a]">
-            <Compass className="size-4 text-[#71717a]" aria-hidden /> Perfil profissional
-          </h2>
-          <p className="mt-0.5 text-[12px] text-[#71717a]">
+          <SectionEyebrow icon={Compass}>Carreira</SectionEyebrow>
+          <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">Perfil profissional</h2>
+          <p className="mt-1 text-[12px] text-[#71717a]">
             Onde esta pessoa seria um bom candidato, além desta vaga. Leitura geral do currículo; não muda a nota nem a etapa.
           </p>
         </div>

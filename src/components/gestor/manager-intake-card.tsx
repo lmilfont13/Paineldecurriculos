@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Check, Copy, FileUp, Loader2, MessageCircle } from "lucide-react";
+import { Check, Copy, FileUp, Loader2, MessageCircle, UserPlus } from "lucide-react";
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 
 import { checkResumeFile, uploadResumeToStorage } from "@/lib/resume-upload";
 import { resumeExtForMime } from "@/server/models/application.model";
@@ -74,9 +75,9 @@ export function ManagerIntakeCard({
         (preRegistered ? "border-[#fde68a] bg-[#fffbeb]" : "border-[#e4e4e7] bg-white")
       }
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+      <SectionEyebrow icon={UserPlus}>
         {preRegistered ? "Cadastro incompleto" : "Currículo recebido por fora?"}
-      </p>
+      </SectionEyebrow>
       {preRegistered && (
         <p className="mt-2 text-[12px] leading-5 text-[#78350f]">
           Você cadastrou esta pessoa só com o e-mail. Mande o convite para ela completar; quando completar, a

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowRight, BookmarkCheck, Zap } from "lucide-react";
+import { ArrowRight, BookmarkCheck, Flag, Zap } from "lucide-react";
 
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 import { InterviewDialog } from "@/components/gestor/interview-dialog";
 import { Toast } from "@/components/gestor/toast";
 import { setApplicationStatusAction } from "@/server/controllers/application.controller";
@@ -310,10 +311,8 @@ export function DecisionBlock({
         />
       )}
 
-      <p className="text-[11px] font-semibold uppercase tracking-[0.6px]" style={{ color: "var(--brand-primary)" }}>
-        Etapa atual
-      </p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <SectionEyebrow icon={Flag}>Etapa atual</SectionEyebrow>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 className="text-base font-semibold text-[#0a0a0a]">
           {appStatusLabels[status]}
         </h2>

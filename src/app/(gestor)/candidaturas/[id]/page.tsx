@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Download, Eye, Sparkles } from "lucide-react";
+import { ClipboardList, Download, Eye, FileText, History, Lock, MessageSquare, Sparkles, UserRound } from "lucide-react";
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -540,18 +541,7 @@ export default async function CandidaturaDetailPage({
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.6px]"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  <span
-                    className="flex size-5 items-center justify-center rounded-md"
-                    style={{ backgroundColor: "var(--brand-tint)" }}
-                  >
-                    <Sparkles className="size-3" aria-hidden />
-                  </span>
-                  Leitura da IA
-                </p>
+                <SectionEyebrow icon={Sparkles}>Leitura da IA</SectionEyebrow>
                 <h2 className="mt-1.5 text-lg font-semibold text-[#0a0a0a]">
                   Apoio à decisão
                 </h2>
@@ -714,14 +704,18 @@ export default async function CandidaturaDetailPage({
           />
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-semibold text-[#0a0a0a]">
+            <SectionEyebrow icon={History}>Processo</SectionEyebrow>
+            <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">
               Histórico do processo
             </h2>
             {app.statusEvents.length > 0 ? (
               <ol className="mt-4 space-y-3">
-                {app.statusEvents.map((event) => (
+                {app.statusEvents.map((event, i) => (
                   <li key={event.id} className="flex gap-3 text-[12px]">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#a1a1aa]" />
+                    <span
+                      className="mt-1.5 size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: i === 0 ? "var(--brand-primary)" : "#d4d4d8" }}
+                    />
                     <div>
                       <span className="text-[#0a0a0a]">
                         {historyLine(event.from, event.to, event.actor)}
@@ -741,10 +735,11 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-semibold text-[#0a0a0a]">
+            <SectionEyebrow icon={MessageSquare}>Comunicação</SectionEyebrow>
+            <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">
               Recado para o candidato
             </h2>
-            <p className="mt-1 text-[11px] text-[#71717a]">
+            <p className="mt-1 text-[12px] text-[#71717a]">
               {app.name.split(" ")[0]} recebe por e-mail e nas novidades da área dele.
             </p>
             <MessageBox
@@ -760,10 +755,11 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-semibold text-[#0a0a0a]">
+            <SectionEyebrow icon={ClipboardList}>Documentos</SectionEyebrow>
+            <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">
               Pré-entrevista
             </h2>
-            <p className="mt-1 text-[11px] text-[#71717a]">
+            <p className="mt-1 text-[12px] text-[#71717a]">
               Peça as informações que faltam antes de marcar a conversa. RG e CPF
               só aparecem mascarados até você pedir para ver.
             </p>
@@ -801,8 +797,9 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-semibold text-[#0a0a0a]">Notas internas</h2>
-            <p className="mt-1 text-[11px] text-[#71717a]">
+            <SectionEyebrow icon={Lock}>Só a equipe vê</SectionEyebrow>
+            <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">Notas internas</h2>
+            <p className="mt-1 text-[12px] text-[#71717a]">
               Visível só para sua equipe. O candidato nunca vê.
             </p>
             <div className="mt-4">
@@ -811,8 +808,11 @@ export default async function CandidaturaDetailPage({
           </section>
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-[#0a0a0a]">Dados cadastrais do candidato</h2>
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <SectionEyebrow icon={UserRound}>Cadastro</SectionEyebrow>
+                <h2 className="mt-1.5 text-base font-semibold text-[#0a0a0a]">Dados do candidato</h2>
+              </div>
               <CandidateRegistrationEditor
                 initial={registrationInitial}
                 answers={editableAnswers}
@@ -907,9 +907,7 @@ export default async function CandidaturaDetailPage({
           )}
 
           <section className="rounded-2xl border border-[#e4e4e7] bg-white p-5 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
-              Currículo
-            </p>
+            <SectionEyebrow icon={FileText}>Currículo</SectionEyebrow>
             <div className="mt-4 flex items-center gap-3">
               <span className="rounded-lg bg-[#e4f6ec] px-2.5 py-2 text-[9px] font-bold text-[#1f7a4d]">
                 PDF

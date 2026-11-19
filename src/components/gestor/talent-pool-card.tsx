@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { FolderOpen, FolderPlus, Loader2, RefreshCw } from "lucide-react";
+import { SectionEyebrow } from "@/components/gestor/section-eyebrow";
 
 import {
   analyzeStandbyForApplicationAction,
@@ -113,9 +114,7 @@ export function TalentPoolCard({
         (highlight && saved.length === 0 ? "border-[#fde68a] bg-[#fffbeb]" : "border-[#e4e4e7] bg-white")
       }
     >
-      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
-        <FolderOpen className="size-3.5" aria-hidden /> Banco de talentos
-      </p>
+      <SectionEyebrow icon={FolderOpen}>Banco de talentos</SectionEyebrow>
 
       {suggestedName && (
         <p className="mt-3 text-[12px] text-[#52525b]">
