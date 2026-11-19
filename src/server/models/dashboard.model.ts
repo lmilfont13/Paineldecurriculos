@@ -45,6 +45,55 @@ export type PriorityApplication = {
   impedimentReason?: string | null;
 };
 
+export type DailyRegistrationPoint = {
+  dateKey: string;
+  dayMonth: string;
+  weekday: string;
+  count: number;
+  isToday: boolean;
+};
+
+export type TopJobRegistration = {
+  id: string;
+  title: string;
+  code: number | null;
+  count: number;
+  pct: number;
+  status: JobStatus;
+};
+
+export type DashboardAnalytics = {
+  totalRegistrations: number;
+  uniquePeople: number;
+  todayRegistrations: number;
+  last7DaysTotal: number;
+  dailyRegistrations: DailyRegistrationPoint[];
+  topJobs: TopJobRegistration[];
+  gender: {
+    femaleCount: number;
+    femalePct: number;
+    maleCount: number;
+    malePct: number;
+    unspecifiedCount: number;
+    unspecifiedPct: number;
+  };
+  quality: {
+    avgScore: number | null;
+    aboveCutoffCount: number;
+    aboveCutoffPct: number;
+    topMatchCount: number;
+  };
+  topAreas: { label: string; count: number; pct: number }[];
+  funnel: {
+    pending: number;
+    shortlisted: number;
+    interview: number;
+    standby: number;
+    approved: number;
+    rejected: number;
+  };
+};
+
 export function personInitials(name: string): string {
   const words = name.trim().split(/\s+/);
   const first = words[0]?.[0] ?? "";

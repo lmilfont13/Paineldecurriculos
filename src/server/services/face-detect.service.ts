@@ -199,6 +199,36 @@ function loadClassifier(): Classifier {
   return classifier;
 }
 
+function findBestInGrayBuffer(
+  gray: Buffer,
+  targetW: number,
+  targetH: number,
+  minScore: number
+): FaceDetection | null {
+  const image: GrayImage = {
+    pixels: new Uint8Array(gray),
+    nrows: targetH,
+    ncols: targetW,
+    ldim: targetW,
+  };
+  const params: CascadeParams = {
+    shiftfactor: 0.08,
+    scalefactor: 1.08,
+    minsize: Math.max(22, Math.round(Math.min(targetW, targetH) * 0.045)),
+    maxsize: Math.round(Math.min(targetW, targetH) * 0.92),
+  };
+
+  const dets = runCascade(image, loadClassifier(), params);
+  const clustered = clusterDetections(dets, 0.2);
+  let best: FaceDetection | null = null;
+  for (const [r, c, s, q] of clustered) {
+    if (!(q >= minScore)) continue;
+    if (s < 22 || s > Math.min(targetW, targetH)) continue;
+    if (!best || q > best.score) best = { x: c, y: r, size: s, score: q };
+  }
+  return best;
+}
+
 /**
  * Procura um rosto numa imagem (ex.: currículo que é uma figura só). Roda no
  * próprio servidor com o detector do pico: a imagem nunca vai para uma IA
@@ -224,46 +254,311 @@ export async function findFace(
     const targetW = Math.max(48, Math.round(width * scaleDown));
     const targetH = Math.max(48, Math.round(height * scaleDown));
 
-    let pipeline = sharp(rawBuffer, { raw: { width, height, channels } });
-    if (channels === 4) {
-      pipeline = pipeline.flatten({ background: "#ffffff" });
-    }
+    const buildBasePipeline = () => {
+      let p = sharp(rawBuffer, { raw: { width, height, channels } });
+      if (channels === 4) {
+        p = p.flatten({ background: "#ffffff" });
+      }
+      return p;
+    };
+
+    let pipeline = buildBasePipeline();
     if (scaleDown < 1) {
       pipeline = pipeline.resize(targetW, targetH, { fit: "fill" });
     }
 
     const gray = await pipeline.greyscale().raw().toBuffer();
+    let best =
+      bestFace(
+        clusterDetections(
+          runCascade(
+            {
+              pixels: new Uint8Array(gray),
+              nrows: targetH,
+              ncols: targetW,
+              ldim: targetW,
+            },
+            loadClassifier(),
+            {
+              shiftfactor: 0.1,
+              scalefactor: 1.1,
+              minsize: Math.max(24, Math.round(Math.min(targetW, targetH) * 0.05)),
+              maxsize: Math.round(Math.min(targetW, targetH) * 0.9),
+            }
+          ),
+          0.2
+        ),
+        targetW,
+        targetH
+      ) ?? null;
 
-    const image: GrayImage = {
-      pixels: new Uint8Array(gray),
-      nrows: targetH,
-      ncols: targetW,
-      ldim: targetW,
-    };
-    const params: CascadeParams = {
-      shiftfactor: 0.1,
-      scalefactor: 1.1,
-      minsize: Math.max(24, Math.round(Math.min(targetW, targetH) * 0.05)),
-      maxsize: Math.round(Math.min(targetW, targetH) * 0.9),
-    };
-
-    const dets = runCascade(image, loadClassifier(), params);
-    const clustered = clusterDetections(dets, 0.2);
-    const best = bestFace(clustered, targetW, targetH);
-    if (!best) return null;
-
-    // Reverte coordenadas para a resolução original da imagem
-    if (scaleDown < 1) {
-      return {
-        x: best.x / scaleDown,
-        y: best.y / scaleDown,
-        size: best.size / scaleDown,
-        score: best.score,
-      };
+    // 2ª tentativa: normalização de contraste + varredura mais densa (óculos / sombra / foto interna)
+    if (!best) {
+      const normGray = await buildBasePipeline()
+        .resize(targetW, targetH, { fit: "fill" })
+        .normalise()
+        .greyscale()
+        .raw()
+        .toBuffer();
+      best = findBestInGrayBuffer(normGray, targetW, targetH, 3.2);
     }
-    return best;
+
+    if (best) {
+      if (scaleDown < 1) {
+        return {
+          x: best.x / scaleDown,
+          y: best.y / scaleDown,
+          size: best.size / scaleDown,
+          score: best.score,
+        };
+      }
+      return best;
+    }
+
+    // 3ª tentativa: em páginas inteiras de currículo, o rosto costuma ser pequeno no topo
+    // ou levemente inclinado. Faz zoom na metade superior da imagem.
+    if (height >= 500 && width >= 350) {
+      const topH = Math.round(height * 0.52);
+      const zoomScale = Math.min(1.6, 1100 / Math.max(width, topH));
+      const zW = Math.max(64, Math.round(width * zoomScale));
+      const zH = Math.max(64, Math.round(topH * zoomScale));
+      const topGray = await buildBasePipeline()
+        .extract({ left: 0, top: 0, width, height: topH })
+        .resize(zW, zH, { fit: "fill" })
+        .normalise()
+        .greyscale()
+        .raw()
+        .toBuffer();
+      const topBest = findBestInGrayBuffer(topGray, zW, zH, 3.0);
+      if (topBest) {
+        return {
+          x: topBest.x / zoomScale,
+          y: topBest.y / zoomScale,
+          size: topBest.size / zoomScale,
+          score: topBest.score,
+        };
+      }
+    }
+
+    return null;
   } catch (error) {
     console.error("[foto] Erro ao detectar rosto na imagem:", error);
+    return null;
+  }
+}
+
+/**
+ * Analisa se uma imagem grande é uma foto de retrato direta (pouco fundo branco)
+ * ou uma página de currículo com fundo branco contendo um quadro de foto no topo.
+ */
+export async function detectPhotoBoxOrPortraitInPage(
+  raw: ArrayLike<number>,
+  width: number,
+  height: number,
+  channels: 1 | 3 | 4
+): Promise<
+  | { kind: "photo_box"; left: number; top: number; size: number }
+  | { kind: "full_portrait" }
+  | null
+> {
+  try {
+    if (channels < 3 || width < 300 || height < 300) return null;
+    const rawBuffer = Buffer.from(raw as ArrayLike<number> as Uint8Array);
+    if (rawBuffer.length < width * height * channels) return null;
+
+    const gridW = 160;
+    const gridH = Math.max(60, Math.min(320, Math.round((height / width) * gridW)));
+    const smallRgb = await sharp(rawBuffer, { raw: { width, height, channels } })
+      .flatten({ background: "#ffffff" })
+      .resize(gridW, gridH, { fit: "fill" })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+
+    let whiteCount = 0;
+    const totalPixels = gridW * gridH;
+    const nonWhite = new Uint8Array(totalPixels);
+
+    for (let i = 0; i < totalPixels; i++) {
+      const r = smallRgb[i * 3];
+      const g = smallRgb[i * 3 + 1];
+      const b = smallRgb[i * 3 + 2];
+      const isWhite = r > 228 && g > 228 && b > 228;
+      if (isWhite) {
+        whiteCount++;
+      } else {
+        nonWhite[i] = 1;
+      }
+    }
+
+    const whiteRatio = whiteCount / totalPixels;
+    const aspect = width / height;
+
+    // Se menos de 42% da imagem é branco puro e a proporção é de retrato/quadrada,
+    // a própria imagem já é a foto do candidato (ex.: selfie 3:4 de alta resolução).
+    if (whiteRatio < 0.42 && aspect >= 0.45 && aspect <= 1.8) {
+      return { kind: "full_portrait" };
+    }
+
+    // Em páginas de documento (fundo predominantemente claro), procura o quadro denso da foto
+    // na metade superior da página (ex.: foto 3x4 ou quadrada com borda no topo esquerdo/direito).
+    const searchH = Math.min(gridH, Math.round(gridH * 0.55));
+    const dense = new Uint8Array(gridW * searchH);
+
+    for (let y = 2; y < searchH - 2; y++) {
+      for (let x = 2; x < gridW - 2; x++) {
+        let sum = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          const rowOffset = (y + dy) * gridW;
+          for (let dx = -2; dx <= 2; dx++) {
+            sum += nonWhite[rowOffset + (x + dx)];
+          }
+        }
+        // Linhas de texto têm bastante espaço branco ao redor (< 14/25); fotos são blocos sólidos (>= 18/25)
+        if (sum >= 18) {
+          dense[y * gridW + x] = 1;
+        }
+      }
+    }
+
+    const visited = new Uint8Array(gridW * searchH);
+    let bestBox: {
+      minX: number;
+      maxX: number;
+      minY: number;
+      maxY: number;
+      area: number;
+      score: number;
+    } | null = null;
+
+    for (let y = 2; y < searchH - 2; y++) {
+      for (let x = 2; x < gridW - 2; x++) {
+        const idx = y * gridW + x;
+        if (!dense[idx] || visited[idx]) continue;
+
+        // BFS para achar componente conectado denso
+        const queue = [idx];
+        visited[idx] = 1;
+        let minX = x;
+        let maxX = x;
+        let minY = y;
+        let maxY = y;
+        let count = 0;
+
+        while (queue.length > 0) {
+          const cur = queue.pop()!;
+          const cy = Math.floor(cur / gridW);
+          const cx = cur % gridW;
+          count++;
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+
+          const neighbors = [
+            cur - 1,
+            cur + 1,
+            cur - gridW,
+            cur + gridW,
+          ];
+          for (const n of neighbors) {
+            if (n >= 0 && n < gridW * searchH && dense[n] && !visited[n]) {
+              visited[n] = 1;
+              queue.push(n);
+            }
+          }
+        }
+
+        const bw = maxX - minX + 1;
+        const bh = maxY - minY + 1;
+        const boxArea = bw * bh;
+        const fillRatio = count / boxArea;
+
+        // Tamanho típico de foto 3x4 / avatar em página de currículo:
+        // largura entre 8% e 42% da página, altura entre 6% e 38% da página
+        const wPct = bw / gridW;
+        const hPct = bh / gridH;
+        const boxAspect = (bw / gridW * width) / (bh / gridH * height);
+
+        if (
+          wPct < 0.07 ||
+          wPct > 0.44 ||
+          hPct < 0.05 ||
+          hPct > 0.42 ||
+          boxAspect < 0.5 ||
+          boxAspect > 1.65 ||
+          fillRatio < 0.55
+        ) {
+          continue;
+        }
+
+        // Verifica variação de cor dentro do bloco (descarta tarjas retangulares chapadas de 1 cor só)
+        let rSum = 0;
+        let gSum = 0;
+        let bSum = 0;
+        let rSq = 0;
+        let gSq = 0;
+        let bSq = 0;
+        let colorTonePixels = 0;
+        let sampleCount = 0;
+
+        for (let sy = minY; sy <= maxY; sy++) {
+          for (let sx = minX; sx <= maxX; sx++) {
+            const pIdx = (sy * gridW + sx) * 3;
+            const r = smallRgb[pIdx];
+            const g = smallRgb[pIdx + 1];
+            const b = smallRgb[pIdx + 2];
+            rSum += r;
+            gSum += g;
+            bSum += b;
+            rSq += r * r;
+            gSq += g * g;
+            bSq += b * b;
+            if (Math.max(r, g, b) - Math.min(r, g, b) > 12) {
+              colorTonePixels++;
+            }
+            sampleCount++;
+          }
+        }
+
+        if (sampleCount < 20) continue;
+        const rVar = rSq / sampleCount - (rSum / sampleCount) ** 2;
+        const gVar = gSq / sampleCount - (gSum / sampleCount) ** 2;
+        const bVar = bSq / sampleCount - (bSum / sampleCount) ** 2;
+        const stdDev = Math.sqrt(Math.max(0, (rVar + gVar + bVar) / 3));
+
+        // Uma foto real tem variação de luminosidade/textura (stdDev >= 16)
+        if (stdDev < 16) continue;
+
+        const colorBoost = colorTonePixels / sampleCount > 0.15 ? 1.3 : 1.0;
+        const squareness = 1 - Math.min(0.5, Math.abs(1 - boxAspect) * 0.5);
+        const score = boxArea * fillRatio * colorBoost * squareness;
+
+        if (!bestBox || score > bestBox.score) {
+          bestBox = { minX, maxX, minY, maxY, area: boxArea, score };
+        }
+      }
+    }
+
+    if (!bestBox) return null;
+
+    const scaleX = width / gridW;
+    const scaleY = height / gridH;
+    const rawLeft = Math.max(0, Math.round((bestBox.minX - 1) * scaleX));
+    const rawTop = Math.max(0, Math.round((bestBox.minY - 1) * scaleY));
+    const rawRight = Math.min(width, Math.round((bestBox.maxX + 2) * scaleX));
+    const rawBottom = Math.min(height, Math.round((bestBox.maxY + 2) * scaleY));
+    const boxW = rawRight - rawLeft;
+    const boxH = rawBottom - rawTop;
+    const cx = rawLeft + boxW / 2;
+    const cy = rawTop + boxH / 2;
+    const size = Math.min(Math.max(boxW, boxH), width, height);
+    const left = Math.min(Math.max(0, Math.round(cx - size / 2)), width - size);
+    const top = Math.min(Math.max(0, Math.round(cy - size / 2)), height - size);
+
+    return { kind: "photo_box", left, top, size };
+  } catch (error) {
+    console.error("[foto] Erro ao localizar quadro de foto na página:", error);
     return null;
   }
 }

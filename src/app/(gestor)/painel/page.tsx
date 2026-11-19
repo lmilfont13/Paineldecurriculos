@@ -58,7 +58,7 @@ function FunnelBar({
  * esperando resposta e há quanto tempo.
  */
 export default async function PainelPage() {
-  const { userName, companyName, publicUrl, stats, priority, jobs } =
+  const { userName, companyName, publicUrl, stats, priority, jobs, analytics } =
     await getPainelData();
   const birthdayData = await getCompanyBirthdaysAction().catch(() => null);
   const birthdaysToday = birthdayData?.today ?? [];
@@ -165,6 +165,332 @@ export default async function PainelPage() {
           + Nova vaga
         </Link>
       </div>
+
+      {/* Micro-Dashboard Executivo Discreto: Cadastrados + Por Dia, Top Vagas, Homens x Mulheres, Qualidade IA & Funil */}
+      {analytics.totalRegistrations > 0 && (
+        <section
+          aria-label="Resumo analítico da base"
+          className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          {/* Card 1: Total de Cadastrados + Cadastros por Dia (7 dias) */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Cadastrados
+                </span>
+                <span
+                  className={
+                    "rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums " +
+                    (analytics.todayRegistrations > 0
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-[#f4f4f5] text-[#71717a]")
+                  }
+                >
+                  +{analytics.todayRegistrations} hoje
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <Link
+                  href="/buscar-cvs"
+                  className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a] tabular-nums hover:underline"
+                >
+                  {analytics.uniquePeople}
+                </Link>
+                <span className="text-xs text-[#71717a]">
+                  pessoas ({analytics.totalRegistrations} candidaturas)
+                </span>
+              </div>
+            </div>
+
+            {/* Mini gráfico de barras: cadastros por dia nos últimos 7 dias */}
+            <div className="mt-3.5 border-t border-[#f4f4f5] pt-2.5">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] text-[#a1a1aa]">
+                <span>Cadastros por dia (7d)</span>
+                <span className="font-medium text-[#52525b] tabular-nums">
+                  {analytics.last7DaysTotal} na semana
+                </span>
+              </div>
+              {(() => {
+                const maxDay = Math.max(
+                  1,
+                  ...analytics.dailyRegistrations.map((d) => d.count)
+                );
+                return (
+                  <div className="grid grid-cols-7 items-end gap-1.5 pt-1">
+                    {analytics.dailyRegistrations.map((d) => {
+                      const heightPx =
+                        d.count === 0
+                          ? 3
+                          : Math.max(6, Math.round((d.count / maxDay) * 26));
+                      return (
+                        <div
+                          key={d.dateKey}
+                          className="flex flex-col items-center gap-1"
+                          title={`${d.dayMonth} (${d.weekday}): ${d.count} cadastro${d.count === 1 ? "" : "s"}`}
+                        >
+                          <span
+                            className={
+                              "text-[9px] font-semibold leading-none tabular-nums " +
+                              (d.isToday
+                                ? "text-[#0a0a0a]"
+                                : d.count > 0
+                                  ? "text-[#52525b]"
+                                  : "text-[#d4d4d8]")
+                            }
+                          >
+                            {d.count}
+                          </span>
+                          <div className="flex h-7 w-full items-end justify-center">
+                            <span
+                              className={
+                                "w-full max-w-[18px] rounded-t-sm transition-all " +
+                                (d.isToday
+                                  ? "bg-[#0a0a0a]"
+                                  : d.count > 0
+                                    ? "bg-[#a1a1aa]/70"
+                                    : "bg-[#f4f4f5]")
+                              }
+                              style={{
+                                height: `${heightPx}px`,
+                                ...(d.isToday && d.count > 0
+                                  ? { backgroundColor: "var(--brand-primary)" }
+                                  : {}),
+                              }}
+                            />
+                          </div>
+                          <span
+                            className={
+                              "text-[9px] leading-none " +
+                              (d.isToday
+                                ? "font-bold text-[#0a0a0a]"
+                                : "text-[#a1a1aa]")
+                            }
+                          >
+                            {d.weekday}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Card 2: Vaga com Mais Cadastros (Top Vagas) */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Vaga com mais cadastros
+                </span>
+                {analytics.topJobs[0] && (
+                  <span className="rounded-full bg-[#f4f4f5] px-2 py-0.5 text-[10px] font-semibold text-[#52525b] tabular-nums">
+                    {analytics.topJobs[0].pct}% do total
+                  </span>
+                )}
+              </div>
+
+              {analytics.topJobs[0] ? (
+                <Link
+                  href={`/vagas/${analytics.topJobs[0].id}`}
+                  className="mt-1.5 block group"
+                >
+                  <p className="truncate text-xs font-bold text-[#0a0a0a] group-hover:underline">
+                    {analytics.topJobs[0].code != null
+                      ? `#${analytics.topJobs[0].code} `
+                      : ""}
+                    {analytics.topJobs[0].title}
+                  </p>
+                  <p className="mt-0.5 flex items-baseline gap-1.5">
+                    <span className="text-xl font-bold tracking-[-0.02em] text-[#0a0a0a] tabular-nums">
+                      {analytics.topJobs[0].count}
+                    </span>
+                    <span className="text-[11px] text-[#71717a]">
+                      inscrito{analytics.topJobs[0].count === 1 ? "" : "s"}
+                    </span>
+                  </p>
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs text-[#a1a1aa]">Sem vagas com inscritos</p>
+              )}
+            </div>
+
+            {analytics.topJobs.length > 1 && (
+              <div className="mt-3 space-y-1.5 border-t border-[#f4f4f5] pt-2.5">
+                {analytics.topJobs.slice(1, 3).map((j) => {
+                  const maxCount = Math.max(1, analytics.topJobs[0]?.count ?? 1);
+                  const barW = Math.max(8, Math.round((j.count / maxCount) * 100));
+                  return (
+                    <Link
+                      key={j.id}
+                      href={`/vagas/${j.id}`}
+                      className="block group"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="truncate text-[#52525b] group-hover:text-[#0a0a0a]">
+                          {j.code != null ? `#${j.code} ` : ""}
+                          {j.title}
+                        </span>
+                        <span className="shrink-0 font-semibold text-[#0a0a0a] tabular-nums">
+                          {j.count}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
+                        <div
+                          className="h-full rounded-full bg-[#a1a1aa]"
+                          style={{ width: `${barW}%` }}
+                        />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Card 3: Homens × Mulheres (Demografia) */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Homens e Mulheres
+                </span>
+                <span className="text-[10px] font-medium text-[#a1a1aa] tabular-nums">
+                  {analytics.uniquePeople} únicos
+                </span>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-rose-50/60 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-rose-700">
+                    <span className="size-1.5 rounded-full bg-rose-500" />
+                    <span>Mulheres</span>
+                  </div>
+                  <p className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-lg font-bold text-[#0a0a0a] tabular-nums">
+                      {analytics.gender.femaleCount}
+                    </span>
+                    <span className="text-[11px] font-semibold text-rose-700 tabular-nums">
+                      {analytics.gender.femalePct}%
+                    </span>
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-indigo-50/60 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-700">
+                    <span className="size-1.5 rounded-full bg-indigo-500" />
+                    <span>Homens</span>
+                  </div>
+                  <p className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-lg font-bold text-[#0a0a0a] tabular-nums">
+                      {analytics.gender.maleCount}
+                    </span>
+                    <span className="text-[11px] font-semibold text-indigo-700 tabular-nums">
+                      {analytics.gender.malePct}%
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 border-t border-[#f4f4f5] pt-2.5">
+              <div className="flex h-2 w-full overflow-hidden rounded-full bg-[#f4f4f5]">
+                {analytics.gender.femalePct > 0 && (
+                  <span
+                    className="h-full bg-rose-500 transition-all"
+                    style={{ width: `${analytics.gender.femalePct}%` }}
+                  />
+                )}
+                {analytics.gender.malePct > 0 && (
+                  <span
+                    className="h-full bg-indigo-500 transition-all"
+                    style={{ width: `${analytics.gender.malePct}%` }}
+                  />
+                )}
+              </div>
+              <div className="mt-1.5 flex items-center justify-between text-[10px] text-[#71717a]">
+                <span>Proporção estimada na base</span>
+                {analytics.gender.unspecifiedCount > 0 && (
+                  <span>{analytics.gender.unspecifiedCount} não id.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Qualidade IA, Top Áreas e Funil */}
+          <div className="flex flex-col justify-between rounded-2xl border border-[#e4e4e7] bg-white p-4 shadow-2xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#71717a]">
+                  Qualidade IA & Funil
+                </span>
+                {analytics.quality.avgScore !== null && (
+                  <span className="rounded-full bg-[#e4f6ec] px-2 py-0.5 text-[10px] font-bold text-[#1f7a4d] tabular-nums">
+                    Média {analytics.quality.avgScore} pts
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <Link
+                  href="/candidaturas"
+                  className="text-2xl font-bold tracking-[-0.02em] text-[#0a0a0a] tabular-nums hover:underline"
+                >
+                  {analytics.quality.aboveCutoffCount}
+                </Link>
+                <span className="text-xs text-[#71717a]">
+                  acima do corte ({analytics.quality.aboveCutoffPct}%)
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-[#71717a]">
+                <strong className="font-semibold text-[#0a0a0a]">
+                  {analytics.quality.topMatchCount}
+                </strong>{" "}
+                Top Match (nota ≥ 80)
+              </p>
+            </div>
+
+            <div className="mt-3 border-t border-[#f4f4f5] pt-2.5">
+              {analytics.topAreas.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  {analytics.topAreas.map((area) => (
+                    <span
+                      key={area.label}
+                      className="rounded-md bg-[#f4f4f5] px-1.5 py-0.5 text-[10px] font-medium text-[#52525b] tabular-nums"
+                    >
+                      {area.label} ({area.count})
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px] text-[#71717a] tabular-nums">
+                <span>
+                  Análise:{" "}
+                  <strong className="text-[#0a0a0a]">
+                    {analytics.funnel.shortlisted}
+                  </strong>
+                </span>
+                <span>·</span>
+                <span>
+                  Entrevista:{" "}
+                  <strong className="text-[#0a0a0a]">
+                    {analytics.funnel.interview}
+                  </strong>
+                </span>
+                <span>·</span>
+                <span>
+                  Aprovados:{" "}
+                  <strong className="text-emerald-700">
+                    {analytics.funnel.approved}
+                  </strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {drafts.length > 0 && (
         <Link

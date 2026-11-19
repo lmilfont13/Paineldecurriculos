@@ -1,5 +1,6 @@
 import "server-only";
 
+import zlib from "node:zlib";
 import sharp from "sharp";
 import { extractImages, type getDocumentProxy } from "unpdf";
 
@@ -14,7 +15,10 @@ import {
   pickPhotoIndex,
   withLargePhotoPaths,
 } from "@/server/models/photo.model";
-import { findFace } from "@/server/services/face-detect.service";
+import {
+  detectPhotoBoxOrPortraitInPage,
+  findFace,
+} from "@/server/services/face-detect.service";
 import { updateApplicationPhoto } from "@/server/repositories/application.repository";
 import { RESUMES_BUCKET } from "@/server/services/resume-storage.service";
 
@@ -63,27 +67,95 @@ function filterValidRawImages(images: RawPdfImage[]): RawPdfImage[] {
 }
 
 /**
- * Extrai streams JPEG brutos embutidos nos bytes de um PDF (muito comum em
- * currículos gerados pelo Canva, Word ou Catho onde `extractImages` do unpdf
- * devolve lista vazia) e os converte em buffers raw para o pipeline de foto.
+ * Desfaz filtros de predição PNG (Predictor 10..15 do PDF FlateDecode), onde
+ * cada linha começa com 1 byte de filtro (0=None, 1=Sub, 2=Up, 3=Average, 4=Paeth).
+ */
+function unfilterPngPredictorRows(
+  src: Buffer,
+  width: number,
+  height: number,
+  channels: number
+): Uint8Array | null {
+  const rowBytes = width * channels;
+  const stride = rowBytes + 1;
+  if (src.length < stride * height) return null;
+
+  const out = new Uint8Array(rowBytes * height);
+  for (let y = 0; y < height; y++) {
+    const filterType = src[y * stride];
+    const srcRowStart = y * stride + 1;
+    const dstRowStart = y * rowBytes;
+    const prevRowStart = (y - 1) * rowBytes;
+
+    for (let x = 0; x < rowBytes; x++) {
+      const rawByte = src[srcRowStart + x];
+      const left = x >= channels ? out[dstRowStart + x - channels] : 0;
+      const up = y > 0 ? out[prevRowStart + x] : 0;
+      const upLeft = y > 0 && x >= channels ? out[prevRowStart + x - channels] : 0;
+
+      let val = rawByte;
+      if (filterType === 1) {
+        val = (rawByte + left) & 0xff;
+      } else if (filterType === 2) {
+        val = (rawByte + up) & 0xff;
+      } else if (filterType === 3) {
+        val = (rawByte + ((left + up) >> 1)) & 0xff;
+      } else if (filterType === 4) {
+        const p = left + up - upLeft;
+        const pa = Math.abs(p - left);
+        const pb = Math.abs(p - up);
+        const pc = Math.abs(p - upLeft);
+        const pr = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+        val = (rawByte + pr) & 0xff;
+      }
+      out[dstRowStart + x] = val;
+    }
+  }
+  return out;
+}
+
+/**
+ * Extrai imagens embutidas diretamente dos bytes brutos do PDF:
+ * 1) Streams JPEG (/DCTDecode) completos — buscando o último EOI (FF D9) antes do
+ *    `endstream` para não truncar fotos de celular que possuem miniatura EXIF no cabeçalho;
+ * 2) Streams PNG brutos (89 50 4E 47 ... IEND);
+ * 3) Objetos `/Subtype /Image` comprimidos com `/FlateDecode` (muito usados por
+ *    Canva, Chrome PDF, wkhtmltopdf, Word e geradores de currículo online).
  */
 async function extractEmbeddedJpegsAsRaw(pdfBytes: Uint8Array): Promise<RawPdfImage[]> {
   const results: RawPdfImage[] = [];
   const len = pdfBytes.length;
-  let pos = 0;
+  const buf = Buffer.from(pdfBytes.buffer, pdfBytes.byteOffset, pdfBytes.byteLength);
 
-  while (pos < len - 10 && results.length < 8) {
+  // 1) Procura JPEGs brutos (FF D8 FF ... FF D9), priorizando o fechamento junto ao endstream
+  let pos = 0;
+  const endstreamToken = Buffer.from("endstream", "latin1");
+
+  while (pos < len - 16 && results.length < 10) {
     if (pdfBytes[pos] === 0xff && pdfBytes[pos + 1] === 0xd8 && pdfBytes[pos + 2] === 0xff) {
-      let end = -1;
-      for (let j = pos + 4; j < len - 1; j++) {
+      const maxSearchEnd = Math.min(len, pos + 4 * 1024 * 1024);
+      const nextEndstream = buf.indexOf(endstreamToken, pos + 64);
+      const searchLimit =
+        nextEndstream !== -1 && nextEndstream < maxSearchEnd
+          ? nextEndstream
+          : maxSearchEnd;
+
+      const eoiCandidates: number[] = [];
+      for (let j = pos + 4; j < searchLimit - 1; j++) {
         if (pdfBytes[j] === 0xff && pdfBytes[j + 1] === 0xd9) {
-          end = j + 2;
-          if (end - pos > 2048) break;
+          const candidateEnd = j + 2;
+          if (candidateEnd - pos > 1024) {
+            eoiCandidates.push(candidateEnd);
+          }
         }
       }
-      if (end > pos + 1024) {
+
+      // Testa do último FF D9 antes do endstream para trás (evita parar no FF D9 da miniatura EXIF!)
+      let decoded = false;
+      for (let k = eoiCandidates.length - 1; k >= Math.max(0, eoiCandidates.length - 4); k--) {
+        const end = eoiCandidates[k];
         try {
-          const candidate = Buffer.from(pdfBytes.subarray(pos, end));
+          const candidate = buf.subarray(pos, end);
           const { data, info } = await sharp(candidate)
             .rotate()
             .toColorspace("srgb")
@@ -97,17 +169,299 @@ async function extractEmbeddedJpegsAsRaw(pdfBytes: Uint8Array): Promise<RawPdfIm
               channels: info.channels,
             });
             pos = end;
-            continue;
+            decoded = true;
+            break;
           }
         } catch {
-          // Não era um JPEG completo/válido
+          // Tenta próximo candidato de EOI
         }
       }
+
+      if (decoded) continue;
     }
     pos++;
   }
 
+  // 2) Procura PNGs brutos embutidos (89 50 4E 47 0D 0A 1A 0A ... IEND)
+  const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const iendSig = Buffer.from("IEND", "latin1");
+  let pngPos = buf.indexOf(pngSig, 0);
+  while (pngPos !== -1 && results.length < 12) {
+    const iendPos = buf.indexOf(iendSig, pngPos + 32);
+    if (iendPos !== -1 && iendPos - pngPos < 4 * 1024 * 1024) {
+      const pngEnd = Math.min(len, iendPos + 8);
+      try {
+        const candidate = buf.subarray(pngPos, pngEnd);
+        const { data, info } = await sharp(candidate)
+          .rotate()
+          .toColorspace("srgb")
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        if (info.width >= 48 && info.height >= 48 && (info.channels === 3 || info.channels === 4)) {
+          results.push({
+            data: new Uint8Array(data),
+            width: info.width,
+            height: info.height,
+            channels: info.channels,
+          });
+        }
+      } catch {
+        // Ignora PNG inválido
+      }
+      pngPos = buf.indexOf(pngSig, pngEnd);
+    } else {
+      break;
+    }
+  }
+
+  // 3) Procura XObjects `/Subtype /Image` comprimidos com `/FlateDecode`
+  try {
+    const latin = buf.toString("latin1");
+    const imgRegex = /<<([\s\S]{10,600}?\/Subtype\s*\/Image[\s\S]{0,600}?)>>[\r\n\s]*stream\r?\n/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = imgRegex.exec(latin)) !== null && results.length < 14) {
+      const dict = match[1];
+      if (!/FlateDecode|\/Fl\b/.test(dict)) continue;
+
+      const wMatch = dict.match(/\/Width\s+(\d+)/);
+      const hMatch = dict.match(/\/Height\s+(\d+)/);
+      const bpcMatch = dict.match(/\/BitsPerComponent\s+(\d+)/);
+      const width = wMatch ? Number(wMatch[1]) : 0;
+      const height = hMatch ? Number(hMatch[1]) : 0;
+      const bpc = bpcMatch ? Number(bpcMatch[1]) : 8;
+
+      if (width < 48 || height < 48 || width > 4500 || height > 4500 || bpc !== 8) continue;
+
+      const streamStart = match.index + match[0].length;
+      const streamEnd = buf.indexOf(endstreamToken, streamStart);
+      if (streamEnd === -1 || streamEnd - streamStart > 6 * 1024 * 1024) continue;
+
+      let endOffset = streamEnd;
+      if (buf[endOffset - 1] === 0x0a) endOffset--;
+      if (buf[endOffset - 1] === 0x0d) endOffset--;
+      const compressed = buf.subarray(streamStart, endOffset);
+
+      let inflated: Buffer | null = null;
+      try {
+        inflated = zlib.inflateSync(compressed);
+      } catch {
+        try {
+          inflated = zlib.inflateRawSync(compressed);
+        } catch {
+          inflated = null;
+        }
+      }
+      if (!inflated || inflated.length === 0) continue;
+
+      // Caso 3a: stream FlateDecode que encapsulava um JPEG (/Filter [/FlateDecode /DCTDecode]) ou PNG
+      if (
+        (inflated[0] === 0xff && inflated[1] === 0xd8 && inflated[2] === 0xff) ||
+        (inflated[0] === 0x89 && inflated[1] === 0x50 && inflated[2] === 0x4e && inflated[3] === 0x47)
+      ) {
+        try {
+          const { data, info } = await sharp(inflated)
+            .rotate()
+            .toColorspace("srgb")
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+          if (info.width >= 48 && info.height >= 48 && (info.channels === 3 || info.channels === 4)) {
+            results.push({
+              data: new Uint8Array(data),
+              width: info.width,
+              height: info.height,
+              channels: info.channels,
+            });
+            continue;
+          }
+        } catch {
+          // Segue para tentativa de pixels brutos
+        }
+      }
+
+      // Caso 3b: pixels brutos RGB (3 canais) ou RGBA (4 canais), com ou sem PNG Predictor (10..15)
+      const pixelCount = width * height;
+      if (inflated.length === pixelCount * 3 || inflated.length === pixelCount * 4) {
+        const channels = inflated.length === pixelCount * 4 ? 4 : 3;
+        results.push({
+          data: new Uint8Array(inflated.buffer, inflated.byteOffset, inflated.byteLength),
+          width,
+          height,
+          channels,
+        });
+      } else if (inflated.length === (width * 3 + 1) * height) {
+        const unfiltered = unfilterPngPredictorRows(inflated, width, height, 3);
+        if (unfiltered) {
+          results.push({ data: unfiltered, width, height, channels: 3 });
+        }
+      } else if (inflated.length === (width * 4 + 1) * height) {
+        const unfiltered = unfilterPngPredictorRows(inflated, width, height, 4);
+        if (unfiltered) {
+          results.push({ data: unfiltered, width, height, channels: 4 });
+        }
+      }
+    }
+  } catch {
+    // Ignora falha no parser de streams FlateDecode
+  }
+
   return results;
+}
+
+/**
+ * Extrai imagens de uma página do PDF combinando `extractImages` do unpdf
+ * com uma varredura direta dos objetos de imagem (`page.objs` / `page.commonObjs`),
+ * capturando imagens pintadas via `paintImageXObjectRepeat`, inline images ou patterns.
+ */
+async function extractPageRawImages(pdf: PdfDocument, pageNum: number): Promise<RawPdfImage[]> {
+  const results: RawPdfImage[] = [];
+  const seenKeys = new Set<string>();
+
+  try {
+    const stdImages = (await extractImages(pdf, pageNum)) as (RawPdfImage & { key?: string })[];
+    for (const img of stdImages) {
+      if (img?.key) seenKeys.add(img.key);
+      results.push(img);
+    }
+  } catch {
+    // Segue para inspeção manual da operatorList
+  }
+
+  try {
+    const page = await pdf.getPage(pageNum);
+    const opList = await page.getOperatorList();
+    for (let i = 0; i < opList.argsArray.length; i++) {
+      const args = opList.argsArray[i];
+      if (!Array.isArray(args) || args.length === 0) continue;
+
+      const firstArg = args[0];
+      // Inline image object já decodificado na operatorList
+      if (
+        firstArg &&
+        typeof firstArg === "object" &&
+        "width" in firstArg &&
+        "height" in firstArg &&
+        "data" in firstArg
+      ) {
+        const inlineImg = firstArg as { width: number; height: number; data: Uint8Array; kind?: number };
+        if (inlineImg.width >= 48 && inlineImg.height >= 48 && inlineImg.data) {
+          const ch = Math.round(inlineImg.data.length / (inlineImg.width * inlineImg.height));
+          if (ch === 3 || ch === 4) {
+            results.push({
+              data: inlineImg.data,
+              width: inlineImg.width,
+              height: inlineImg.height,
+              channels: ch,
+            });
+          }
+        }
+        continue;
+      }
+
+      if (typeof firstArg === "string" && (firstArg.startsWith("img_") || firstArg.startsWith("g_"))) {
+        if (seenKeys.has(firstArg)) continue;
+        seenKeys.add(firstArg);
+
+        const pool = firstArg.startsWith("g_") ? page.commonObjs : page.objs;
+        const resolved = await new Promise<any>((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve(null);
+            }
+          }, 500);
+          try {
+            pool.get(firstArg, (obj: any) => {
+              if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve(obj);
+              }
+            });
+          } catch {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timer);
+              resolve(null);
+            }
+          }
+        });
+
+        if (resolved && resolved.data && resolved.width >= 48 && resolved.height >= 48) {
+          const pixelCount = resolved.width * resolved.height;
+          const ch = Math.round(resolved.data.length / pixelCount);
+          if ((ch === 3 || ch === 4) && resolved.data.length >= pixelCount * ch) {
+            results.push({
+              data: resolved.data,
+              width: resolved.width,
+              height: resolved.height,
+              channels: ch,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignora erro de introspecção extra
+  }
+
+  return results;
+}
+
+async function cropFromRegion(
+  rawBuf: Buffer,
+  width: number,
+  height: number,
+  channels: 1 | 3 | 4,
+  region: { left: number; top: number; size: number }
+): Promise<{ small: Buffer; large: Buffer }> {
+  const { left, top, size } = region;
+  const crop = () =>
+    sharp(rawBuf, { raw: { width, height, channels } }).extract({
+      left,
+      top,
+      width: size,
+      height: size,
+    });
+  const largeSide = largePhotoSide(size);
+  return {
+    small: await crop()
+      .resize(PHOTO_SIZE, PHOTO_SIZE)
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82 })
+      .toBuffer(),
+    large: await crop()
+      .resize(largeSide, largeSide)
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 90 })
+      .toBuffer(),
+  };
+}
+
+async function cropFullImageAsPortrait(
+  rawBuf: Buffer,
+  width: number,
+  height: number,
+  channels: 1 | 3 | 4
+): Promise<{ small: Buffer; large: Buffer }> {
+  const source = () =>
+    sharp(rawBuf, {
+      raw: { width, height, channels },
+    });
+  const largeSide = largePhotoSide(Math.min(width, height));
+  return {
+    small: await source()
+      .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: sharp.strategy.attention })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82 })
+      .toBuffer(),
+    large: await source()
+      .resize(largeSide, largeSide, { fit: "cover", position: sharp.strategy.attention })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 90 })
+      .toBuffer(),
+  };
 }
 
 async function buildPhotoPairFromRawImages(
@@ -128,49 +482,23 @@ async function buildPhotoPairFromRawImages(
     // Se houver um rosto detectável dentro da foto, centraliza nele; senão usa attention crop
     const face = await findFace(rawBuf, img.width, img.height, channels);
     if (face) {
-      const { left, top, size } = faceCropRegion(face, img.width, img.height);
-      const crop = () =>
-        sharp(rawBuf, { raw: { width: img.width, height: img.height, channels } }).extract({
-          left,
-          top,
-          width: size,
-          height: size,
-        });
-      const largeSide = largePhotoSide(size);
-      return {
-        small: await crop()
-          .resize(PHOTO_SIZE, PHOTO_SIZE)
-          .flatten({ background: "#ffffff" })
-          .jpeg({ quality: 82 })
-          .toBuffer(),
-        large: await crop()
-          .resize(largeSide, largeSide)
-          .flatten({ background: "#ffffff" })
-          .jpeg({ quality: 90 })
-          .toBuffer(),
-      };
+      return cropFromRegion(
+        rawBuf,
+        img.width,
+        img.height,
+        channels,
+        faceCropRegion(face, img.width, img.height)
+      );
     }
 
-    const source = () =>
-      sharp(rawBuf, {
-        raw: { width: img.width, height: img.height, channels },
-      });
-    const largeSide = largePhotoSide(Math.min(img.width, img.height));
-    return {
-      small: await source()
-        .resize(PHOTO_SIZE, PHOTO_SIZE, { fit: "cover", position: sharp.strategy.attention })
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 82 })
-        .toBuffer(),
-      large: await source()
-        .resize(largeSide, largeSide, { fit: "cover", position: sharp.strategy.attention })
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 90 })
-        .toBuffer(),
-    };
+    return cropFullImageAsPortrait(rawBuf, img.width, img.height, channels);
   }
 
-  // Currículo que é uma figura só (página inteira): procura o rosto na imagem.
+  // Currículo que é uma figura grande (ou selfie 3:4 de alta resolução >= 1400px):
+  // 1) Procura o rosto na imagem;
+  // 2) Se o detector não achar rosto (ex.: óculos com reflexo, rosto inclinado), verifica
+  //    se a própria imagem é uma foto de retrato (pouco fundo branco) ou localiza o
+  //    quadro denso da foto 3x4 no topo da página branca do currículo.
   const pageIndex = pickPageImageIndex(images);
   if (pageIndex !== null) {
     const img = images[pageIndex];
@@ -182,24 +510,26 @@ async function buildPhotoPairFromRawImages(
     );
     const face = await findFace(rawBuf, img.width, img.height, channels);
     if (face) {
-      const { left, top, size } = faceCropRegion(face, img.width, img.height);
-      const crop = () =>
-        sharp(rawBuf, {
-          raw: { width: img.width, height: img.height, channels },
-        }).extract({ left, top, width: size, height: size });
-      const largeSide = largePhotoSide(size);
-      return {
-        small: await crop()
-          .resize(PHOTO_SIZE, PHOTO_SIZE)
-          .flatten({ background: "#ffffff" })
-          .jpeg({ quality: 82 })
-          .toBuffer(),
-        large: await crop()
-          .resize(largeSide, largeSide)
-          .flatten({ background: "#ffffff" })
-          .jpeg({ quality: 90 })
-          .toBuffer(),
-      };
+      return cropFromRegion(
+        rawBuf,
+        img.width,
+        img.height,
+        channels,
+        faceCropRegion(face, img.width, img.height)
+      );
+    }
+
+    const fallback = await detectPhotoBoxOrPortraitInPage(
+      rawBuf,
+      img.width,
+      img.height,
+      channels
+    );
+    if (fallback?.kind === "full_portrait") {
+      return cropFullImageAsPortrait(rawBuf, img.width, img.height, channels);
+    }
+    if (fallback?.kind === "photo_box") {
+      return cropFromRegion(rawBuf, img.width, img.height, channels, fallback);
     }
   }
 
@@ -254,29 +584,19 @@ export async function captureResumePhoto(
   rawPdfBytes?: Uint8Array
 ): Promise<boolean> {
   try {
-    let page1Images: RawPdfImage[] = [];
-    try {
-      page1Images = (await extractImages(pdf, 1)) as RawPdfImage[];
-    } catch {
-      page1Images = [];
-    }
-
+    const page1Images = await extractPageRawImages(pdf, 1);
     let photo = await buildPhotoPairFromRawImages(page1Images);
 
     if (!photo && pdf.numPages > 1) {
-      try {
-        const page2Images = (await extractImages(pdf, 2)) as RawPdfImage[];
-        photo = await buildPhotoPairFromRawImages(page2Images);
-      } catch {
-        // Ignora erro na página 2
-      }
+      const page2Images = await extractPageRawImages(pdf, 2);
+      photo = await buildPhotoPairFromRawImages(page2Images);
     }
 
-    // Fallback: se o PDF tinha JPEGs embutidos que o extractImages do unpdf não retornou
+    // Fallback: extrai JPEGs (sem truncar no EXIF), PNGs e XObjects FlateDecode dos bytes do PDF
     if (!photo && rawPdfBytes && rawPdfBytes.length > 0) {
-      const embeddedJpegs = await extractEmbeddedJpegsAsRaw(rawPdfBytes);
-      if (embeddedJpegs.length > 0) {
-        photo = await buildPhotoPairFromRawImages(embeddedJpegs);
+      const embeddedImages = await extractEmbeddedJpegsAsRaw(rawPdfBytes);
+      if (embeddedImages.length > 0) {
+        photo = await buildPhotoPairFromRawImages(embeddedImages);
       }
     }
 

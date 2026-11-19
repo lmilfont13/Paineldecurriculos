@@ -8,6 +8,7 @@ import { cache } from "react";
 
 import { requireManager } from "@/server/controllers/guards";
 import type {
+  DashboardAnalytics,
   DashboardStats,
   JobProgress,
   PriorityApplication,
@@ -303,9 +304,10 @@ export async function getPainelData(): Promise<{
   stats: DashboardStats;
   priority: (PriorityApplication & { photoUrl: string | null })[];
   jobs: JobProgress[];
+  analytics: DashboardAnalytics;
 }> {
   const { user, company } = await getGestorShell();
-  const { stats, priority, jobs } = await getDashboard(user.companyId);
+  const { stats, priority, jobs, analytics } = await getDashboard(user.companyId);
   return {
     userName: user.name ?? user.email,
     companyName: company.name,
@@ -314,6 +316,7 @@ export async function getPainelData(): Promise<{
     stats,
     priority: await withPhotoUrls(priority),
     jobs,
+    analytics,
   };
 }
 

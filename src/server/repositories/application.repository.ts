@@ -302,24 +302,38 @@ export async function findApplicationsByCompany(
   });
 }
 
-/** Dados leves do painel: nunca carregar currículo, RG/CPF ou notas internas. */
+/** Dados leves do painel: nunca carregar currículo, RG ou notas internas. */
 export async function findDashboardApplications(companyId: string) {
   await syncCompanyImpediments(companyId);
   return prisma.application.findMany({
-    where: { companyId, isDemo: false, job: { isTalentPool: false, status: "OPEN" } },
+    where: { companyId, isDemo: false },
     orderBy: [{ aiScore: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     select: {
       id: true,
       name: true,
+      email: true,
+      cpf: true,
+      candidateId: true,
       status: true,
       aiScore: true,
       aiState: true,
+      aiArea: true,
+      aiLevel: true,
       createdAt: true,
       updatedAt: true,
       photoPath: true,
       hasImpediment: true,
       impedimentReason: true,
-      job: { select: { id: true, title: true, code: true, aiMinScore: true } },
+      job: {
+        select: {
+          id: true,
+          title: true,
+          code: true,
+          aiMinScore: true,
+          status: true,
+          isTalentPool: true,
+        },
+      },
     },
   });
 }
