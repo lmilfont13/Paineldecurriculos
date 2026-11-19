@@ -8,6 +8,7 @@ import { DecisionBlock } from "@/components/gestor/decision-block";
 import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
 import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
 import { CandidateRegistrationEditor } from "@/components/gestor/candidate-registration-editor";
+import { ResumeLightboxButton } from "@/components/gestor/resume-lightbox-button";
 import { SyncResumeBanner } from "@/components/gestor/sync-resume-banner";
 import { extractStandbyReason } from "@/server/models/standby.model";
 import { DeleteApplicationButton } from "@/components/gestor/delete-application-button";
@@ -396,16 +397,10 @@ export default async function CandidaturaDetailPage({
               companyName={app.company.name}
               enabled={whatsappTemplatesEnabled}
             />
-            <a
-              href={`/candidaturas/${app.id}/cv`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs transition hover:bg-[#fafaf9]"
-              title="Ver currículo em nova aba"
-            >
-              <Eye className="size-3.5 text-[#52525b]" />
-              <span>Ver currículo</span>
-            </a>
+            <ResumeLightboxButton
+              applicationId={app.id}
+              candidateName={app.name}
+            />
             <a
               href={`/candidaturas/${app.id}/cv?download=1`}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] shadow-2xs transition hover:bg-[#fafaf9]"
@@ -880,15 +875,11 @@ export default async function CandidaturaDetailPage({
               </span>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <a
-                href={`/candidaturas/${app.id}/cv`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <ResumeLightboxButton
+                applicationId={app.id}
+                candidateName={app.name}
                 className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 text-xs font-semibold text-[#0a0a0a] transition hover:bg-[#fafaf9]"
-              >
-                <Eye className="size-3.5 text-[#52525b]" />
-                <span>Ver currículo</span>
-              </a>
+              />
               <a
                 href={`/candidaturas/${app.id}/cv?download=1`}
                 className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition hover:opacity-90"

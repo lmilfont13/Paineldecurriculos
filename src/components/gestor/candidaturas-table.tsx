@@ -41,6 +41,7 @@ import {
   type StageKey,
 } from "@/server/models/candidate-list.model";
 import { CandidateAvatar } from "@/components/gestor/candidate-avatar";
+import { ResumeLightboxButton } from "@/components/gestor/resume-lightbox-button";
 
 export type { CandidaturaRow };
 
@@ -1189,15 +1190,13 @@ export function CandidaturasTable({
                             className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <a
-                              href={`/candidaturas/${row.id}/cv`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <ResumeLightboxButton
+                              applicationId={row.id}
+                              candidateName={row.name}
+                              label="CV"
+                              showIcon={false}
                               className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#52525b] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                              title="Visualizar currículo em nova aba"
-                            >
-                              CV
-                            </a>
+                            />
                             <a
                               href={`/candidaturas/${row.id}/cv?download=1`}
                               className="inline-flex size-5 items-center justify-center rounded text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
@@ -1388,15 +1387,13 @@ export function CandidaturasTable({
                 )}
               </span>
               <div className="col-span-full flex items-center justify-end gap-1 md:col-span-1 md:justify-start">
-                <a
-                  href={`/candidaturas/${row.id}/cv`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <ResumeLightboxButton
+                  applicationId={row.id}
+                  candidateName={row.name}
+                  label="Ver CV"
+                  showIcon={false}
                   className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[11px] font-medium text-[#71717a] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
-                  title="Visualizar currículo em nova aba"
-                >
-                  Ver CV
-                </a>
+                />
                 <a
                   href={`/candidaturas/${row.id}/cv?download=1`}
                   className="inline-flex size-7 items-center justify-center rounded-lg text-[#a1a1aa] transition hover:bg-[#f4f4f5] hover:text-[#0a0a0a]"
