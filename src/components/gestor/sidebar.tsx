@@ -45,23 +45,25 @@ function CompanyMark({
   name,
   initials,
   logoUrl,
-  size = 28,
+  size = 32,
 }: {
   name: string;
   initials: string;
   logoUrl: string | null;
   size?: number;
 }) {
-  const src = logoUrl || "/images/tarhget-icon.png";
+  // Ícone oficial branco para fundo escuro, garantindo que o logo nunca suma
+  const isTarhget = !logoUrl || logoUrl.includes("tarhget") || name.toLowerCase().includes("tarhget");
+  const src = isTarhget ? "/images/tarhget-icon-white.png" : logoUrl;
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 p-0.5 border border-white/15">
+    <div className="flex shrink-0 items-center justify-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={name}
         width={size}
         height={size}
-        className="shrink-0 object-contain rounded-full"
+        className="shrink-0 object-contain drop-shadow-sm"
         style={{ width: size, height: size }}
       />
     </div>
@@ -71,10 +73,7 @@ function CompanyMark({
 function PendingBadge({ count }: { count: number }) {
   return (
     <span
-      className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-xs"
-      style={{
-        backgroundColor: "var(--brand-primary, #7c1d3c)",
-      }}
+      className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white shadow-xs bg-[#922d25]"
     >
       {count}
     </span>
@@ -115,17 +114,17 @@ export function GestorSidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#261d1c] bg-[#161010] md:flex select-none">
-      {/* Topo / Logo */}
-      <div className="mx-3 mt-4 mb-1 flex items-center gap-2.5 rounded-xl px-2.5 py-2">
-        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={28} />
-        <span className="min-w-0 truncate font-serif text-[13px] font-bold tracking-[0.16em] text-white uppercase">
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-[#2e1d1c] bg-[#1f1110] md:flex select-none">
+      {/* Topo / Logo oficial com ícone branco e tipografia serifada */}
+      <div className="px-5 pt-6 pb-3 flex items-center gap-3">
+        <CompanyMark name={companyName} initials={companyInitials} logoUrl={logoUrl} size={32} />
+        <span className="font-serif text-[16px] font-bold tracking-[0.24em] text-white uppercase drop-shadow-xs">
           {companyName}
         </span>
       </div>
 
-      <nav className="mt-5 flex flex-col gap-0.5 px-3">
-        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8e8580]">
+      <nav className="mt-4 flex flex-col gap-1 px-3">
+        <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7951]">
           Recrutamento
         </p>
         {NAV.filter((item) => !("secondary" in item && item.secondary)).map((item) => {
@@ -135,17 +134,20 @@ export function GestorSidebar({
               key={item.href}
               href={item.href}
               className={
-                "group flex h-9.5 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
+                "relative group flex h-10 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
                 (active
-                  ? "bg-white/[0.12] font-semibold text-white shadow-2xs"
-                  : "text-[#a8a19c] hover:bg-white/[0.06] hover:text-white")
+                  ? "bg-[#312423] font-bold text-white shadow-xs"
+                  : "text-[#dcd3ce] hover:bg-[#2b1918] hover:text-white")
               }
             >
+              {active && (
+                <span className="absolute -left-3 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#f43f5e]" aria-hidden />
+              )}
               <item.Icon
                 aria-hidden
                 className="size-[17px] shrink-0"
                 strokeWidth={active ? 2.25 : 1.75}
-                style={active ? { color: "var(--brand-primary, #e11d48)" } : undefined}
+                style={active ? { color: "#ffffff" } : undefined}
               />
               <span className="flex-1 truncate">{item.label}</span>
               {"badge" in item && item.badge && pendingCount > 0 && <PendingBadge count={pendingCount} />}
@@ -153,8 +155,8 @@ export function GestorSidebar({
           );
         })}
 
-        <div className="mx-3 my-2.5 h-px bg-white/[0.08]" />
-        <p className="px-3 pb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8e8580]">
+        <div className="mx-3 my-3 h-px bg-white/[0.08]" />
+        <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7951]">
           Administração
         </p>
         {NAV.filter((item) => "secondary" in item && item.secondary).map((item) => {
@@ -164,17 +166,20 @@ export function GestorSidebar({
               key={item.href}
               href={item.href}
               className={
-                "group flex h-9 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
+                "relative group flex h-9.5 items-center gap-2.5 rounded-xl px-3.5 text-[13px] transition-colors " +
                 (active
-                  ? "bg-white/[0.12] font-semibold text-white shadow-2xs"
-                  : "text-[#8e8580] hover:bg-white/[0.06] hover:text-stone-200")
+                  ? "bg-[#312423] font-bold text-white shadow-xs"
+                  : "text-[#b8aba4] hover:bg-[#2b1918] hover:text-white")
               }
             >
+              {active && (
+                <span className="absolute -left-3 top-1/2 -translate-y-1/2 h-4.5 w-1 rounded-r-full bg-[#f43f5e]" aria-hidden />
+              )}
               <item.Icon
                 aria-hidden
                 className="size-[16px] shrink-0"
                 strokeWidth={active ? 2.1 : 1.6}
-                style={active ? { color: "var(--brand-primary, #e11d48)" } : undefined}
+                style={active ? { color: "#ffffff" } : undefined}
               />
               <span className="flex-1 truncate">{item.label}</span>
             </Link>
@@ -195,10 +200,9 @@ export function GestorSidebar({
           />
         )}
       </div>
-      <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+      <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-white/10 bg-[#2b1918] p-2.5">
         <span
-          className="flex size-[28px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-xs"
-          style={{ backgroundColor: "var(--brand-primary, #7c1d3c)" }}
+          className="flex size-[28px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-xs bg-[#922d25]"
         >
           {userInitials}
         </span>
