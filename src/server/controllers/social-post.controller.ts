@@ -8,6 +8,7 @@ import {
 } from "@/server/services/social-post.service";
 import {
   publishToInstagramFeed,
+  verifyInstagramConnection,
   type InstagramPublishResult,
 } from "@/server/services/instagram-publish.service";
 import { findJobsByCompanyId } from "@/server/repositories/job.repository";
@@ -60,4 +61,12 @@ export async function publishToInstagramAction(params: {
 }): Promise<InstagramPublishResult> {
   await requireManager();
   return publishToInstagramFeed(params);
+}
+
+export async function verifyInstagramAction(params: {
+  accountId?: string;
+  accessToken?: string;
+}) {
+  await requireManager();
+  return verifyInstagramConnection(params);
 }

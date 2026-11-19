@@ -12,6 +12,50 @@ export type InstagramPublishResult = {
   needsConfig?: boolean;
 };
 
+export type InstagramVerifyResult = {
+  ok: boolean;
+  username?: string;
+  name?: string;
+  profilePictureUrl?: string;
+  error?: string;
+};
+
+export async function verifyInstagramConnection(params: {
+  accountId?: string;
+  accessToken?: string;
+}): Promise<InstagramVerifyResult> {
+  const accountId = params.accountId?.trim() || readEnv("INSTAGRAM_ACCOUNT_ID") || readEnv("META_INSTAGRAM_ACCOUNT_ID");
+  const accessToken = params.accessToken?.trim() || readEnv("INSTAGRAM_ACCESS_TOKEN") || readEnv("META_ACCESS_TOKEN");
+
+  if (!accountId || !accessToken) {
+    return { ok: false, error: "Account ID e Access Token não configurados." };
+  }
+
+  try {
+    const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`;
+    const res = await fetch(url);
+    const data = (await res.json()) as {
+      name?: string;
+      username?: string;
+      profile_picture_url?: string;
+      error?: { message: string; type: string; code: number };
+    };
+
+    if (!res.ok || data.error) {
+      return { ok: false, error: data.error?.message || "Credenciais inválidas ou expiradas na Meta." };
+    }
+
+    return {
+      ok: true,
+      username: data.username,
+      name: data.name,
+      profilePictureUrl: data.profile_picture_url,
+    };
+  } catch (err) {
+    return { ok: false, error: "Falha ao comunicar com os servidores da Meta." };
+  }
+}
+
 // Armazenamento em memória temporário para fallback de download pelo crawler da Meta
 const tempImageCache = new Map<string, { buffer: Buffer; expiresAt: number }>();
 

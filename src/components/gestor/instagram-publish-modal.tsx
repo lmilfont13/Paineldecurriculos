@@ -18,6 +18,7 @@ import {
 import {
   publishToInstagramAction,
   checkInstagramConfigAction,
+  verifyInstagramAction,
 } from "@/server/controllers/social-post.controller";
 
 type Props = {
@@ -66,6 +67,15 @@ export function InstagramPublishModal({
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [supportsNativeShare, setSupportsNativeShare] = useState(false);
 
+  // Validação em tempo real da conexão
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [accountInfo, setAccountInfo] = useState<{
+    username?: string;
+    name?: string;
+    profilePictureUrl?: string;
+  } | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hasShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -79,10 +89,54 @@ export function InstagramPublishModal({
         setHasServerConfig(cfg.configured);
         if (!cfg.configured && !savedAcc) {
           setShowConfigInputs(true);
+        } else if (cfg.configured || (savedAcc && savedToken)) {
+          // Valida a conta automaticamente em background
+          verifyInstagramAction({
+            accountId: savedAcc || undefined,
+            accessToken: savedToken || undefined,
+          }).then((res) => {
+            if (res.ok) {
+              setAccountInfo({
+                username: res.username,
+                name: res.name,
+                profilePictureUrl: res.profilePictureUrl,
+              });
+            }
+          });
         }
       });
     }
   }, [isOpen]);
+
+  // Testar conexão explicitamente
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    setVerifyError(null);
+    try {
+      const res = await verifyInstagramAction({
+        accountId: accountId.trim() || undefined,
+        accessToken: accessToken.trim() || undefined,
+      });
+      if (res.ok) {
+        setAccountInfo({
+          username: res.username,
+          name: res.name,
+          profilePictureUrl: res.profilePictureUrl,
+        });
+        if (accountId) localStorage.setItem("tarhget_ig_account_id", accountId);
+        if (accessToken) localStorage.setItem("tarhget_ig_access_token", accessToken);
+        setVerifyError(null);
+      } else {
+        setAccountInfo(null);
+        setVerifyError(res.error || "Não foi possível validar as credenciais.");
+      }
+    } catch {
+      setAccountInfo(null);
+      setVerifyError("Erro de comunicação ao testar credenciais com a Meta.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -307,6 +361,44 @@ export function InstagramPublishModal({
                     </p>
                   </div>
 
+                  {/* Status da Conta Validada */}
+                  {accountInfo && (
+                    <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5">
+                      {accountInfo.profilePictureUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={accountInfo.profilePictureUrl}
+                          alt=""
+                          className="size-10 rounded-full border border-emerald-300 object-cover"
+                        />
+                      ) : (
+                        <div className="flex size-10 items-center justify-center rounded-full bg-emerald-200 text-emerald-800 font-bold text-sm">
+                          IG
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                          <CheckCircle2 className="size-3.5 text-emerald-600" />
+                          @{accountInfo.username || "tarhget_oficial"}
+                          {accountInfo.name ? <span className="font-normal text-emerald-800">({accountInfo.name})</span> : ""}
+                        </p>
+                        <p className="text-[11px] text-emerald-700">
+                          Conta autenticada e pronta para publicação direta no Feed
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {verifyError && (
+                    <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                      <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Validação da conta:</p>
+                        <p>{verifyError}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {publishStatus?.error && (
                     <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
                       <AlertCircle className="size-4 shrink-0 text-rose-600 mt-0.5" />
@@ -361,6 +453,27 @@ export function InstagramPublishModal({
                             className="w-full rounded-xl border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-mono focus:border-[#8f281e] focus:outline-none"
                           />
                         </div>
+                      </div>
+
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleVerify}
+                          disabled={isVerifying || !accountId || !accessToken}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#d4d4d8] bg-white px-3 py-1.5 text-xs font-medium text-[#18181b] hover:bg-[#f4f4f5] disabled:opacity-50"
+                        >
+                          {isVerifying ? (
+                            <>
+                              <Loader2 className="size-3.5 animate-spin" />
+                              Validando...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="size-3.5 text-emerald-600" />
+                              Testar Conexão
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   )}
