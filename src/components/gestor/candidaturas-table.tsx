@@ -329,17 +329,115 @@ export function CandidaturasTable({
     [filtered]
   );
 
-  /** Cabeçalho da vaga, antes do primeiro candidato de cada grupo. */
-  function groupHeader(row: CandidaturaRow, index: number, className: string) {
+  const jobThemeMap = useMemo(() => {
+    const themes = [
+      {
+        box: "border-indigo-200/90 bg-indigo-50/75",
+        bar: "bg-indigo-600",
+        code: "bg-indigo-600 text-white",
+        tag: "border-indigo-300/80 bg-white text-indigo-800",
+        count: "border-indigo-200/80 bg-white/90 text-indigo-700",
+      },
+      {
+        box: "border-emerald-200/90 bg-emerald-50/75",
+        bar: "bg-emerald-600",
+        code: "bg-emerald-600 text-white",
+        tag: "border-emerald-300/80 bg-white text-emerald-800",
+        count: "border-emerald-200/80 bg-white/90 text-emerald-700",
+      },
+      {
+        box: "border-amber-200/90 bg-amber-50/80",
+        bar: "bg-amber-600",
+        code: "bg-amber-600 text-white",
+        tag: "border-amber-300/80 bg-white text-amber-900",
+        count: "border-amber-200/80 bg-white/90 text-amber-800",
+      },
+      {
+        box: "border-violet-200/90 bg-violet-50/75",
+        bar: "bg-violet-600",
+        code: "bg-violet-600 text-white",
+        tag: "border-violet-300/80 bg-white text-violet-800",
+        count: "border-violet-200/80 bg-white/90 text-violet-700",
+      },
+      {
+        box: "border-sky-200/90 bg-sky-50/75",
+        bar: "bg-sky-600",
+        code: "bg-sky-600 text-white",
+        tag: "border-sky-300/80 bg-white text-sky-800",
+        count: "border-sky-200/80 bg-white/90 text-sky-700",
+      },
+      {
+        box: "border-rose-200/90 bg-rose-50/75",
+        bar: "bg-rose-600",
+        code: "bg-rose-600 text-white",
+        tag: "border-rose-300/80 bg-white text-rose-800",
+        count: "border-rose-200/80 bg-white/90 text-rose-700",
+      },
+    ];
+    const map = new Map<string, (typeof themes)[number]>();
+    let idx = 0;
+    for (const r of ordered) {
+      if (!map.has(r.jobId)) {
+        map.set(r.jobId, themes[idx % themes.length]);
+        idx++;
+      }
+    }
+    return map;
+  }, [ordered]);
+
+  /** Cabeçalho da vaga com cor distinta por grupo para nunca confundir vagas parecidas. */
+  function groupHeader(row: CandidaturaRow, index: number, mode: "cards" | "list") {
     if (!showGroups || (index > 0 && visible[index - 1].jobId === row.jobId)) return null;
+    const theme = jobThemeMap.get(row.jobId) ?? {
+      box: "border-zinc-200 bg-zinc-50",
+      bar: "bg-zinc-700",
+      code: "bg-zinc-800 text-white",
+      tag: "border-zinc-300 bg-white text-zinc-800",
+      count: "border-zinc-200 bg-white text-zinc-700",
+    };
+    const trailingMatch = row.jobTitle.trim().match(/^(.*?)\s*\(\s*([^()]{4,})\s*\)\s*$/);
+    const baseTitle = trailingMatch ? trailingMatch[1].trim() : row.jobTitle;
+    const highlightTag = trailingMatch ? trailingMatch[2].trim() : null;
+    const count = jobCounts[row.jobId] ?? 0;
+
     return (
-      <div className={className}>
-        <span className="text-[13px] font-semibold text-[#0a0a0a]">
-          {jobLabel(row.jobTitle, row.jobCode)}
-        </span>
-        <span className="ml-2 text-[12px] text-[#71717a]">
-          {jobCounts[row.jobId]} {jobCounts[row.jobId] === 1 ? "candidato" : "candidatos"}
-        </span>
+      <div
+        className={
+          mode === "cards"
+            ? `col-span-full mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-2.5 first:mt-0 ${theme.box}`
+            : `flex flex-wrap items-center justify-between gap-2 border-b px-5 py-2.5 ${theme.box}`
+        }
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className={`h-4 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
+          {row.jobCode != null && (
+            <span className={`rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums shadow-2xs ${theme.code}`}>
+              #{row.jobCode}
+            </span>
+          )}
+          <span className="text-[13px] font-bold text-[#0a0a0a]">
+            {baseTitle}
+          </span>
+          {highlightTag && (
+            <span className={`rounded-lg border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-2xs ${theme.tag}`}>
+              {highlightTag}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${theme.count}`}>
+            {count} {count === 1 ? "candidato" : "candidatos"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setJobId(row.jobId)}
+            className="rounded-lg px-2 py-0.5 text-[11px] font-medium text-[#52525b] transition hover:bg-white/80 hover:text-[#0a0a0a]"
+            title="Filtrar tela apenas para esta vaga"
+          >
+            Filtrar vaga →
+          </button>
+        </div>
       </div>
     );
   }
@@ -956,7 +1054,7 @@ export function CandidaturasTable({
 
               return (
                 <Fragment key={row.id}>
-                  {groupHeader(row, index, "col-span-full mt-3 border-b border-[#e4e4e7] pb-2 first:mt-0")}
+                  {groupHeader(row, index, "cards")}
                   <div
                     onClick={() => router.push(`/candidaturas/${row.id}`)}
                     className={
@@ -1171,7 +1269,7 @@ export function CandidaturasTable({
           const waiting = row.status === "PENDING";
           return (
             <Fragment key={row.id}>
-            {groupHeader(row, index, "border-b border-[#e4e4e7] bg-[#fafaf9] px-5 py-2.5")}
+            {groupHeader(row, index, "list")}
             <div
               className={
                 `grid ${cols} items-center gap-3 border-b border-[#e4e4e7] px-4 py-4 transition-colors last:border-b-0 hover:bg-[#fafaf9] md:gap-4 md:px-5 ` +
