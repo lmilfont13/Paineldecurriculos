@@ -839,75 +839,107 @@ export default async function PainelPage() {
 
       {/* Andamento por processo — a vaga é a unidade de trabalho */}
       {jobs.length > 0 && (
-        <>
-          <h2 className="mt-10 text-[15px] font-semibold text-[#0a0a0a]">
-            Seus processos
-          </h2>
-          <div className="mt-4 grid max-w-[848px] grid-cols-1 gap-4 sm:grid-cols-2">
+        <section aria-label="Processos seletivos em andamento" className="mt-8">
+          <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[13px] font-bold uppercase tracking-wider text-zinc-800">
+                Seus processos
+              </h2>
+              <span className="rounded-full border border-zinc-200/80 bg-zinc-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-zinc-600">
+                {jobs.length}
+              </span>
+              {jobs.some((j) => j.pending > 0) && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                  <span className="size-1.5 rounded-full bg-amber-500" />
+                  {jobs.reduce((acc, j) => acc + j.pending, 0)} aguardando
+                </span>
+              )}
+            </div>
+            <Link
+              href="/vagas"
+              className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              Gerenciar vagas →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {jobs.map((job, idx) => {
               const theme = getJobAccentTheme(job.id || idx);
               const { role, city } = parseJobTitleAndCity(job.title);
+              const isDraft = job.status === "DRAFT";
+
               return (
                 <Link
                   key={job.id}
                   href={`/vagas/${job.id}`}
-                  className={`group rounded-2xl border ${theme.border} bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0px_4px_16px_rgba(0,0,0,0.06)]`}
+                  className="group flex flex-col justify-between rounded-xl border border-zinc-200/80 bg-white p-3 shadow-2xs transition-all hover:border-zinc-300 hover:shadow-xs hover:-translate-y-0.5"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className={`h-4 w-1.5 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
-                      <span className="truncate text-sm font-bold text-[#0a0a0a] group-hover:text-[#7c1d3c] transition-colors">
-                        {role}
-                      </span>
-                      {city && (
-                        <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-2xs ${theme.cityTag}`}>
-                          <MapPin className="size-2.5 opacity-80" strokeWidth={2.5} />
-                          {city}
+                  <div>
+                    {/* Linha Superior: Barra de cor + Cargo + Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className={`h-3.5 w-1 shrink-0 rounded-full ${theme.bar}`} aria-hidden />
+                        <h3 className="truncate text-[13px] font-bold text-zinc-900 group-hover:text-black transition-colors" title={role}>
+                          {role}
+                        </h3>
+                      </div>
+                      {job.status !== "OPEN" ? (
+                        <span className="shrink-0 rounded-md border border-amber-200/80 bg-amber-50 px-1.5 py-0.2 text-[10px] font-semibold text-amber-800">
+                          {jobStatusLabels[job.status]}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-300 group-hover:text-zinc-700 transition-colors text-xs font-bold shrink-0">
+                          ›
                         </span>
                       )}
                     </div>
-                    {job.status !== "OPEN" && (
-                      <span className="shrink-0 rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                        {jobStatusLabels[job.status]}
-                      </span>
+
+                    {/* Cidade / Praça com tag refinada */}
+                    {city && (
+                      <div className="mt-1 pl-3">
+                        <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.2 text-[10px] font-bold uppercase tracking-wider ${theme.cityTag}`}>
+                          <MapPin className="size-2.5 opacity-80" strokeWidth={2.5} />
+                          {city}
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <span className="mt-3.5 block">
-                    <FunnelBar
-                      pending={job.pending}
-                      interview={job.interview}
-                      approved={job.approved}
-                      rejected={job.rejected}
-                    />
-                  </span>
-                  <span className="mt-2.5 block text-[11px] text-[#71717a]">
-                    {job.status === "DRAFT" ? (
-                      <span
-                        className="font-medium"
-                        style={{ color: "var(--brand-primary)" }}
-                      >
+
+                  {/* Linha Inferior: Contadores compactos + Mini FunnelBar */}
+                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-zinc-100 pt-2 text-[11px]">
+                    {isDraft ? (
+                      <span className="font-semibold" style={{ color: "var(--brand-primary)" }}>
                         Revisar e publicar ›
                       </span>
+                    ) : job.total === 0 ? (
+                      <span className="text-zinc-400">0 candidatos</span>
                     ) : (
                       <>
-                        <span className="font-semibold text-zinc-800">{job.total}</span> candidato{job.total === 1 ? "" : "s"}
-                        {job.pending > 0 && (
-                          <>
-                            {" · "}
-                            <span className="font-semibold text-[#b07818]">
-                              {job.pending} esperando
+                        <span className="truncate text-zinc-600">
+                          <strong className="font-bold text-zinc-900 tabular-nums">{job.total}</strong> cand.
+                          {job.pending > 0 && (
+                            <span className="ml-1 font-bold text-amber-700 tabular-nums">
+                              · {job.pending} na fila
                             </span>
-                          </>
-                        )}
-                        {job.interview > 0 && ` · ${job.interview} em entrevista`}
+                          )}
+                        </span>
+                        <div className="w-16 shrink-0">
+                          <FunnelBar
+                            pending={job.pending}
+                            interview={job.interview}
+                            approved={job.approved}
+                            rejected={job.rejected}
+                          />
+                        </div>
                       </>
                     )}
-                  </span>
+                  </div>
                 </Link>
               );
             })}
           </div>
-        </>
+        </section>
       )}
     </>
   );

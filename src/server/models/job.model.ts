@@ -172,16 +172,31 @@ export function parseJobTitleAndCity(title: string): { role: string; city: strin
   const trimmed = title.trim();
   // Remove código da vaga no final caso já venha formatado como "Cargo (Cidade) #1123"
   const withoutCode = trimmed.replace(/\s*#\w+\s*$/, "");
-  const match = withoutCode.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-  if (!match) return { role: withoutCode, city: null };
 
-  const inside = match[2].trim();
-  // Se for apenas flexão de gênero como (a), (o), (a/o), (m/f), faz parte do cargo
-  if (/^(a|o|a\/o|o\/a|as|os|m\/f)$/i.test(inside)) {
-    return { role: withoutCode, city: null };
+  // 1. Tenta padrão com parênteses: "Cargo (Cidade)" ou "Cargo - (Cidade)"
+  const parenMatch = withoutCode.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (parenMatch) {
+    const inside = parenMatch[2].trim();
+    // Se for apenas flexão de gênero como (a), (o), (a/o), (m/f), faz parte do cargo
+    if (!/^(a|o|a\/o|o\/a|as|os|m\/f)$/i.test(inside)) {
+      const cleanRole = parenMatch[1].trim().replace(/\s*[-–—/]\s*$/, "").trim();
+      return { role: cleanRole, city: inside };
+    }
   }
 
-  return { role: match[1].trim(), city: inside };
+  // 2. Tenta padrão com hífen final: "Cargo - Cidade - UF" ou "Cargo - Cidade"
+  const hyphenParts = withoutCode.split(/\s+[-–—]\s+/);
+  if (hyphenParts.length >= 2) {
+    const last = hyphenParts[hyphenParts.length - 1]?.trim() ?? "";
+    const secondLast = hyphenParts[hyphenParts.length - 2]?.trim() ?? "";
+    if (/^[A-Z]{2}$/i.test(last) && hyphenParts.length >= 3) {
+      const city = `${secondLast} - ${last.toUpperCase()}`;
+      const role = hyphenParts.slice(0, hyphenParts.length - 2).join(" - ").trim();
+      return { role, city };
+    }
+  }
+
+  return { role: withoutCode, city: null };
 }
 
 export const JOB_ACCENT_THEMES = [
