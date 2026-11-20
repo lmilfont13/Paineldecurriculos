@@ -18,9 +18,9 @@ export const socialJobPostSchema = z.object({
   segmentSubtitle: z.string().default(""),
   location: z.string().default(""),
   route: z.string().default(""),
-  startDate: z.string().default("Início imediato"),
-  contractType: z.string().default("Regime CLT – Efetivo"),
-  workSchedule: z.string().default("44h semanais"),
+  startDate: z.string().default(""),
+  contractType: z.string().default(""),
+  workSchedule: z.string().default(""),
   salary: z.string().default(""),
   mealVoucher: z.string().default(""),
   costAid: z.string().default(""),
@@ -29,7 +29,7 @@ export const socialJobPostSchema = z.object({
   benefitsList: z.array(benefitItemSchema).default([]),
   ctaText: z.string().default("Acesse o link na nossa bio do Instagram para se candidatar! 👆"),
   disclaimer: z.string().default("Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal."),
-  modelImage: z.string().default("/images/templates/master-base-clean.png"),
+  modelImage: z.string().default("/images/poster/foto-padrao.jpg"),
   caption: z.string().default(""),
 });
 
@@ -60,7 +60,7 @@ export const DEFAULT_POST_DATA: SocialJobPostData = {
   ],
   ctaText: "Acesse o link na nossa bio do Instagram para se candidatar! 👆",
   disclaimer: "⚠️ Inscrições abertas! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal.",
-  modelImage: "/images/templates/master-base-clean.png",
+  modelImage: "/images/poster/foto-padrao.jpg",
   caption: "",
 };
 
@@ -68,7 +68,7 @@ export const STOCK_MODELS = [
   {
     id: "model-official",
     label: "Modelo Oficial Tarhget (Padrão Original Travado)",
-    src: "/images/templates/master-base-clean.png",
+    src: "/images/poster/foto-padrao.jpg",
     gender: "female",
     tag: "Oficial Tarhget (Recomendado)",
   },
