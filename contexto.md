@@ -392,7 +392,10 @@ e-mail personalizados.
   o nome completo, a vaga, a cidade e o mês aparecem num bloco da página de
   vagas (até 12 pessoas, as mais recentes). A pessoa pode desistir quando
   quiser; o gestor pode ocultar alguém pela ficha (fica na Auditoria). Conta
-  excluída sai sozinha. Regras em `src/server/models/showcase.model.ts`.
+  excluída sai sozinha. Em *Candidatos*, um aviso no topo mostra quantos
+  aprovados ainda não responderam, com o botão "Pedir autorização" (aviso no
+  site + e-mail, cada pessoa recebe uma vez só). Regras e texto do pedido em
+  `src/server/models/showcase.model.ts`.
 
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.

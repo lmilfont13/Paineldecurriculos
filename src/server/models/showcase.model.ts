@@ -66,3 +66,16 @@ export function toPublicHires(rows: ShowcaseRow[], limit = SHOWCASE_LIMIT): Publ
       month: hireMonth(row.approvedAt),
     }));
 }
+
+/** Pedido de autorização aos aprovados ({nome} e {empresa} são trocados por pessoa). */
+export const SHOWCASE_ASK_SUBJECT = "Você aparece na nossa página de vagas?";
+export const SHOWCASE_ASK_TEXT = `Olá, {nome}!
+
+Você foi contratado(a) pela {empresa} pela nossa página de vagas, e queremos mostrar para quem está procurando emprego que as contratações acontecem de verdade por lá.
+
+Se você autorizar, vamos mostrar na página de vagas apenas seu nome, a vaga e o mês em que você foi contratado(a). Nada além disso.
+
+Para responder, abra sua candidatura e toque em "Sim, pode mostrar" ou "Prefiro não". Você pode mudar de ideia quando quiser. Se preferir não aparecer, não muda nada no seu trabalho com a gente.
+
+Obrigado!
+Equipe {empresa}`;

@@ -28,7 +28,8 @@ export type AuditAction =
   | "CANDIDATURA_IMPEDIMENTO_ATIVADO"
   | "CANDIDATURA_IMPEDIMENTO_REMOVIDO"
   | "VITRINE_OCULTADO"
-  | "VITRINE_EXIBIDO";
+  | "VITRINE_EXIBIDO"
+  | "VITRINE_AUTORIZACAO_PEDIDA";
 
 export interface CreateAuditLogInput {
   companyId: string;

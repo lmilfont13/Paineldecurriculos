@@ -10,6 +10,7 @@ import {
   CandidaturasTable,
   type CandidaturaRow,
 } from "@/components/gestor/candidaturas-table";
+import { ShowcaseAskBanner } from "@/components/gestor/showcase-ask-banner";
 import { getCandidaturasPageData } from "@/server/controllers/gestor.controller";
 import {
   appStatusLabels,
@@ -30,7 +31,7 @@ export default async function CandidaturasPage({
   const { vaga, status, atende } = await searchParams;
   const initialStatus =
     status && status in appStatusLabels ? (status as AppStatusKey) : undefined;
-  const { applications, jobs, companyName, ages } = await getCandidaturasPageData();
+  const { applications, jobs, companyName, ages, showcasePending } = await getCandidaturasPageData();
   const messageTemplates = await listMessageTemplatesAction();
 
   const rows: CandidaturaRow[] = applications.map((app) => {
@@ -89,6 +90,7 @@ export default async function CandidaturasPage({
 
   return (
     <>
+      <ShowcaseAskBanner pending={showcasePending} companyName={companyName} />
       <CandidaturasTable
         rows={rows}
         jobs={jobs.map((j) => ({ id: j.id, title: j.title, code: j.code }))}

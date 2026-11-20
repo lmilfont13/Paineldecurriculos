@@ -32,7 +32,7 @@ import {
   savedMessageForSubject,
 } from "@/server/services/message-template.service";
 import { createAuditLog } from "@/server/repositories/audit.repository";
-import { setShowcaseHidden } from "@/server/services/showcase.service";
+import { askShowcaseConsent, setShowcaseHidden } from "@/server/services/showcase.service";
 import {
   rejectPendingWithMessage,
   type BulkRejectResult,
@@ -445,6 +445,28 @@ export async function setApplicationStatusAction(
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
   if (updated) revalidatePath(`/vagas/${updated.jobId}`);
+}
+
+/** Pede aos aprovados que ainda não responderam se querem aparecer na página de vagas. */
+export async function askShowcaseConsentAction(): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
+  const user = await requireManager();
+  const result = await askShowcaseConsent(user.companyId);
+  if (result.ok) {
+    runInBackground("auditoria da vitrine", async () => {
+      try {
+        await createAuditLog({
+          companyId: user.companyId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          action: "VITRINE_AUTORIZACAO_PEDIDA",
+          metadata: { enviados: result.sent },
+        });
+      } catch { /* auditoria nunca bloqueia a ação principal */ }
+    });
+  }
+  revalidatePath("/candidaturas");
+  return result;
 }
 
 /** Gestor oculta ou volta a mostrar o contratado na página pública de vagas. */
