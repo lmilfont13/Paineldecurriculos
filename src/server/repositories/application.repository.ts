@@ -1336,14 +1336,16 @@ export function findOtherApplicationsByEmail(
       OR: orClauses,
     },
     orderBy: { createdAt: "desc" },
-    take: 10,
+    take: 25,
     select: {
       id: true,
       status: true,
       hasImpediment: true,
       impedimentReason: true,
       createdAt: true,
-      job: { select: { title: true, code: true } },
+      updatedAt: true,
+      managerNotes: true,
+      job: { select: { id: true, title: true, code: true, location: true } },
     },
   });
 }

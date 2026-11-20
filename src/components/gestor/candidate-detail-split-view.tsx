@@ -66,7 +66,7 @@ export function CandidateDetailSplitView({
   }
 
   return (
-    <div className={splitView ? "mx-auto w-full max-w-[1720px] px-2 sm:px-4" : "mx-auto w-full max-w-[1080px]"}>
+    <div className={splitView ? "mx-auto w-full max-w-[1720px] px-2 sm:px-4" : "mx-auto w-full max-w-[1360px] px-2 sm:px-4"}>
       <CandidateQueueBar
         applicationId={applicationId}
         jobId={jobId}
