@@ -33,6 +33,8 @@ import { ZoomableCandidateAvatar } from "@/components/gestor/zoomable-candidate-
 import { WhatsAppQuickButton } from "@/components/gestor/whatsapp-quick-templates";
 import { ResumeLightboxButton } from "@/components/gestor/resume-lightbox-button";
 import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
+import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
+import { getCompanyReportAction, type CompanyCandidateDossierItem } from "@/server/controllers/application.controller";
 import { appStatusLabels, type AppStatusKey } from "@/server/models/application.model";
 import { formatPhone } from "@/lib/phone";
 import { jobLabel } from "@/server/models/candidate-list.model";
@@ -174,6 +176,19 @@ export function CandidateCorporateDossier({
   // Define a aba inicial: se tiver outras inscrições, abre inscrições como na referência; senão abre parecer da IA ou dados
   const [activeTab, setActiveTab] = useState<TabKey>("inscricoes");
   const [activeResumeVersion, setActiveResumeVersion] = useState<"current" | "latest">("current");
+  const [companyDossierOpen, setCompanyDossierOpen] = useState(false);
+  const [companyDossierData, setCompanyDossierData] = useState<CompanyCandidateDossierItem[] | null>(null);
+  const [companyDossierLoading, setCompanyDossierLoading] = useState(false);
+
+  async function handleOpenCompanyDossier() {
+    setCompanyDossierLoading(true);
+    const res = await getCompanyReportAction([applicationId]);
+    setCompanyDossierLoading(false);
+    if (res.ok && res.candidates) {
+      setCompanyDossierData(res.candidates);
+      setCompanyDossierOpen(true);
+    }
+  }
 
   const effectiveResumeUrl =
     activeResumeVersion === "latest" && latestResumeInfo?.latestResumeUrl
@@ -481,6 +496,17 @@ export function CandidateCorporateDossier({
                   impedimentReason={impedimentReason ?? undefined}
                 />
               </div>
+
+              <button
+                type="button"
+                disabled={companyDossierLoading}
+                onClick={handleOpenCompanyDossier}
+                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white shadow-2xs hover:bg-emerald-600 transition disabled:opacity-50"
+                title="Gerar resumo executivo deste candidato com Nome, E-mail, Telefone, Fardamento e Resumo para enviar à empresa parceira"
+              >
+                <Building2 className="size-3.5" />
+                <span>{companyDossierLoading ? "Carregando…" : "Resumo p/ Empresa"}</span>
+              </button>
             </div>
           </div>
 
@@ -870,6 +896,17 @@ export function CandidateCorporateDossier({
           )}
         </main>
       </div>
+
+      {/* MODAL DE DOSSIÊ PARA EMPRESA */}
+      {companyDossierData && (
+        <CompanyDossierModal
+          open={companyDossierOpen}
+          onClose={() => setCompanyDossierOpen(false)}
+          companyName={companyName}
+          jobTitle={jobTitle}
+          candidates={companyDossierData}
+        />
+      )}
     </div>
   );
 }

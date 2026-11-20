@@ -35,6 +35,7 @@ import {
   findApplicationsByCandidate,
   findApplicationsByCompany,
   findApplicationsByIds,
+  findApplicationsForCompanyReport,
   findLatestApplicationWithAnswers,
   completePreRegisteredApplication,
   updateApplicationResume,
@@ -60,10 +61,12 @@ import {
   updateApplicationRegistration,
 } from "@/server/repositories/application.repository";
 import { formatInterviewAt } from "@/server/models/interview.model";
+import { formatPhone } from "@/lib/phone";
 import { titleCasePt } from "@/server/models/text.model";
 import {
   buildInfoAnswerSchema,
   knownInfoOf,
+  maskCpf,
   pendingRequestedFields,
   type InfoField,
 } from "@/server/models/pre-interview.model";
@@ -1757,6 +1760,84 @@ export async function getApplicationSummaries(
     results.push(await generateCandidateSummary(id));
   }
   return results;
+}
+
+export type CompanyCandidateDossierItem = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  rawPhone: string | null;
+  uniform: {
+    bootSize: string | null;
+    pantsSize: string | null;
+    shirtSize: string | null;
+    formatted: string;
+  };
+  location: string;
+  resumo: string;
+  jobTitle: string;
+  status: string;
+  cpfMasked: string | null;
+  rg: string | null;
+};
+
+/**
+ * Dossiê de candidatos selecionados para envio a empresas clientes / parceiras.
+ * Reúne Nome, E-mail, Telefone, Fardamento (bota, calça, camisa) e Resumo Profissional.
+ */
+export async function getCompanyReportDossier(
+  companyId: string,
+  applicationIds: string[]
+): Promise<{
+  companyName: string;
+  jobTitle?: string;
+  candidates: CompanyCandidateDossierItem[];
+}> {
+  const apps = await findApplicationsForCompanyReport(companyId, applicationIds);
+  const companyName = apps[0]?.company?.name ?? "Empresa";
+  const jobTitle = apps[0]?.job?.title;
+
+  const candidates: CompanyCandidateDossierItem[] = apps.map((app) => {
+    const uniformParts = [
+      app.bootSize && `Bota ${app.bootSize}`,
+      app.pantsSize && `Calça ${app.pantsSize}`,
+      app.shirtSize && `Blusa ${app.shirtSize}`,
+    ].filter(Boolean);
+
+    const uniformFormatted = uniformParts.length > 0 ? uniformParts.join(" · ") : "Não informado";
+
+    const resumo =
+      app.professionalSummary?.trim() ||
+      app.aiReasoning?.trim() ||
+      app.aiProfile?.trim() ||
+      "Sem resumo cadastrado.";
+
+    const locParts = [app.city, app.state].filter(Boolean);
+    const location = locParts.length > 0 ? locParts.join(" / ") : "Não informada";
+
+    return {
+      id: app.id,
+      name: app.name,
+      email: app.email,
+      phone: formatPhone(app.phone) || app.phone || "Não informado",
+      rawPhone: app.phone,
+      uniform: {
+        bootSize: app.bootSize,
+        pantsSize: app.pantsSize,
+        shirtSize: app.shirtSize,
+        formatted: uniformFormatted,
+      },
+      location,
+      resumo,
+      jobTitle: app.job?.title || "",
+      status: app.status,
+      cpfMasked: app.cpf ? maskCpf(app.cpf) : null,
+      rg: app.rg || null,
+    };
+  });
+
+  return { companyName, jobTitle, candidates };
 }
 
 /**

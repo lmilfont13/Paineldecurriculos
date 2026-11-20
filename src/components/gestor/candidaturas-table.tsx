@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Download, ExternalLink, MapPin } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Download, ExternalLink, MapPin } from "lucide-react";
 
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
+import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { Toast } from "@/components/gestor/toast";
 import {
@@ -16,7 +17,9 @@ import {
   reanalyzeBatchAction,
   searchCandidatesAction,
   generateCandidatesReportAction,
+  getCompanyReportAction,
   type CandidateSummary,
+  type CompanyCandidateDossierItem,
 } from "@/server/controllers/application.controller";
 import {
   appStatusLabels,
@@ -163,6 +166,13 @@ export function CandidaturasTable({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [report, setReport] = useState<CandidateSummary[] | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [companyDossierOpen, setCompanyDossierOpen] = useState(false);
+  const [companyDossierData, setCompanyDossierData] = useState<{
+    companyName: string;
+    jobTitle?: string;
+    candidates: CompanyCandidateDossierItem[];
+  } | null>(null);
+  const [companyDossierLoading, setCompanyDossierLoading] = useState(false);
   const [quickPeekRow, setQuickPeekRow] = useState<CandidaturaRow | null>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -522,6 +532,23 @@ export function CandidaturasTable({
       setReport(result.reports);
     } else {
       setToast(result.error);
+    }
+  }
+
+  async function openCompanyDossier() {
+    if (selected.size === 0) return;
+    setCompanyDossierLoading(true);
+    const res = await getCompanyReportAction([...selected]);
+    setCompanyDossierLoading(false);
+    if (res.ok) {
+      setCompanyDossierData({
+        companyName: res.companyName,
+        jobTitle: res.jobTitle,
+        candidates: res.candidates,
+      });
+      setCompanyDossierOpen(true);
+    } else {
+      setToast(res.error || "Falha ao gerar dossiê para empresa.");
     }
   }
 
@@ -1631,6 +1658,16 @@ export function CandidaturasTable({
           )}
           <button
             type="button"
+            disabled={pending || companyDossierLoading}
+            onClick={openCompanyDossier}
+            className="h-[34px] shrink-0 rounded-[10px] bg-emerald-600 px-4 text-xs font-bold text-white hover:bg-emerald-500 shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+            title="Gerar resumo executivo dos candidatos com Nome, E-mail, Telefone, Fardamento e Resumo para enviar para a empresa"
+          >
+            <Building2 className="size-3.5" />
+            <span>{companyDossierLoading ? "Carregando…" : `Resumo p/ Empresa (${selected.size})`}</span>
+          </button>
+          <button
+            type="button"
             disabled={pending || reportLoading}
             onClick={generateReport}
             className="h-[34px] shrink-0 rounded-[10px] bg-white/12 px-4 text-xs font-medium text-white hover:bg-white/20 disabled:opacity-50"
@@ -1826,6 +1863,17 @@ export function CandidaturasTable({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Dossiê Executivo para Envio à Empresa (Nome, E-mail, Telefone, Fardamento e Resumo) */}
+      {companyDossierData && (
+        <CompanyDossierModal
+          open={companyDossierOpen}
+          onClose={() => setCompanyDossierOpen(false)}
+          companyName={companyDossierData.companyName}
+          jobTitle={companyDossierData.jobTitle}
+          candidates={companyDossierData.candidates}
+        />
       )}
 
       {/* Gaveta Lateral de Triagem Rápida (Quick-Peek Slide-Over Drawer) */}

@@ -53,6 +53,7 @@ import {
   getLargePhotoUrl,
   searchCompanyApplicationIds,
   getApplicationSummaries,
+  getCompanyReportDossier,
   getCompanyApplication,
   requestApplicationResumeUpload,
   requestApplicationInfo,
@@ -70,9 +71,10 @@ import {
   importStandbyToJob,
   submitApplication,
   type CandidateSummary,
+  type CompanyCandidateDossierItem,
 } from "@/server/services/application.service";
 
-export { type CandidateSummary };
+export { type CandidateSummary, type CompanyCandidateDossierItem };
 import { getSessionCandidate } from "@/server/services/candidate.service";
 import { getPublicCompanyBySlug } from "@/server/services/company.service";
 
@@ -665,6 +667,28 @@ export async function generateCandidatesReportAction(
   const user = await requireManager();
   const reports = await getApplicationSummaries(user.companyId, applicationIds);
   return { ok: true, reports };
+}
+
+export type CompanyReportActionResult =
+  | {
+      ok: true;
+      companyName: string;
+      jobTitle?: string;
+      candidates: CompanyCandidateDossierItem[];
+    }
+  | { ok: false; error: string };
+
+/**
+ * Relatório executivo de candidatos selecionados para envio a empresas parceiras/clientes.
+ * Reúne Nome, E-mail, Telefone, Fardamento e Resumo Profissional.
+ */
+export async function getCompanyReportAction(
+  applicationIds: string[]
+): Promise<CompanyReportActionResult> {
+  if (!applicationIds.length) return { ok: false, error: "Nenhum candidato selecionado." };
+  const user = await requireManager();
+  const data = await getCompanyReportDossier(user.companyId, applicationIds);
+  return { ok: true, ...data };
 }
 
 /**

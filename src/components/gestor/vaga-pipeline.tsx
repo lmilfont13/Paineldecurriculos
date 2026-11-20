@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type React from "react";
-import { ChevronDown, ChevronUp, Download, Search } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Download, Search } from "lucide-react";
 import type { AIState } from "@prisma/client";
 import {
   bulkSetApplicationStatusAction,
   moveApplicationAction,
+  getCompanyReportAction,
+  type CompanyCandidateDossierItem,
 } from "@/server/controllers/application.controller";
+import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
 import {
   appStatusLabels,
   formatWaiting,
@@ -86,6 +89,14 @@ export function VagaPipeline({
     action?: { label: string; onClick: () => void };
   } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const [companyDossierOpen, setCompanyDossierOpen] = useState(false);
+  const [companyDossierData, setCompanyDossierData] = useState<{
+    companyName: string;
+    jobTitle?: string;
+    candidates: CompanyCandidateDossierItem[];
+  } | null>(null);
+  const [companyDossierLoading, setCompanyDossierLoading] = useState(false);
 
   // Recolhimento do quadro inteiro + recolhimento por coluna (Banco de Dados já nasce recolhido se > 5)
   const initialRejectedCount = applications.filter((a) => a.status === "REJECTED").length;
@@ -244,6 +255,32 @@ export function VagaPipeline({
     });
   }
 
+  async function openCompanyDossier(stageKey?: AppStatusKey) {
+    const targetPeople = stageKey
+      ? visible.filter((p) => p.status === stageKey)
+      : visible.filter((p) => p.status === "APPROVED" || p.status === "INTERVIEW" || p.status === "SHORTLISTED");
+
+    const ids = (targetPeople.length > 0 ? targetPeople : visible).map((p) => p.id);
+    if (ids.length === 0) {
+      setToast({ message: "Nenhum candidato disponível para gerar o resumo." });
+      return;
+    }
+
+    setCompanyDossierLoading(true);
+    const res = await getCompanyReportAction(ids);
+    setCompanyDossierLoading(false);
+    if (res.ok) {
+      setCompanyDossierData({
+        companyName: res.companyName,
+        jobTitle: res.jobTitle || jobTitle,
+        candidates: res.candidates,
+      });
+      setCompanyDossierOpen(true);
+    } else {
+      setToast({ message: res.error || "Falha ao gerar dossiê para a empresa." });
+    }
+  }
+
   function askMove(id: string, stage: AppStatusKey) {
     const person = people.find((p) => p.id === id);
     if (!person || person.status === stage) return;
@@ -331,6 +368,17 @@ export function VagaPipeline({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={companyDossierLoading}
+              onClick={() => openCompanyDossier()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-emerald-700 px-3 text-[11px] font-bold text-white shadow-2xs hover:bg-emerald-600 transition disabled:opacity-50"
+              title="Gerar resumo executivo dos candidatos com Nome, E-mail, Telefone, Fardamento e Resumo para enviar para a empresa parceira"
+            >
+              <Building2 className="size-3.5" />
+              <span>{companyDossierLoading ? "Carregando…" : "Resumo p/ Empresa"}</span>
+            </button>
+
             <a
               href="#sugestoes-banco"
               className="inline-flex h-8 items-center gap-1 rounded-xl border border-[#e4e4e7] bg-white px-3 text-[11px] font-semibold text-[#0e7a6b] transition hover:bg-[#fafaf9]"
@@ -711,6 +759,15 @@ export function VagaPipeline({
           pending={pending}
           onCancel={() => setConfirm(null)}
           onConfirm={(notice) => move(confirm.id, confirm.stage, notice)}
+        />
+      )}
+      {companyDossierData && (
+        <CompanyDossierModal
+          open={companyDossierOpen}
+          onClose={() => setCompanyDossierOpen(false)}
+          companyName={companyDossierData.companyName}
+          jobTitle={companyDossierData.jobTitle}
+          candidates={companyDossierData.candidates}
         />
       )}
       {toast && (

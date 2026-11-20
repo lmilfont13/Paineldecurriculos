@@ -93,6 +93,49 @@ export function findApplicationsByIds(companyId: string, ids: string[]) {
   });
 }
 
+/** Candidaturas com dados completos para o relatório executivo p/ empresas parceiras. */
+export function findApplicationsForCompanyReport(companyId: string, ids: string[]) {
+  return prisma.application.findMany({
+    where: { companyId, id: { in: ids } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      bootSize: true,
+      pantsSize: true,
+      shirtSize: true,
+      city: true,
+      state: true,
+      neighborhood: true,
+      cpf: true,
+      rg: true,
+      professionalSummary: true,
+      aiReasoning: true,
+      aiProfile: true,
+      aiScore: true,
+      status: true,
+      desiredRole: true,
+      createdAt: true,
+      job: {
+        select: {
+          id: true,
+          title: true,
+          code: true,
+          location: true,
+        },
+      },
+      company: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 /** Estado da IA de algumas candidaturas do tenant (polling leve da UI). */
 export function findAiStates(companyId: string, ids: string[]) {
   return prisma.application.findMany({
