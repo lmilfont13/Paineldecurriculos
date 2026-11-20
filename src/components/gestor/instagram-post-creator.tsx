@@ -286,7 +286,7 @@ export function InstagramPostCreator({
                     <img
                       src={model.src}
                       alt={model.label}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-[85%_35%]"
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate text-center">
                       {model.id === "model-official" ? "★ Oficial" : model.gender === "female" ? "Mulher" : "Homem"}

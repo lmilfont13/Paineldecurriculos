@@ -219,9 +219,8 @@ ${job.requirements || ""}
 
   parsed.caption = generateInstagramCaption(parsed);
 
-  // Seleciona um modelo visual inicial aleatório da lista
-  const randomModel = STOCK_MODELS[Math.floor(Math.random() * STOCK_MODELS.length)];
-  parsed.modelImage = randomModel.src;
+  // Trava rigorosamente no modelo oficial original Tarhget (padrão mestre)
+  parsed.modelImage = DEFAULT_POST_DATA.modelImage;
 
   return parsed;
 }

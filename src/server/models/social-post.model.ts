@@ -29,7 +29,7 @@ export const socialJobPostSchema = z.object({
   benefitsList: z.array(benefitItemSchema).default([]),
   ctaText: z.string().default("Acesse o link na nossa bio do Instagram para se candidatar! 👆"),
   disclaimer: z.string().default("Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal."),
-  modelImage: z.string().default("/images/templates/master-template-1080.png"),
+  modelImage: z.string().default("/images/templates/master-base-clean.png"),
   caption: z.string().default(""),
 });
 
@@ -60,17 +60,17 @@ export const DEFAULT_POST_DATA: SocialJobPostData = {
   ],
   ctaText: "Acesse o link na nossa bio do Instagram para se candidatar! 👆",
   disclaimer: "⚠️ Inscrições abertas! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal.",
-  modelImage: "/images/templates/official-model-clean.png",
+  modelImage: "/images/templates/master-base-clean.png",
   caption: "",
 };
 
 export const STOCK_MODELS = [
   {
     id: "model-official",
-    label: "Modelo Oficial Tarhget (Padrão Oficial)",
-    src: "/images/templates/official-model-clean.png",
+    label: "Modelo Oficial Tarhget (Padrão Original Travado)",
+    src: "/images/templates/master-base-clean.png",
     gender: "female",
-    tag: "Oficial Tarhget",
+    tag: "Oficial Tarhget (Recomendado)",
   },
   {
     id: "model-man-1",
