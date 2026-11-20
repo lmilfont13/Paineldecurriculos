@@ -87,9 +87,9 @@ export function InstagramPublishModal({
 
       checkInstagramConfigAction().then((cfg) => {
         setHasServerConfig(cfg.configured);
-        if (!cfg.configured && !savedAcc) {
+        if (!cfg.configured && !savedToken) {
           setShowConfigInputs(true);
-        } else if (cfg.configured || (savedAcc && savedToken)) {
+        } else if (cfg.configured || savedToken) {
           // Valida a conta automaticamente em background
           verifyInstagramAction({
             accountId: savedAcc || undefined,
@@ -149,7 +149,8 @@ export function InstagramPublishModal({
     setPublishStatus(null);
 
     try {
-      const imageBase64 = canvas.toDataURL("image/png");
+      // JPEG: é o formato que o Instagram aceita e deixa o envio bem menor.
+      const imageBase64 = canvas.toDataURL("image/jpeg", 0.92);
 
       // Salva no localStorage se preenchido manualmente
       if (accountId) localStorage.setItem("tarhget_ig_account_id", accountId);
@@ -418,7 +419,7 @@ export function InstagramPublishModal({
                           Credenciais do Instagram (Meta for Developers)
                         </span>
                         <a
-                          href="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/content-publishing"
+                          href="https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login"
                           target="_blank"
                           rel="noreferrer"
                           className="text-[11px] text-[#8f281e] hover:underline"
@@ -430,7 +431,7 @@ export function InstagramPublishModal({
                       <div className="space-y-2">
                         <div>
                           <label className="block text-[11px] font-semibold text-[#71717a] mb-1">
-                            ID da Conta Comercial do Instagram (Account ID)
+                            ID da conta do Instagram (opcional com token IG…)
                           </label>
                           <input
                             type="text"
@@ -443,13 +444,13 @@ export function InstagramPublishModal({
 
                         <div>
                           <label className="block text-[11px] font-semibold text-[#71717a] mb-1">
-                            Token de Acesso da Meta (Access Token com instagram_content_publish)
+                            Token de acesso (IGAA… do Login do Instagram ou EAA… da Meta)
                           </label>
                           <input
                             type="password"
                             value={accessToken}
                             onChange={(e) => setAccessToken(e.target.value)}
-                            placeholder="EAA..."
+                            placeholder="IGAA... ou EAA..."
                             className="w-full rounded-xl border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-mono focus:border-[#8f281e] focus:outline-none"
                           />
                         </div>
@@ -459,7 +460,7 @@ export function InstagramPublishModal({
                         <button
                           type="button"
                           onClick={handleVerify}
-                          disabled={isVerifying || !accountId || !accessToken}
+                          disabled={isVerifying || !accessToken}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-[#d4d4d8] bg-white px-3 py-1.5 text-xs font-medium text-[#18181b] hover:bg-[#f4f4f5] disabled:opacity-50"
                         >
                           {isVerifying ? (

@@ -15,7 +15,7 @@ export async function GET(
   const response = new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
-      "Content-Type": "image/png",
+      "Content-Type": "image/jpeg",
       "Cache-Control": "public, max-age=3600, immutable",
       "Access-Control-Allow-Origin": "*",
     },

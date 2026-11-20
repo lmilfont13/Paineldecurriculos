@@ -30,3 +30,21 @@ export function parseInstagram(input: string | null | undefined): { handle: stri
 export function instagramUrl(handle: string): string {
   return `https://www.instagram.com/${encodeURIComponent(handle)}/`;
 }
+
+/** Versão da API da Meta usada na publicação. */
+export const META_GRAPH_VERSION = "v27.0";
+
+/**
+ * Endereço da API conforme o tipo de token. Token do "Login do Instagram"
+ * (começa com IG, ex.: IGAA…) só funciona em graph.instagram.com; token do
+ * Facebook/Business (EAA…) usa graph.facebook.com.
+ */
+export function instagramApiBase(accessToken: string): string {
+  const host = /^IG/i.test(accessToken.trim()) ? "https://graph.instagram.com" : "https://graph.facebook.com";
+  return `${host}/${META_GRAPH_VERSION}`;
+}
+
+/** Token do Login do Instagram dispensa o ID da conta (descobrimos pelo /me). */
+export function isInstagramLoginToken(accessToken: string): boolean {
+  return /^IG/i.test(accessToken.trim());
+}
