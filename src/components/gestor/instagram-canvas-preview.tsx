@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Download, Copy, Check, Sparkles, RefreshCw, ZoomIn, Eye } from "lucide-react";
+import { Download, Copy, Check, Sparkles, RefreshCw, ZoomIn, Eye, Lock } from "lucide-react";
 import type { SocialJobPostData } from "@/server/models/social-post.model";
 import { InstagramPublishModal } from "@/components/gestor/instagram-publish-modal";
 
@@ -11,23 +11,19 @@ type Props = {
   onRandomModel?: () => void;
 };
 
-// Cores da paleta oficial do template
-const PALETTE = {
-  wine: "#401114",
-  wineDark: "#2d0a0d",
-  gold: "#a07a4a",
-  goldDark: "#856235",
-  goldLight: "#d8bea0",
-  ribbonBg: "#e9dac4",
-  ribbonWave: "#c4a47a",
-  cardBorder: "#ba9a6d",
-  cardBg: "#ffffff",
-  textDark: "#1f1412",
-  textMuted: "#4b3d39",
-  creamBg: "#f6f3eb",
+// Cores originais extraídas do master
+const COLORS = {
+  wine: "#431317",
+  wineDark: "#231012",
+  gold: "#a37a4a",
+  cardBg: "#fbf5e8",
+  cardBorder: "#3d211a",
+  textPrimary: "#1a100e",
+  textSecondary: "#271915",
+  ribbonBg: "#e9d9bf",
 };
 
-export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandomModel }: Props) {
+export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
@@ -35,150 +31,20 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
   const [canvasDataUrl, setCanvasDataUrl] = useState<string>("");
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
-  // Desenha os ícones vetoriais com precisão matemática no Canvas
-  const drawIcon = (
-    ctx: CanvasRenderingContext2D,
-    type: "pin" | "store" | "calendar" | "contract" | "clock" | "coins" | "meal" | "aid" | "health" | "phone",
-    cx: number,
-    cy: number,
-    size: number,
-    color: string
-  ) => {
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    const s = size / 24; // normalização baseada em grid 24x24
-
-    if (type === "pin") {
-      ctx.beginPath();
-      ctx.arc(cx, cy - 3 * s, 6 * s, Math.PI, 0, false);
-      ctx.lineTo(cx, cy + 9 * s);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(cx, cy - 3 * s, 2.2 * s, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (type === "store") {
-      ctx.beginPath();
-      ctx.rect(cx - 9 * s, cy - 4 * s, 18 * s, 13 * s);
-      ctx.stroke();
-      // toldo
-      ctx.beginPath();
-      ctx.moveTo(cx - 10 * s, cy - 4 * s);
-      ctx.lineTo(cx - 7 * s, cy - 10 * s);
-      ctx.lineTo(cx + 7 * s, cy - 10 * s);
-      ctx.lineTo(cx + 10 * s, cy - 4 * s);
-      ctx.closePath();
-      ctx.stroke();
-      // porta
-      ctx.beginPath();
-      ctx.rect(cx - 3 * s, cy + 2 * s, 6 * s, 7 * s);
-      ctx.stroke();
-    } else if (type === "calendar") {
-      ctx.beginPath();
-      ctx.rect(cx - 8 * s, cy - 7 * s, 16 * s, 16 * s);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx - 8 * s, cy - 2 * s);
-      ctx.lineTo(cx + 8 * s, cy - 2 * s);
-      ctx.stroke();
-      // pinos
-      ctx.beginPath();
-      ctx.moveTo(cx - 4 * s, cy - 9 * s);
-      ctx.lineTo(cx - 4 * s, cy - 6 * s);
-      ctx.moveTo(cx + 4 * s, cy - 9 * s);
-      ctx.lineTo(cx + 4 * s, cy - 6 * s);
-      ctx.stroke();
-    } else if (type === "contract") {
-      ctx.beginPath();
-      ctx.rect(cx - 7 * s, cy - 9 * s, 14 * s, 18 * s);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx - 4 * s, cy - 4 * s);
-      ctx.lineTo(cx + 4 * s, cy - 4 * s);
-      ctx.moveTo(cx - 4 * s, cy);
-      ctx.lineTo(cx + 4 * s, cy);
-      ctx.moveTo(cx - 4 * s, cy + 4 * s);
-      ctx.lineTo(cx + 1 * s, cy + 4 * s);
-      ctx.stroke();
-    } else if (type === "clock") {
-      ctx.beginPath();
-      ctx.arc(cx, cy, 9 * s, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - 5 * s);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx + 4 * s, cy);
-      ctx.stroke();
-    } else if (type === "coins") {
-      // pilhas de moedas
-      ctx.beginPath();
-      ctx.ellipse(cx - 3 * s, cy - 4 * s, 6 * s, 2.5 * s, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(cx - 3 * s, cy, 6 * s, 2.5 * s, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(cx - 3 * s, cy + 4 * s, 6 * s, 2.5 * s, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(cx + 4 * s, cy + 3 * s, 5 * s, 2.2 * s, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    } else if (type === "meal") {
-      // garfo, prato e faca
-      ctx.beginPath();
-      ctx.arc(cx, cy, 7 * s, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      // garfo
-      ctx.moveTo(cx - 10 * s, cy - 7 * s);
-      ctx.lineTo(cx - 10 * s, cy + 7 * s);
-      // faca
-      ctx.moveTo(cx + 10 * s, cy - 7 * s);
-      ctx.lineTo(cx + 10 * s, cy + 7 * s);
-      ctx.stroke();
-    } else if (type === "aid") {
-      // gráfico de barras com seta para cima
-      ctx.beginPath();
-      ctx.rect(cx - 8 * s, cy + 1 * s, 4 * s, 6 * s);
-      ctx.rect(cx - 2 * s, cy - 3 * s, 4 * s, 10 * s);
-      ctx.rect(cx + 4 * s, cy - 7 * s, 4 * s, 14 * s);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx - 8 * s, cy - 2 * s);
-      ctx.lineTo(cx + 8 * s, cy - 10 * s);
-      ctx.lineTo(cx + 4 * s, cy - 10 * s);
-      ctx.stroke();
-    } else if (type === "health") {
-      // coração com cruz de primeiros socorros
-      ctx.beginPath();
-      ctx.moveTo(cx, cy + 7 * s);
-      ctx.bezierCurveTo(cx - 10 * s, cy + 2 * s, cx - 10 * s, cy - 6 * s, cx, cy - 2 * s);
-      ctx.bezierCurveTo(cx + 10 * s, cy - 6 * s, cx + 10 * s, cy + 2 * s, cx, cy + 7 * s);
-      ctx.stroke();
-      // cruz central
-      ctx.beginPath();
-      ctx.moveTo(cx - 3 * s, cy + 1 * s);
-      ctx.lineTo(cx + 3 * s, cy + 1 * s);
-      ctx.moveTo(cx, cy - 2 * s);
-      ctx.lineTo(cx, cy + 4 * s);
-      ctx.stroke();
-    } else if (type === "phone") {
-      // celular corporativo
-      ctx.beginPath();
-      ctx.rect(cx - 6 * s, cy - 9 * s, 12 * s, 18 * s);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(cx, cy + 6 * s, 1.2 * s, 0, Math.PI * 2);
-      ctx.fill();
+  // Injeta Google Fonts no documento para garantir tipografia idêntica ao original
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const fontId = "google-fonts-cartaz-tarhget";
+      if (!document.getElementById(fontId)) {
+        const link = document.createElement("link");
+        link.id = fontId;
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700&family=Bebas+Neue&family=Montserrat:wght@700;800;900&display=swap";
+        document.head.appendChild(link);
+      }
     }
-
-    ctx.restore();
-  };
+  }, []);
 
   const renderCanvas = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -188,13 +54,18 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    // Garante que fontes externas estejam prontas
+    // Aguarda o carregamento das fontes Bebas Neue e Barlow Semi Condensed
     try {
       if (typeof document !== "undefined" && document.fonts) {
+        await Promise.allSettled([
+          document.fonts.load('36px "Bebas Neue"'),
+          document.fonts.load('18px "Barlow Semi Condensed"'),
+          document.fonts.load('bold 14px "Montserrat"'),
+        ]);
         await document.fonts.ready;
       }
     } catch {
-      // segue normalmente com fontes nativas
+      // continua com fontes do sistema
     }
 
     const W = 1080;
@@ -202,396 +73,255 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
     canvas.width = W;
     canvas.height = H;
 
-    // 1. FUNDO GERAL COM LEVE GRADIENTE QUENTE
-    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-    bgGrad.addColorStop(0, "#faf8f3");
-    bgGrad.addColorStop(0.5, "#f3ece0");
-    bgGrad.addColorStop(1, "#eae0cf");
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // 2. FOTO DA MODELO / AMBIENTE DE VAREJO (DIREITA)
-    // Tenta carregar a imagem do modelo
+    // 1. CARREGAR A ARTE MESTRE OFICIAL EM ALTA DEFINIÇÃO (1080x1080)
+    // O template mestre contém a modelo oficial, a loja de varejo iluminada, o logo Tarhget,
+    // a tipografia cursiva autêntica, a fita ondulada dourada e o botão vinho da bio com cursor.
+    const masterImg = new Image();
+    masterImg.crossOrigin = "anonymous";
     try {
-      const modelImg = new Image();
-      modelImg.crossOrigin = "anonymous";
       await new Promise<void>((resolve, reject) => {
-        modelImg.onload = () => resolve();
-        modelImg.onerror = () => reject();
-        modelImg.src = data.modelImage || "/images/templates/model-woman-retail-1.jpg";
+        masterImg.onload = () => resolve();
+        masterImg.onerror = () => reject();
+        masterImg.src = "/images/templates/master-template-1080.png";
       });
+      ctx.drawImage(masterImg, 0, 0, W, H);
+    } catch (err) {
+      console.warn("Template mestre carregando fallback:", err);
+    }
 
-      ctx.save();
-      // Desenha a imagem na metade direita com proporção harmoniosa
-      const imgTargetX = 490;
-      const imgTargetY = 0;
-      const imgTargetW = 590;
-      const imgTargetH = 750;
+    // 2. SE O USUÁRIO TROCOU DE MODELO (FOTO ALTERNATIVA OU UPLOAD)
+    const isCustomModel =
+      data.modelImage &&
+      !data.modelImage.includes("master-template-1080") &&
+      !data.modelImage.includes("model-official");
 
-      // Desenha a imagem cobrindo a área
-      const imgRatio = modelImg.width / modelImg.height;
-      const targetRatio = imgTargetW / imgTargetH;
-      let sx = 0;
-      let sy = 0;
-      let sw = modelImg.width;
-      let sh = modelImg.height;
+    if (isCustomModel) {
+      try {
+        const altModel = new Image();
+        altModel.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          altModel.onload = () => resolve();
+          altModel.onerror = () => reject();
+          altModel.src = data.modelImage;
+        });
 
-      if (imgRatio > targetRatio) {
-        sw = modelImg.height * targetRatio;
-        sx = (modelImg.width - sw) / 2;
-      } else {
-        sh = modelImg.width / targetRatio;
-        sy = (modelImg.height - sh) / 4; // foca um pouco mais no terço superior (rosto)
+        ctx.save();
+        const imgX = 510;
+        const imgY = 0;
+        const imgW = 570;
+        const imgH = 740;
+
+        // Proporção de preenchimento
+        const imgRatio = altModel.width / altModel.height;
+        const targetRatio = imgW / imgH;
+        let sx = 0;
+        let sy = 0;
+        let sw = altModel.width;
+        let sh = altModel.height;
+
+        if (imgRatio > targetRatio) {
+          sw = altModel.height * targetRatio;
+          sx = (altModel.width - sw) / 2;
+        } else {
+          sh = altModel.width / targetRatio;
+          sy = (altModel.height - sh) / 4;
+        }
+
+        ctx.drawImage(altModel, sx, sy, sw, sh, imgX, imgY, imgW, imgH);
+
+        // Degradê de fusão suave na lateral esquerda da foto alternativa
+        const fadeGrad = ctx.createLinearGradient(imgX, 0, imgX + 130, 0);
+        fadeGrad.addColorStop(0, "#f6f1e5");
+        fadeGrad.addColorStop(0.4, "rgba(246, 241, 229, 0.7)");
+        fadeGrad.addColorStop(1, "rgba(246, 241, 229, 0)");
+        ctx.fillStyle = fadeGrad;
+        ctx.fillRect(imgX, imgY, 130, imgH);
+        ctx.restore();
+      } catch {
+        // mantém a modelo original do master
       }
-
-      ctx.drawImage(modelImg, sx, sy, sw, sh, imgTargetX, imgTargetY, imgTargetW, imgTargetH);
-
-      // Gradiente suave de fusão na borda esquerda da foto para fundir com o fundo
-      const fadeGrad = ctx.createLinearGradient(imgTargetX, 0, imgTargetX + 160, 0);
-      fadeGrad.addColorStop(0, "#f7f2e8");
-      fadeGrad.addColorStop(0.3, "rgba(247, 242, 232, 0.7)");
-      fadeGrad.addColorStop(1, "rgba(247, 242, 232, 0)");
-      ctx.fillStyle = fadeGrad;
-      ctx.fillRect(imgTargetX, imgTargetY, 160, imgTargetH);
-
-      ctx.restore();
-    } catch {
-      // Se a imagem falhar ao carregar, desenha uma silhueta profissional estilizada
-      ctx.save();
-      ctx.fillStyle = "#ebdcc7";
-      ctx.fillRect(520, 40, 520, 680);
-      ctx.restore();
     }
 
-    // 3. LOGO OFICIAL TARHGET NO TOPO DIREITO
-    ctx.save();
-    try {
-      const logoImg = new Image();
-      logoImg.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        logoImg.onload = () => resolve();
-        logoImg.onerror = () => reject();
-        logoImg.src = "/images/tarhget-logo.png";
-      });
-      ctx.drawImage(logoImg, 860, 40, 170, 75);
-    } catch {
-      // Fallback em vetor puro idêntico à identidade Tarhget
-      ctx.beginPath();
-      ctx.arc(945, 68, 28, 0, Math.PI * 2);
-      ctx.strokeStyle = PALETTE.wine;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.font = "bold 32px 'Times New Roman', serif";
-      ctx.fillStyle = PALETTE.wine;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("T", 945, 67);
-
-      ctx.font = "bold 15px 'Montserrat', sans-serif";
-      ctx.letterSpacing = "3px";
-      ctx.fillText(companyName.toUpperCase(), 945, 112);
-    }
-    ctx.restore();
-
-    // 4. CABEÇALHO DO POST (TOPO ESQUERDO)
-    ctx.save();
-    ctx.textAlign = "left";
-
-    // Número da Vaga
+    // 3. CAMADA DINÂMICA: VAGA Nº {CÓDIGO} (TOPO ESQUERDO)
     if (data.jobCode) {
-      ctx.font = "bold 23px 'Montserrat', 'Inter', sans-serif";
-      ctx.fillStyle = PALETTE.textDark;
-      ctx.fillText(`VAGA Nº ${data.jobCode}`, 50, 64);
+      ctx.save();
+      // Limpa a área da vaga original com a cor de fundo exata
+      ctx.fillStyle = "#f6f1e5";
+      ctx.fillRect(44, 34, 210, 36);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = COLORS.textPrimary;
+      ctx.font = 'bold 25px "Bebas Neue", "Montserrat", Impact, sans-serif';
+      ctx.letterSpacing = "1.2px";
+      ctx.fillText(`VAGA Nº ${data.jobCode}`, 48, 58);
+      ctx.restore();
     }
 
-    // "OPORTUNIDADE" (Grande e imponente em Vinho Nobre)
-    ctx.font = "900 60px 'Montserrat', 'Impact', sans-serif";
-    ctx.fillStyle = PALETTE.wine;
-    ctx.fillText("OPORTUNIDADE", 50, 126);
-
-    // "DE EMPREGO" (Dourado sofisticado)
-    ctx.font = "900 60px 'Montserrat', 'Impact', sans-serif";
-    ctx.fillStyle = PALETTE.gold;
-    ctx.fillText("DE EMPREGO", 50, 185);
-
-    // "Estamos contratando!" (Letra cursiva elegante)
-    ctx.font = "700 44px 'Caveat', 'Dancing Script', 'Brush Script MT', cursive";
-    ctx.fillStyle = PALETTE.wineDark;
-    ctx.fillText(data.opportunitySubtitle || "Estamos contratando!", 52, 232);
-    ctx.restore();
-
-    // 5. CARD PRINCIPAL BRANCO COM BORDA DOURADA (INFORMAÇÕES DA VAGA)
-    const cardX = 46;
-    const cardY = 252;
-    const cardW = 540;
-    const cardH = 440;
-    const radius = 22;
+    // 4. CAMADA DINÂMICA: QUADRO DO CARGO DENTRO DO CARD
+    // Caixa arredondada com borda fina idêntica ao design original
+    const titleBoxX = 50;
+    const titleBoxY = 260;
+    const titleBoxW = 558;
+    const titleBoxH = 148;
+    const titleBoxRadius = 22;
 
     ctx.save();
-    // Sombra sutil do card
-    ctx.shadowColor = "rgba(0, 0, 0, 0.08)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 6;
-
-    // Fundo do Card
+    // Fundo da caixa com a textura e cor creme do card
     ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, radius);
-    ctx.fillStyle = PALETTE.cardBg;
+    ctx.roundRect(titleBoxX, titleBoxY, titleBoxW, titleBoxH, titleBoxRadius);
+    ctx.fillStyle = COLORS.cardBg;
     ctx.fill();
 
-    // Borda Dourada Elegante
-    ctx.shadowColor = "transparent";
-    ctx.lineWidth = 2.2;
-    ctx.strokeStyle = PALETTE.cardBorder;
+    // Borda escura elegante
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = COLORS.cardBorder;
     ctx.stroke();
 
-    // CONTEÚDO DENTRO DO CARD
-    // Título do Cargo (ex: CONSULTOR(A) MERCHAN JR)
+    // Título do Cargo em Bebas Neue (Condensed Bold)
     ctx.textAlign = "center";
-    ctx.fillStyle = PALETTE.wineDark;
-    ctx.font = "900 32px 'Montserrat', sans-serif";
+    ctx.fillStyle = COLORS.wineDark;
+    ctx.font = 'bold 36px "Bebas Neue", Impact, sans-serif';
+    ctx.letterSpacing = "0.5px";
 
-    // Quebra se o título for longo
-    const words = data.roleTitle.toUpperCase().split(" ");
-    let line1 = "";
+    const cleanTitle = data.roleTitle.toUpperCase().trim();
+    const words = cleanTitle.split(" ");
+    let line1 = cleanTitle;
     let line2 = "";
-    if (words.length <= 2) {
-      line1 = data.roleTitle.toUpperCase();
-    } else {
+
+    // Se o cargo for longo (mais de 18 caracteres ou mais de 2 palavras), divide em 2 linhas
+    if (cleanTitle.length > 18 && words.length >= 2) {
       const mid = Math.ceil(words.length / 2);
       line1 = words.slice(0, mid).join(" ");
       line2 = words.slice(mid).join(" ");
     }
 
+    const titleCenterX = titleBoxX + titleBoxW / 2;
     if (line2) {
-      ctx.fillText(line1, cardX + cardW / 2, cardY + 45);
-      ctx.fillText(line2, cardX + cardW / 2, cardY + 80);
+      ctx.fillText(line1, titleCenterX, titleBoxY + 48);
+      ctx.fillText(line2, titleCenterX, titleBoxY + 86);
     } else {
-      ctx.fillText(line1, cardX + cardW / 2, cardY + 54);
+      ctx.fillText(line1, titleCenterX, titleBoxY + 66);
     }
 
-    // Pílula do Segmento (ex: SEGMENTO DE COSMÉTICOS E CUIDADOS PESSOAIS)
-    const segmentY = line2 ? cardY + 112 : cardY + 86;
+    // Pílula do Segmento / Cliente (ex: SEGMENTO DE COSMÉTICOS E CUIDADOS PESSOAIS)
     if (data.segmentSubtitle) {
       const segText = data.segmentSubtitle.toUpperCase();
-      ctx.font = "700 12px 'Montserrat', sans-serif";
-      const segWidth = Math.min(ctx.measureText(segText).width + 30, cardW - 40);
+      ctx.font = 'bold 12px "Barlow Semi Condensed", "Montserrat", sans-serif';
+      ctx.letterSpacing = "0.8px";
+      const segMetrics = ctx.measureText(segText);
+      const pillWidth = Math.min(segMetrics.width + 26, titleBoxW - 40);
+      const pillY = titleBoxY + 116;
 
       ctx.beginPath();
-      ctx.roundRect(cardX + (cardW - segWidth) / 2, segmentY - 14, segWidth, 24, 6);
-      ctx.strokeStyle = "#d4bfa6";
-      ctx.fillStyle = "#f8f5ee";
+      ctx.roundRect(titleCenterX - pillWidth / 2, pillY - 14, pillWidth, 23, 6);
+      ctx.fillStyle = "#f7efe0";
+      ctx.strokeStyle = "#856d5c";
+      ctx.lineWidth = 1.2;
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = "#5c473f";
-      ctx.fillText(segText.slice(0, 48), cardX + cardW / 2, segmentY + 2);
+      ctx.fillStyle = "#2a1714";
+      ctx.fillText(segText.slice(0, 52), titleCenterX, pillY + 2);
     }
+    ctx.restore();
 
-    // 5 LINHAS DE DETALHES COM ÍCONES VETORIAIS CIRCULARES
-    const detailStartY = line2 ? cardY + 148 : cardY + 128;
-    const rowSpacing = 54;
+    // 5. CAMADA DINÂMICA: AS 5 LINHAS DE DETALHES DA OPERAÇÃO
+    // Os 5 ícones circulares bordô já estão gravados no master com máxima nitidez!
+    // Cobrimos somente a área de texto à direita dos ícones para desenhar os dados da vaga.
+    ctx.save();
+    ctx.fillStyle = "#fcf7ee";
+    ctx.fillRect(104, 420, 502, 288);
 
     const rows = [
-      {
-        icon: "pin" as const,
-        title: "Local",
-        text: data.location || "Fortaleza - CE",
-      },
-      {
-        icon: "store" as const,
-        title: "Roteiro",
-        text: data.route || "Cobertura de lojas conforme roteiro",
-      },
-      {
-        icon: "calendar" as const,
-        title: "Início",
-        text: data.startDate || "Imediato - a confirmar",
-      },
-      {
-        icon: "contract" as const,
-        title: "Contratação",
-        text: data.contractType || "Regime CLT – EFETIVO",
-      },
-      {
-        icon: "clock" as const,
-        title: "Escala",
-        text: data.workSchedule || "44h semanais",
-      },
+      { label: "Local:", value: data.location || "Fortaleza - CE", y: 454 },
+      { label: "Roteiro:", value: data.route || "Cobertura de lojas conforme roteiro", y: 510 },
+      { label: "Início:", value: data.startDate || "Imediato - data a confirmar", y: 566 },
+      { label: "Contratação:", value: data.contractType || "Regime CLT – EFETIVO", y: 622 },
+      { label: "Escala:", value: data.workSchedule || "44h semanais", y: 678 },
     ];
 
-    rows.forEach((row, idx) => {
-      const rowY = detailStartY + idx * rowSpacing;
-      const iconCX = cardX + 38;
-      const iconCY = rowY + 8;
-
-      // Círculo marrom/vinho do ícone
-      ctx.beginPath();
-      ctx.arc(iconCX, iconCY, 18, 0, Math.PI * 2);
-      ctx.fillStyle = PALETTE.wine;
-      ctx.fill();
-
-      // Desenha o ícone em branco dentro do círculo
-      drawIcon(ctx, row.icon, iconCX, iconCY, 18, "#ffffff");
-
-      // Texto do Detalhe (ex: "Local: Fortaleza - CE")
+    rows.forEach((r) => {
       ctx.textAlign = "left";
-      ctx.font = "bold 17px 'Montserrat', 'Inter', sans-serif";
-      ctx.fillStyle = PALETTE.textDark;
-      const prefix = `${row.title}: `;
-      ctx.fillText(prefix, cardX + 68, rowY + 14);
+      // Prefixo em negrito escuro (ex: "Local: ")
+      ctx.font = 'bold 18px "Barlow Semi Condensed", "Roboto Condensed", sans-serif';
+      ctx.fillStyle = COLORS.textPrimary;
+      ctx.fillText(r.label, 106, r.y);
 
-      const prefixWidth = ctx.measureText(prefix).width;
-      ctx.font = "500 16px 'Montserrat', 'Inter', sans-serif";
-      ctx.fillStyle = "#2e2320";
+      const prefixWidth = ctx.measureText(r.label + " ").width;
 
-      // Trunca o texto se exceder o limite do card
-      const maxTextWidth = cardW - 74 - prefixWidth;
-      let displayVal = row.text;
-      while (ctx.measureText(displayVal).width > maxTextWidth && displayVal.length > 5) {
-        displayVal = displayVal.slice(0, -2) + "…";
+      // Valor do detalhe em fonte condensada nítida
+      ctx.font = '600 17px "Barlow Semi Condensed", "Roboto Condensed", sans-serif';
+      ctx.fillStyle = COLORS.textSecondary;
+
+      let valText = r.value;
+      const maxWidth = 596 - (106 + prefixWidth);
+      while (ctx.measureText(valText).width > maxWidth && valText.length > 6) {
+        valText = valText.slice(0, -2) + "…";
       }
-      ctx.fillText(displayVal, cardX + 68 + prefixWidth, rowY + 14);
+      ctx.fillText(valText, 106 + prefixWidth, r.y);
     });
-
     ctx.restore();
 
-    // 6. FAIXA ONDULADA DOURADA INFERIOR (REMUNERAÇÃO E BENEFÍCIOS)
-    const waveY = 724;
+    // 6. CAMADA DINÂMICA: VALORES DA FAIXA DOURADA DE BENEFÍCIOS
+    // Os ícones dourados vetoriais e cabeçalhos permanecem idênticos ao modelo mestre.
+    // Atualizamos somente os 5 valores monetários e descrições inferiores.
     ctx.save();
+    // Limpa a faixa de valores anterior com o tom dourado exato da onda
+    ctx.fillStyle = COLORS.ribbonBg;
+    ctx.fillRect(50, 874, 980, 58);
 
-    // Desenha a curva ondulada estilizada
-    ctx.beginPath();
-    ctx.moveTo(0, waveY + 12);
-    ctx.bezierCurveTo(240, waveY - 24, 600, waveY + 28, W, waveY - 8);
-    ctx.lineTo(W, 955);
-    ctx.lineTo(0, 955);
-    ctx.closePath();
-
-    // Gradiente da faixa de benefícios
-    const ribbonGrad = ctx.createLinearGradient(0, waveY, 0, 955);
-    ribbonGrad.addColorStop(0, "#e8d8c2");
-    ribbonGrad.addColorStop(0.5, "#eedfcb");
-    ribbonGrad.addColorStop(1, "#dec8ab");
-    ctx.fillStyle = ribbonGrad;
-    ctx.fill();
-
-    // Linha dourada do contorno superior da onda
-    ctx.beginPath();
-    ctx.moveTo(0, waveY + 12);
-    ctx.bezierCurveTo(240, waveY - 24, 600, waveY + 28, W, waveY - 8);
-    ctx.strokeStyle = PALETTE.gold;
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-
-    // TÍTULO DA FAIXA: REMUNERAÇÃO E BENEFÍCIOS
-    ctx.textAlign = "center";
-    ctx.font = "900 28px 'Montserrat', sans-serif";
-    ctx.fillStyle = PALETTE.wine;
-    ctx.fillText("REMUNERAÇÃO E BENEFÍCIOS", W / 2, waveY + 48);
-
-    // 5 COLUNAS DE BENEFÍCIOS COM ÍCONES DOURADOS
-    const benefitCols = [
+    const benefitValues = [
       {
-        icon: "coins" as const,
-        label: "Salário:",
         value: data.salary || "R$ 1.839,41",
-        boldVal: true,
+        x: 138,
+        font: 'bold 20px "Bebas Neue", "Montserrat", sans-serif',
       },
       {
-        icon: "meal" as const,
-        label: "VALE REFEIÇÃO",
         value: data.mealVoucher || "R$ 35,00/dia",
-        boldVal: false,
+        x: 334,
+        font: 'bold 16px "Barlow Semi Condensed", "Montserrat", sans-serif',
       },
       {
-        icon: "aid" as const,
-        label: "AJUDA DE CUSTO",
         value: data.costAid || "(de acordo com o roteiro)",
-        boldVal: false,
+        x: 532,
+        font: '600 14px "Barlow Semi Condensed", sans-serif',
       },
       {
-        icon: "health" as const,
-        label: "CONVÊNIO MÉDICO",
         value: data.healthInsurance || "e odontológico",
-        boldVal: false,
+        x: 732,
+        font: '600 14px "Barlow Semi Condensed", sans-serif',
       },
       {
-        icon: "phone" as const,
-        label: "APARELHO",
         value: data.corporatePhone || "CORPORATIVO",
-        boldVal: false,
+        x: 932,
+        font: 'bold 17px "Bebas Neue", "Barlow Semi Condensed", sans-serif',
       },
     ];
 
-    const colWidth = W / 5;
-    benefitCols.forEach((col, idx) => {
-      const colCenterX = colWidth * idx + colWidth / 2;
-      const iconCY = waveY + 98;
-
-      // Ícone dourado/bronzeado
-      drawIcon(ctx, col.icon, colCenterX, iconCY, 26, PALETTE.goldDark);
-
-      // Label (ex: "VALE REFEIÇÃO")
-      ctx.textAlign = "center";
-      ctx.font = "800 13px 'Montserrat', sans-serif";
-      ctx.fillStyle = PALETTE.wineDark;
-      ctx.fillText(col.label, colCenterX, waveY + 145);
-
-      // Valor (ex: "R$ 35,00/dia")
-      ctx.font = col.boldVal
-        ? "800 16px 'Montserrat', sans-serif"
-        : "600 13px 'Montserrat', sans-serif";
-      ctx.fillStyle = PALETTE.textDark;
-
-      // Trunca se muito longo
-      let val = col.value;
-      if (val.length > 24) val = val.slice(0, 22) + "…";
-      ctx.fillText(val, colCenterX, waveY + 168);
-    });
-
-    ctx.restore();
-
-    // 7. RODAPÉ INFERIOR (CTA + AVISO)
-    const footerY = 960;
-    ctx.save();
-
-    // Pílula Vinho de Chamada para Ação (Acesse o link na nossa bio do Instagram...)
-    const ctaX = 110;
-    const ctaY = footerY + 8;
-    const ctaW = 860;
-    const ctaH = 48;
-    const ctaRadius = 24;
-
-    ctx.shadowColor = "rgba(64, 17, 20, 0.25)";
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 4;
-
-    ctx.beginPath();
-    ctx.roundRect(ctaX, ctaY, ctaW, ctaH, ctaRadius);
-    ctx.fillStyle = PALETTE.wine;
-    ctx.fill();
-
-    ctx.shadowColor = "transparent";
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 20px 'Montserrat', sans-serif";
-    ctx.fillText(data.ctaText || "Acesse o link na nossa bio do Instagram para se candidatar! 👆", W / 2, ctaY + 31);
-
-    // Disclaimer inferior com ícone de atenção
-    ctx.font = "600 13px 'Montserrat', sans-serif";
-    ctx.fillStyle = "#4a3b36";
-    ctx.fillText(
-      data.disclaimer || "⚠️ Atenção: Inscrições abertas! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal.",
-      W / 2,
-      ctaY + 80
-    );
-
+    ctx.fillStyle = COLORS.textPrimary;
+    benefitValues.forEach((b) => {
+      ctx.font = b.font;
+      let val = b.value;
+      if (val.length > 25) val = val.slice(0, 23) + "…";
+      ctx.fillText(val, b.x, 910);
+    });
     ctx.restore();
 
-    // Converte para dataUrl para permitir download e visualização rápida
+    // 7. CAMADA DINÂMICA: AVISO E DATA LIMITE INFERIOR
+    if (data.disclaimer) {
+      ctx.save();
+      ctx.fillStyle = "#f4efe1";
+      ctx.fillRect(120, 1028, 840, 36);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#33221b";
+      ctx.font = '600 13px "Barlow Semi Condensed", "Montserrat", sans-serif';
+      ctx.fillText(data.disclaimer, W / 2, 1048);
+      ctx.restore();
+    }
+
+    // Exporta dataUrl para visualização
     try {
       const dataUrl = canvas.toDataURL("image/png");
       setCanvasDataUrl(dataUrl);
@@ -600,7 +330,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
     }
 
     setIsRendering(false);
-  }, [data, companyName]);
+  }, [data]);
 
   useEffect(() => {
     renderCanvas();
@@ -617,7 +347,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
     link.click();
   };
 
-  // Copia a imagem direto para a área de transferência para colar no WhatsApp / Canva
+  // Copia a imagem direto para a área de transferência
   const handleCopyImage = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -633,7 +363,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
         setTimeout(() => setIsCopied(false), 2500);
       });
     } catch (err) {
-      console.warn("Clipboard write failed, downloading fallback:", err);
+      console.warn("Clipboard write falhou, baixando:", err);
       handleDownload();
     }
   };
@@ -644,12 +374,12 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
       <div className="mb-4 flex flex-wrap items-center justify-between w-full gap-2 px-1">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-[#faece7] px-3 py-1 text-xs font-bold text-[#8f281e]">
-            <Sparkles className="size-3.5" />
-            1080 × 1080 px (Feed Instagram)
+            <Lock className="size-3" />
+            Template Master Oficial 100% Travado (1080×1080)
           </span>
           {isRendering && (
             <span className="text-xs text-[#71717a] flex items-center gap-1">
-              <RefreshCw className="size-3 animate-spin" /> Renderizando...
+              <RefreshCw className="size-3 animate-spin" /> Atualizando...
             </span>
           )}
         </div>
@@ -659,7 +389,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
             <button
               type="button"
               onClick={onRandomModel}
-              title="Trocar foto do modelo de varejo"
+              title="Trocar modelo ou voltar para o oficial"
               className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] shadow-xs hover:bg-[#fafaf9] transition-colors"
             >
               <RefreshCw className="size-3.5 text-[#71717a]" />
@@ -670,7 +400,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
           <button
             type="button"
             onClick={handleCopyImage}
-            title="Copiar imagem para colar direto no WhatsApp, Telegram ou Canva"
+            title="Copiar imagem para colar direto no WhatsApp ou Telegram"
             className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] shadow-xs hover:bg-[#fafaf9] transition-colors"
           >
             {isCopied ? (
@@ -681,7 +411,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
             ) : (
               <>
                 <Copy className="size-3.5 text-[#71717a]" />
-                Copiar imagem
+                Copiar
               </>
             )}
           </button>
@@ -704,7 +434,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
             <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
             </svg>
-            Mandar para o Instagram
+            Instagram
           </button>
 
           <button
@@ -729,7 +459,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
         {/* Hover overlay hint */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <span className="bg-black/80 backdrop-blur text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
-            <Eye className="size-3.5" /> Clique para ampliar
+            <Eye className="size-3.5" /> Clique para ampliar 1080×1080
           </span>
         </div>
       </div>
@@ -745,7 +475,7 @@ export function InstagramCanvasPreview({ data, companyName = "TARHGET", onRandom
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-3 border-b border-[#e4e4e7]">
-              <span className="text-sm font-bold text-[#0a0a0a]">Pré-visualização 1080×1080 (HQ)</span>
+              <span className="text-sm font-bold text-[#0a0a0a]">Pré-visualização 1080×1080 (HD)</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"

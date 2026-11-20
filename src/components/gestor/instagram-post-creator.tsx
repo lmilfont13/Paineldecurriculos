@@ -288,8 +288,8 @@ export function InstagramPostCreator({
                       alt={model.label}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white font-medium truncate text-center">
-                      {model.gender === "female" ? "Mulher" : "Homem"}
+                    <div className="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[10px] text-white font-bold truncate text-center">
+                      {model.id === "model-official" ? "★ Oficial" : model.gender === "female" ? "Mulher" : "Homem"}
                     </div>
                     {isSelected && (
                       <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-[#8f281e] text-white">
