@@ -25,6 +25,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   CADASTROS_EXPORTADOS:         { label: "Planilha de cadastrados baixada", color: "bg-[#fef2f2] text-[#b91c1c]" },
   VITRINE_OCULTADO:             { label: "Contratado ocultado da página de vagas", color: "bg-[#f4f4f5] text-[#52525b]" },
   VITRINE_EXIBIDO:              { label: "Contratado voltou à página de vagas", color: "bg-[#f4f4f5] text-[#52525b]" },
+  VITRINE_AUTORIZACAO_PEDIDA:   { label: "Autorização pedida aos contratados", color: "bg-[#fff7ed] text-[#c2410c]" },
   NOTA_SALVA:                   { label: "Nota interna salva",      color: "bg-[#f1f0ed] text-[#71717a]" },
   CONFIGURACOES_ATUALIZADAS:    { label: "Configurações atualizadas", color: "bg-[#fce7f3] text-[#9d174d]" },
   RESPOSTAS_CORRIGIDAS:         { label: "Respostas corrigidas",    color: "bg-[#fff7ed] text-[#c2410c]" },

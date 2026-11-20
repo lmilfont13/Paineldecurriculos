@@ -298,6 +298,8 @@ model Application {
   showcaseConsent   Boolean?
   showcaseConsentAt DateTime?
   showcaseHidden    Boolean   @default(false)
+  /// Quando o gestor pediu a autorização (evita pedir duas vezes).
+  showcaseAskedAt   DateTime?
 
   job           Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   company       Company            @relation(fields: [companyId], references: [id])

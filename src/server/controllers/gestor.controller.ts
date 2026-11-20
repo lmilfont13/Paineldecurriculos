@@ -3,6 +3,7 @@ import { loadPortfolioReportData } from "@/server/services/portfolio.service";
 import { loadTalentDashboardReportData } from "@/server/services/talent-dashboard.service";
 import { titleCasePt } from "@/server/models/text.model";
 import "server-only";
+import { countShowcasePending } from "@/server/services/showcase.service";
 
 import { cache } from "react";
 
@@ -116,7 +117,8 @@ export async function getCandidaturasPageData(jobId?: string) {
   for (const app of applications) if (requeued.has(app.id)) app.aiState = "WAITING";
 
   const ages = await listCompanyApplicantAges(user.companyId);
-  return { applications, jobs: (await listCompanyJobs(user.companyId)).filter((j) => j.status === "OPEN"), companyName: company.name, ages };
+  const showcasePending = await countShowcasePending(user.companyId);
+  return { applications, jobs: (await listCompanyJobs(user.companyId)).filter((j) => j.status === "OPEN"), companyName: company.name, ages, showcasePending };
 }
 
 /** Busca avançada de CVs (nível Michelin): base aberta de currículos com busca facetada. */
