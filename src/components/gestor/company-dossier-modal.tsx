@@ -5,18 +5,16 @@ import {
   X,
   Copy,
   Check,
-  Download,
   Printer,
   Mail,
   Phone,
   Shirt,
-  User,
   MapPin,
   FileSpreadsheet,
   MessageCircle,
-  Eye,
-  FileText,
   Building2,
+  Calendar,
+  FileCheck2,
 } from "lucide-react";
 import type { CompanyCandidateDossierItem } from "@/server/services/application.service";
 
@@ -35,121 +33,88 @@ export function CompanyDossierModal({
   jobTitle,
   candidates,
 }: CompanyDossierModalProps) {
-  const [copiedMode, setCopiedMode] = useState<"whatsapp" | "full" | null>(null);
-  const [activeView, setActiveView] = useState<"cards" | "table" | "preview">("cards");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [activeView, setActiveView] = useState<"standard" | "cards" | "table">("standard");
 
   if (!open || candidates.length === 0) return null;
 
-  // Formata o texto perfeito para WhatsApp
-  function formatWhatsAppText(): string {
-    const header = [
-      `📋 *RELATÓRIO DE CANDIDATOS — ${companyName.toUpperCase()}*`,
-      jobTitle ? `*Vaga:* ${jobTitle}` : null,
-      `*Total:* ${candidates.length} candidato(s) selecionado(s)`,
-      `*Data:* ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const body = candidates
-      .map((c, i) => {
-        return [
-          `*${i + 1}. ${c.name.toUpperCase()}*`,
-          `📧 *E-mail:* ${c.email}`,
-          `📱 *Telefone:* ${c.phone}`,
-          `🦺 *Fardamento:* ${c.uniform.formatted}`,
-          `📍 *Localização:* ${c.location}`,
-          c.cpfMasked ? `📑 *CPF:* ${c.cpfMasked}` : null,
-          `📝 *Resumo Profissional:*\n${c.resumo}`,
-        ]
-          .filter(Boolean)
-          .join("\n");
-      })
-      .join("\n\n─────────────────────────────────\n\n");
-
-    const footer = [
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `Documento gerado para conferência e alinhamento de fardamento e contratação.`,
+  // Formata o candidato no padrão oficial exato da Ever e Grupo GPS
+  function formatCandidateStandard(c: CompanyCandidateDossierItem): string {
+    return [
+      `Nome completo: ${c.name}`,
+      `CPF: ${c.cpf}`,
+      `RG: ${c.rg}`,
+      `Data de nascimento: ${c.birthDateFormatted}`,
+      `• CONTATOS:`,
+      `Telefone: ${c.phone}`,
+      `E-mail: ${c.email}`,
+      `• INFORMAÇÕES ADICIONAIS`,
+      `Uniforme: ${c.uniform.formatted}`,
+      `Possui conta no Itaú?: ${c.itauAccount}`,
+      `Endereço completo: ${c.fullAddress}`,
+      `• PARECER: ${c.parecerText}`,
+      `Principais Clientes/Marcas Atendidas: ${c.companiesAttended}`,
     ].join("\n");
-
-    return `${header}\n\n${body}\n\n${footer}`;
   }
 
-  // Formata o texto formal para E-mail
-  function formatFullEmailText(): string {
-    const header = [
-      `RELATÓRIO DE CANDIDATOS SELECIONADOS`,
-      `Empresa: ${companyName}`,
-      jobTitle ? `Vaga: ${jobTitle}` : null,
-      `Quantidade: ${candidates.length}`,
-      `Data de emissão: ${new Intl.DateTimeFormat("pt-BR").format(new Date())}`,
-      `=================================================================`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const body = candidates
-      .map((c, i) => {
-        return [
-          `[${i + 1}] ${c.name.toUpperCase()}`,
-          `- E-mail: ${c.email}`,
-          `- Telefone: ${c.phone}`,
-          `- Fardamento: ${c.uniform.formatted}`,
-          `- Localidade: ${c.location}`,
-          c.cpfMasked ? `- CPF: ${c.cpfMasked}` : null,
-          `- Resumo do Perfil:`,
-          `  ${c.resumo.replace(/\n/g, "\n  ")}`,
-        ]
-          .filter(Boolean)
-          .join("\n");
-      })
-      .join("\n\n-----------------------------------------------------------------\n\n");
-
-    return `${header}\n\n${body}`;
+  // Formata todos os candidatos selecionados no padrão Ever / GPS
+  function formatAllCandidatesStandard(): string {
+    return candidates
+      .map((c) => formatCandidateStandard(c))
+      .join("\n\n──────────────────────────────────────────────\n\n");
   }
 
-  function handleCopy(mode: "whatsapp" | "full") {
-    const text = mode === "whatsapp" ? formatWhatsAppText() : formatFullEmailText();
+  function handleCopyAll() {
+    const text = formatAllCandidatesStandard();
     navigator.clipboard.writeText(text).then(() => {
-      setCopiedMode(mode);
-      setTimeout(() => setCopiedMode(null), 3000);
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 3000);
+    });
+  }
+
+  function handleCopySingle(c: CompanyCandidateDossierItem) {
+    const text = formatCandidateStandard(c);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(c.id);
+      setTimeout(() => setCopiedId(null), 3000);
     });
   }
 
   function handleExportCsv() {
     const headers = [
-      "Nome",
-      "E-mail",
+      "Nome Completo",
+      "CPF",
+      "RG",
+      "Data de Nascimento",
       "Telefone",
-      "Fardamento Completo",
-      "Bota",
-      "Calça",
-      "Camisa",
-      "Cidade / UF",
-      "Vaga",
-      "Resumo Profissional",
+      "E-mail",
+      "Uniforme",
+      "Conta no Itaú",
+      "Endereço Completo",
+      "Parecer",
+      "Principais Clientes/Marcas Atendidas",
     ];
 
     const rows = candidates.map((c) => [
       `"${c.name.replace(/"/g, '""')}"`,
-      `"${c.email.replace(/"/g, '""')}"`,
+      `"${c.cpf.replace(/"/g, '""')}"`,
+      `"${c.rg.replace(/"/g, '""')}"`,
+      `"${c.birthDateFormatted.replace(/"/g, '""')}"`,
       `"${c.phone.replace(/"/g, '""')}"`,
+      `"${c.email.replace(/"/g, '""')}"`,
       `"${c.uniform.formatted.replace(/"/g, '""')}"`,
-      `"${c.uniform.bootSize || ""}"`,
-      `"${c.uniform.pantsSize || ""}"`,
-      `"${c.uniform.shirtSize || ""}"`,
-      `"${c.location.replace(/"/g, '""')}"`,
-      `"${(c.jobTitle || jobTitle || "").replace(/"/g, '""')}"`,
-      `"${c.resumo.replace(/\r?\n/g, " ").replace(/"/g, '""')}"`,
+      `"${c.itauAccount.replace(/"/g, '""')}"`,
+      `"${c.fullAddress.replace(/"/g, '""')}"`,
+      `"${c.parecerText.replace(/\r?\n/g, " ").replace(/"/g, '""')}"`,
+      `"${c.companiesAttended.replace(/\r?\n/g, " ").replace(/"/g, '""')}"`,
     ]);
 
-    // BOM UTF-8 (\uFEFF) para abrir no Excel em português sem quebrar caracteres
     const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map((r) => r.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const filename = `candidatos_${companyName.toLowerCase().replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `resumo_candidatos_${companyName.toLowerCase().replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.setAttribute("href", url);
     link.setAttribute("download", filename);
     document.body.appendChild(link);
@@ -164,17 +129,17 @@ export function CompanyDossierModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/70 p-3 sm:p-6 backdrop-blur-xs overflow-y-auto print:p-0 print:bg-white"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/70 p-2 sm:p-4 md:p-6 backdrop-blur-xs overflow-y-auto print:p-0 print:bg-white"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="relative my-auto flex max-h-[92vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-300 bg-white shadow-2xl overflow-hidden print:max-h-none print:shadow-none print:border-none"
+        className="relative my-auto flex max-h-[94vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-300 bg-white shadow-2xl overflow-hidden print:max-h-none print:shadow-none print:border-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* CABEÇALHO DO MODAL */}
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-5 py-4 print:bg-white print:border-b-2 print:border-slate-800">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-5 py-3.5 print:bg-white print:border-b-2 print:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white shadow-xs print:hidden">
               <Building2 className="size-5" />
@@ -182,7 +147,7 @@ export function CompanyDossierModal({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Dossiê Executivo para Empresa
+                  Modelo Oficial p/ Envio (Padrão Ever / Grupo GPS)
                 </span>
                 <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 tabular-nums">
                   {candidates.length} candidato{candidates.length > 1 ? "s" : ""}
@@ -194,9 +159,20 @@ export function CompanyDossierModal({
             </div>
           </div>
 
-          {/* Botões de Ação de Topo */}
+          {/* Alternância de Abas e Fechar */}
           <div className="flex items-center gap-2 print:hidden">
             <div className="hidden sm:flex rounded-lg border border-slate-300 bg-white p-0.5 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveView("standard")}
+                className={`px-3 py-1 rounded-md transition ${
+                  activeView === "standard"
+                    ? "bg-slate-800 text-white font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Padrão Ever/GPS
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveView("cards")}
@@ -206,7 +182,7 @@ export function CompanyDossierModal({
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Fichas
+                Fichas Visuais
               </button>
               <button
                 type="button"
@@ -218,17 +194,6 @@ export function CompanyDossierModal({
                 }`}
               >
                 Tabela
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveView("preview")}
-                className={`px-3 py-1 rounded-md transition ${
-                  activeView === "preview"
-                    ? "bg-slate-800 text-white font-bold"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Prévia Texto
               </button>
             </div>
 
@@ -243,65 +208,48 @@ export function CompanyDossierModal({
           </div>
         </header>
 
-        {/* BARRA DE AÇÕES RÁPIDAS DE COMPARTILHAMENTO */}
+        {/* BARRA DE AÇÕES PRINCIPAIS */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-xs print:hidden">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => handleCopy("whatsapp")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 font-bold transition shadow-2xs ${
-                copiedMode === "whatsapp"
+              onClick={handleCopyAll}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 font-bold transition shadow-xs ${
+                copiedAll
                   ? "bg-emerald-600 text-white"
                   : "bg-emerald-600 text-white hover:bg-emerald-700"
               }`}
+              title="Copiar todos os candidatos no padrão exato solicitado pelas empresas"
             >
-              {copiedMode === "whatsapp" ? (
+              {copiedAll ? (
                 <>
-                  <Check className="size-3.5" />
-                  <span>Copiado p/ WhatsApp!</span>
+                  <Check className="size-4" />
+                  <span>Copiado com Sucesso!</span>
                 </>
               ) : (
                 <>
-                  <MessageCircle className="size-3.5" />
-                  <span>Copiar p/ WhatsApp</span>
+                  <Copy className="size-4" />
+                  <span>Copiar Modelo Padrão ({candidates.length})</span>
                 </>
               )}
             </button>
 
             <button
               type="button"
-              onClick={() => handleCopy("full")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
+              title="Baixar planilha compatível com Excel (.csv UTF-8)"
             >
-              {copiedMode === "full" ? (
-                <>
-                  <Check className="size-3.5 text-emerald-600" />
-                  <span>Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3.5 text-slate-500" />
-                  <span>Copiar p/ E-mail</span>
-                </>
-              )}
+              <FileSpreadsheet className="size-3.5 text-emerald-700" />
+              <span>Baixar Excel / CSV</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleExportCsv}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
-              title="Baixar planilha compatível com Excel (.csv UTF-8)"
-            >
-              <FileSpreadsheet className="size-3.5 text-emerald-700" />
-              <span>Baixar Planilha</span>
-            </button>
-
-            <button
-              type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
               title="Imprimir ou Salvar em PDF"
             >
               <Printer className="size-3.5 text-slate-600" />
@@ -310,85 +258,169 @@ export function CompanyDossierModal({
           </div>
         </div>
 
-        {/* CONTEÚDO SCROLLÁVEL */}
+        {/* CONTEÚDO PRINCIPAL */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           
-          {/* VISUALIZAÇÃO 1: FICHAS EXECUTIVAS (CARDS) */}
+          {/* VISUALIZAÇÃO 1: PADRÃO OFICIAL EVER / GRUPO GPS (EXATAMENTE O FORMATO DO CLIENTE) */}
+          {activeView === "standard" && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex items-center justify-between">
+                <span>
+                  💡 <strong>Modelo Padronizado:</strong> CPF e RG sem asteriscos para avaliação admissional, fardamento completo, endereço e parecer com destaques do segmento.
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Pronto para WhatsApp ou E-mail
+                </span>
+              </div>
+
+              {candidates.map((c, idx) => (
+                <div
+                  key={c.id}
+                  className="rounded-xl border border-slate-300 bg-white shadow-xs overflow-hidden"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2 text-xs">
+                    <span className="font-bold text-slate-700">
+                      Candidato #{idx + 1} · {c.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingle(c)}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
+                    >
+                      {copiedId === c.id ? (
+                        <>
+                          <Check className="size-3 text-emerald-600" />
+                          <span className="text-emerald-700">Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3 text-slate-500" />
+                          <span>Copiar só este</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-800 p-4 select-all bg-white overflow-x-auto">
+                    {formatCandidateStandard(c)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* VISUALIZAÇÃO 2: FICHAS VISUAIS CORPORATIVAS */}
           {activeView === "cards" && (
             <div className="grid grid-cols-1 gap-4">
               {candidates.map((c, idx) => (
                 <article
                   key={c.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-slate-300 print:border-b print:rounded-none print:shadow-none"
+                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300 print:border-b print:rounded-none print:shadow-none"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-full bg-slate-800 text-[11px] font-bold text-white">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-3 mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-slate-800 text-xs font-bold text-white">
                         {idx + 1}
                       </span>
-                      <h3 className="text-base font-extrabold uppercase tracking-tight text-slate-900">
-                        {c.name}
-                      </h3>
+                      <div>
+                        <h3 className="text-base font-extrabold uppercase tracking-tight text-slate-900">
+                          {c.name}
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Nascimento: <strong>{c.birthDateFormatted}</strong>
+                        </p>
+                      </div>
                     </div>
-                    {c.jobTitle && (
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                        {c.jobTitle}
-                      </span>
-                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingle(c)}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition print:hidden"
+                    >
+                      {copiedId === c.id ? (
+                        <>
+                          <Check className="size-3 text-emerald-600" />
+                          <span className="text-emerald-700">Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3 text-slate-500" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 text-xs">
-                    {/* Contatos */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-slate-700">
-                        <Mail className="size-3.5 text-slate-400 shrink-0" />
-                        <a href={`mailto:${c.email}`} className="truncate hover:underline">
-                          {c.email}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-700">
-                        <Phone className="size-3.5 text-slate-400 shrink-0" />
-                        <span className="font-semibold">{c.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <MapPin className="size-3.5 text-slate-400 shrink-0" />
-                        <span>{c.location}</span>
-                      </div>
-                    </div>
-
-                    {/* Fardamento */}
-                    <div className="rounded-lg bg-amber-50/70 border border-amber-200/80 p-2.5">
-                      <div className="flex items-center gap-1.5 font-bold text-amber-900 uppercase tracking-wider text-[10px] mb-1">
-                        <Shirt className="size-3 text-amber-700" />
-                        <span>Fardamento & Medidas</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 leading-snug">
-                        {c.uniform.formatted}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 text-xs">
+                    {/* Documentos */}
+                    <div className="rounded-lg bg-slate-50 p-3 border border-slate-200/80 space-y-1">
+                      <p className="font-bold uppercase text-[10px] text-slate-500 tracking-wider">
+                        Documentos (Sem Asteriscos)
+                      </p>
+                      <p className="text-slate-800">
+                        CPF: <strong className="font-mono text-slate-900">{c.cpf}</strong>
+                      </p>
+                      <p className="text-slate-800">
+                        RG: <strong className="font-mono text-slate-900">{c.rg}</strong>
                       </p>
                     </div>
 
-                    {/* Dados Adicionais */}
-                    <div className="space-y-1 text-slate-600">
-                      {c.cpfMasked && (
-                        <div>
-                          CPF: <strong className="font-mono text-slate-800">{c.cpfMasked}</strong>
-                        </div>
-                      )}
-                      {c.rg && (
-                        <div>
-                          RG: <strong className="font-mono text-slate-800">{c.rg}</strong>
-                        </div>
-                      )}
+                    {/* Contatos */}
+                    <div className="rounded-lg bg-slate-50 p-3 border border-slate-200/80 space-y-1">
+                      <p className="font-bold uppercase text-[10px] text-slate-500 tracking-wider">
+                        Contatos
+                      </p>
+                      <div className="flex items-center gap-1.5 text-slate-800">
+                        <Phone className="size-3 text-slate-400" />
+                        <span className="font-semibold">{c.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-700">
+                        <Mail className="size-3 text-slate-400" />
+                        <span className="truncate">{c.email}</span>
+                      </div>
+                    </div>
+
+                    {/* Fardamento & Itaú */}
+                    <div className="rounded-lg bg-amber-50/70 p-3 border border-amber-200/80 space-y-1">
+                      <p className="font-bold uppercase text-[10px] text-amber-900 tracking-wider">
+                        Fardamento & Itaú
+                      </p>
+                      <p className="font-bold text-slate-800">
+                        {c.uniform.formatted}
+                      </p>
+                      <p className="text-slate-700">
+                        Conta Itaú?: <strong>{c.itauAccount}</strong>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Resumo do Candidato */}
-                  <div className="mt-3 border-t border-slate-100 pt-2.5">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Resumo Profissional / Qualificações
+                  {/* Endereço Completo */}
+                  <div className="mt-3 text-xs text-slate-700">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Endereço Completo:
                     </p>
-                    <p className="text-xs leading-relaxed text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                      {c.resumo}
+                    <p className="mt-0.5 text-slate-800 font-medium">
+                      {c.fullAddress}
+                    </p>
+                  </div>
+
+                  {/* Parecer */}
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      • PARECER:
+                    </p>
+                    <p className="text-xs leading-relaxed text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-200/80">
+                      {c.parecerText}
+                    </p>
+                  </div>
+
+                  {/* Principais Clientes / Marcas */}
+                  <div className="mt-2.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">
+                      Principais Clientes / Marcas Atendidas:
+                    </p>
+                    <p className="text-xs text-slate-700 font-medium">
+                      {c.companiesAttended}
                     </p>
                   </div>
                 </article>
@@ -396,7 +428,7 @@ export function CompanyDossierModal({
             </div>
           )}
 
-          {/* VISUALIZAÇÃO 2: TABELA CORPORATIVA */}
+          {/* VISUALIZAÇÃO 3: TABELA CORPORATIVA */}
           {activeView === "table" && (
             <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto shadow-xs">
               <table className="w-full text-left text-xs border-collapse">
@@ -404,11 +436,13 @@ export function CompanyDossierModal({
                   <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-700">
                     <th className="px-3.5 py-2.5">#</th>
                     <th className="px-3.5 py-2.5">Nome</th>
-                    <th className="px-3.5 py-2.5">E-mail</th>
+                    <th className="px-3.5 py-2.5">CPF</th>
+                    <th className="px-3.5 py-2.5">RG</th>
+                    <th className="px-3.5 py-2.5">Nascimento</th>
                     <th className="px-3.5 py-2.5">Telefone</th>
-                    <th className="px-3.5 py-2.5">Fardamento</th>
-                    <th className="px-3.5 py-2.5">Local</th>
-                    <th className="px-3.5 py-2.5">Resumo</th>
+                    <th className="px-3.5 py-2.5">Uniforme</th>
+                    <th className="px-3.5 py-2.5">Conta Itaú?</th>
+                    <th className="px-3.5 py-2.5 text-right">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -418,18 +452,32 @@ export function CompanyDossierModal({
                       <td className="px-3.5 py-2.5 font-bold text-slate-900 whitespace-nowrap">
                         {c.name}
                       </td>
-                      <td className="px-3.5 py-2.5 text-slate-600">{c.email}</td>
-                      <td className="px-3.5 py-2.5 font-semibold text-slate-700 whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 font-mono text-slate-800 whitespace-nowrap">
+                        {c.cpf}
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono text-slate-800 whitespace-nowrap">
+                        {c.rg}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-slate-700 whitespace-nowrap">
+                        {c.birthDateFormatted}
+                      </td>
+                      <td className="px-3.5 py-2.5 font-semibold text-slate-800 whitespace-nowrap">
                         {c.phone}
                       </td>
                       <td className="px-3.5 py-2.5 font-bold text-amber-900 bg-amber-50/40 whitespace-nowrap">
                         {c.uniform.formatted}
                       </td>
-                      <td className="px-3.5 py-2.5 text-slate-600 whitespace-nowrap">
-                        {c.location}
+                      <td className="px-3.5 py-2.5 text-slate-700 whitespace-nowrap">
+                        {c.itauAccount}
                       </td>
-                      <td className="px-3.5 py-2.5 text-slate-600 max-w-xs truncate" title={c.resumo}>
-                        {c.resumo}
+                      <td className="px-3.5 py-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleCopySingle(c)}
+                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100 shadow-2xs transition"
+                        >
+                          {copiedId === c.id ? "Copiado!" : "Copiar"}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -437,33 +485,12 @@ export function CompanyDossierModal({
               </table>
             </div>
           )}
-
-          {/* VISUALIZAÇÃO 3: PRÉVIA DO TEXTO (WHATSAPP / E-MAIL) */}
-          {activeView === "preview" && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                  Prévia do Texto Formatado para WhatsApp
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy("whatsapp")}
-                  className="text-xs font-bold text-emerald-700 hover:underline"
-                >
-                  Copiar este texto
-                </button>
-              </div>
-              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-800 bg-slate-900 text-slate-100 p-4 rounded-xl border border-slate-700 max-h-[500px] overflow-y-auto">
-                {formatWhatsAppText()}
-              </pre>
-            </div>
-          )}
         </div>
 
         {/* RODAPÉ DO MODAL */}
         <footer className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500 print:hidden">
           <span>
-            {candidates.length} candidato{candidates.length > 1 ? "s" : ""} pronto{candidates.length > 1 ? "s" : ""} para envio.
+            {candidates.length} candidato{candidates.length > 1 ? "s" : ""} formatado{candidates.length > 1 ? "s" : ""} no padrão Ever / GPS.
           </span>
           <button
             type="button"

@@ -63,6 +63,9 @@ import {
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { formatPhone } from "@/lib/phone";
 import { titleCasePt } from "@/server/models/text.model";
+import { formatBirthDate } from "@/server/models/age.model";
+import { formatAddress } from "@/server/models/address.model";
+import { readTenure } from "@/server/models/tenure.model";
 import {
   buildInfoAnswerSchema,
   knownInfoOf,
@@ -1765,6 +1768,9 @@ export async function getApplicationSummaries(
 export type CompanyCandidateDossierItem = {
   id: string;
   name: string;
+  cpf: string;
+  rg: string;
+  birthDateFormatted: string;
   email: string;
   phone: string;
   rawPhone: string | null;
@@ -1774,17 +1780,24 @@ export type CompanyCandidateDossierItem = {
     shirtSize: string | null;
     formatted: string;
   };
-  location: string;
-  resumo: string;
+  itauAccount: string;
+  fullAddress: string;
+  familyInfo: string;
+  vehicleInfo: string;
+  cnhInfo: string;
+  parecerText: string;
+  companiesAttended: string;
   jobTitle: string;
   status: string;
+  location: string;
+  resumo: string;
   cpfMasked: string | null;
-  rg: string | null;
 };
 
 /**
- * Dossiê de candidatos selecionados para envio a empresas clientes / parceiras.
- * Reúne Nome, E-mail, Telefone, Fardamento (bota, calça, camisa) e Resumo Profissional.
+ * Dossiê de candidatos selecionados para envio a empresas clientes / parceiras (Padrão Ever e GPS).
+ * Reúne Nome, CPF e RG sem asteriscos, Nascimento, Telefone, E-mail, Fardamento, Conta Itaú,
+ * Endereço completo, Parecer com segmento e veículo próprio, e Principais Clientes/Marcas Atendidas.
  */
 export async function getCompanyReportDossier(
   companyId: string,
@@ -1807,18 +1820,110 @@ export async function getCompanyReportDossier(
 
     const uniformFormatted = uniformParts.length > 0 ? uniformParts.join(" · ") : "Não informado";
 
-    const resumo =
+    const locParts = [app.city, app.state].filter(Boolean);
+    const location = locParts.length > 0 ? locParts.join(" / ") : "Não informada";
+
+    const fullAddress =
+      formatAddress(app) ||
+      [app.neighborhood, [app.city, app.state].filter(Boolean).join("/")].filter(Boolean).join(" - ") ||
+      "Não informado";
+
+    const birthDateFormatted = formatBirthDate(app.birthDate) || "Não informada";
+
+    // CPF e RG limpos sem asteriscos, pois são avaliados no compliance admissional (Ever / GPS)
+    const cpfClean = app.cpf ? app.cpf.replace(/\D/g, "") || app.cpf : "Não informado";
+    const rgClean = app.rg ? app.rg.trim() : "Não informado";
+
+    // Informações de família / estado civil
+    const marital = app.maritalStatus?.trim() || "Solteiro(a)";
+    let children = "";
+    if (app.hasChildren === true) {
+      children =
+        app.childrenCount && app.childrenCount > 0
+          ? `${app.childrenCount} Filho${app.childrenCount > 1 ? "s" : ""}`
+          : "Com filhos";
+    } else if (app.hasChildren === false) {
+      children = "Sem filhos";
+    }
+    const familyInfo = [marital, children].filter(Boolean).join(" ");
+
+    // Conta no Itaú / Bancos cadastrados
+    const itauAnswer = app.answers?.find((a) => /ita[uú]|conta/i.test(a.field?.label || ""));
+    let itauAccount = "Não";
+    if (itauAnswer) {
+      const val = itauAnswer.value.trim();
+      itauAccount = /sim/i.test(val) ? "Sim" : /n[aã]o/i.test(val) ? "Não" : val;
+    } else if (app.bankNames && /ita[uú]/i.test(app.bankNames)) {
+      itauAccount = "Sim";
+    } else if (app.hasBankAccount === "no") {
+      itauAccount = "Não";
+    } else if (app.hasBankAccount === "yes" && app.bankNames) {
+      itauAccount = `Não (Possui ${app.bankNames})`;
+    }
+
+    // Veículo Próprio (destaque exigido no parecer)
+    const vehicleAnswer = app.answers?.find((a) =>
+      /ve[ií]culo|moto|carro|transporte|condu[çc][ãa]o/i.test(a.field?.label || "")
+    );
+    let vehicleInfo = "Não possui veículo próprio";
+    if (vehicleAnswer) {
+      const v = vehicleAnswer.value.trim().toLowerCase();
+      if (v.includes("sim") || v.includes("possui") || v.includes("moto") || v.includes("carro")) {
+        vehicleInfo = `Possui veículo próprio (${vehicleAnswer.value.trim()})`;
+      } else if (v.includes("não") || v.includes("nao")) {
+        vehicleInfo = "Não possui veículo próprio";
+      } else {
+        vehicleInfo = vehicleAnswer.value.trim();
+      }
+    } else if (/n[aã]o possui ve[íi]culo|sem ve[íi]culo|sem moto|sem carro/i.test(app.resumeText || "")) {
+      vehicleInfo = "Não possui veículo próprio";
+    } else if (/possui ve[íi]culo|ve[íi]culo pr[oó]prio|moto pr[oó]pria|carro pr[oó]prio/i.test(app.resumeText || "")) {
+      vehicleInfo = "Possui veículo próprio";
+    }
+
+    // CNH
+    const cnhInfo = app.hasCnh ? `Possui CNH categoria ${app.hasCnh}` : "Não possui CNH";
+
+    // Principais Clientes / Marcas Atendidas (extraído de aiTenure ou currículo)
+    const tenure = readTenure(app.aiTenure, app.resumeText);
+    const tenureCompanies = tenure?.empresas && tenure.empresas.length > 0 ? tenure.empresas : [];
+    let companiesAttended = "";
+    if (tenureCompanies.length > 0) {
+      const items = tenureCompanies.slice(0, 6).map((c) => `${c.empresa} (${c.duracaoFormatada})`);
+      companiesAttended =
+        items.length === 1 ? items[0] : `${items.slice(0, -1).join(", ")} e ${items[items.length - 1]}`;
+    } else {
+      companiesAttended = "Experiências detalhadas no currículo em anexo";
+    }
+
+    // Parecer enriquecido no padrão Ever / GPS
+    const baseSummary =
       app.professionalSummary?.trim() ||
       app.aiReasoning?.trim() ||
       app.aiProfile?.trim() ||
-      "Sem resumo cadastrado.";
+      "Possui experiência profissional sólida e perfil alinhado aos requisitos da vaga.";
 
-    const locParts = [app.city, app.state].filter(Boolean);
-    const location = locParts.length > 0 ? locParts.join(" / ") : "Não informada";
+    const cnhVehicleParts = [
+      cnhInfo,
+      vehicleInfo ? `${vehicleInfo}` : null,
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    const parecerText = [
+      familyInfo ? `${familyInfo} |` : null,
+      baseSummary,
+      cnhVehicleParts ? `${cnhVehicleParts}.` : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return {
       id: app.id,
       name: app.name,
+      cpf: cpfClean,
+      rg: rgClean,
+      birthDateFormatted,
       email: app.email,
       phone: formatPhone(app.phone) || app.phone || "Não informado",
       rawPhone: app.phone,
@@ -1828,12 +1933,18 @@ export async function getCompanyReportDossier(
         shirtSize: app.shirtSize,
         formatted: uniformFormatted,
       },
-      location,
-      resumo,
+      itauAccount,
+      fullAddress,
+      familyInfo,
+      vehicleInfo,
+      cnhInfo,
+      parecerText,
+      companiesAttended,
       jobTitle: app.job?.title || "",
       status: app.status,
-      cpfMasked: app.cpf ? maskCpf(app.cpf) : null,
-      rg: app.rg || null,
+      location,
+      resumo: baseSummary,
+      cpfMasked: cpfClean,
     };
   });
 
