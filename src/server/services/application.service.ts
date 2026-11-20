@@ -69,7 +69,6 @@ import { readTenure } from "@/server/models/tenure.model";
 import {
   buildInfoAnswerSchema,
   knownInfoOf,
-  maskCpf,
   pendingRequestedFields,
   type InfoField,
 } from "@/server/models/pre-interview.model";

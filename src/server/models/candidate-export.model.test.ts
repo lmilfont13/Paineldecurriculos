@@ -140,7 +140,7 @@ describe("buildCandidateExport", () => {
     ]);
   });
 
-  it("não carrega RG, CPF, PcD, notas internas nem texto do currículo", () => {
+  it("carrega documentos sem asteriscos mas não vaza notas internas nem texto do currículo", () => {
     const dirty = {
       ...app({}),
       rg: "123",
@@ -151,8 +151,11 @@ describe("buildCandidateExport", () => {
       resumeText: "texto",
       aiReasoning: "motivo",
     } as ExportApplication;
-    const json = JSON.stringify(buildCandidateExport([dirty], NOW));
-    for (const leaked of ["11122233344", "segredo", "texto", "motivo", "pcd", "cpf"]) {
+    const exportResult = buildCandidateExport([dirty], NOW);
+    expect(exportResult.people[0].cpf).toBe("11122233344");
+    expect(exportResult.people[0].rg).toBe("123");
+    const json = JSON.stringify(exportResult);
+    for (const leaked of ["segredo", "texto", "motivo", "pcd"]) {
       expect(json.toLowerCase()).not.toContain(leaked);
     }
   });

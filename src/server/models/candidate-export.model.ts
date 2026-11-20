@@ -14,6 +14,8 @@ export type ExportApplication = {
   id: string;
   candidateId: string | null;
   name: string;
+  cpf?: string | null;
+  rg?: string | null;
   email: string;
   phone: string | null;
   birthDate: Date | null;
@@ -41,6 +43,8 @@ export type ExportApplication = {
 
 export type ExportPerson = {
   name: string;
+  cpf: string;
+  rg: string;
   email: string;
   phone: string;
   city: string;
@@ -68,6 +72,8 @@ export type ExportPerson = {
 
 export type ExportApplicationRow = {
   name: string;
+  cpf: string;
+  rg: string;
   email: string;
   phone: string;
   job: string;
@@ -160,8 +166,14 @@ export function buildCandidateExport(apps: ExportApplication[], now: Date = new 
     const jobs = [...new Set(list.map((a) => jobLabel(a.job)))];
     const pick = (kind: "workPreference" | "availability" | "hasCnh") =>
       profileChoiceLabel(kind, latest(list, (a) => clean(a[kind])) ?? "");
+    const sanitizeCleanDoc = (raw: string | null | undefined) => (raw ? raw.replace(/\*/g, "").trim() : "");
+    const personCpf = latest(list, (a) => sanitizeCleanDoc(a.cpf)) ?? "";
+    const personRg = latest(list, (a) => sanitizeCleanDoc(a.rg)) ?? "";
+
     people.push({
       name: titleCasePt(clean(newest.name)),
+      cpf: personCpf,
+      rg: personRg,
       email: clean(newest.email).toLowerCase(),
       phone: latest(list, (a) => clean(a.phone)) ?? "",
       city: latest(list, (a) => clean(a.city)) ?? "",
@@ -194,6 +206,8 @@ export function buildCandidateExport(apps: ExportApplication[], now: Date = new 
       const min = a.job.isTalentPool ? null : a.job.aiMinScore;
       return {
         name: titleCasePt(clean(a.name)),
+        cpf: a.cpf ? a.cpf.replace(/\*/g, "").trim() : "",
+        rg: a.rg ? a.rg.replace(/\*/g, "").trim() : "",
         email: clean(a.email).toLowerCase(),
         phone: clean(a.phone),
         job: a.job.isTalentPool ? TALENT_POOL_LABEL : a.job.title,

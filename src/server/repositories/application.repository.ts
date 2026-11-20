@@ -510,6 +510,8 @@ export function findApplicationsForExport(companyId: string) {
       id: true,
       candidateId: true,
       name: true,
+      cpf: true,
+      rg: true,
       email: true,
       phone: true,
       birthDate: true,

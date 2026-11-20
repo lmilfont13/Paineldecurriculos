@@ -7,6 +7,9 @@ export type CandidaturaRow = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  cpf?: string | null;
+  rg?: string | null;
   createdAt: string; // ISO
   status: AppStatus;
   aiState: AIState;

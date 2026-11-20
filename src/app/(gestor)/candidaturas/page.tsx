@@ -39,10 +39,16 @@ export default async function CandidaturasPage({
       (app as { resumeText?: string | null }).resumeText
     );
 
+    const cpfClean = app.cpf ? app.cpf.replace(/\D/g, "") || app.cpf : null;
+    const rgClean = app.rg ? app.rg.trim() : null;
+
     return {
       id: app.id,
       name: titleCasePt(app.name),
       email: app.email,
+      phone: app.phone ?? null,
+      cpf: cpfClean,
+      rg: rgClean,
       createdAt: app.createdAt.toISOString(),
       status: app.status,
       aiState: app.aiState,

@@ -44,6 +44,8 @@ export async function renderCandidateWorkbook(
 
   const people = sheet<P>("Pessoas", data.people, [
     { header: "Nome", width: 30, cell: (p) => text(p.name) },
+    { header: "CPF", width: 16, cell: (p) => text(p.cpf) },
+    { header: "RG", width: 16, cell: (p) => text(p.rg) },
     { header: "E-mail", width: 30, cell: (p) => text(p.email) },
     { header: "Telefone", width: 17, cell: (p) => text(p.phone) },
     { header: "Cidade", width: 20, cell: (p) => text(p.city) },
@@ -71,6 +73,8 @@ export async function renderCandidateWorkbook(
 
   const applications = sheet<A>("Candidaturas", data.applications, [
     { header: "Nome", width: 30, cell: (a) => text(a.name) },
+    { header: "CPF", width: 16, cell: (a) => text(a.cpf) },
+    { header: "RG", width: 16, cell: (a) => text(a.rg) },
     { header: "E-mail", width: 30, cell: (a) => text(a.email) },
     { header: "Telefone", width: 17, cell: (a) => text(a.phone) },
     { header: "Vaga", width: 30, cell: (a) => text(a.job) },

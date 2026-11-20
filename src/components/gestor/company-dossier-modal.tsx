@@ -39,7 +39,7 @@ export function CompanyDossierModal({
 
   if (!open || candidates.length === 0) return null;
 
-  // Formata o candidato no padrão oficial exato da Ever e Grupo GPS
+  // Formata o candidato no modelo oficial para envio
   function formatCandidateStandard(c: CompanyCandidateDossierItem): string {
     return [
       `Nome completo: ${c.name}`,
@@ -58,7 +58,7 @@ export function CompanyDossierModal({
     ].join("\n");
   }
 
-  // Formata todos os candidatos selecionados no padrão Ever / GPS
+  // Formata todos os candidatos selecionados no modelo oficial
   function formatAllCandidatesStandard(): string {
     return candidates
       .map((c) => formatCandidateStandard(c))
@@ -96,10 +96,17 @@ export function CompanyDossierModal({
       "Principais Clientes/Marcas Atendidas",
     ];
 
+    // Garante documentos 100% livres de qualquer asterisco
+    const sanitizeDoc = (doc: string) => {
+      if (!doc || doc === "Não informado") return "Não informado";
+      const unmasked = doc.replace(/\*/g, "").trim();
+      return unmasked || "Não informado";
+    };
+
     const rows = candidates.map((c) => [
       `"${c.name.replace(/"/g, '""')}"`,
-      `"${c.cpf.replace(/"/g, '""')}"`,
-      `"${c.rg.replace(/"/g, '""')}"`,
+      `"${sanitizeDoc(c.cpf).replace(/"/g, '""')}"`,
+      `"${sanitizeDoc(c.rg).replace(/"/g, '""')}"`,
       `"${c.birthDateFormatted.replace(/"/g, '""')}"`,
       `"${c.phone.replace(/"/g, '""')}"`,
       `"${c.email.replace(/"/g, '""')}"`,
@@ -147,7 +154,7 @@ export function CompanyDossierModal({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Modelo Oficial p/ Envio (Padrão Ever / Grupo GPS)
+                  Modelo Oficial p/ Envio
                 </span>
                 <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 tabular-nums">
                   {candidates.length} candidato{candidates.length > 1 ? "s" : ""}
@@ -171,7 +178,7 @@ export function CompanyDossierModal({
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Padrão Ever/GPS
+                Modelo Oficial
               </button>
               <button
                 type="button"
@@ -219,7 +226,7 @@ export function CompanyDossierModal({
                   ? "bg-emerald-600 text-white"
                   : "bg-emerald-600 text-white hover:bg-emerald-700"
               }`}
-              title="Copiar todos os candidatos no padrão exato solicitado pelas empresas"
+              title="Copiar todos os candidatos no modelo oficial"
             >
               {copiedAll ? (
                 <>
@@ -229,7 +236,7 @@ export function CompanyDossierModal({
               ) : (
                 <>
                   <Copy className="size-4" />
-                  <span>Copiar Modelo Padrão ({candidates.length})</span>
+                  <span>Copiar Modelo Oficial ({candidates.length})</span>
                 </>
               )}
             </button>
@@ -261,12 +268,12 @@ export function CompanyDossierModal({
         {/* CONTEÚDO PRINCIPAL */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           
-          {/* VISUALIZAÇÃO 1: PADRÃO OFICIAL EVER / GRUPO GPS (EXATAMENTE O FORMATO DO CLIENTE) */}
+          {/* VISUALIZAÇÃO 1: MODELO OFICIAL */}
           {activeView === "standard" && (
             <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex items-center justify-between">
                 <span>
-                  💡 <strong>Modelo Padronizado:</strong> CPF e RG sem asteriscos para avaliação admissional, fardamento completo, endereço e parecer com destaques do segmento.
+                  💡 <strong>Modelo Oficial:</strong> CPF e RG sem asteriscos para avaliação cadastral e admissional, fardamento completo, endereço e parecer profissional.
                 </span>
                 <span className="text-[11px] font-semibold text-slate-500">
                   Pronto para WhatsApp ou E-mail
@@ -490,7 +497,7 @@ export function CompanyDossierModal({
         {/* RODAPÉ DO MODAL */}
         <footer className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500 print:hidden">
           <span>
-            {candidates.length} candidato{candidates.length > 1 ? "s" : ""} formatado{candidates.length > 1 ? "s" : ""} no padrão Ever / GPS.
+            {candidates.length} candidato{candidates.length > 1 ? "s" : ""} formatado{candidates.length > 1 ? "s" : ""} para envio.
           </span>
           <button
             type="button"

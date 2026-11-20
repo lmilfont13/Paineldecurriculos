@@ -574,11 +574,14 @@ export function CandidaturasTable({
 
   function exportCsv() {
     const rowsToExport = visibleSelected.length > 0 ? visibleSelected : filtered;
-    const header = "Nome;E-mail;Vaga;Score IA;Status;Data\n";
+    const header = "Nome;CPF;RG;Telefone;E-mail;Vaga;Score IA;Status;Data\n";
     const body = rowsToExport
       .map((r) =>
         [
           r.name,
+          r.cpf ? r.cpf.replace(/\*/g, "") : "",
+          r.rg ? r.rg.replace(/\*/g, "") : "",
+          r.phone ?? "",
           r.email,
           r.jobTitle,
           r.aiScore ?? "",
