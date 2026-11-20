@@ -12,6 +12,8 @@ import type { CandidateProfile } from "@/server/models/candidate.model";
 import type { PublicCompany } from "@/server/models/company.model";
 import type { PublicFormField } from "@/server/models/form.model";
 import type { PublicJob } from "@/server/models/job.model";
+import type { PublicHire } from "@/server/models/showcase.model";
+import { listPublicHires } from "@/server/services/showcase.service";
 import {
   getCandidateApplication,
   getAppliedJobIds,
@@ -53,6 +55,7 @@ export async function getJobsPageData(
   company: PublicCompany;
   jobs: PublicJob[];
   appliedJobIds: string[];
+  hires: PublicHire[];
 } | null> {
   const company = await getTenant(slug);
   if (!company) return null;
@@ -63,7 +66,8 @@ export async function getJobsPageData(
   const appliedJobIds = candidate
     ? await getAppliedJobIds(candidate.id, jobs.map((j) => j.id))
     : [];
-  return { company, jobs, appliedJobIds };
+  const hires = await listPublicHires(company.id);
+  return { company, jobs, appliedJobIds, hires };
 }
 
 export async function getJobDetailPageData(

@@ -387,5 +387,12 @@ e-mail personalizados.
   `src/components/gestor/instagram-poster-draw.ts` e as regras em
   `src/server/models/poster.model.ts`.
 
+- **"Quem já entrou" na página de vagas (11/2026):** quem é aprovado vê, na
+  área dele, a pergunta se quer aparecer como contratado(a). Só com o "sim"
+  o nome completo, a vaga, a cidade e o mês aparecem num bloco da página de
+  vagas (até 12 pessoas, as mais recentes). A pessoa pode desistir quando
+  quiser; o gestor pode ocultar alguém pela ficha (fica na Auditoria). Conta
+  excluída sai sozinha. Regras em `src/server/models/showcase.model.ts`.
+
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.

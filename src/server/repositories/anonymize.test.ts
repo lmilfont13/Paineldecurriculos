@@ -24,6 +24,8 @@ describe("anonymizeApplicationsByCandidate (LGPD)", () => {
       infoRequestedFields: [],
       infoRequestedAt: null,
       infoAnsweredAt: null,
+      showcaseConsent: null,
+      showcaseConsentAt: null,
     });
   });
 });

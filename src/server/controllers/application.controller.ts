@@ -32,6 +32,7 @@ import {
   savedMessageForSubject,
 } from "@/server/services/message-template.service";
 import { createAuditLog } from "@/server/repositories/audit.repository";
+import { setShowcaseHidden } from "@/server/services/showcase.service";
 import {
   rejectPendingWithMessage,
   type BulkRejectResult,
@@ -444,6 +445,28 @@ export async function setApplicationStatusAction(
   revalidatePath(`/candidaturas/${applicationId}`);
   revalidatePath("/painel");
   if (updated) revalidatePath(`/vagas/${updated.jobId}`);
+}
+
+/** Gestor oculta ou volta a mostrar o contratado na página pública de vagas. */
+export async function setShowcaseHiddenAction(applicationId: string, hidden: boolean): Promise<void> {
+  const user = await requireManager();
+  const changed = await setShowcaseHidden(user.companyId, applicationId, hidden);
+  if (changed) {
+    runInBackground("auditoria da vitrine", async () => {
+      try {
+        await createAuditLog({
+          companyId: user.companyId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          action: hidden ? "VITRINE_OCULTADO" : "VITRINE_EXIBIDO",
+          entityType: "CANDIDATURA",
+          entityId: applicationId,
+        });
+      } catch { /* auditoria nunca bloqueia a ação principal */ }
+    });
+  }
+  revalidatePath(`/candidaturas/${applicationId}`);
 }
 
 /**
