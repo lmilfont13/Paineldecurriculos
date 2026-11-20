@@ -1,6 +1,9 @@
 import "server-only";
 
+import sharp from "sharp";
+
 import { readEnv, appUrl } from "@/lib/env";
+import { instagramApiBase, isInstagramLoginToken } from "@/server/models/instagram.model";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type InstagramPublishResult = {
@@ -20,19 +23,43 @@ export type InstagramVerifyResult = {
   error?: string;
 };
 
+type Credentials = { accountId: string; accessToken: string; api: string };
+
+/**
+ * Credenciais: as digitadas na tela ou as da Vercel. Com token do Login do
+ * Instagram (IG…), o ID da conta é descoberto pelo próprio token.
+ */
+async function resolveCredentials(params: { accountId?: string; accessToken?: string }): Promise<
+  Credentials | { error: string }
+> {
+  const accessToken = params.accessToken?.trim() || readEnv("INSTAGRAM_ACCESS_TOKEN") || readEnv("META_ACCESS_TOKEN") || "";
+  let accountId = params.accountId?.trim() || readEnv("INSTAGRAM_ACCOUNT_ID") || readEnv("META_INSTAGRAM_ACCOUNT_ID") || "";
+  if (!accessToken) return { error: "Token de acesso não configurado." };
+  const api = instagramApiBase(accessToken);
+  if (!accountId && isInstagramLoginToken(accessToken)) {
+    try {
+      const res = await fetch(`${api}/me?fields=user_id,username&access_token=${encodeURIComponent(accessToken)}`);
+      const me = (await res.json()) as { user_id?: string; id?: string; error?: { message: string } };
+      accountId = me.user_id || me.id || "";
+      if (!accountId) return { error: me.error?.message || "Token do Instagram inválido ou expirado." };
+    } catch {
+      return { error: "Falha ao comunicar com os servidores da Meta." };
+    }
+  }
+  if (!accountId) return { error: "Informe o ID da conta do Instagram (ou use um token do Login do Instagram, que começa com IG)." };
+  return { accountId, accessToken, api };
+}
+
 export async function verifyInstagramConnection(params: {
   accountId?: string;
   accessToken?: string;
 }): Promise<InstagramVerifyResult> {
-  const accountId = params.accountId?.trim() || readEnv("INSTAGRAM_ACCOUNT_ID") || readEnv("META_INSTAGRAM_ACCOUNT_ID");
-  const accessToken = params.accessToken?.trim() || readEnv("INSTAGRAM_ACCESS_TOKEN") || readEnv("META_ACCESS_TOKEN");
-
-  if (!accountId || !accessToken) {
-    return { ok: false, error: "Account ID e Access Token não configurados." };
-  }
+  const creds = await resolveCredentials(params);
+  if ("error" in creds) return { ok: false, error: creds.error };
+  const { accountId, accessToken, api } = creds;
 
   try {
-    const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`;
+    const url = `${api}/${encodeURIComponent(accountId)}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`;
     const res = await fetch(url);
     const data = (await res.json()) as {
       name?: string;
@@ -84,20 +111,23 @@ export async function publishToInstagramFeed(params: {
   accountId?: string;
   accessToken?: string;
 }): Promise<InstagramPublishResult> {
-  const accountId = params.accountId?.trim() || readEnv("INSTAGRAM_ACCOUNT_ID") || readEnv("META_INSTAGRAM_ACCOUNT_ID");
-  const accessToken = params.accessToken?.trim() || readEnv("INSTAGRAM_ACCESS_TOKEN") || readEnv("META_ACCESS_TOKEN");
-
-  if (!accountId || !accessToken) {
-    return {
-      success: false,
-      needsConfig: true,
-      error: "CREDENTIALS_MISSING",
-      message: "Credenciais do Instagram Graph API (Account ID e Access Token) não configuradas.",
-    };
+  const creds = await resolveCredentials(params);
+  if ("error" in creds) {
+    return { success: false, needsConfig: true, error: "CREDENTIALS_MISSING", message: creds.error };
   }
+  const { accountId, accessToken, api } = creds;
 
   const rawBase64 = params.imageBase64.replace(/^data:image\/\w+;base64,/, "");
-  const imageBuffer = Buffer.from(rawBase64, "base64");
+  // A API do Instagram só aceita JPEG: converte o PNG do cartaz.
+  let imageBuffer: Buffer;
+  try {
+    imageBuffer = await sharp(Buffer.from(rawBase64, "base64"))
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+  } catch {
+    return { success: false, error: "INVALID_IMAGE", message: "Não consegui preparar a imagem do cartaz." };
+  }
 
   // 1. Obter uma URL HTTPS pública para a Meta baixar a imagem
   let publicImageUrl: string | null = null;
@@ -106,11 +136,11 @@ export async function publishToInstagramFeed(params: {
   // Tenta hospedar no Supabase Storage primeiro
   try {
     const supabase = createAdminClient();
-    const filePath = `instagram-posts/${imageId}.png`;
+    const filePath = `instagram-posts/${imageId}.jpg`;
 
     const { error: uploadError } = await supabase.storage
       .from("resumes")
-      .upload(filePath, imageBuffer, { contentType: "image/png", upsert: true });
+      .upload(filePath, imageBuffer, { contentType: "image/jpeg", upsert: true });
 
     if (!uploadError) {
       const { data: signData } = await supabase.storage
@@ -132,7 +162,7 @@ export async function publishToInstagramFeed(params: {
   }
 
   // 2. Passo 1 da Meta: Criar container de mídia no Instagram
-  const containerUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media`;
+  const containerUrl = `${api}/${encodeURIComponent(accountId)}/media`;
   const containerRes = await fetch(containerUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -165,7 +195,7 @@ export async function publishToInstagramFeed(params: {
     await new Promise((r) => setTimeout(r, 2000));
     try {
       const statusRes = await fetch(
-        `https://graph.facebook.com/v21.0/${creationId}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`
+        `${api}/${creationId}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`
       );
       const statusData = (await statusRes.json()) as { status_code?: string };
       if (statusData.status_code === "FINISHED") {
@@ -181,7 +211,7 @@ export async function publishToInstagramFeed(params: {
   }
 
   // 4. Passo 2 da Meta: Publicar container de mídia
-  const publishUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(accountId)}/media_publish`;
+  const publishUrl = `${api}/${encodeURIComponent(accountId)}/media_publish`;
   const publishRes = await fetch(publishUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -211,7 +241,7 @@ export async function publishToInstagramFeed(params: {
   let permalink: string | undefined;
   try {
     const mediaInfoRes = await fetch(
-      `https://graph.facebook.com/v21.0/${publishedMediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`
+      `${api}/${publishedMediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`
     );
     const mediaInfo = (await mediaInfoRes.json()) as { permalink?: string };
     permalink = mediaInfo.permalink;
