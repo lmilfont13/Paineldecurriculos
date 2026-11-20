@@ -11,17 +11,6 @@ type Props = {
   onRandomModel?: () => void;
 };
 
-// Cores extraídas diretamente do modelo master original
-const MASTER_COLORS = {
-  wine: "#431317",
-  wineDark: "#241113",
-  gold: "#a37a4a",
-  textPrimary: "#1a100e",
-  textSecondary: "#2a1c18",
-  pillBg: "#f8f1e3",
-  pillBorder: "#856d5c",
-};
-
 export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -30,16 +19,16 @@ export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
   const [canvasDataUrl, setCanvasDataUrl] = useState<string>("");
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
-  // Injeta Google Fonts oficiais idênticas ao Canva/Figma original
+  // Injeta Google Fonts no documento
   useEffect(() => {
     if (typeof document !== "undefined") {
-      const fontId = "tarhget-official-template-fonts";
+      const fontId = "tarhget-official-template-fonts-v2";
       if (!document.getElementById(fontId)) {
         const link = document.createElement("link");
         link.id = fontId;
         link.rel = "stylesheet";
         link.href =
-          "https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700&family=Bebas+Neue&family=Montserrat:wght@700;800;900&display=swap";
+          "https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700&family=Bebas+Neue&family=Great+Vibes&family=Montserrat:wght@700;800;900&display=swap";
         document.head.appendChild(link);
       }
     }
@@ -53,18 +42,19 @@ export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    // Aguarda o carregamento das fontes Bebas Neue e Barlow Semi Condensed
+    // Aguarda fontes externas
     try {
       if (typeof document !== "undefined" && document.fonts) {
         await Promise.allSettled([
           document.fonts.load('38px "Bebas Neue"'),
           document.fonts.load('18px "Barlow Semi Condensed"'),
+          document.fonts.load('44px "Great Vibes"'),
           document.fonts.load('bold 14px "Montserrat"'),
         ]);
         await document.fonts.ready;
       }
     } catch {
-      // continua normalmente
+      // continua com fontes nativas
     }
 
     const W = 1080;
@@ -72,274 +62,325 @@ export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
     canvas.width = W;
     canvas.height = H;
 
-    // 1. CARREGA O TEMPLATE MASTER LIMPO E DE ALTA RESOLUÇÃO (1080x1080)
-    // O template master-clean-1080 contém toda a iluminação fotográfica, a modelo oficial,
-    // o logotipo Tarhget, o título estilizado "OPORTUNIDADE DE EMPREGO", o "Estamos contratando!",
-    // os 5 ícones circulares do card, a onda dourada de benefícios e o botão vinho da bio com o cursor.
-    // Ele já tem as áreas de texto limpas sem fantasmas nem sobreposições.
-    const masterImg = new Image();
-    masterImg.crossOrigin = "anonymous";
+    // Determina a foto da modelo (oficial limpa ou alternativa)
+    const modelSrc =
+      data.modelImage && !data.modelImage.includes("master-template")
+        ? data.modelImage
+        : "/images/templates/official-model-clean.png";
+
+    // Converte a imagem da modelo para base64 para injeção limpa no SVG
+    let modelBase64 = "";
     try {
-      await new Promise<void>((resolve, reject) => {
-        masterImg.onload = () => resolve();
-        masterImg.onerror = () => reject();
-        masterImg.src = "/images/templates/master-clean-1080.png";
-      });
-      ctx.drawImage(masterImg, 0, 0, W, H);
-    } catch (err) {
-      console.warn("[canvas] Falha ao carregar master-clean-1080, tentando fallback:", err);
-    }
-
-    // 2. SE FOR SELECIONADO UM MODELO ALTERNATIVO (ex.: modelo masculino ou foto própria)
-    const isCustomModel =
-      data.modelImage &&
-      !data.modelImage.includes("master-clean-1080") &&
-      !data.modelImage.includes("master-template-1080") &&
-      !data.modelImage.includes("model-official");
-
-    if (isCustomModel) {
-      try {
-        const altModel = new Image();
-        altModel.crossOrigin = "anonymous";
-        await new Promise<void>((resolve, reject) => {
-          altModel.onload = () => resolve();
-          altModel.onerror = () => reject();
-          altModel.src = data.modelImage;
+      if (modelSrc.startsWith("data:")) {
+        modelBase64 = modelSrc;
+      } else {
+        const resp = await fetch(modelSrc);
+        const blob = await resp.blob();
+        modelBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
         });
-
-        ctx.save();
-        // Preserva o topo (logo da Tarhget) e a base da onda, posicionando a foto entre y: 110 e y: 740
-        const imgX = 520;
-        const imgY = 110;
-        const imgW = 560;
-        const imgH = 635;
-
-        const imgRatio = altModel.width / altModel.height;
-        const targetRatio = imgW / imgH;
-        let sx = 0, sy = 0, sw = altModel.width, sh = altModel.height;
-
-        if (imgRatio > targetRatio) {
-          sw = altModel.height * targetRatio;
-          sx = (altModel.width - sw) / 2;
-        } else {
-          sh = altModel.width / targetRatio;
-          sy = (altModel.height - sh) / 4;
-        }
-
-        ctx.drawImage(altModel, sx, sy, sw, sh, imgX, imgY, imgW, imgH);
-
-        // Degradê de fusão suave na lateral esquerda da foto para se integrar ao card
-        const fadeGrad = ctx.createLinearGradient(imgX, 0, imgX + 110, 0);
-        fadeGrad.addColorStop(0, "#f8f3e7");
-        fadeGrad.addColorStop(0.5, "rgba(248, 243, 231, 0.7)");
-        fadeGrad.addColorStop(1, "rgba(248, 243, 231, 0)");
-        ctx.fillStyle = fadeGrad;
-        ctx.fillRect(imgX, imgY, 110, imgH);
-        ctx.restore();
-      } catch {
-        // mantém a modelo oficial
       }
+    } catch (err) {
+      console.warn("[canvas] Falha ao carregar imagem da modelo:", err);
     }
 
-    // 3. VAGA Nº {CÓDIGO} (TOPO ESQUERDO)
-    if (data.jobCode) {
-      ctx.save();
-      ctx.textAlign = "left";
-      ctx.fillStyle = MASTER_COLORS.textPrimary;
-      ctx.font = 'bold 26px "Bebas Neue", Impact, sans-serif';
-      ctx.letterSpacing = "1px";
-      ctx.fillText(`VAGA Nº ${data.jobCode}`, 50, 56);
-      ctx.restore();
-    }
-
-    // 4. TÍTULO DO CARGO DENTRO DO QUADRO DO CARD
-    // Centro do quadro: x: 330
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.fillStyle = MASTER_COLORS.wineDark;
-    ctx.font = 'bold 38px "Bebas Neue", Impact, sans-serif';
-    ctx.letterSpacing = "0.5px";
-
+    // Tratamento de quebra do título do cargo
     const cleanTitle = (data.roleTitle || "CONSULTOR(A) MERCHAN JR").toUpperCase().trim();
     const words = cleanTitle.split(" ");
-    let line1 = cleanTitle;
-    let line2 = "";
+    let titleLine1 = cleanTitle;
+    let titleLine2 = "";
 
-    if (cleanTitle.length > 18 && words.length >= 2) {
+    if (cleanTitle.length > 20 && words.length >= 2) {
       const mid = Math.ceil(words.length / 2);
-      line1 = words.slice(0, mid).join(" ");
-      line2 = words.slice(mid).join(" ");
+      titleLine1 = words.slice(0, mid).join(" ");
+      titleLine2 = words.slice(mid).join(" ");
     }
 
-    if (line2) {
-      ctx.fillText(line1, 330, 318);
-      ctx.fillText(line2, 330, 358);
-    } else {
-      ctx.fillText(line1, 330, 338);
+    // Tratamento de quebra da escala e roteiro se longos
+    const routeText = data.route || "Cobertura de lojas conforme roteiro";
+    let routeLine1 = routeText;
+    let routeLine2 = "";
+    if (routeText.includes("|")) {
+      const parts = routeText.split("|");
+      routeLine1 = parts[0].trim();
+      routeLine2 = "| " + parts.slice(1).join("|").trim();
     }
 
-    // Pílula do Segmento / Cliente (ex: SEGMENTO DE COSMÉTICOS E CUIDADOS PESSOAIS)
-    if (data.segmentSubtitle) {
-      const segText = data.segmentSubtitle.toUpperCase();
-      ctx.font = 'bold 13px "Barlow Semi Condensed", "Montserrat", sans-serif';
-      ctx.letterSpacing = "0.8px";
-      const segWidth = Math.min(ctx.measureText(segText).width + 28, 520);
-      const pillY = 398;
-
-      ctx.beginPath();
-      ctx.roundRect(330 - segWidth / 2, pillY - 18, segWidth, 26, 6);
-      ctx.fillStyle = MASTER_COLORS.pillBg;
-      ctx.strokeStyle = MASTER_COLORS.pillBorder;
-      ctx.lineWidth = 1.2;
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#2a1714";
-      ctx.fillText(segText.slice(0, 50), 330, pillY);
+    const scheduleText = data.workSchedule || "44h semanais — Seg a Sex e Sáb";
+    let scheduleLine1 = scheduleText;
+    let scheduleLine2 = "";
+    if (scheduleText.includes("—")) {
+      const parts = scheduleText.split("—");
+      scheduleLine1 = parts[0].trim() + " —";
+      scheduleLine2 = parts[1].trim();
     }
-    ctx.restore();
 
-    // 5. AS 5 LINHAS DE DETALHES DA OPERAÇÃO (ALINHADAS COM OS 5 ÍCONES ORIGINAIS)
-    // Ícone 1 (Local): centro y: 458 -> texto y: 464
-    // Ícone 2 (Roteiro): centro y: 514 -> texto y: 512
-    // Ícone 3 (Início): centro y: 579 -> texto y: 584
-    // Ícone 4 (Contratação): centro y: 645 -> texto y: 650
-    // Ícone 5 (Escala): centro y: 710 -> texto y: 708
-    ctx.save();
-    ctx.textAlign = "left";
+    // Escapa caracteres especiais para SVG
+    const escapeXml = (str: string) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-    const textStartX = 108;
-    const maxTextWidth = 490;
+    // Geração do SVG Mestre com Fidelidade Absoluta
+    const svgString = `
+    <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700&amp;family=Bebas+Neue&amp;family=Great+Vibes&amp;family=Montserrat:wght@700;800;900&amp;display=swap');
+          
+          .font-vaga { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 26px; fill: #1d1816; letter-spacing: 1.2px; }
+          .font-oportunidade { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 68px; fill: #431317; letter-spacing: 0.5px; }
+          .font-de-emprego { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 68px; fill: #a37a4a; letter-spacing: 0.5px; }
+          .font-contratando { font-family: 'Great Vibes', 'Dancing Script', cursive; font-size: 44px; fill: #231012; }
+          .font-logo-text { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; fill: #431317; letter-spacing: 3.5px; text-anchor: middle; }
+          
+          .font-role-title { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 38px; fill: #241113; text-anchor: middle; letter-spacing: 0.5px; }
+          .font-pill-text { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 13px; fill: #2a1714; letter-spacing: 0.8px; text-anchor: middle; }
+          
+          .font-prefix { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 18px; fill: #1a100e; }
+          .font-detail-val { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 17px; fill: #281915; }
+          
+          .font-ribbon-title { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 30px; fill: #431317; letter-spacing: 1.5px; text-anchor: middle; }
+          .font-benefit-label { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 13px; fill: #431317; text-anchor: middle; }
+          .font-benefit-val-bold { font-family: 'Bebas Neue', sans-serif; font-size: 21px; fill: #1a100e; text-anchor: middle; letter-spacing: 0.5px; }
+          .font-benefit-val-sub { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 14px; fill: #281914; text-anchor: middle; }
+          
+          .font-cta { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 21px; fill: #ffffff; text-anchor: middle; }
+          .font-disclaimer { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 14px; fill: #3a2820; text-anchor: middle; }
+        </style>
 
-    // Linha 1: Local
-    ctx.font = 'bold 18px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText("Local: ", textStartX, 464);
-    const localPrefixW = ctx.measureText("Local: ").width;
-    ctx.font = '600 17px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textSecondary;
-    ctx.fillText(data.location || "Fortaleza - CE", textStartX + localPrefixW, 464);
+        <linearGradient id="bgGrad" x1="0" y1="0" x2="1080" y2="1080" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#faf6ed" />
+          <stop offset="50%" stop-color="#f3ebdb" />
+          <stop offset="100%" stop-color="#e9ddc9" />
+        </linearGradient>
 
-    // Linha 2: Roteiro (com quebra inteligente se longo)
-    ctx.font = 'bold 18px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText("Roteiro: ", textStartX, 512);
-    const roteiroPrefixW = ctx.measureText("Roteiro: ").width;
-    ctx.font = '600 17px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textSecondary;
+        <linearGradient id="waveGrad" x1="0" y1="730" x2="0" y2="960" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#eedfcb" />
+          <stop offset="40%" stop-color="#e4d1b8" />
+          <stop offset="100%" stop-color="#d1b794" />
+        </linearGradient>
 
-    const roteiroText = data.route || "Cobertura de lojas conforme roteiro estabelecido";
-    if (ctx.measureText(roteiroText).width > maxTextWidth - roteiroPrefixW && roteiroText.includes("|")) {
-      const parts = roteiroText.split("|");
-      ctx.fillText(parts[0].trim(), textStartX + roteiroPrefixW, 512);
-      ctx.fillText("| " + parts.slice(1).join("|").trim(), textStartX, 532);
-    } else {
-      let rText = roteiroText;
-      while (ctx.measureText(rText).width > maxTextWidth - roteiroPrefixW && rText.length > 8) {
-        rText = rText.slice(0, -2) + "…";
+        <linearGradient id="fadeMaskGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#000000" stop-opacity="0" />
+          <stop offset="25%" stop-color="#ffffff" stop-opacity="0.85" />
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="1" />
+        </linearGradient>
+        <mask id="modelFadeMask">
+          <rect x="490" y="0" width="590" height="750" fill="url(#fadeMaskGrad)" />
+        </mask>
+
+        <filter id="cardShadow" x="-10%" y="-10%" width="125%" height="125%">
+          <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#3d2218" flood-opacity="0.10" />
+        </filter>
+
+        <filter id="ctaShadow" x="-10%" y="-20%" width="120%" height="150%">
+          <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#431317" flood-opacity="0.25" />
+        </filter>
+      </defs>
+
+      <!-- 1. FUNDO GERAL SATIN COM LEVE AQUECIMENTO -->
+      <rect width="1080" height="1080" fill="url(#bgGrad)" />
+
+      <!-- 2. FOTO DA MODELO DE VAREJO COM FUSÃO SUAVE -->
+      ${
+        modelBase64
+          ? `<g mask="url(#modelFadeMask)">
+               <image href="${modelBase64}" x="490" y="0" width="590" height="745" preserveAspectRatio="xMidYMid slice" />
+             </g>`
+          : ""
       }
-      ctx.fillText(rText, textStartX + roteiroPrefixW, 512);
-    }
 
-    // Linha 3: Início
-    ctx.font = 'bold 18px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText("Início: ", textStartX, 584);
-    const inicioPrefixW = ctx.measureText("Início: ").width;
-    ctx.font = '600 17px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textSecondary;
-    ctx.fillText(data.startDate || "Imediato - data a confirmar", textStartX + inicioPrefixW, 584);
+      <!-- 3. LOGO OFICIAL TARHGET NO TOPO DIREITO -->
+      <g transform="translate(935, 68)">
+        <circle cx="0" cy="0" r="32" fill="none" stroke="#431317" stroke-width="3" />
+        <line x1="-16" y1="-12" x2="16" y2="-12" stroke="#431317" stroke-width="4" stroke-linecap="round" />
+        <line x1="0" y1="-12" x2="0" y2="18" stroke="#431317" stroke-width="3.5" stroke-linecap="round" />
+        <text x="0" y="48" class="font-logo-text">TARHGET</text>
+      </g>
 
-    // Linha 4: Contratação
-    ctx.font = 'bold 18px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText("Contratação: ", textStartX, 650);
-    const contraPrefixW = ctx.measureText("Contratação: ").width;
-    ctx.font = '600 17px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textSecondary;
-    ctx.fillText(data.contractType || "Regime CLT – EFETIVO", textStartX + contraPrefixW, 650);
-
-    // Linha 5: Escala
-    ctx.font = 'bold 18px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText("Escala: ", textStartX, 708);
-    const escalaPrefixW = ctx.measureText("Escala: ").width;
-    ctx.font = '600 17px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textSecondary;
-
-    const escalaText = data.workSchedule || "44h semanais — Seg a Sex (11h às 20h) e Sáb (16h às 20h)";
-    if (ctx.measureText(escalaText).width > maxTextWidth - escalaPrefixW && escalaText.includes("—")) {
-      const parts = escalaText.split("—");
-      ctx.fillText(parts[0].trim() + " —", textStartX + escalaPrefixW, 708);
-      ctx.fillText(parts[1].trim(), textStartX, 728);
-    } else {
-      let eText = escalaText;
-      while (ctx.measureText(eText).width > maxTextWidth - escalaPrefixW && eText.length > 8) {
-        eText = eText.slice(0, -2) + "…";
+      <!-- 4. CABEÇALHO DO POST (TOPO ESQUERDO) -->
+      ${
+        data.jobCode
+          ? `<text x="50" y="58" class="font-vaga">VAGA Nº ${escapeXml(data.jobCode)}</text>`
+          : ""
       }
-      ctx.fillText(eText, textStartX + escalaPrefixW, 708);
-    }
-    ctx.restore();
+      <text x="50" y="122" class="font-oportunidade">OPORTUNIDADE</text>
+      <text x="50" y="182" class="font-de-emprego">DE EMPREGO</text>
+      <text x="52" y="234" class="font-contratando">Estamos contratando!</text>
 
-    // 6. VALORES DA FAIXA DOURADA DE BENEFÍCIOS (y: 930)
-    // As colunas de benefícios estão alinhadas com os 5 ícones dourados:
-    // Coluna 1 (Salário): x: 135
-    // Coluna 2 (Vale Refeição): x: 335
-    // Coluna 3 (Ajuda de Custo): x: 532
-    // Coluna 4 (Convênio Médico): x: 732
-    // Coluna 5 (Aparelho Corporativo): x: 930
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
+      <!-- 5. CARD PRINCIPAL COM BORDA DOURADA -->
+      <g filter="url(#cardShadow)">
+        <rect x="46" y="254" width="554" height="476" rx="24" fill="#fcf8ef" stroke="#ba9a6d" stroke-width="2.2" />
+      </g>
 
-    // 1. Salário
-    ctx.font = 'bold 21px "Bebas Neue", "Montserrat", sans-serif';
-    ctx.fillText(data.salary || "R$ 1.839,41", 135, 930);
+      <!-- QUADRO DO CARGO DENTRO DO CARD -->
+      <rect x="62" y="270" width="522" height="136" rx="18" fill="#fbf5e7" stroke="#3e221b" stroke-width="2.2" />
+      ${
+        titleLine2
+          ? `<text x="323" y="322" class="font-role-title">${escapeXml(titleLine1)}</text>
+             <text x="323" y="360" class="font-role-title">${escapeXml(titleLine2)}</text>`
+          : `<text x="323" y="340" class="font-role-title">${escapeXml(titleLine1)}</text>`
+      }
 
-    // 2. VR
-    ctx.font = 'bold 21px "Bebas Neue", "Montserrat", sans-serif';
-    ctx.fillText(data.mealVoucher || "R$ 35,00/dia", 335, 930);
+      <!-- Pílula do Segmento -->
+      ${
+        data.segmentSubtitle
+          ? `<rect x="160" y="377" width="326" height="24" rx="12" fill="#f6efe0" stroke="#856d5c" stroke-width="1.2" />
+             <text x="323" y="393" class="font-pill-text">${escapeXml(data.segmentSubtitle.toUpperCase())}</text>`
+          : ""
+      }
 
-    // 3. Ajuda de Custo
-    ctx.font = '600 14px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = "#2c1e19";
-    const costText = data.costAid || "(de acordo com o roteiro)";
-    if (costText.includes("de acordo")) {
-      ctx.fillText("(de acordo com", 532, 922);
-      ctx.fillText("o roteiro)", 532, 940);
-    } else {
-      ctx.font = 'bold 18px "Bebas Neue", sans-serif';
-      ctx.fillText(costText, 532, 930);
-    }
+      <!-- 5 LINHAS COM OS 5 ÍCONES VETORIAIS CIRCULARES VINHO -->
+      <!-- Linha 1: Local -->
+      <g transform="translate(74, 442)">
+        <circle cx="0" cy="0" r="18" fill="#431317" />
+        <path d="M0 -8 A 5.5 5.5 0 0 1 0 3 L0 8 Z" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" />
+        <circle cx="0" cy="-2.5" r="2" fill="#ffffff" />
+      </g>
+      <text x="104" y="448" class="font-prefix">Local: <tspan class="font-detail-val">${escapeXml(data.location || "Fortaleza - CE")}</tspan></text>
 
-    // 4. Convênio Médico
-    ctx.font = '600 15px "Barlow Semi Condensed", sans-serif';
-    ctx.fillStyle = "#2c1e19";
-    ctx.fillText(data.healthInsurance || "e odontológico", 732, 930);
+      <!-- Linha 2: Roteiro -->
+      <g transform="translate(74, 494)">
+        <circle cx="0" cy="0" r="18" fill="#431317" />
+        <rect x="-8" y="-3" width="16" height="11" fill="none" stroke="#ffffff" stroke-width="1.8" />
+        <path d="M-9 -3 L-6 -8 L6 -8 L9 -3 Z" fill="none" stroke="#ffffff" stroke-width="1.8" />
+        <rect x="-2.5" y="2" width="5" height="6" fill="none" stroke="#ffffff" stroke-width="1.6" />
+      </g>
+      <text x="104" y="492" class="font-prefix">Roteiro: <tspan class="font-detail-val">${escapeXml(routeLine1)}</tspan></text>
+      ${
+        routeLine2
+          ? `<text x="104" y="510" class="font-detail-val">${escapeXml(routeLine2)}</text>`
+          : ""
+      }
 
-    // 5. Aparelho Corporativo
-    ctx.font = 'bold 21px "Bebas Neue", "Montserrat", sans-serif';
-    ctx.fillStyle = MASTER_COLORS.textPrimary;
-    ctx.fillText(data.corporatePhone || "CORPORATIVO", 930, 930);
+      <!-- Linha 3: Início -->
+      <g transform="translate(74, 550)">
+        <circle cx="0" cy="0" r="18" fill="#431317" />
+        <rect x="-7" y="-6" width="14" height="14" rx="2" fill="none" stroke="#ffffff" stroke-width="1.8" />
+        <line x1="-7" y1="-1" x2="7" y2="-1" stroke="#ffffff" stroke-width="1.6" />
+        <line x1="-3.5" y1="-8" x2="-3.5" y2="-5" stroke="#ffffff" stroke-width="1.8" />
+        <line x1="3.5" y1="-8" x2="3.5" y2="-5" stroke="#ffffff" stroke-width="1.8" />
+      </g>
+      <text x="104" y="556" class="font-prefix">Início: <tspan class="font-detail-val">${escapeXml(data.startDate || "Imediato - a confirmar")}</tspan></text>
 
-    ctx.restore();
+      <!-- Linha 4: Contratação -->
+      <g transform="translate(74, 604)">
+        <circle cx="0" cy="0" r="18" fill="#431317" />
+        <rect x="-6" y="-8" width="12" height="16" rx="1.5" fill="none" stroke="#ffffff" stroke-width="1.8" />
+        <line x1="-3" y1="-3" x2="3" y2="-3" stroke="#ffffff" stroke-width="1.6" />
+        <line x1="-3" y1="0.5" x2="3" y2="0.5" stroke="#ffffff" stroke-width="1.6" />
+        <line x1="-3" y1="4" x2="1" y2="4" stroke="#ffffff" stroke-width="1.6" />
+      </g>
+      <text x="104" y="610" class="font-prefix">Contratação: <tspan class="font-detail-val">${escapeXml(data.contractType || "Regime CLT – EFETIVO")}</tspan></text>
 
-    // 7. AVISO E DATA LIMITE INFERIOR
-    if (data.disclaimer) {
-      ctx.save();
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#33221b";
-      ctx.font = '600 13px "Barlow Semi Condensed", "Montserrat", sans-serif';
-      ctx.fillText(data.disclaimer, W / 2, 1046);
-      ctx.restore();
-    }
+      <!-- Linha 5: Escala -->
+      <g transform="translate(74, 658)">
+        <circle cx="0" cy="0" r="18" fill="#431317" />
+        <circle cx="0" cy="0" r="7.5" fill="none" stroke="#ffffff" stroke-width="1.8" />
+        <polyline points="0,-4.5 0,0 3.5,2" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+      </g>
+      <text x="104" y="656" class="font-prefix">Escala: <tspan class="font-detail-val">${escapeXml(scheduleLine1)}</tspan></text>
+      ${
+        scheduleLine2
+          ? `<text x="104" y="674" class="font-detail-val">${escapeXml(scheduleLine2)}</text>`
+          : ""
+      }
 
-    // Exporta dataUrl para visualização e zoom
+      <!-- 6. FAIXA ONDULADA DOURADA INFERIOR -->
+      <path d="M 0 740 Q 280 770 540 735 T 1080 725 L 1080 965 L 0 965 Z" fill="url(#waveGrad)" stroke="#a37a4a" stroke-width="3" />
+      <text x="540" y="775" class="font-ribbon-title">REMUNERAÇÃO E BENEFÍCIOS</text>
+
+      <!-- 5 COLUNAS DE BENEFÍCIOS -->
+      <!-- Col 1: Salário -->
+      <g transform="translate(135, 815)">
+        <ellipse cx="-2" cy="-4" rx="8" ry="3.5" fill="none" stroke="#856235" stroke-width="2" />
+        <ellipse cx="-2" cy="1" rx="8" ry="3.5" fill="none" stroke="#856235" stroke-width="2" />
+        <ellipse cx="-2" cy="6" rx="8" ry="3.5" fill="none" stroke="#856235" stroke-width="2" />
+        <ellipse cx="6" cy="5" rx="6" ry="2.8" fill="none" stroke="#856235" stroke-width="2" />
+      </g>
+      <text x="135" y="855" class="font-benefit-label">Salário:</text>
+      <text x="135" y="880" class="font-benefit-val-bold">${escapeXml(data.salary || "R$ 1.839,41")}</text>
+
+      <!-- Col 2: VR -->
+      <g transform="translate(335, 815)">
+        <circle cx="0" cy="0" r="9" fill="none" stroke="#856235" stroke-width="2" />
+        <line x1="-13" y1="-8" x2="-13" y2="8" stroke="#856235" stroke-width="2" stroke-linecap="round" />
+        <line x1="13" y1="-8" x2="13" y2="8" stroke="#856235" stroke-width="2" stroke-linecap="round" />
+      </g>
+      <text x="335" y="855" class="font-benefit-label">VALE REFEIÇÃO</text>
+      <text x="335" y="880" class="font-benefit-val-bold">${escapeXml(data.mealVoucher || "R$ 35,00/dia")}</text>
+
+      <!-- Col 3: Ajuda -->
+      <g transform="translate(535, 815)">
+        <rect x="-10" y="2" width="4.5" height="7" fill="none" stroke="#856235" stroke-width="1.8" />
+        <rect x="-3" y="-3" width="4.5" height="12" fill="none" stroke="#856235" stroke-width="1.8" />
+        <rect x="4" y="-8" width="4.5" height="17" fill="none" stroke="#856235" stroke-width="1.8" />
+        <path d="M-10 -2 L8 -11 L4 -11" fill="none" stroke="#856235" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </g>
+      <text x="535" y="855" class="font-benefit-label">AJUDA DE CUSTO</text>
+      <text x="535" y="880" class="font-benefit-val-sub">${escapeXml(data.costAid || "(de acordo com o roteiro)")}</text>
+
+      <!-- Col 4: Convênio -->
+      <g transform="translate(735, 815)">
+        <path d="M0 9 C-12 3 -12 -7 0 -2 C12 -7 12 3 0 9 Z" fill="none" stroke="#856235" stroke-width="2" stroke-linejoin="round" />
+        <line x1="-3.5" y1="2" x2="3.5" y2="2" stroke="#856235" stroke-width="1.8" />
+        <line x1="0" y1="-1.5" x2="0" y2="5.5" stroke="#856235" stroke-width="1.8" />
+      </g>
+      <text x="735" y="855" class="font-benefit-label">CONVÊNIO</text>
+      <text x="735" y="880" class="font-benefit-val-sub">${escapeXml(data.healthInsurance || "e odontológico")}</text>
+
+      <!-- Col 5: Aparelho -->
+      <g transform="translate(935, 815)">
+        <rect x="-7" y="-10" width="14" height="20" rx="3" fill="none" stroke="#856235" stroke-width="2" />
+        <circle cx="0" cy="6" r="1.5" fill="#856235" />
+      </g>
+      <text x="935" y="855" class="font-benefit-label">APARELHO</text>
+      <text x="935" y="880" class="font-benefit-val-bold">${escapeXml(data.corporatePhone || "CORPORATIVO")}</text>
+
+      <!-- 7. RODAPÉ CTA COM PÍLULA VINHO E CURSOR -->
+      <g filter="url(#ctaShadow)">
+        <rect x="110" y="975" width="860" height="50" rx="25" fill="#431317" />
+      </g>
+      <text x="540" y="1007" class="font-cta">Acesse o link na nossa bio do Instagram para se candidatar! 👆</text>
+
+      <!-- Disclaimer -->
+      <text x="540" y="1052" class="font-disclaimer">${escapeXml(
+        data.disclaimer ||
+          "⚠️ Atenção: Inscrições abertas! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal."
+      )}</text>
+    </svg>
+    `;
+
+    // Desenha o SVG no Canvas através de Blob URL
     try {
+      const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          ctx.clearRect(0, 0, W, H);
+          ctx.drawImage(img, 0, 0, W, H);
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Falha ao renderizar SVG no canvas"));
+        };
+        img.src = url;
+      });
+
       const dataUrl = canvas.toDataURL("image/png");
       setCanvasDataUrl(dataUrl);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("[canvas] Erro ao renderizar:", err);
     }
 
     setIsRendering(false);
@@ -388,7 +429,7 @@ export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-[#faece7] px-3 py-1 text-xs font-bold text-[#8f281e]">
             <Lock className="size-3" />
-            Padrão Oficial Tarhget 1080×1080 (HD)
+            Template Vetorial HD 1080×1080 (Oficial)
           </span>
           {isRendering && (
             <span className="text-xs text-[#71717a] flex items-center gap-1">
@@ -402,7 +443,7 @@ export function InstagramCanvasPreview({ data, onRandomModel }: Props) {
             <button
               type="button"
               onClick={onRandomModel}
-              title="Alternar modelo de foto"
+              title="Alternar foto de modelo"
               className="flex items-center gap-1.5 rounded-xl border border-[#e4e4e7] bg-white px-3 py-1.5 text-xs font-medium text-[#0a0a0a] shadow-xs hover:bg-[#fafaf9] transition-colors"
             >
               <RefreshCw className="size-3.5 text-[#71717a]" />

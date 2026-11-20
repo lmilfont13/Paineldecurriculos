@@ -59,25 +59,18 @@ export const DEFAULT_POST_DATA: SocialJobPostData = {
     { id: "b5", type: "phone", label: "APARELHO", value: "CORPORATIVO", highlight: false },
   ],
   ctaText: "Acesse o link na nossa bio do Instagram para se candidatar! 👆",
-  disclaimer: "⚠️ Inscrições abertas até dia 10/11/2026! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal.",
-  modelImage: "/images/templates/master-template-1080.png",
+  disclaimer: "⚠️ Inscrições abertas! Confira todos os detalhes sobre perfil e requisitos diretamente em nosso portal.",
+  modelImage: "/images/templates/official-model-clean.png",
   caption: "",
 };
 
 export const STOCK_MODELS = [
   {
     id: "model-official",
-    label: "Modelo Oficial Tarhget (Bloqueado no Padrão)",
-    src: "/images/templates/master-template-1080.png",
+    label: "Modelo Oficial Tarhget (Padrão Oficial)",
+    src: "/images/templates/official-model-clean.png",
     gender: "female",
     tag: "Oficial Tarhget",
-  },
-  {
-    id: "model-woman-1",
-    label: "Mulher · Consultora / Varejo",
-    src: "/images/templates/model-woman-retail-1.jpg",
-    gender: "female",
-    tag: "Cosméticos & Farmácia",
   },
   {
     id: "model-man-1",
