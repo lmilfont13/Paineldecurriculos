@@ -1737,3 +1737,27 @@ export function updateShowcaseHidden(companyId: string, applicationId: string, h
     data: { showcaseHidden: hidden },
   });
 }
+
+/** Aprovados com conta que ainda não responderam nem receberam o pedido da vitrine. */
+export function findShowcaseAskTargets(companyId: string, excludeJobId: string | null) {
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      status: "APPROVED",
+      candidateId: { not: null },
+      isDemo: false,
+      showcaseConsent: null,
+      showcaseAskedAt: null,
+      ...(excludeJobId ? { jobId: { not: excludeJobId } } : {}),
+    },
+    select: { id: true },
+    take: 300,
+  });
+}
+
+export function markShowcaseAsked(companyId: string, ids: string[]) {
+  return prisma.application.updateMany({
+    where: { companyId, id: { in: ids } },
+    data: { showcaseAskedAt: new Date() },
+  });
+}
