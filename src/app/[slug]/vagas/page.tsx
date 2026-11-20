@@ -6,6 +6,7 @@ import {
   CompanyFooter,
   CompanyHeader,
 } from "@/components/public/company-header";
+import { HiresShowcase } from "@/components/public/hires-showcase";
 import { JobList } from "@/components/public/job-list";
 import {
   getJobsPageData,
@@ -33,7 +34,7 @@ export default async function PublicJobsPage({
   const data = await getJobsPageData(slug);
   const candidate = await getPublicSession();
   if (!data) notFound();
-  const { company, jobs, appliedJobIds } = data;
+  const { company, jobs, appliedJobIds, hires } = data;
 
   return (
     <div className="min-h-screen bg-[#f3f1ec]">
@@ -86,6 +87,8 @@ export default async function PublicJobsPage({
           loggedIn={Boolean(candidate)}
           appliedJobIds={appliedJobIds}
         />
+
+        <HiresShowcase hires={hires} companyName={company.name} />
 
         <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e2ddd6] bg-white p-6 shadow-[0_1px_3px_rgba(28,25,23,0.06)] md:p-7">
           <div className="max-w-[620px]">

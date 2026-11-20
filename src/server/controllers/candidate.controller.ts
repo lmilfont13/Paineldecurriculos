@@ -15,6 +15,7 @@ import {
   candidateSignupSchema,
 } from "@/server/models/candidate.model";
 import { withdrawApplication } from "@/server/services/application.service";
+import { setShowcaseConsent } from "@/server/services/showcase.service";
 import { markRead } from "@/server/services/notification.service";
 import {
   deleteCandidateAccount,
@@ -233,6 +234,22 @@ export async function withdrawApplicationAction(
     await withdrawApplication(candidate.id, applicationId);
   }
   redirect(`/${slug}/minhas-candidaturas`);
+}
+
+/**
+ * Candidato aprovado escolhe se o nome e a vaga aparecem na página pública
+ * ("Quem já entrou"). Pode mudar de ideia quando quiser.
+ */
+export async function setShowcaseConsentAction(
+  slug: string,
+  applicationId: string,
+  consent: boolean
+): Promise<void> {
+  const candidate = await getSessionCandidate();
+  if (!candidate) redirect(`/${slug}/vagas`);
+  await setShowcaseConsent(candidate.id, applicationId, consent);
+  revalidatePath(`/${slug}/minhas-candidaturas/${applicationId}`);
+  revalidatePath(`/${slug}/vagas`);
 }
 
 /** Marca as novidades como lidas — sempre no escopo do candidato da sessão. */

@@ -612,6 +612,9 @@ export function anonymizeApplicationsByCandidate(candidateId: string) {
       infoRequestedFields: [],
       infoRequestedAt: null,
       infoAnsweredAt: null,
+      // vitrine de contratados: o nome some da página pública
+      showcaseConsent: null,
+      showcaseConsentAt: null,
     },
   });
 }
@@ -1686,4 +1689,51 @@ export async function findLatestPersonResumeInfo(
   }
 
   return null;
+}
+
+/**
+ * Vitrine de contratados: aprovados que autorizaram aparecer e não foram
+ * ocultados pelo gestor. Só nome, vaga e data da aprovação saem daqui.
+ */
+export function findShowcaseHires(companyId: string, excludeJobId: string | null, take = 60) {
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      status: "APPROVED",
+      showcaseConsent: true,
+      showcaseHidden: false,
+      isDemo: false,
+      ...(excludeJobId ? { jobId: { not: excludeJobId } } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      updatedAt: true,
+      job: { select: { title: true, location: true } },
+      statusEvents: {
+        where: { to: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
+    },
+  });
+}
+
+/** Resposta do candidato sobre aparecer na vitrine — só na própria candidatura aprovada. */
+export function updateShowcaseConsent(candidateId: string, applicationId: string, consent: boolean) {
+  return prisma.application.updateMany({
+    where: { id: applicationId, candidateId, status: "APPROVED" },
+    data: { showcaseConsent: consent, showcaseConsentAt: new Date() },
+  });
+}
+
+/** Gestor oculta ou volta a mostrar alguém na vitrine (escopo da empresa). */
+export function updateShowcaseHidden(companyId: string, applicationId: string, hidden: boolean) {
+  return prisma.application.updateMany({
+    where: { id: applicationId, companyId },
+    data: { showcaseHidden: hidden },
+  });
 }

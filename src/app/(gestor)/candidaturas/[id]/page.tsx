@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DecisionBlock } from "@/components/gestor/decision-block";
+import { ShowcaseToggle } from "@/components/gestor/showcase-toggle";
 import { ImpedimentToggle } from "@/components/gestor/impediment-toggle";
 import { CandidateDetailSplitView } from "@/components/gestor/candidate-detail-split-view";
 import { CandidateRegistrationEditor } from "@/components/gestor/candidate-registration-editor";
@@ -267,6 +268,7 @@ export default async function CandidaturaDetailPage({
         aiScore={app.aiScore}
         aiMinScore={app.job.aiMinScore}
         decisionBlockSlot={
+          <>
           <DecisionBlock
             applicationId={app.id}
             status={app.status}
@@ -279,6 +281,14 @@ export default async function CandidaturaDetailPage({
             queue={app.queue}
             hasImpediment={app.hasImpediment ?? false}
           />
+          {app.status === "APPROVED" && app.candidateId && (
+            <ShowcaseToggle
+              applicationId={app.id}
+              consent={app.showcaseConsent}
+              hidden={app.showcaseHidden}
+            />
+          )}
+          </>
         }
         registrationEditorHeaderSlot={
           <CandidateRegistrationEditor

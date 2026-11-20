@@ -11,6 +11,7 @@ import {
 } from "@/components/public/company-header";
 import { WithdrawButton } from "@/components/public/withdraw-button";
 import { CandidateProcessTracker } from "@/components/candidate/candidate-process-tracker";
+import { ShowcaseConsentCard } from "@/components/candidate/showcase-consent-card";
 import { getMinhaCandidaturaData } from "@/server/controllers/public.controller";
 import { formatAppliedAt } from "@/server/models/application.model";
 import { formatInterviewLong } from "@/server/models/interview.model";
@@ -122,6 +123,19 @@ export default async function MinhaCandidaturaPage({
               {application.company.name} enviou.
             </p>
           </section>
+        )}
+
+        {/* Aprovado: autorizar aparecer em "Quem já entrou" na página de vagas */}
+        {application.status === "APPROVED" && (
+          <ShowcaseConsentCard
+            slug={slug}
+            applicationId={application.id}
+            companyName={application.company.name}
+            jobTitle={application.job.title}
+            name={application.name}
+            consent={application.showcaseConsent}
+            hidden={application.showcaseHidden}
+          />
         )}
 
         {/* Recados da empresa */}

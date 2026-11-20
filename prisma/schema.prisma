@@ -292,6 +292,13 @@ model Application {
   infoRequestedAt     DateTime?
   infoAnsweredAt      DateTime?
 
+  /// Vitrine de contratados (página pública de vagas): quem foi aprovado
+  /// escolhe, na área dele, se o nome completo e a vaga aparecem.
+  /// null = ainda não respondeu; só aparece com true. O gestor pode ocultar.
+  showcaseConsent   Boolean?
+  showcaseConsentAt DateTime?
+  showcaseHidden    Boolean   @default(false)
+
   job           Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   company       Company            @relation(fields: [companyId], references: [id])
   candidate     Candidate?         @relation(fields: [candidateId], references: [id])
@@ -311,6 +318,7 @@ model Application {
   @@index([companyId, desiredRole])
   @@index([companyId, source])
   @@index([jobId, source])
+  @@index([companyId, showcaseConsent])
   interviewEvaluations InterviewEvaluation[]
 }
 
