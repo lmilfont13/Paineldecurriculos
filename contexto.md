@@ -378,5 +378,14 @@ e-mail personalizados.
   cartão" abre o compartilhar do celular com a imagem; no computador copia a
   imagem para colar na conversa. Só gestor logado gera o cartão.
 
+- **Cartaz de vaga para o Instagram refeito (11/2026):** o cartaz deixou de
+  ser uma foto do cartaz antigo com texto escrito por cima. Agora é montado em
+  camadas (foto, faixa dourada, textos e ícones), com as peças fixas recortadas
+  do cartaz oficial em `public/images/poster/` e a fonte servida pelo próprio
+  site (`public/fonts/`). Só aparecem as informações e os benefícios que a vaga
+  tem; nada de valor de exemplo. O desenho fica em
+  `src/components/gestor/instagram-poster-draw.ts` e as regras em
+  `src/server/models/poster.model.ts`.
+
 Relatórios com o raciocínio por trás das decisões, na raiz do projeto:
 `RELATORIO_MELHORIAS.md`, `RELATORIO_UX_GESTOR.md` e `PLANO_PERSONAS.md`.

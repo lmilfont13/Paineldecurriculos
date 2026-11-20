@@ -2,12 +2,12 @@ import "server-only";
 
 import { geminiGenerate } from "@/lib/gemini";
 import { findJobById } from "@/server/repositories/job.repository";
+import { contractLabels } from "@/server/models/job.model";
+import { splitJobTitle } from "@/server/models/job-title.model";
 import {
   DEFAULT_POST_DATA,
   SocialJobPostData,
   socialJobPostSchema,
-  STOCK_MODELS,
-  BenefitItem,
 } from "@/server/models/social-post.model";
 
 /**
@@ -49,7 +49,7 @@ Retorne APENAS um objeto JSON com as seguintes chaves (sem formatação markdown
 Regras:
 1. Mantenha os textos dos campos do card objetivos para caber harmoniosamente no espaço visual de 1080x1080.
 2. Formate moedas no padrão brasileiro (R$ X.XXX,XX).
-3. Se um benefício não for mencionado, coloque uma alternativa realista comum no varejo (ex: Vale Transporte, Seguro de Vida) ou mantenha sucinto.
+3. Use só o que está no texto. Se um campo ou benefício não for mencionado, deixe "" (vazio) — nunca invente valor, benefício, data ou cidade, e nunca copie os exemplos acima.
 4. "benefitsList" deve conter no máximo 5 itens principais ordenados para os cards inferiores.`;
 
 /**
@@ -58,10 +58,10 @@ Regras:
 function fallbackParse(text: string): SocialJobPostData {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  let role = "PROMOTOR(A) DE MERCHANDISING";
-  let location = "Fortaleza - CE";
-  let salary = "R$ 1.839,41";
-  let meal = "R$ 35,00/dia";
+  let role = "";
+  let location = "";
+  let salary = "";
+  let meal = "";
   let code = "";
 
   const codeMatch = text.match(/(?:vaga|c[oó]digo|#)\s*(?:n[º°o]?)?\s*[:\-]?\s*([A-Za-z0-9\-]+)/i);
@@ -76,26 +76,26 @@ function fallbackParse(text: string): SocialJobPostData {
   const cityMatch = text.match(/(?:local|cidade|regi[aã]o)\s*[:\-]?\s*([^\n\r]+)/i);
   if (cityMatch) location = cityMatch[1].trim();
 
-  if (lines.length > 0 && !codeMatch) {
+  const cargoMatch = text.match(/cargo\s*[:\-]\s*([^\n\r]+)/i);
+  if (cargoMatch) role = cargoMatch[1].trim();
+  else if (lines.length > 0) {
     const firstNonEmpty = lines.find((l) => !l.toLowerCase().startsWith("vaga") && l.length > 4);
-    if (firstNonEmpty) role = firstNonEmpty.toUpperCase().slice(0, 40);
+    if (firstNonEmpty) role = firstNonEmpty.slice(0, 60);
   }
 
+  // Só o que foi encontrado no texto: nada de valor de exemplo.
   return {
-    ...DEFAULT_POST_DATA,
-    jobCode: code || DEFAULT_POST_DATA.jobCode,
-    roleTitle: role,
+    ...emptyPostData(role || "Vaga"),
+    jobCode: code,
     location,
     salary,
     mealVoucher: meal,
-    benefitsList: [
-      { id: "b1", type: "salary", label: "Salário", value: salary, highlight: true },
-      { id: "b2", type: "meal", label: "VALE REFEIÇÃO", value: meal, highlight: false },
-      { id: "b3", type: "aid", label: "AJUDA DE CUSTO", value: "(de acordo c/ roteiro)", highlight: false },
-      { id: "b4", type: "health", label: "CONVÊNIO MÉDICO", value: "e odontológico", highlight: false },
-      { id: "b5", type: "phone", label: "APARELHO", value: "CORPORATIVO", highlight: false },
-    ],
   };
+}
+
+/** Post em branco (sem nenhum dado de exemplo). */
+function emptyPostData(roleTitle: string): SocialJobPostData {
+  return socialJobPostSchema.parse({ roleTitle });
 }
 
 /**
@@ -169,10 +169,13 @@ export async function parseJobAnnouncementText(
     }
 
     console.warn("[social-post] Validação parcial falhou, mesclando dados:", validated.error);
+    // Junta com um post em branco: o que a IA não trouxe fica vazio, nunca
+    // com os valores do exemplo.
     return {
-      ...DEFAULT_POST_DATA,
+      ...emptyPostData(String(parsedJson.roleTitle || "Vaga")),
       ...parsedJson,
-      benefitsList: parsedJson.benefitsList || DEFAULT_POST_DATA.benefitsList,
+      benefitsList: Array.isArray(parsedJson.benefitsList) ? parsedJson.benefitsList : [],
+      modelImage: DEFAULT_POST_DATA.modelImage,
     };
   } catch (err) {
     console.error("[social-post] Falha ao processar com IA, usando fallback heurístico:", err);
@@ -209,12 +212,15 @@ ${job.requirements || ""}
 
   // Garante que o código e título da vaga do banco tenham precedência
   parsed.jobCode = job.code || parsed.jobCode || job.id.slice(0, 5);
-  parsed.roleTitle = job.title.toUpperCase();
+  // Título sem a cidade repetida ("PROMOTOR(A) ... ( QUIXADÁ - CE )").
+  parsed.roleTitle = splitJobTitle(job.title, job.location).toUpperCase();
   if (job.location) {
     parsed.location = job.location;
   }
-  if (job.contract) {
-    parsed.contractType = `Regime ${job.contract} – Efetivo`;
+  // O tipo de contrato vem do texto da vaga (a IA lê "temporário",
+  // "determinado"...). Só sem isso usa o cadastro, sem inventar "Efetivo".
+  if (!parsed.contractType.trim() && job.contract) {
+    parsed.contractType = `Regime ${contractLabels[job.contract]}`;
   }
 
   parsed.caption = generateInstagramCaption(parsed);
