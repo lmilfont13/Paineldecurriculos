@@ -394,9 +394,21 @@ async function extractPdfTextWithVision(
   return nativeText;
 }
 
-/** Regra 3: prompt da IA — NÃO ALTERAR. */
-const AI_PROMPT = `Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência.
-Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases" }`;
+/** Regra 3: prompt da IA de avaliação de nota e aderência. */
+const AI_PROMPT = `Você é um recrutador sênior avaliando a aderência de um candidato a uma vaga.
+
+Ignore nome, gênero, idade, foto e origem. Avalie só habilidades e experiência em relação aos critérios da vaga.
+
+Use esta régua para a nota:
+- 90 a 100: atende todos os critérios essenciais, com experiência comprovada na função
+- 70 a 89: atende a maioria dos critérios, falta pouco para o ideal
+- 50 a 69: atende parcialmente, precisaria de treinamento relevante
+- 30 a 49: atende poucos critérios, perfil distante da vaga
+- 0 a 29: não atende aos critérios essenciais
+
+Se o material não tiver informação suficiente para avaliar, dê nota baixa e explique na justificativa, em vez de chutar.
+
+Retorne JSON: { "score": 0-100, "reasoning": "máximo 2 frases citando os critérios que decidiram a nota" }`;
 
 
 /** Etapa da triagem, mostrada ao vivo na tela de agentes. */
