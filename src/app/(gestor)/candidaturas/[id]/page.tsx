@@ -33,6 +33,7 @@ import { formatBirthDate } from "@/server/models/age.model";
 import { formatAddress } from "@/server/models/address.model";
 import { AnswersEditor } from "@/components/gestor/answers-editor";
 import { AskAiBox } from "@/components/gestor/ask-ai-box";
+import { ScoreRulerTrigger, ScoreRulerCard } from "@/components/gestor/score-ruler-legend";
 import { ReanalyzeButton } from "@/components/gestor/reanalyze-button";
 import { ReextractPhotoButton } from "@/components/gestor/reextract-photo-button";
 import { CareerCard } from "@/components/gestor/career-card";
@@ -523,15 +524,18 @@ export default async function CandidaturaDetailPage({
                         </span>
                         <span className="text-xs font-semibold text-slate-500">/ 100</span>
                       </p>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          meets ? "bg-emerald-200/80 text-emerald-900" : "bg-amber-200/80 text-amber-900"
-                        }`}
-                      >
-                        {meets
-                          ? `Acima do mínimo da vaga (${app.job.aiMinScore})`
-                          : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                            meets ? "bg-emerald-200/80 text-emerald-900" : "bg-amber-200/80 text-amber-900"
+                          }`}
+                        >
+                          {meets
+                            ? `Acima do mínimo da vaga (${app.job.aiMinScore})`
+                            : `Abaixo do mínimo da vaga (${app.job.aiMinScore})`}
+                        </span>
+                        <ScoreRulerTrigger highlightScore={app.aiScore} variant="pill" label="Régua da Nota" />
+                      </div>
                     </div>
                     <div className="relative mt-2.5 h-2 rounded-full bg-slate-200 ring-1 ring-black/5">
                       <div

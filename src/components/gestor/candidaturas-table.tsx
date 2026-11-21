@@ -8,6 +8,7 @@ import { Building2, ChevronDown, ChevronUp, Download, ExternalLink, MapPin } fro
 import { AiScoreChip } from "@/components/gestor/ai-score-chip";
 import { BulkMessageDialog } from "@/components/gestor/bulk-message-dialog";
 import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
+import { ScoreRulerTrigger } from "@/components/gestor/score-ruler-legend";
 import { LiveRefresh } from "@/components/gestor/live-refresh";
 import { Toast } from "@/components/gestor/toast";
 import {
@@ -1098,6 +1099,7 @@ export function CandidaturasTable({
             </option>
           ))}
         </select>
+        <ScoreRulerTrigger variant="pill" label="Régua de Notas" />
         <div className="relative">
           <button
             type="button"

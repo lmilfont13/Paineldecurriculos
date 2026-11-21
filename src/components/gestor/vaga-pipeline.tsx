@@ -12,6 +12,7 @@ import {
   type CompanyCandidateDossierItem,
 } from "@/server/controllers/application.controller";
 import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
+import { ScoreRulerTrigger } from "@/components/gestor/score-ruler-legend";
 import {
   appStatusLabels,
   formatWaiting,
@@ -368,6 +369,7 @@ export function VagaPipeline({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <ScoreRulerTrigger variant="pill" label="Régua de Notas" />
             <button
               type="button"
               disabled={companyDossierLoading}

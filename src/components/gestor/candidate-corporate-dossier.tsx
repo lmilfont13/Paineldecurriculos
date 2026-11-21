@@ -39,6 +39,7 @@ import { appStatusLabels, type AppStatusKey } from "@/server/models/application.
 import { formatPhone } from "@/lib/phone";
 import { jobLabel } from "@/server/models/candidate-list.model";
 import { extractStandbyReason } from "@/server/models/standby.model";
+import { ScoreRulerTrigger } from "@/components/gestor/score-ruler-legend";
 
 export type ApplicationHistoryItem = {
   id: string;
@@ -367,16 +368,19 @@ export function CandidateCorporateDossier({
                 </span>
 
                 {typeof aiScore === "number" && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
-                      aiScore >= aiMinScore
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border border-amber-200"
-                    }`}
-                    title={`Score IA: ${aiScore}% (Mínimo: ${aiMinScore}%)`}
-                  >
-                    {aiScore}% match
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                        aiScore >= aiMinScore
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}
+                      title={`Score IA: ${aiScore}% (Mínimo: ${aiMinScore}%)`}
+                    >
+                      {aiScore}% match
+                    </span>
+                    <ScoreRulerTrigger highlightScore={aiScore} variant="icon" />
+                  </div>
                 )}
               </div>
             </div>
