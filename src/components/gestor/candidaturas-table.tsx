@@ -915,6 +915,17 @@ export function CandidaturasTable({
         </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={aiBusy}
+            onClick={() => void handleRecalculateAll()}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 text-[12px] font-bold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50"
+            title="Recalcula a nota de todos os candidatos usando o novo prompt e a nova régua oficial"
+          >
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>{aiBusy ? "Recalculando…" : "Recalcular Notas (Nova Régua)"}</span>
+          </button>
+
           <Link
             href="/candidaturas/novo"
             className="flex h-9 items-center rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[12px] font-semibold text-[#0a0a0a] hover:bg-[#fafaf9]"

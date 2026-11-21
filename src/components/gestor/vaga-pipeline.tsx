@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type React from "react";
-import { Building2, ChevronDown, ChevronUp, Download, Search } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Download, RefreshCw, Search } from "lucide-react";
 import type { AIState } from "@prisma/client";
 import {
   bulkSetApplicationStatusAction,
   moveApplicationAction,
   getCompanyReportAction,
+  recalculateAllScoresAction,
   type CompanyCandidateDossierItem,
 } from "@/server/controllers/application.controller";
 import { CompanyDossierModal } from "@/components/gestor/company-dossier-modal";
@@ -98,6 +99,7 @@ export function VagaPipeline({
     candidates: CompanyCandidateDossierItem[];
   } | null>(null);
   const [companyDossierLoading, setCompanyDossierLoading] = useState(false);
+  const [recalculatingScores, setRecalculatingScores] = useState(false);
 
   // Recolhimento do quadro inteiro + recolhimento por coluna (Banco de Dados já nasce recolhido se > 5)
   const initialRejectedCount = applications.filter((a) => a.status === "REJECTED").length;
@@ -282,6 +284,36 @@ export function VagaPipeline({
     }
   }
 
+  async function handleRecalculateVagaScores() {
+    const ok = window.confirm(
+      `Deseja recalcular a nota de TODOS os candidatos desta vaga com a Nova Régua Oficial (0 a 100)?\n\nIsso atualizará a pontuação e justificativa da IA conforme os novos critérios. O status dos candidatos (Aprovado, Entrevista, etc.) NÃO será alterado.`
+    );
+    if (!ok) return;
+
+    setRecalculatingScores(true);
+    try {
+      const res = await recalculateAllScoresAction({ jobId });
+      if (res.ok) {
+        setToast({
+          message: `Recálculo iniciado para ${res.queued} candidatos em segundo plano! Acompanhe o processamento.`,
+        });
+        // Atualiza estado local para WAITING
+        setPeople((prev) =>
+          prev.map((p) => ({
+            ...p,
+            aiState: "WAITING",
+          }))
+        );
+      } else {
+        setToast({ message: res.error || "Falha ao iniciar recálculo de notas." });
+      }
+    } catch {
+      setToast({ message: "Erro ao solicitar recálculo de notas." });
+    } finally {
+      setRecalculatingScores(false);
+    }
+  }
+
   function askMove(id: string, stage: AppStatusKey) {
     const person = people.find((p) => p.id === id);
     if (!person || person.status === stage) return;
@@ -370,6 +402,16 @@ export function VagaPipeline({
 
           <div className="flex flex-wrap items-center gap-2">
             <ScoreRulerTrigger variant="pill" label="Régua de Notas" />
+            <button
+              type="button"
+              disabled={recalculatingScores}
+              onClick={handleRecalculateVagaScores}
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50"
+              title="Recalcula a nota de todos os candidatos desta vaga com a Nova Régua Oficial (0-100)"
+            >
+              <RefreshCw className={`size-3.5 text-emerald-600 ${recalculatingScores ? "animate-spin" : ""}`} />
+              <span>{recalculatingScores ? "Recalculando…" : "Recalcular Notas (Nova Régua)"}</span>
+            </button>
             <button
               type="button"
               disabled={companyDossierLoading}
