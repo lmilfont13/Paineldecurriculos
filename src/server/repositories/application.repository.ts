@@ -1783,3 +1783,29 @@ export function markShowcaseAsked(companyId: string, ids: string[]) {
     data: { showcaseAskedAt: new Date() },
   });
 }
+
+/** Todas as candidaturas da empresa (ou de uma vaga) para recálculo geral de notas. */
+export function findAllApplicationsForRecalculate(
+  companyId: string,
+  options: { jobId?: string } = {}
+) {
+  return prisma.application.findMany({
+    where: {
+      companyId,
+      isDemo: false,
+      hasImpediment: false,
+      ...(options.jobId ? { jobId: options.jobId } : {}),
+    },
+    select: { id: true, name: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Marca candidaturas como WAITING para recálculo de notas em lote. */
+export function markApplicationsWaiting(ids: string[]) {
+  if (ids.length === 0) return Promise.resolve({ count: 0 });
+  return prisma.application.updateMany({
+    where: { id: { in: ids } },
+    data: { aiState: "WAITING" },
+  });
+}

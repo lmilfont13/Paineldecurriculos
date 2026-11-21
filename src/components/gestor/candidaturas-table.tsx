@@ -16,6 +16,7 @@ import {
   deleteApplicationsAction,
   extractPhotosBulkAction,
   reanalyzeBatchAction,
+  recalculateAllScoresAction,
   searchCandidatesAction,
   generateCandidatesReportAction,
   getCompanyReportAction,
@@ -299,6 +300,28 @@ export function CandidaturasTable({
       if (ids) setSelected(new Set());
     } catch {
       setToast("Não foi possível iniciar a avaliação em lote agora.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function handleRecalculateAll() {
+    const scopeLabel = jobId ? "desta vaga" : "de todas as vagas";
+    const confirmed = window.confirm(
+      `Deseja recalcular a nota de TODOS os candidatos ${scopeLabel} com a Nova Régua Oficial (0 a 100)?\n\nIsso atualizará a nota e a justificativa no novo critério. O status dos candidatos (Aprovado, Entrevista, etc.) NÃO será alterado.`
+    );
+    if (!confirmed) return;
+
+    setAiBusy(true);
+    try {
+      const res = await recalculateAllScoresAction({ jobId: jobId || undefined });
+      if (res.ok) {
+        setToast(`Recálculo iniciado para ${res.queued} candidatos em segundo plano! Acompanhe o processamento.`);
+      } else {
+        setToast(res.error || "Não foi possível iniciar o recálculo.");
+      }
+    } catch {
+      setToast("Falha ao solicitar recálculo de notas.");
     } finally {
       setAiBusy(false);
     }
@@ -955,6 +978,25 @@ export function CandidaturasTable({
                     </span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  disabled={aiBusy}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    void handleRecalculateAll();
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                  title="Recalcula a nota e justificativa de todos os candidatos usando a Nova Régua Oficial (0-100)"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>Recalcular todas as notas (Nova Régua)</span>
+                  </span>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    {rows.length}
+                  </span>
+                </button>
 
                 <Link
                   href="/buscar-cvs"

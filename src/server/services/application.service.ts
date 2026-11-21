@@ -54,6 +54,8 @@ import {
   findJobQueueSiblings,
   cloneStandbyApplicationToJob,
   findUnevaluatedApplications,
+  findAllApplicationsForRecalculate,
+  markApplicationsWaiting,
   findLatestPersonResumeInfo,
   findApplicationsMissingPhoto,
   findExistingPersonPhotoPath,
@@ -846,6 +848,36 @@ export async function reanalyzePendingApplications(
     queued: targets.length,
     names: targets.map((t) => t.name),
   };
+}
+
+/**
+ * Recalcula as notas de todas as candidaturas ativas da empresa utilizando o novo
+ * prompt calibrado e a régua oficial da IA. Roda em segundo plano.
+ * Regra 1: companyId da sessão; Regra 2: só atualiza aiScore, aiReasoning e aiState.
+ */
+export async function recalculateAllCompanyScores(
+  companyId: string,
+  options: { jobId?: string } = {}
+): Promise<{ queued: number; total: number }> {
+  const apps = await findAllApplicationsForRecalculate(companyId, options);
+
+  if (apps.length === 0) {
+    return { queued: 0, total: 0 };
+  }
+
+  // Marca todas como WAITING para o gestor acompanhar visualmente na tabela
+  await markApplicationsWaiting(apps.map((a) => a.id));
+
+  runInBackground("recalcular todas as notas com nova régua", async () => {
+    for (const app of apps) {
+      await runTriageWithTracking(app.id, {
+        eventName: "application/recalculate-all",
+        maxAttempts: 3,
+      }).catch((err) => console.error(`[recalculate] erro no app ${app.id}:`, err));
+    }
+  });
+
+  return { queued: apps.length, total: apps.length };
 }
 
 /**

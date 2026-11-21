@@ -62,6 +62,7 @@ import {
   updateCandidateRegistrationByManager,
   requestReanalysis,
   reanalyzePendingApplications,
+  recalculateAllCompanyScores,
   saveInfoAnswers,
   saveManagerNotes,
   scheduleInterview,
@@ -353,6 +354,33 @@ export async function reanalyzeBatchAction(options?: {
   revalidatePath("/agentes");
   revalidatePath("/painel");
   return result;
+}
+
+/**
+ * Recalcula todas as notas de candidaturas da empresa (ou de uma vaga específica)
+ * usando a nova régua calibrada da IA (0 a 100). Executa em background.
+ * Regra 1: tenant isolation; Regra 2: nunca altera status ou bloqueia o candidato.
+ */
+export async function recalculateAllScoresAction(options?: {
+  jobId?: string;
+}): Promise<{ ok: boolean; queued: number; total: number; error?: string }> {
+  try {
+    const user = await requireManager();
+    const result = await recalculateAllCompanyScores(user.companyId, {
+      jobId: options?.jobId || undefined,
+    });
+    revalidatePath("/candidaturas");
+    revalidatePath("/agentes");
+    revalidatePath("/painel");
+    return { ok: true, queued: result.queued, total: result.total };
+  } catch (err) {
+    return {
+      ok: false,
+      queued: 0,
+      total: 0,
+      error: err instanceof Error ? err.message : "Falha ao iniciar recálculo.",
+    };
+  }
 }
 
 /** G11 · Mudança de status em massa (E9) — cada id é validado pelo tenant. */
