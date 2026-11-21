@@ -57,20 +57,21 @@ export default async function PublicJobsPage({
           jobCount={jobs.length}
         />
 
-        <div className="relative mx-auto w-full max-w-[1120px] px-5 pb-8 pt-5 md:px-8 md:pb-10 md:pt-6">
-          <div className="relative z-10 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="relative mx-auto w-full max-w-[1120px] px-5 pb-4 pt-2 md:px-8 md:pb-5 md:pt-3">
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
             <div>
-              <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.8px] text-white md:text-[38px]">
+              <h1 className="text-[22px] sm:text-[26px] md:text-[30px] font-bold leading-tight tracking-[-0.6px] text-white">
                 {company.heroTitle}
               </h1>
-              <p className="mt-2 max-w-[560px] text-[14px] leading-6 text-white/85 md:text-[15px]">
+              <p className="mt-0.5 max-w-[560px] text-[13px] leading-relaxed text-white/85 sm:text-[14px]">
                 {company.heroSubtitle}
               </p>
             </div>
             {jobs.length > 0 && (
-              <div className="flex items-baseline gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-white backdrop-blur">
-                <span className="text-[30px] font-semibold leading-none tracking-[-1px]">{jobs.length}</span>
-                <span className="text-[13px] font-medium leading-tight text-white/85">
+              <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-white backdrop-blur shadow-xs">
+                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[18px] sm:text-[20px] font-bold leading-none tracking-tight">{jobs.length}</span>
+                <span className="text-[12px] sm:text-[13px] font-medium leading-tight text-white/90">
                   {jobs.length === 1 ? "vaga aberta" : "vagas abertas"}
                 </span>
               </div>
@@ -79,7 +80,7 @@ export default async function PublicJobsPage({
         </div>
       </section>
 
-      <main id="vagas" className="mx-auto w-full max-w-[1120px] px-5 pb-10 pt-6 md:px-8 md:pt-8">
+      <main id="vagas" className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-4 md:px-8 md:pt-6">
         <JobList
           slug={company.slug}
           jobs={jobs}

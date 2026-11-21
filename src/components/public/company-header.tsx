@@ -28,7 +28,7 @@ function BrandLogo({ company }: { company: PublicCompany }) {
     <img
       src={logoSrc}
       alt={company.name}
-      className="h-[52px] w-auto max-w-[220px] object-contain md:h-[68px]"
+      className="h-[38px] sm:h-[46px] w-auto max-w-[190px] object-contain transition-all"
       style={!isWhitePreRendered ? { filter: "brightness(0) invert(1)" } : undefined}
     />
   );
@@ -94,7 +94,7 @@ export async function CompanyHeader({
       <div
         className={
           "mx-auto flex w-full max-w-[1120px] items-center justify-between gap-4 px-5 md:px-8 " +
-          (onBrand ? "pt-6" : "h-16")
+          (onBrand ? "pt-3.5 pb-1 sm:pt-4 sm:pb-2" : "h-16")
         }
       >
         <div className="flex items-center gap-6">
