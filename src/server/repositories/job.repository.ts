@@ -129,3 +129,33 @@ export function findPublicOpenJobsForSitemap() {
     select: { id: true, updatedAt: true, company: { select: { slug: true } } },
   });
 }
+
+/** Vagas abertas públicas para vitrine da página inicial. */
+export function findPublicFeaturedJobs(limit = 8) {
+  return prisma.job.findMany({
+    where: {
+      status: "OPEN",
+      isTalentPool: false,
+      company: { isActive: true, slug: { notIn: HIDDEN_FROM_DIRECTORY_SLUGS } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      code: true,
+      location: true,
+      workMode: true,
+      contract: true,
+      createdAt: true,
+      company: {
+        select: {
+          name: true,
+          slug: true,
+          logoUrl: true,
+          primaryColor: true,
+        },
+      },
+    },
+  });
+}

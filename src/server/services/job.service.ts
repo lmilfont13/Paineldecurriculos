@@ -20,6 +20,7 @@ import {
   countJobsCreatedSince,
   findJobsByCompanyId,
   findOpenJobsByCompanyId,
+  findPublicFeaturedJobs,
   findPublicOpenJobsForSitemap,
   incrementWhatsappShares,
   updateJob,
@@ -164,4 +165,9 @@ export function countCompanyJobs(companyId: string, onlyOpen = false): Promise<n
 
 export function countCompanyJobsSince(companyId: string, since: Date): Promise<number> {
   return countJobsCreatedSince(companyId, since);
+}
+
+/** Vagas abertas públicas para a vitrine inovadora da página inicial. */
+export function listPublicFeaturedJobs(limit = 8) {
+  return findPublicFeaturedJobs(limit);
 }
