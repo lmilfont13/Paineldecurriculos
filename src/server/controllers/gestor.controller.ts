@@ -47,7 +47,7 @@ import {
 import { getDashboard } from "@/server/services/dashboard.service";
 import { countCompanyJobs, countCompanyJobsSince, getCompanyJob, listCompanyJobs } from "@/server/services/job.service";
 import { appUrl } from "@/lib/env";
-import { effectiveAge } from "@/server/models/age.model";
+import { effectiveAge, extractBirthDateFromAnswers, parseBirthDate } from "@/server/models/age.model";
 
 function getStartOfTodayInBrazil(): Date {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -133,6 +133,7 @@ export async function getBuscarCvsData() {
     let education: string | null = null;
     let languages: string | null = null;
 
+    let birthDateFromAnswer: string | null = null;
     for (const ans of app.answers) {
       const label = ans.field.label.toLowerCase();
       if (label.includes("salar") || label.includes("pretens")) {
@@ -141,12 +142,18 @@ export async function getBuscarCvsData() {
         education = ans.value;
       } else if (label.includes("idioma") || label.includes("inglês")) {
         languages = ans.value;
+      } else if (label.includes("nasc") || label.includes("anivers") || label.includes("birth")) {
+        birthDateFromAnswer = ans.value;
       }
     }
 
     const effectiveSalary = app.salaryExpectation || salaryExpectation;
-    const effectiveBirthDate = app.birthDate ?? extractBirthDateFromText(app.resumeText);
-    const age = calculateAge(effectiveBirthDate) ?? extractAgeFromText(app.resumeText);
+    const effectiveBirthDate =
+      app.birthDate ??
+      (app as any).candidate?.birthDate ??
+      parseBirthDate(birthDateFromAnswer) ??
+      extractBirthDateFromText(app.resumeText);
+    const age = effectiveBirthDate ? calculateAge(effectiveBirthDate) : extractAgeFromText(app.resumeText);
 
     return {
       id: app.id,
@@ -259,11 +266,24 @@ export async function getCandidaturaDetail(id: string) {
     application.resumeUrl
   );
 
+  const effectiveBirthDate =
+    application.birthDate ??
+    (application as any).candidate?.birthDate ??
+    extractBirthDateFromAnswers(application.answers) ??
+    extractBirthDateFromText(application.resumeText);
+
   return {
     ...withPhoto,
     name: titleCasePt(withPhoto.name),
+    birthDate: effectiveBirthDate ?? withPhoto.birthDate,
     otherApplications,
-    age: effectiveAge(application.birthDate, application.resumeText),
+    age: effectiveAge(
+      effectiveBirthDate,
+      application.resumeText,
+      new Date(),
+      application.answers,
+      (application as any).candidate?.birthDate
+    ),
     queue,
     latestResumeInfo: latestResume
       ? {

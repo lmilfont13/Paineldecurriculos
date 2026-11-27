@@ -65,7 +65,8 @@ import {
 import { formatInterviewAt } from "@/server/models/interview.model";
 import { formatPhone } from "@/lib/phone";
 import { titleCasePt } from "@/server/models/text.model";
-import { formatBirthDate } from "@/server/models/age.model";
+import { formatBirthDate, extractBirthDateFromAnswers, parseBirthDate } from "@/server/models/age.model";
+import { extractBirthDateFromText } from "@/server/models/cv-search.model";
 import { formatAddress } from "@/server/models/address.model";
 import { readTenure } from "@/server/models/tenure.model";
 import {
@@ -195,13 +196,35 @@ export async function listCompanyApplications(
 /** Idade (só para exibir e filtrar) de cada candidato de uma vaga, por id da candidatura. */
 export async function listJobApplicantAges(companyId: string, jobId: string) {
   const rows = await findAgeSourcesForJob(companyId, jobId);
-  return Object.fromEntries(rows.map((r) => [r.id, effectiveAge(r.birthDate, r.resumeText)])) as Record<string, number | null>;
+  return Object.fromEntries(
+    rows.map((r) => [
+      r.id,
+      effectiveAge(
+        r.birthDate,
+        r.resumeText,
+        new Date(),
+        r.answers,
+        r.candidate?.birthDate
+      ),
+    ])
+  ) as Record<string, number | null>;
 }
 
 /** Idade (só para exibir) de cada candidatura da empresa, por id. */
 export async function listCompanyApplicantAges(companyId: string) {
   const rows = await findAgeSourcesForCompany(companyId);
-  return Object.fromEntries(rows.map((r) => [r.id, effectiveAge(r.birthDate, r.resumeText)])) as Record<string, number | null>;
+  return Object.fromEntries(
+    rows.map((r) => [
+      r.id,
+      effectiveAge(
+        r.birthDate,
+        r.resumeText,
+        new Date(),
+        r.answers,
+        r.candidate?.birthDate
+      ),
+    ])
+  ) as Record<string, number | null>;
 }
 
 /** Busca avançada de CVs (nível Michelin): lista enriquecida com fotos assinadas e respostas. */
@@ -1859,7 +1882,12 @@ export async function getCompanyReportDossier(
       [app.neighborhood, [app.city, app.state].filter(Boolean).join("/")].filter(Boolean).join(" - ") ||
       "Não informado";
 
-    const birthDateFormatted = formatBirthDate(app.birthDate) || "Não informada";
+    const effectiveBirth =
+      app.birthDate ??
+      (app as any).candidate?.birthDate ??
+      extractBirthDateFromAnswers(app.answers) ??
+      extractBirthDateFromText(app.resumeText);
+    const birthDateFormatted = formatBirthDate(effectiveBirth) || "Não informada";
 
     // CPF e RG limpos sem asteriscos, pois são avaliados no compliance admissional (Ever / GPS)
     const cpfClean = app.cpf ? app.cpf.replace(/\D/g, "") || app.cpf : "Não informado";

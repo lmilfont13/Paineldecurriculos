@@ -1648,7 +1648,11 @@ export function BuscarCvsView({
                         <p className="font-medium text-[#0a0a0a]">
                           {selectedCandidate.birthDate
                             ? `${new Date(selectedCandidate.birthDate).toLocaleDateString("pt-BR")}${
-                                selectedCandidate.age ? ` (${selectedCandidate.age} anos)` : ""
+                                calculateAge(selectedCandidate.birthDate) !== null
+                                  ? ` (${calculateAge(selectedCandidate.birthDate)} anos)`
+                                  : selectedCandidate.age
+                                  ? ` (${selectedCandidate.age} anos)`
+                                  : ""
                               }`
                             : selectedCandidate.age
                             ? `${selectedCandidate.age} anos`

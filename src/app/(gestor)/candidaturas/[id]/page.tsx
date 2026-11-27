@@ -357,8 +357,7 @@ export default async function CandidaturaDetailPage({
                 <div>
                   <dt className="font-semibold text-slate-500">Data de Nascimento</dt>
                   <dd className="mt-0.5 text-slate-900 font-medium">
-                    {formatBirthDate(app.birthDate) || "Não informada"}{" "}
-                    {app.age !== null ? `(${app.age} anos)` : ""}
+                    {formatBirthDate(app.birthDate) || (app.age !== null ? `${app.age} anos` : "Não informada")}
                   </dd>
                 </div>
                 <div>

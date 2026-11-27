@@ -445,24 +445,48 @@ export async function findDashboardApplications(
 export function findAgeSourcesForJob(companyId: string, jobId: string) {
   return prisma.application.findMany({
     where: { companyId, jobId },
-    select: { id: true, birthDate: true, resumeText: true },
+    select: {
+      id: true,
+      birthDate: true,
+      resumeText: true,
+      candidate: { select: { birthDate: true } },
+      answers: {
+        where: {
+          field: {
+            label: { contains: "nasc", mode: "insensitive" },
+          },
+        },
+        select: {
+          field: { select: { label: true } },
+          value: true,
+        },
+      },
+    },
   });
 }
 
-/** Data de nascimento de todas as candidaturas da empresa e, só para quem não tem, o texto do currículo. */
+/** Data de nascimento de todas as candidaturas da empresa para cálculo de idade exata. */
 export async function findAgeSourcesForCompany(companyId: string) {
-  const withBirth = await prisma.application.findMany({
-    where: { companyId, birthDate: { not: null } },
-    select: { id: true, birthDate: true },
+  return prisma.application.findMany({
+    where: { companyId },
+    select: {
+      id: true,
+      birthDate: true,
+      resumeText: true,
+      candidate: { select: { birthDate: true } },
+      answers: {
+        where: {
+          field: {
+            label: { contains: "nasc", mode: "insensitive" },
+          },
+        },
+        select: {
+          field: { select: { label: true } },
+          value: true,
+        },
+      },
+    },
   });
-  const withoutBirth = await prisma.application.findMany({
-    where: { companyId, birthDate: null },
-    select: { id: true, resumeText: true },
-  });
-  return [
-    ...withBirth.map((r) => ({ id: r.id, birthDate: r.birthDate, resumeText: null as string | null })),
-    ...withoutBirth.map((r) => ({ id: r.id, birthDate: null as Date | null, resumeText: r.resumeText })),
-  ];
 }
 
 /** Busca avançada de CVs (nível Michelin): dados enriquecidos para busca facetada e snippets. */

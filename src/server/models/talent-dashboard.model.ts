@@ -428,9 +428,9 @@ export function buildTalentDashboardData(
     else if (gender === "Masculino") maleCount++;
     else unspecifiedGenderCount++;
 
-    // 2. Idade
+    // 2. Idade - sempre calcula pela data de nascimento quando preenchida
     const effectiveBirthDate = c.birthDate ?? extractBirthDateFromText(c.resumeText);
-    const age = c.age ?? (effectiveBirthDate ? calculateAge(effectiveBirthDate) : extractAgeFromText(c.resumeText));
+    const age = effectiveBirthDate ? calculateAge(effectiveBirthDate) : (c.age ?? extractAgeFromText(c.resumeText));
     if (age !== null && age >= 14 && age <= 90) {
       validAges.push(age);
       if (age < 20) ageBracketsCount["< 20 anos"]++;
